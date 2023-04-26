@@ -1,0 +1,652 @@
+{
+  "last_node_id": 15,
+  "last_link_id": 16,
+  "nodes": [
+    {
+      "id": 8,
+      "type": "VAEDecode",
+      "pos": [
+        1176.4676513671875,
+        867.5911865234375
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 11,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 4,
+          "slot_index": 0
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 6,
+          "slot_index": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            5
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "VAE解码",
+      "properties": {},
+      "widgets_values": []
+    },
+    {
+      "id": 4,
+      "type": "CheckpointLoaderSimple",
+      "pos": [
+        -109.54988861083984,
+        706.24267578125
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            3
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            0,
+            2
+          ],
+          "slot_index": 1
+        },
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "links": [
+            15
+          ],
+          "slot_index": 2
+        }
+      ],
+      "title": "Checkpoint简易加载器",
+      "properties": {},
+      "widgets_values": [
+        "AbyssOrangeMix2_sfw.ckpt"
+      ]
+    },
+    {
+      "id": 5,
+      "type": "CLIPTextEncode",
+      "pos": [
+        303.3335266113281,
+        866.6644287109375
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 0,
+          "slot_index": 0
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            8
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "CLIP文本编码器(正)",
+      "properties": {},
+      "widgets_values": [
+        "1girl, bangs, blue_eyes, blue_hair, hair_ornament, halo, looking_at_viewer, multicolored_hair, open_mouth, simple_background, solo, streaked_hair, teeth, virtual_youtuber, white_hair"
+      ]
+    },
+    {
+      "id": 14,
+      "type": "ControlNetApply",
+      "pos": [
+        622.5785522460938,
+        816.0228271484375
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "conditioning",
+          "type": "CONDITIONING",
+          "link": 8,
+          "slot_index": 0
+        },
+        {
+          "name": "control_net",
+          "type": "CONTROL_NET",
+          "link": 7,
+          "slot_index": 1
+        },
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 10,
+          "slot_index": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            9
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "ControlNet应用",
+      "properties": {},
+      "widgets_values": [
+        1.0
+      ]
+    },
+    {
+      "id": 10,
+      "type": "VAELoader",
+      "pos": [
+        835.1873168945312,
+        921.4703979492188
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "links": [
+            6
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "VAE加载器",
+      "properties": {},
+      "widgets_values": [
+        "pastel-waifu-diffusion.vae.pt"
+      ]
+    },
+    {
+      "id": 9,
+      "type": "预览",
+      "pos": [
+        1476.2161865234375,
+        602.52978515625
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 12,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 5,
+          "slot_index": 0
+        }
+      ],
+      "outputs": [],
+      "title": "预览(Blender专用)",
+      "properties": {},
+      "widgets_values": []
+    },
+    {
+      "id": 12,
+      "type": "输入图像",
+      "pos": [
+        -761.9703369140625,
+        1113.9034423828125
+      ],
+      "size": {
+        "0": 1024.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            11,
+            14
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": [],
+          "slot_index": 1
+        }
+      ],
+      "title": "输入图像",
+      "properties": {},
+      "widgets_values": [
+        "D:\\Tmp\\AWE_00044_.png",
+        "输入"
+      ]
+    },
+    {
+      "id": 13,
+      "type": "ControlNetLoader",
+      "pos": [
+        301.7764587402344,
+        629.7715454101562
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "CONTROL_NET",
+          "type": "CONTROL_NET",
+          "links": [
+            7
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "ControlNet加载器",
+      "properties": {},
+      "widgets_values": [
+        "语义-control_seg-fp16.safetensors"
+      ]
+    },
+    {
+      "id": 3,
+      "type": "KSampler",
+      "pos": [
+        904.2295532226562,
+        529.2134399414062
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 3,
+          "slot_index": 0
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 9,
+          "slot_index": 1
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 1,
+          "slot_index": 2
+        },
+        {
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 13,
+          "slot_index": 3
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            4
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "K采样器",
+      "properties": {},
+      "widgets_values": [
+        "4293230423",
+        false,
+        20,
+        8.0,
+        "euler",
+        "karras",
+        1.0
+      ]
+    },
+    {
+      "id": 15,
+      "type": "预览",
+      "pos": [
+        556.8773803710938,
+        1226.2340087890625
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 12,
+          "slot_index": 0
+        }
+      ],
+      "outputs": [],
+      "title": "预览(Blender专用-预处理)",
+      "properties": {},
+      "widgets_values": []
+    },
+    {
+      "id": 6,
+      "type": "CLIPTextEncode",
+      "pos": [
+        292.70379638671875,
+        1183.8140869140625
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 2,
+          "slot_index": 0
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            1
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "CLIP文本编码器(反)",
+      "properties": {},
+      "widgets_values": [
+        "embedding:EasyNegative"
+      ]
+    },
+    {
+      "id": 11,
+      "type": "SemSegPreprocessor",
+      "pos": [
+        297.96087646484375,
+        1088.158447265625
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 11,
+          "slot_index": 0
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            10,
+            12
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "SemSeg(语义分割)预处理器",
+      "properties": {},
+      "widgets_values": []
+    },
+    {
+      "id": 7,
+      "type": "VAEEncode",
+      "pos": [
+        584.064453125,
+        994.3632202148438
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "pixels",
+          "type": "IMAGE",
+          "link": 14,
+          "slot_index": 0
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 15,
+          "slot_index": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            13
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "VAE编码",
+      "properties": {},
+      "widgets_values": []
+    }
+  ],
+  "links": [
+    [
+      0,
+      4,
+      1,
+      5,
+      0,
+      "CheckpointLoaderSimple"
+    ],
+    [
+      1,
+      6,
+      0,
+      3,
+      2,
+      "CLIPTextEncode"
+    ],
+    [
+      2,
+      4,
+      1,
+      6,
+      0,
+      "CheckpointLoaderSimple"
+    ],
+    [
+      3,
+      4,
+      0,
+      3,
+      0,
+      "CheckpointLoaderSimple"
+    ],
+    [
+      4,
+      3,
+      0,
+      8,
+      0,
+      "KSampler"
+    ],
+    [
+      5,
+      8,
+      0,
+      9,
+      0,
+      "VAEDecode"
+    ],
+    [
+      6,
+      10,
+      0,
+      8,
+      1,
+      "VAELoader"
+    ],
+    [
+      7,
+      13,
+      0,
+      14,
+      1,
+      "ControlNetLoader"
+    ],
+    [
+      8,
+      5,
+      0,
+      14,
+      0,
+      "CLIPTextEncode"
+    ],
+    [
+      9,
+      14,
+      0,
+      3,
+      1,
+      "ControlNetApply"
+    ],
+    [
+      10,
+      11,
+      0,
+      14,
+      2,
+      "SemSegPreprocessor"
+    ],
+    [
+      11,
+      12,
+      0,
+      11,
+      0,
+      "输入图像"
+    ],
+    [
+      12,
+      11,
+      0,
+      15,
+      0,
+      "SemSegPreprocessor"
+    ],
+    [
+      13,
+      7,
+      0,
+      3,
+      3,
+      "VAEEncode"
+    ],
+    [
+      14,
+      12,
+      0,
+      7,
+      0,
+      "输入图像"
+    ],
+    [
+      15,
+      4,
+      2,
+      7,
+      1,
+      "CheckpointLoaderSimple"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {},
+  "version": 0.4
+}

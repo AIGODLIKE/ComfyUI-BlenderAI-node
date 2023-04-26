@@ -1,0 +1,100 @@
+{
+    "last_node_id": 11,
+    "last_link_id": 11,
+    "nodes": [
+        {
+            "id": 11,
+            "type": "输入图像",
+            "pos": [
+                132.4813995361328,
+                1178.6380615234375
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 100.0
+            },
+            "flags": {},
+            "order": 0,
+            "mode": 0,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "IMAGE",
+                    "type": "IMAGE",
+                    "links": [
+                        9
+                    ],
+                    "slot_index": 0
+                },
+                {
+                    "name": "MASK",
+                    "type": "MASK",
+                    "links": [],
+                    "slot_index": 1
+                }
+            ],
+            "title": "输入图像",
+            "properties": {},
+            "widgets_values": [
+                "",
+                "输入"
+            ]
+        },
+        {
+            "id": 10,
+            "type": "VAEEncode",
+            "pos": [
+                477.420166015625,
+                1145.332275390625
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 100.0
+            },
+            "flags": {},
+            "order": 2,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "pixels",
+                    "type": "IMAGE",
+                    "link": 9,
+                    "slot_index": 0
+                },
+                {
+                    "name": "vae",
+                    "type": "VAE",
+                    "link": 10,
+                    "slot_index": 1
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "LATENT",
+                    "type": "LATENT",
+                    "links": [
+                        8
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "VAE编码",
+            "properties": {},
+            "widgets_values": []
+        }
+    ],
+    "links": [
+        [
+            9,
+            11,
+            0,
+            10,
+            0,
+            "输入图像"
+        ]
+    ],
+    "groups": [],
+    "config": {},
+    "extra": {},
+    "version": 0.4
+}

@@ -1,0 +1,34 @@
+{
+    "last_node_id": 15,
+    "last_link_id": 13,
+    "nodes": [
+        {
+            "id": 9,
+            "type": "存储",
+            "pos": [
+                1519.5968017578125,
+                938.8121948242188
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 100.0
+            },
+            "flags": {},
+            "order": 0,
+            "mode": 0,
+            "inputs": [],
+            "outputs": [],
+            "title": "存储",
+            "properties": {},
+            "widgets_values": [
+                "Blender",
+                ""
+            ]
+        }
+    ],
+    "links": [],
+    "groups": [],
+    "config": {},
+    "extra": {},
+    "version": 0.4
+}

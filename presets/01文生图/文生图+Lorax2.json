@@ -1,0 +1,541 @@
+{
+    "last_node_id": 12,
+    "last_link_id": 13,
+    "nodes": [
+        {
+            "id": 8,
+            "type": "VAEDecode",
+            "pos": [
+                1106.1478271484375,
+                867.5911865234375
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 8,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "samples",
+                    "type": "LATENT",
+                    "link": 3,
+                    "slot_index": 0
+                },
+                {
+                    "name": "vae",
+                    "type": "VAE",
+                    "link": 5,
+                    "slot_index": 1
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "IMAGE",
+                    "type": "IMAGE",
+                    "links": [
+                        4
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "VAE解码",
+            "properties": {},
+            "widgets_values": []
+        },
+        {
+            "id": 10,
+            "type": "VAELoader",
+            "pos": [
+                839.4569091796875,
+                1037.6197509765625
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 7,
+            "mode": 0,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "VAE",
+                    "type": "VAE",
+                    "links": [
+                        5
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "VAE加载器",
+            "properties": {},
+            "widgets_values": [
+                "pastel-waifu-diffusion.vae.pt"
+            ]
+        },
+        {
+            "id": 5,
+            "type": "CLIPTextEncode",
+            "pos": [
+                230.67881774902344,
+                839.6133422851562
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 4,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "clip",
+                    "type": "CLIP",
+                    "link": 11,
+                    "slot_index": 0
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "CONDITIONING",
+                    "type": "CONDITIONING",
+                    "links": [
+                        0
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "CLIP文本编码器(正)",
+            "properties": {},
+            "widgets_values": [
+                "1girl, bangs, blue_eyes, blue_hair, hair_ornament, halo, looking_at_viewer, multicolored_hair, open_mouth, simple_background, solo, streaked_hair, teeth, virtual_youtuber, white_hair"
+            ]
+        },
+        {
+            "id": 6,
+            "type": "CLIPTextEncode",
+            "pos": [
+                231.6758270263672,
+                953.5704956054688
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 1,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "clip",
+                    "type": "CLIP",
+                    "link": 9,
+                    "slot_index": 0
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "CONDITIONING",
+                    "type": "CONDITIONING",
+                    "links": [
+                        1
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "CLIP文本编码器(负)",
+            "properties": {},
+            "widgets_values": [
+                "embedding:EasyNegative"
+            ]
+        },
+        {
+            "id": 7,
+            "type": "EmptyLatentImage",
+            "pos": [
+                501.7041931152344,
+                1033.7838134765625
+            ],
+            "size": {
+                "0": 512,
+                "1": 512
+            },
+            "flags": {},
+            "order": 5,
+            "mode": 0,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "LATENT",
+                    "type": "LATENT",
+                    "links": [
+                        2
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "空Latent图像(“画布”)",
+            "properties": {},
+            "widgets_values": [
+                512,
+                512,
+                1
+            ]
+        },
+        {
+            "id": 3,
+            "type": "KSampler",
+            "pos": [
+                835.3834838867188,
+                654.4996948242188
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 6,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "model",
+                    "type": "MODEL",
+                    "link": 6,
+                    "slot_index": 0
+                },
+                {
+                    "name": "positive",
+                    "type": "CONDITIONING",
+                    "link": 0,
+                    "slot_index": 1
+                },
+                {
+                    "name": "negative",
+                    "type": "CONDITIONING",
+                    "link": 1,
+                    "slot_index": 2
+                },
+                {
+                    "name": "latent_image",
+                    "type": "LATENT",
+                    "link": 2,
+                    "slot_index": 3
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "LATENT",
+                    "type": "LATENT",
+                    "links": [
+                        3
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "K采样器",
+            "properties": {},
+            "widgets_values": [
+                "123456789",
+                false,
+                20,
+                8.0,
+                "euler",
+                "karras",
+                1.0
+            ]
+        },
+        {
+            "id": 9,
+            "type": "预览",
+            "pos": [
+                1354.700439453125,
+                869.1697387695312
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 9,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "images",
+                    "type": "IMAGE",
+                    "link": 4,
+                    "slot_index": 0
+                }
+            ],
+            "outputs": [],
+            "title": "预览(Blender专用)",
+            "properties": {},
+            "widgets_values": []
+        },
+        {
+            "id": 11,
+            "type": "LoraLoader",
+            "pos": [
+                -394.63604736328125,
+                606.468994140625
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 2,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "model",
+                    "type": "MODEL",
+                    "link": 7,
+                    "slot_index": 0
+                },
+                {
+                    "name": "clip",
+                    "type": "CLIP",
+                    "link": 8,
+                    "slot_index": 1
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "MODEL",
+                    "type": "MODEL",
+                    "links": [
+                        10
+                    ],
+                    "slot_index": 0
+                },
+                {
+                    "name": "CLIP",
+                    "type": "CLIP",
+                    "links": [
+                        12
+                    ],
+                    "slot_index": 1
+                }
+            ],
+            "title": "Lora加载器1",
+            "properties": {},
+            "widgets_values": [
+                "",
+                1.0,
+                1.0
+            ]
+        },
+        {
+            "id": 4,
+            "type": "CheckpointLoaderSimple",
+            "pos": [
+                -769.26025390625,
+                870.78369140625
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 0,
+            "mode": 0,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "MODEL",
+                    "type": "MODEL",
+                    "links": [
+                        7
+                    ],
+                    "slot_index": 0
+                },
+                {
+                    "name": "CLIP",
+                    "type": "CLIP",
+                    "links": [
+                        8,
+                        9
+                    ],
+                    "slot_index": 1
+                },
+                {
+                    "name": "VAE",
+                    "type": "VAE",
+                    "links": [],
+                    "slot_index": 2
+                }
+            ],
+            "title": "Checkpoint简易加载器",
+            "properties": {},
+            "widgets_values": [
+                "AbyssOrangeMix2_sfw.ckpt"
+            ]
+        },
+        {
+            "id": 12,
+            "type": "LoraLoader",
+            "pos": [
+                -158.18186950683594,
+                606.468994140625
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 3,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "model",
+                    "type": "MODEL",
+                    "link": 10,
+                    "slot_index": 0
+                },
+                {
+                    "name": "clip",
+                    "type": "CLIP",
+                    "link": 12,
+                    "slot_index": 1
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "MODEL",
+                    "type": "MODEL",
+                    "links": [
+                        6
+                    ],
+                    "slot_index": 0
+                },
+                {
+                    "name": "CLIP",
+                    "type": "CLIP",
+                    "links": [
+                        11
+                    ],
+                    "slot_index": 1
+                }
+            ],
+            "title": "Lora加载器2",
+            "properties": {},
+            "widgets_values": [
+                "",
+                1.0,
+                1.0
+            ]
+        }
+    ],
+    "links": [
+        [
+            0,
+            5,
+            0,
+            3,
+            1,
+            "CLIPTextEncode"
+        ],
+        [
+            1,
+            6,
+            0,
+            3,
+            2,
+            "CLIPTextEncode"
+        ],
+        [
+            2,
+            7,
+            0,
+            3,
+            3,
+            "EmptyLatentImage"
+        ],
+        [
+            3,
+            3,
+            0,
+            8,
+            0,
+            "KSampler"
+        ],
+        [
+            4,
+            8,
+            0,
+            9,
+            0,
+            "VAEDecode"
+        ],
+        [
+            5,
+            10,
+            0,
+            8,
+            1,
+            "VAELoader"
+        ],
+        [
+            6,
+            12,
+            0,
+            3,
+            0,
+            "LoraLoader"
+        ],
+        [
+            7,
+            4,
+            0,
+            11,
+            0,
+            "CheckpointLoaderSimple"
+        ],
+        [
+            8,
+            4,
+            1,
+            11,
+            1,
+            "CheckpointLoaderSimple"
+        ],
+        [
+            9,
+            4,
+            1,
+            6,
+            0,
+            "CheckpointLoaderSimple"
+        ],
+        [
+            10,
+            11,
+            0,
+            12,
+            0,
+            "LoraLoader"
+        ],
+        [
+            11,
+            12,
+            1,
+            5,
+            0,
+            "LoraLoader"
+        ],
+        [
+            12,
+            11,
+            1,
+            12,
+            1,
+            "LoraLoader"
+        ]
+    ],
+    "groups": [],
+    "config": {},
+    "extra": {},
+    "version": 0.4
+}

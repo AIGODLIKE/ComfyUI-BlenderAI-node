@@ -1,0 +1,591 @@
+{
+  "last_node_id": 24,
+  "last_link_id": 15,
+  "nodes": [
+    {
+      "id": 5,
+      "type": "EmptyLatentImage",
+      "pos": [
+        350.6894226074219,
+        470.09893798828125
+      ],
+      "size": {
+        "0": 768,
+        "1": 768
+      },
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            9
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "空Latent图像",
+      "properties": {},
+      "widgets_values": [
+        768,
+        768,
+        1
+      ]
+    },
+    {
+      "id": 11,
+      "type": "VAELoader",
+      "pos": [
+        1004.0285034179688,
+        279.2672119140625
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 100.0
+      },
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "links": [
+            12
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "VAE加载器",
+      "properties": {},
+      "widgets_values": [
+        "pastel-waifu-diffusion.vae.pt"
+      ]
+    },
+    {
+      "id": 3,
+      "type": "KSampler",
+      "pos": [
+        947.5491333007812,
+        -146.00289916992188
+      ],
+      "size": {
+        "0": 315.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 13,
+          "slot_index": 0
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 7,
+          "slot_index": 1
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 8,
+          "slot_index": 2
+        },
+        {
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 9,
+          "slot_index": 3
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            10
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "K采样器",
+      "properties": {},
+      "widgets_values": [
+        "3235351274",
+        false,
+        20,
+        8.0,
+        "uni_pc_bh2",
+        "normal",
+        1.0
+      ]
+    },
+    {
+      "id": 9,
+      "type": "预览",
+      "pos": [
+        1680.9361572265625,
+        387.12603759765625
+      ],
+      "size": {
+        "0": 768.0,
+        "1": 100.0
+      },
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 11,
+          "slot_index": 0
+        }
+      ],
+      "outputs": [],
+      "title": "预览",
+      "properties": {},
+      "widgets_values": []
+    },
+    {
+      "id": 8,
+      "type": "VAEDecode",
+      "pos": [
+        1345.58154296875,
+        209.6739044189453
+      ],
+      "size": {
+        "0": 210.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 10,
+          "slot_index": 0
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 12,
+          "slot_index": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            11
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "VAE解码",
+      "properties": {},
+      "widgets_values": []
+    },
+    {
+      "id": 12,
+      "type": "CheckpointLoaderSimple",
+      "pos": [
+        -369.02484130859375,
+        150.79238891601562
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 100.0
+      },
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            13
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            0,
+            3,
+            4,
+            14
+          ],
+          "slot_index": 1
+        },
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "links": [],
+          "slot_index": 2
+        }
+      ],
+      "title": "Checkpoint简易加载器",
+      "properties": {},
+      "widgets_values": [
+        "AbyssOrangeMix2_sfw.ckpt"
+      ]
+    },
+    {
+      "id": 4,
+      "type": "GLIGENTextBoxApply",
+      "pos": [
+        431.8034973144531,
+        -184.7287139892578
+      ],
+      "size": {
+        "0": 192,
+        "1": 304
+      },
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "conditioning_to",
+          "type": "CONDITIONING",
+          "link": 1,
+          "slot_index": 0
+        },
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 3,
+          "slot_index": 1
+        },
+        {
+          "name": "gligen_textbox_model",
+          "type": "GLIGEN",
+          "link": 5,
+          "slot_index": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            2
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "GLIGEN文本框应用(描述单个元素1)",
+      "properties": {},
+      "widgets_values": [
+        "1girl",
+        192,
+        304,
+        176,
+        272
+      ]
+    },
+    {
+      "id": 10,
+      "type": "GLIGENTextBoxApply",
+      "pos": [
+        682.9270629882812,
+        -180.94161987304688
+      ],
+      "size": {
+        "0": 144,
+        "1": 144
+      },
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "conditioning_to",
+          "type": "CONDITIONING",
+          "link": 2,
+          "slot_index": 0
+        },
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 4,
+          "slot_index": 1
+        },
+        {
+          "name": "gligen_textbox_model",
+          "type": "GLIGEN",
+          "link": 6,
+          "slot_index": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            7
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "GLIGEN文本框应用(描述单个元素2)",
+      "properties": {},
+      "widgets_values": [
+        "1car",
+        144,
+        144,
+        416,
+        16
+      ]
+    },
+    {
+      "id": 24,
+      "type": "CLIPTextEncode",
+      "pos": [
+        -105.32020568847656,
+        -159.60687255859375
+      ],
+      "size": {
+        "0": 422.84503173828125,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 0,
+          "slot_index": 0
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            1
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "CLIP文本编码器(所有元素)",
+      "properties": {},
+      "widgets_values": [
+        "1car;1girl;"
+      ]
+    },
+    {
+      "id": 6,
+      "type": "GLIGENLoader",
+      "pos": [
+        -6.750099182128906,
+        199.57203674316406
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 100.0
+      },
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "GLIGEN",
+          "type": "GLIGEN",
+          "links": [
+            5,
+            6
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "GLIGEN加载器",
+      "properties": {},
+      "widgets_values": [
+        "gligen_sd14_textbox_pruned.safetensors"
+      ]
+    },
+    {
+      "id": 7,
+      "type": "CLIPTextEncode",
+      "pos": [
+        209.14125061035156,
+        315.8410339355469
+      ],
+      "size": {
+        "0": 425.27801513671875,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 14,
+          "slot_index": 0
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            8
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "CLIP文本编码器(负)",
+      "properties": {},
+      "widgets_values": [
+        "embedding:EasyNegative"
+      ]
+    }
+  ],
+  "links": [
+    [
+      0,
+      12,
+      1,
+      24,
+      0,
+      "CheckpointLoaderSimple"
+    ],
+    [
+      1,
+      24,
+      0,
+      4,
+      0,
+      "CLIPTextEncode"
+    ],
+    [
+      2,
+      4,
+      0,
+      10,
+      0,
+      "GLIGENTextBoxApply"
+    ],
+    [
+      3,
+      12,
+      1,
+      4,
+      1,
+      "CheckpointLoaderSimple"
+    ],
+    [
+      4,
+      12,
+      1,
+      10,
+      1,
+      "CheckpointLoaderSimple"
+    ],
+    [
+      5,
+      6,
+      0,
+      4,
+      2,
+      "GLIGENLoader"
+    ],
+    [
+      6,
+      6,
+      0,
+      10,
+      2,
+      "GLIGENLoader"
+    ],
+    [
+      7,
+      10,
+      0,
+      3,
+      1,
+      "GLIGENTextBoxApply"
+    ],
+    [
+      8,
+      7,
+      0,
+      3,
+      2,
+      "CLIPTextEncode"
+    ],
+    [
+      9,
+      5,
+      0,
+      3,
+      3,
+      "EmptyLatentImage"
+    ],
+    [
+      10,
+      3,
+      0,
+      8,
+      0,
+      "KSampler"
+    ],
+    [
+      11,
+      8,
+      0,
+      9,
+      0,
+      "VAEDecode"
+    ],
+    [
+      12,
+      11,
+      0,
+      8,
+      1,
+      "VAELoader"
+    ],
+    [
+      13,
+      12,
+      0,
+      3,
+      0,
+      "CheckpointLoaderSimple"
+    ],
+    [
+      14,
+      12,
+      1,
+      7,
+      0,
+      "CheckpointLoaderSimple"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {},
+  "version": 0.4
+}

@@ -1,0 +1,178 @@
+{
+    "last_node_id": 18,
+    "last_link_id": 22,
+    "nodes": [
+        {
+            "id": 12,
+            "type": "UpscaleModelLoader",
+            "pos": [
+                1202.9571533203125,
+                253.23634338378906
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 0,
+            "mode": 0,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "UPSCALE_MODEL",
+                    "type": "UPSCALE_MODEL",
+                    "links": [
+                        9
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "放大模型加载器",
+            "properties": {},
+            "widgets_values": [
+                "BSRGAN.pth"
+            ]
+        },
+        {
+            "id": 11,
+            "type": "ImageUpscaleWithModel",
+            "pos": [
+                1450.08984375,
+                343.53253173828125
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 9,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "upscale_model",
+                    "type": "UPSCALE_MODEL",
+                    "link": 9,
+                    "slot_index": 0
+                },
+                {
+                    "name": "image",
+                    "type": "IMAGE",
+                    "link": 8,
+                    "slot_index": 1
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "IMAGE",
+                    "type": "IMAGE",
+                    "links": [
+                        11
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "图像通过模型放大",
+            "properties": {},
+            "widgets_values": []
+        },
+        {
+            "id": 14,
+            "type": "ImageScale",
+            "pos": [
+                1694.745361328125,
+                293.18389892578125
+            ],
+            "size": {
+                "0": 960.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 10,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "image",
+                    "type": "IMAGE",
+                    "link": 11,
+                    "slot_index": 0
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "IMAGE",
+                    "type": "IMAGE",
+                    "links": [
+                        6,
+                        12
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "图像缩放(设置最终尺寸)",
+            "properties": {},
+            "widgets_values": [
+                "nearest-exact",
+                960,
+                960,
+                "disabled"
+            ]
+        },
+        {
+            "id": 9,
+            "type": "预览",
+            "pos": [
+                2662.337646484375,
+                172.7451629638672
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 15,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "images",
+                    "type": "IMAGE",
+                    "link": 6,
+                    "slot_index": 0
+                }
+            ],
+            "outputs": [],
+            "title": "预览(Blender专用-放大)",
+            "properties": {},
+            "widgets_values": []
+        }
+    ],
+    "links": [
+        [
+            6,
+            14,
+            0,
+            9,
+            0,
+            "ImageScale"
+        ],
+        [
+            9,
+            12,
+            0,
+            11,
+            0,
+            "UpscaleModelLoader"
+        ],
+        [
+            11,
+            11,
+            0,
+            14,
+            0,
+            "ImageUpscaleWithModel"
+        ]
+    ],
+    "groups": [],
+    "config": {},
+    "extra": {},
+    "version": 0.4
+}
