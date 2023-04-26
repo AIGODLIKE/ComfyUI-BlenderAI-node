@@ -2,6 +2,7 @@
 Blender Node integration of [ComfyUI](https://github.com/comfyanonymous/ComfyUI).
 
 [工具手册](https://shimo.im/docs/Ee32m0w80rfLp4A2)
+
 [AIGODLIKE社区](www.aigodlike.com)
 
 # Blender开源AI工具无限圣杯节点
