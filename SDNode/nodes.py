@@ -369,7 +369,7 @@ def parse_node():
     
     for name, desc in object_info.items():
         cat = desc["category"]
-        for inp, inp_desc in desc["input"]["required"].items():
+        for inp, inp_desc in desc["input"].get("required", {}).items():
             stype = inp_desc[0]
             if isinstance(stype, list):
                 sockets.add("ENUM")
