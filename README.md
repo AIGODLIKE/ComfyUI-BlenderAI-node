@@ -1,4 +1,4 @@
-# BlenderAI_Node
+# ComfyUI-BlenderAI-node
 Blender Node integration of [ComfyUI](https://github.com/comfyanonymous/ComfyUI).
 
 [工具手册](https://shimo.im/docs/Ee32m0w80rfLp4A2)
