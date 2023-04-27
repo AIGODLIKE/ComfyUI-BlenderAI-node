@@ -1,5 +1,6 @@
 import struct
 from pathlib import Path
+from bpy.app.translations import pgettext as _T
 from .kclogger import logger
 
 def update_screen():

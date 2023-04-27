@@ -32,8 +32,15 @@ td = {'fr_FR': {
 """
 
 ctxt = "SDN"
+
+other = {
+    "ComfyUI Path Not Found": "ComfyUI路径不存在",
+    "icon path load error": "预览图配置解析失败",
+    "|IGNORED|": "|已忽略|",
+}
 lang_text = {
     "zh_CN": {
+        **other,
         # 分类
         "latent": "潜空间",
         "advanced": "高级",

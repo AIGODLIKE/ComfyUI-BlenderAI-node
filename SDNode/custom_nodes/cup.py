@@ -31,7 +31,10 @@ atexit.register(removetemp)
 
 def hk(func):
     def wrap(*args, **kwargs):
-        func(*args, **kwargs)
+        try:
+            func(*args, **kwargs)
+        except:
+            ...
         sys.stdout.flush()
         # sys.stderr.flush()
     return wrap
@@ -51,7 +54,7 @@ def try_write_config():
         config[k] = list(folder_names_and_paths[k])
         if isinstance(config[k][1], set):
             config[k][1] = list(config[k][1])
-    Path(config_path).write_text(json.dumps(config, ensure_ascii=False, indent=4))
+    Path(config_path).write_text(json.dumps(config, indent=4))
 
 
 try:

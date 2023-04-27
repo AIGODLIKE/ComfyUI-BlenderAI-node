@@ -1,0 +1,155 @@
+{
+    "checkpoints": [
+        [
+            "D:\\BaiduNetdiskDownload\\A I + \u4e2d\u6587\u8def\u5f84\u5566\u5566\u5566\u5566\u5566\u5566\\ComfyUI\\models\\checkpoints"
+        ],
+        [
+            ".pth",
+            ".ckpt",
+            ".safetensors"
+        ]
+    ],
+    "configs": [
+        [
+            "D:\\BaiduNetdiskDownload\\A I + \u4e2d\u6587\u8def\u5f84\u5566\u5566\u5566\u5566\u5566\u5566\\ComfyUI\\models\\configs"
+        ],
+        [
+            ".yaml"
+        ]
+    ],
+    "loras": [
+        [
+            "D:\\BaiduNetdiskDownload\\A I + \u4e2d\u6587\u8def\u5f84\u5566\u5566\u5566\u5566\u5566\u5566\\ComfyUI\\models\\loras"
+        ],
+        [
+            ".safetensors",
+            ".pth",
+            ".ckpt",
+            ".bin",
+            ".pt"
+        ]
+    ],
+    "vae": [
+        [
+            "D:\\BaiduNetdiskDownload\\A I + \u4e2d\u6587\u8def\u5f84\u5566\u5566\u5566\u5566\u5566\u5566\\ComfyUI\\models\\vae"
+        ],
+        [
+            ".safetensors",
+            ".pth",
+            ".ckpt",
+            ".bin",
+            ".pt"
+        ]
+    ],
+    "clip": [
+        [
+            "D:\\BaiduNetdiskDownload\\A I + \u4e2d\u6587\u8def\u5f84\u5566\u5566\u5566\u5566\u5566\u5566\\ComfyUI\\models\\clip"
+        ],
+        [
+            ".safetensors",
+            ".pth",
+            ".ckpt",
+            ".bin",
+            ".pt"
+        ]
+    ],
+    "clip_vision": [
+        [
+            "D:\\BaiduNetdiskDownload\\A I + \u4e2d\u6587\u8def\u5f84\u5566\u5566\u5566\u5566\u5566\u5566\\ComfyUI\\models\\clip_vision"
+        ],
+        [
+            ".safetensors",
+            ".pth",
+            ".ckpt",
+            ".bin",
+            ".pt"
+        ]
+    ],
+    "style_models": [
+        [
+            "D:\\BaiduNetdiskDownload\\A I + \u4e2d\u6587\u8def\u5f84\u5566\u5566\u5566\u5566\u5566\u5566\\ComfyUI\\models\\style_models"
+        ],
+        [
+            ".safetensors",
+            ".pth",
+            ".ckpt",
+            ".bin",
+            ".pt"
+        ]
+    ],
+    "embeddings": [
+        [
+            "D:\\BaiduNetdiskDownload\\A I + \u4e2d\u6587\u8def\u5f84\u5566\u5566\u5566\u5566\u5566\u5566\\ComfyUI\\models\\embeddings"
+        ],
+        [
+            ".safetensors",
+            ".pth",
+            ".ckpt",
+            ".bin",
+            ".pt"
+        ]
+    ],
+    "diffusers": [
+        [
+            "D:\\BaiduNetdiskDownload\\A I + \u4e2d\u6587\u8def\u5f84\u5566\u5566\u5566\u5566\u5566\u5566\\ComfyUI\\models\\diffusers"
+        ],
+        [
+            "folder"
+        ]
+    ],
+    "controlnet": [
+        [
+            "D:\\BaiduNetdiskDownload\\A I + \u4e2d\u6587\u8def\u5f84\u5566\u5566\u5566\u5566\u5566\u5566\\ComfyUI\\models\\controlnet",
+            "D:\\BaiduNetdiskDownload\\A I + \u4e2d\u6587\u8def\u5f84\u5566\u5566\u5566\u5566\u5566\u5566\\ComfyUI\\models\\t2i_adapter"
+        ],
+        [
+            ".safetensors",
+            ".pth",
+            ".ckpt",
+            ".bin",
+            ".pt"
+        ]
+    ],
+    "gligen": [
+        [
+            "D:\\BaiduNetdiskDownload\\A I + \u4e2d\u6587\u8def\u5f84\u5566\u5566\u5566\u5566\u5566\u5566\\ComfyUI\\models\\gligen"
+        ],
+        [
+            ".safetensors",
+            ".pth",
+            ".ckpt",
+            ".bin",
+            ".pt"
+        ]
+    ],
+    "upscale_models": [
+        [
+            "D:\\BaiduNetdiskDownload\\A I + \u4e2d\u6587\u8def\u5f84\u5566\u5566\u5566\u5566\u5566\u5566\\ComfyUI\\models\\upscale_models"
+        ],
+        [
+            ".safetensors",
+            ".pth",
+            ".ckpt",
+            ".bin",
+            ".pt"
+        ]
+    ],
+    "custom_nodes": [
+        [
+            "D:\\BaiduNetdiskDownload\\A I + \u4e2d\u6587\u8def\u5f84\u5566\u5566\u5566\u5566\u5566\u5566\\ComfyUI\\custom_nodes"
+        ],
+        []
+    ],
+    "hypernetworks": [
+        [
+            "D:\\BaiduNetdiskDownload\\A I + \u4e2d\u6587\u8def\u5f84\u5566\u5566\u5566\u5566\u5566\u5566\\ComfyUI\\models\\hypernetworks"
+        ],
+        [
+            ".safetensors",
+            ".pth",
+            ".ckpt",
+            ".bin",
+            ".pt"
+        ]
+    ]
+}

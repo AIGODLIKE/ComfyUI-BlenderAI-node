@@ -9,7 +9,7 @@ from pathlib import Path
 from random import random as rand
 from functools import partial
 from .utils import gen_mask, SELECTED_COLLECTIONS
-from ..utils import logger, update_screen, Icon
+from ..utils import logger, update_screen, Icon, _T
 from ..datas import ENUM_ITEMS_CACHE
 from ..preference import get_pref
 from ..timer import Timer
@@ -35,6 +35,24 @@ name2path = {
     "UpscaleModelLoader": {"model_name": "upscale_models"},
     "GLIGENLoader": {"gligen_name": "gligen"}
 }
+
+
+def try_get_path_cfg():
+    if not PATH_CFG.exists():
+        return
+    try:
+        d = json.loads(PATH_CFG.read_text())
+        return d
+    except Exception as e:
+        logger.warn(_T("icon path load error") + str(e))
+
+    try:
+        d = json.loads(PATH_CFG.read_text(encoding="gbk"))
+        return d
+    except Exception as e:
+        logger.warn(_T("icon path load error") + str(e))
+
+
 def get_icon_path(nname):
 
     {'controlnet': [['D:\\BaiduNetdiskDownload\\AI\\ComfyUI\\models\\controlnet',
@@ -42,7 +60,8 @@ def get_icon_path(nname):
      'upscale_models': [['D:\\BaiduNetdiskDownload\\AI\\ComfyUI\\models\\upscale_models'], ['.bin', '.safetensors', '.pth', '.pt', '.ckpt']]}
 
     if not PREVICONPATH:
-        d = json.loads(PATH_CFG.read_text())
+        if not (d := try_get_path_cfg()):
+            return {}
         # prev_dir = Path(get_pref().model_path) / "models"
         # {
         #     "ckpt_name": prev_dir / "checkpoints",
@@ -221,11 +240,11 @@ class NodeBase(bpy.types.Node):
                 if inp_name in {"seed", "noise_seed"}:
                     setattr(self, reg_name, str(v))
                 elif (enum := re.findall(' enum "(.*?)" not found', str(e), re.S)):
-                    logger.warn(f"|已忽略| {self.class_type} -> {inp_name} -> 未找到项: {enum[0]}")
+                    logger.warn(f"{_T('|IGNORED|')} {self.class_type} -> {inp_name} -> 未找到项: {enum[0]}")
                 else:
                     logger.error(f"|{e}|")
             except IndexError:
-                logger.info(f"|已忽略| -> 载入<{self.class_type}>参数与当前节点不匹配")
+                logger.info(f"{_T('|IGNORED|')} -> 载入<{self.class_type}>参数与当前节点不匹配")
             except Exception as e:
                 logger.error(f"参数载入错误 {self.class_type} -> {self.class_type}.{inp_name}")
                 logger.error(f" -> {e}")
@@ -366,7 +385,7 @@ def parse_node():
     # for node in object_info.values():
     #     node_inp_type.update(set(node["input"].keys()))
     # logger.info(f"Node Input Type -> {node_inp_type}")
-    
+
     for name, desc in object_info.items():
         cat = desc["category"]
         for inp, inp_desc in desc["input"].get("required", {}).items():
@@ -572,7 +591,7 @@ def parse_node():
                 prop = bpy.props.StringProperty(default=inp[1].get("default", ""),
                                                 subtype=subtype,
                                                 update=update)
-            
+
             properties[reg_name] = prop
         spec_properties(properties, nname, ndesc)
         fields = {"init": init,
@@ -706,6 +725,7 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
         row = layout.row()
         if prop in get_icon_path(self.class_type):
             row.template_icon_view(self, prop, show_labels=True, scale_popup=popup_scale, scale=popup_scale)
+
     def setwidth(self: NodeBase, w):
         w = max(self.bl_width_min, w)
         w = min(self.bl_width_max, w)
@@ -820,5 +840,5 @@ def nodes_reg():
 def nodes_unreg():
     try:
         unreg()
-    except:
+    except BaseException:
         ...

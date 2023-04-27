@@ -15,7 +15,7 @@ from threading import Thread
 from subprocess import Popen, PIPE
 from pathlib import Path
 from queue import Queue
-from ..utils import logger
+from ..utils import logger, _T
 from ..timer import Timer
 
 port = 8189
@@ -89,7 +89,7 @@ class TaskManager:
         pref = get_pref()
         model_path = pref.model_path
         if not model_path or not Path(model_path).exists():
-            logger.error("ComfyUI路径不存在")
+            logger.error(_T("ComfyUI路径不存在"))
             return
         logger.debug(f"Update Model Path: {model_path}")
         python = Path(model_path) / "../python_embeded/python.exe"
