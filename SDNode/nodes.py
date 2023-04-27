@@ -85,39 +85,6 @@ def get_fixed_seed():
     return int(random.randrange(4294967294))
 
 
-class UIWrap:
-    def __init__(self, layout: bpy.types.UILayout) -> None:
-        self._layout = layout
-
-    def column(self, *args, **kwargs) -> UIWrap:
-        return UIWrap(self._layout.column(*args, **kwargs))
-
-    def row(self, *args, **kwargs) -> UIWrap:
-        return UIWrap(self._layout.row(*args, **kwargs))
-
-    def box(self, *args, **kwargs) -> UIWrap:
-        return UIWrap(self._layout.box(*args, **kwargs))
-
-    def label(self, *args, **kwargs):
-        kwargs["text_ctxt"] = ctxt
-        return self._layout.label(*args, **kwargs)
-
-    def operator(self, *args, **kwargs):
-        kwargs["text_ctxt"] = ctxt
-        return self._layout.operator(*args, **kwargs)
-
-    def prop(self, data, property, *args, **kwargs):
-        kwargs["text_ctxt"] = ctxt
-        kwargs["text"] = property
-        return self._layout.prop(data, property, *args, **kwargs)
-
-    def template_icon(self, *args, **kwargs):
-        return self._layout.template_icon(*args, **kwargs)
-
-    def template_icon_view(self, *args, **kwargs):
-        return self._layout.template_icon_view(*args, **kwargs)
-
-
 class NodeBase(bpy.types.Node):
     bl_width_min = 200.0
     bl_width_max = 2000.0
@@ -473,9 +440,6 @@ def parse_node():
             self.calc_slot_index()
 
         def draw_buttons(self, context, layout: bpy.types.UILayout):
-            # layout = UIWrap(layout)
-            # if time.time_ns() & 1000 < 800:
-            #     print(time.time_ns())
             for prop in self.__annotations__:
                 if spec_draw(self, context, layout, prop):
                     continue
