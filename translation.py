@@ -74,6 +74,7 @@ other = {
     "  Select mask Objects": "  选中mask物体(可多选)",
     "  Select mask Collections": "  选中mask集合(可多选)",
     "Set Image Path of Render Result(.png)": "设置摄像机渲染图像的保存位置及文件名(.png)，如已设置请忽略",
+    "Saved Title Name -> ": "存储名称",
     # __init__.py
     "Image not found or format error(png only)": "魔法图鉴不存在或格式不正确(仅png)",
     "Execute Node Tree": "运行节点树",
@@ -85,6 +86,7 @@ other = {
     "Append Node Group": "追加节点",
     "Pending / Running": "排队 / 运行",
     "Adjust node tree and try again": "请调整后重新执行节点树",
+    "Preset Image":"魔法图鉴",
     "Load from Image": "加载魔法图鉴",
     "Preset": "法典",
     "exists, Click Ok to Overwrite!": "已存在, 确认将覆盖!",

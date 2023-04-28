@@ -185,7 +185,11 @@ class NodeBase(bpy.types.Node):
         self.pool.discard(self.id)
         self.location[:] = [data["pos"][0], -data["pos"][1]]
         self.width, self.height = [data["size"]["0"], -data["size"]["1"]]
-        self.name = data.get("title", self.name)
+        title = data.get("title", "")
+        if self.class_type in {"KSampler", "KSamplerAdvanced"}:
+            logger.info(_T("Saved Title Name -> ") + title) # do not replace name
+        elif title:
+            self.name = title
         if with_id:
             try:
                 self.id = str(data["id"])

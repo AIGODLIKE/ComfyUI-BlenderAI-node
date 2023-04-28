@@ -86,10 +86,11 @@ class Panel(bpy.types.Panel):
         layout = layout.box()
         qr_num = len(TaskManager.query_server_task().get('queue_running', []))
         qp_num = TaskManager.task_queue.qsize()
-        row = layout.row()
+        row = layout.row(align=True)
         row.alert = True
         row.alignment = "CENTER"
-        row.label(text=f"{_T('Pending / Running')}: {qp_num} / {qr_num}", text_ctxt=ctxt)
+        row.label(text="Pending / Running", text_ctxt=ctxt)
+        row.label(text=f": {qp_num} / {qr_num}", text_ctxt=ctxt)
 
         prog = TaskManager.progress
         if prog and prog.get("value"):
@@ -144,7 +145,7 @@ class Ops(bpy.types.Operator):
             return
         tree.load_json(json.loads(data))
         
-    import_image: bpy.props.StringProperty(name="魔法图鉴", default=str(Path.cwd()), subtype="FILE_PATH", set=import_image_set)
+    import_image: bpy.props.StringProperty(name="Preset Image", default=str(Path.cwd()), subtype="FILE_PATH", set=import_image_set)
 
     def draw(self, context):
         layout = self.layout
