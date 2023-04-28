@@ -176,8 +176,8 @@ lang_text = {
         "T2IAdapterLoader": "文生图适配加载器",
         "StyleModelLoader": "风格模型加载器",
         "CLIPVisionLoader": "CLIP视觉加载器",
-        "VAEDecodeTiled": "VAE平铺化解码",
-        "VAEEncodeTiled": "VAE平铺化编码",
+        "VAEDecodeTiled": "VAE平铺解码",
+        "VAEEncodeTiled": "VAE平铺编码",
         # Other
         "Add Node": "添加节点",
         "Add Group": "添加组",
@@ -369,6 +369,16 @@ lang_text = {
         "detect_face": "检测面部",
         "HypernetworkLoader": "Hypernetwork超网络加载器",
         "hypernetwork_name": "hypernetwork超网络名称",
+        "LineArtPreprocessor": "LineArt艺术线条预处理器",
+        "AnimeLineArtPreprocessor": "AnimeLineArt动漫艺术线条预处理器",
+        "Manga2Anime-LineArtPreprocessor": "Manga2Anime-LineArt漫画转动漫-艺术线条预处理器",
+        "coarse": "粗糙化",
+        "UniFormer-SemSegPreprocessor": "UniFormer-SemSeg语义分割预处理器",
+        "OneFormer-COCO-SemSegPreprocessor": "OneFormer-COCO-SemSeg语义分割预处理器",
+        "OneFormer-ADE20K-SemSegPreprocessor": "OneFormer-ADE20K-SemSeg语义分割预处理器",
+        "tile": "平铺",
+        "TilePreprocessor": "平铺预处理器",
+        "pyrUp_iters": "向上采样迭代",
     }
 }
 cat = {'default_real': None,
