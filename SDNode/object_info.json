@@ -2238,6 +2238,34 @@
     "description": "",
     "category": "preprocessors/color_style"
   },
+  "TilePreprocessor": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ],
+        "pyrUp_iters": [
+          "INT",
+          {
+            "default": 3,
+            "min": 1,
+            "max": 10,
+            "step": 1
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "TilePreprocessor",
+    "display_name": "TilePreprocessor",
+    "description": "",
+    "category": "preprocessors/tile"
+  },
   "输入图像": {
     "input": {
       "required": {

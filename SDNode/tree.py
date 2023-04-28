@@ -121,7 +121,7 @@ class CFNodeTree(NodeTree):
             groups.append(group_info)
 
         data = {
-            "last_node_id": max(*[int(node.id) for node in self.get_nodes()], 0),
+            "last_node_id": max([*[int(node.id) for node in self.get_nodes()], 0]),
             "last_link_id": len(self.links),
             "nodes": nodes_info,
             "links": links,
@@ -130,7 +130,6 @@ class CFNodeTree(NodeTree):
             "extra": {},
             "version": 0.4
         }
-
         # if onSerialize:
         #     onSerialize(data)
 
