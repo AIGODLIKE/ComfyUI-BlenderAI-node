@@ -23,10 +23,10 @@
         ],
         [
             ".pt",
-            ".bin",
-            ".pth",
             ".ckpt",
-            ".safetensors"
+            ".bin",
+            ".safetensors",
+            ".pth"
         ]
     ],
     "vae": [
@@ -35,10 +35,10 @@
         ],
         [
             ".pt",
-            ".bin",
-            ".pth",
             ".ckpt",
-            ".safetensors"
+            ".bin",
+            ".safetensors",
+            ".pth"
         ]
     ],
     "clip": [
@@ -47,10 +47,10 @@
         ],
         [
             ".pt",
-            ".bin",
-            ".pth",
             ".ckpt",
-            ".safetensors"
+            ".bin",
+            ".safetensors",
+            ".pth"
         ]
     ],
     "clip_vision": [
@@ -59,10 +59,10 @@
         ],
         [
             ".pt",
-            ".bin",
-            ".pth",
             ".ckpt",
-            ".safetensors"
+            ".bin",
+            ".safetensors",
+            ".pth"
         ]
     ],
     "style_models": [
@@ -71,10 +71,10 @@
         ],
         [
             ".pt",
-            ".bin",
-            ".pth",
             ".ckpt",
-            ".safetensors"
+            ".bin",
+            ".safetensors",
+            ".pth"
         ]
     ],
     "embeddings": [
@@ -83,10 +83,10 @@
         ],
         [
             ".pt",
-            ".bin",
-            ".pth",
             ".ckpt",
-            ".safetensors"
+            ".bin",
+            ".safetensors",
+            ".pth"
         ]
     ],
     "diffusers": [
@@ -104,10 +104,10 @@
         ],
         [
             ".pt",
-            ".bin",
-            ".pth",
             ".ckpt",
-            ".safetensors"
+            ".bin",
+            ".safetensors",
+            ".pth"
         ]
     ],
     "gligen": [
@@ -116,10 +116,10 @@
         ],
         [
             ".pt",
-            ".bin",
-            ".pth",
             ".ckpt",
-            ".safetensors"
+            ".bin",
+            ".safetensors",
+            ".pth"
         ]
     ],
     "upscale_models": [
@@ -128,10 +128,10 @@
         ],
         [
             ".pt",
-            ".bin",
-            ".pth",
             ".ckpt",
-            ".safetensors"
+            ".bin",
+            ".safetensors",
+            ".pth"
         ]
     ],
     "custom_nodes": [
@@ -146,10 +146,10 @@
         ],
         [
             ".pt",
-            ".bin",
-            ".pth",
             ".ckpt",
-            ".safetensors"
+            ".bin",
+            ".safetensors",
+            ".pth"
         ]
     ]
 }
