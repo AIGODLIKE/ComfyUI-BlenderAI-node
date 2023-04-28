@@ -5,6 +5,7 @@ from .translation import lang_text
 
 translation = {}
 
+
 def _T(word):
     import bpy
     from .timer import Timer
@@ -55,6 +56,18 @@ def hex2rgb(hex_val):
     return r, g, b
 
 
+def to_str(path: Path):
+    if isinstance(path, Path):
+        return path.as_posix()
+    return path
+
+
+def to_path(path: Path):
+    if isinstance(path, Path):
+        return path
+    return Path(path)
+
+
 class MetaIn(type):
     def __contains__(self, name):
         return name in Icon.PREV_DICT
@@ -70,7 +83,7 @@ class Icon(metaclass=MetaIn):
 
     def __init__(self) -> None:
         if Icon.NONE_IMAGE and Icon.NONE_IMAGE not in Icon:
-            Icon.NONE_IMAGE = str(Icon.NONE_IMAGE)
+            Icon.NONE_IMAGE = to_str(Icon.NONE_IMAGE)
             self.reg_icon(Icon.NONE_IMAGE)
 
     def __new__(cls, *args, **kwargs):
@@ -91,7 +104,8 @@ class Icon(metaclass=MetaIn):
 
     @staticmethod
     def try_mark_image(path) -> bool:
-        p = Path(path)
+        p = to_path(path)
+        path = to_str(path)
         if not p.exists():
             return False
         if Icon.IMG_STATUS.get(path, -1) == p.stat().st_mtime_ns:
@@ -100,14 +114,16 @@ class Icon(metaclass=MetaIn):
 
     @staticmethod
     def can_mark_image(path) -> bool:
-        if not Icon.try_mark_image(path):
+        p = to_path(path)
+        path = to_str(path)
+        if not Icon.try_mark_image(p):
             return False
-        p = Path(path)
         Icon.IMG_STATUS[path] = p.stat().st_mtime_ns
         return True
 
     @staticmethod
     def can_mark_pixel(prev, name) -> bool:
+        name = to_str(name)
         if Icon.IMG_STATUS.get(name) == hash(prev.pixels):
             return False
         Icon.IMG_STATUS[name] = hash(prev.pixels)
@@ -115,20 +131,22 @@ class Icon(metaclass=MetaIn):
 
     @staticmethod
     def remove_mark(name) -> bool:
+        name = to_str(name)
         Icon.IMG_STATUS.pop(name)
         Icon.PREV_DICT.pop(name)
         return True
 
     @staticmethod
-    def reg_none(none):
-        if not none or none in Icon:
+    def reg_none(none: Path):
+        none = to_str(none)
+        if none in Icon:
             return
-        Icon.NONE_IMAGE = str(none)
+        Icon.NONE_IMAGE = none
         Icon.reg_icon(Icon.NONE_IMAGE)
 
     @staticmethod
     def reg_icon(path):
-        path = str(path)
+        path = to_str(path)
         if not Icon.can_mark_image(path):
             return Icon[path]
         if Icon.ENABLE_HQ_PREVIEW:
@@ -146,24 +164,26 @@ class Icon(metaclass=MetaIn):
     @staticmethod
     def reg_icon_hq(path):
         import bpy
-        p = Path(path)
-        if str(path) in Icon:
+        p = to_path(path)
+        path = to_str(path)
+        if path in Icon:
             return
         if p.exists() and p.suffix in {".png", ".jpg", ".jpeg"}:
-            img = bpy.data.images.load(str(path))
-            Icon.reg_icon_by_pixel(img, str(path))
+            img = bpy.data.images.load(path)
+            Icon.reg_icon_by_pixel(img, path)
             bpy.data.images.remove(img)
 
     @staticmethod
     def load_icon(path):
-        path = str(path)
+        p = to_path(path)
+        path = to_str(path)
+        
         if not Icon.can_mark_image(path):
             return
         import bpy
-        p = Path(path)
         if p.name[:63] not in bpy.data.images:
             if p.suffix in {".png", ".jpg", ".jpeg"}:
-                bpy.data.images.load(str(path))
+                bpy.data.images.load(path)
         else:
             img = bpy.data.images[p.name[:63]]
             Icon.update_icon_pixel(img.name, img)
@@ -180,8 +200,8 @@ class Icon(metaclass=MetaIn):
         p.image_pixels_float[:] = prev.pixels[:]
 
     @staticmethod
-    def get_icon_id(name):
-        p = Icon.PREV_DICT.get(name, None)
+    def get_icon_id(name: Path):
+        p = Icon.PREV_DICT.get(to_str(name), None)
         if not p:
             p = Icon.PREV_DICT.get(Icon.NONE_IMAGE, None)
         return p.icon_id if p else 0
@@ -207,10 +227,10 @@ class Icon(metaclass=MetaIn):
         return Icon.get_icon_id(name)
 
     def __contains__(self, name):
-        return name in Icon.PREV_DICT
+        return to_str(name) in Icon.PREV_DICT
 
     def __class_contains__(cls, name):
-        return name in Icon.PREV_DICT
+        return to_str(name) in Icon.PREV_DICT
 
 
 class PngParse:

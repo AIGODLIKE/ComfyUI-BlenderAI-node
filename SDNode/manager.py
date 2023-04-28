@@ -69,7 +69,8 @@ class TaskManager:
             except psutil.NoSuchProcess:
                 return
         else:
-            os.kill(pid, signal.SIGKILL)
+            ...
+            # os.kill(pid, signal.SIGKILL)
         logger.error(f"{_T('Kill Last ComfyUI Process')} id -> {pid}")
 
     def run_server():

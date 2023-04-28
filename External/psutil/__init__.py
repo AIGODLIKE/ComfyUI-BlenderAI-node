@@ -7,5 +7,5 @@ elif platform.sys.platform == "darwin":
         from . import psutil_macosx_arm64 as psutil
     else:
         from . import psutil_macosx_x86_64 as psutil
-else:
+elif platform.system() == "Linux":
     from . import psutil_linux_x86_64 as psutil

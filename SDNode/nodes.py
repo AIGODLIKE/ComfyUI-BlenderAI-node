@@ -466,7 +466,7 @@ def parse_node():
                 if file.suffix not in {".png", ".jpg", ".jpeg"}:
                     continue
                 # logger.info(f"🌟 Found Icon -> {file.name}")
-                return Icon.reg_icon(str(file.absolute()))
+                return Icon.reg_icon(file.absolute())
             # logger.info(f"🌚 No Icon <- {file.name}")
             return Icon["NONE"]
 
