@@ -16,7 +16,7 @@ from functools import partial
 from threading import Thread
 from mathutils import Vector
 from .translation import translations_dict, ctxt
-from .utils import logger, Icon, PngParse
+from .utils import logger, Icon, PngParse, _T
 from .SDNode import rtnode_reg, rtnode_unreg, TaskManager, Task
 from .timer import Timer, timer_reg, timer_unreg
 from .preference import AddonPreference, get_pref
@@ -50,35 +50,35 @@ class Panel(bpy.types.Panel):
         scale_popup = get_pref().popup_scale
         layout = self.layout
         
-        layout.operator(Ops.bl_idname, text="运行节点树", text_ctxt=ctxt).action = "Submit"
+        layout.operator(Ops.bl_idname, text="Execute Node Tree", text_ctxt=ctxt).action = "Submit"
         self.show_progress(layout)
         box = layout.box()
         row = box.row()
-        row.label(text="节点树", text_ctxt=ctxt)
+        row.label(text="Node Tree", text_ctxt=ctxt)
         row.prop(bpy.context.scene.sdn, "open_presets_dir", text="", icon="FILEBROWSER", text_ctxt=ctxt)
         col = box.column(align=True)
         col.prop(bpy.context.scene.sdn, "presets_dir", text="", text_ctxt=ctxt)
         col.template_icon_view(bpy.context.scene.sdn, "presets", show_labels=True, scale_popup=scale_popup, scale=scale_popup)
         # col.prop(bpy.context.scene.sdn, "presets", text="")
         row = col.row(align=True)
-        row.operator(Ops.bl_idname, text="保存", text_ctxt=ctxt).action = "Save"
-        row.operator(Ops.bl_idname, text="删除", text_ctxt=ctxt).action = "Del"
+        row.operator(Ops.bl_idname, text="Save", text_ctxt=ctxt).action = "Save"
+        row.operator(Ops.bl_idname, text="Delete", text_ctxt=ctxt).action = "Del"
         rrow = col.row(align=True)
-        rrow.operator(Ops.bl_idname, text="替换节点树", text_ctxt=ctxt).action = "Load"
+        rrow.operator(Ops.bl_idname, text="Replace Node Tree", text_ctxt=ctxt).action = "Load"
         rrow.operator(Ops.bl_idname, text="", icon="TEXTURE", text_ctxt=ctxt).action = "Preset_from_Image"
         
         box = layout.box()
         row = box.row()
-        row.label(text="节点", text_ctxt=ctxt)
+        row.label(text="Node Group", text_ctxt=ctxt)
         row.prop(bpy.context.scene.sdn, "open_groups_dir", text="", icon="FILEBROWSER", text_ctxt=ctxt)
         col = box.column(align=True)
         col.prop(bpy.context.scene.sdn, "groups_dir", text="", text_ctxt=ctxt)
         col.template_icon_view(bpy.context.scene.sdn, "groups", show_labels=True, scale_popup=scale_popup, scale=scale_popup)
         # col.prop(bpy.context.scene.sdn, "groups", text="")
         row = col.row(align=True)
-        row.operator(Ops.bl_idname, text="保存", text_ctxt=ctxt).action = "SaveGroup"
-        row.operator(Ops.bl_idname, text="删除", text_ctxt=ctxt).action = "DelGroup"
-        col.operator(Ops.bl_idname, text="追加节点", text_ctxt=ctxt).action = "LoadGroup"
+        row.operator(Ops.bl_idname, text="Save", text_ctxt=ctxt).action = "SaveGroup"
+        row.operator(Ops.bl_idname, text="Delete", text_ctxt=ctxt).action = "DelGroup"
+        col.operator(Ops.bl_idname, text="Append Node Group", text_ctxt=ctxt).action = "LoadGroup"
 
 
 
@@ -89,7 +89,7 @@ class Panel(bpy.types.Panel):
         row = layout.row()
         row.alert = True
         row.alignment = "CENTER"
-        row.label(text=f"排队 / 运行: {qp_num} / {qr_num}", text_ctxt=ctxt)
+        row.label(text=f"{_T('Pending / Running')}: {qp_num} / {qr_num}", text_ctxt=ctxt)
 
         prog = TaskManager.progress
         if prog and prog.get("value"):
@@ -111,7 +111,7 @@ class Panel(bpy.types.Panel):
             row = layout.box().row()
             row.alignment = "CENTER"
             row.alert = True
-            row.label(text="请调整后重新执行节点树", text_ctxt=ctxt)
+            row.label(text="Adjust node tree and try again", text_ctxt=ctxt)
 
 class Ops(bpy.types.Operator):
     bl_idname = "sdn.ops"
@@ -126,13 +126,13 @@ class Ops(bpy.types.Operator):
                     properties: bpy.types.OperatorProperties) -> str:
         desc = "SD Node"
         if properties.get("action") == "Preset_from_Image":
-            desc = "加载魔法图鉴"
+            desc = "Load from Image"
         return desc
     
     def import_image_set(self, value):
         png = Path(value)
         if not png.exists() or png.suffix != ".png":
-            logger.error("魔法图鉴不存在或格式不正确(仅png)")
+            logger.error(_T("Image not found or format error(png only)"))
             logger.error(str(png))
             logger.error(png.cwd())
             return
@@ -151,26 +151,26 @@ class Ops(bpy.types.Operator):
         if self.action == "Save":
             if (Path(bpy.context.scene.sdn.presets_dir) / f"{self.save_name}.json").exists():
                 layout.alert = True
-                layout.label(text=f"法典<{self.save_name}>已存在, 确认将覆盖!", icon="ERROR", text_ctxt=ctxt)
-                layout.label(text=f"单击空白处取消!", icon="ERROR", text_ctxt=ctxt)
+                layout.label(text=f"{_T('Preset')}<{self.save_name}>{_T('exists, Click Ok to Overwrite!')}", icon="ERROR", text_ctxt=ctxt)
+                layout.label(text="Click Outside to Cancel!", icon="ERROR", text_ctxt=ctxt)
             layout.prop(self, "save_name", text_ctxt=ctxt)
         if self.action == "SaveGroup":
             if (Path(bpy.context.scene.sdn.groups_dir) / f"{self.save_name}.json").exists():
                 layout.alert = True
-                layout.label(text=f"法典<{self.save_name}>已存在, 确认将覆盖!", icon="ERROR", text_ctxt=ctxt)
-                layout.label(text=f"单击空白处取消!", icon="ERROR", text_ctxt=ctxt)
+                layout.label(text=f"{_T('Preset')}<{self.save_name}>{_T('exists, Click Ok to Overwrite!')}", icon="ERROR", text_ctxt=ctxt)
+                layout.label(text="Click Outside to Cancel!", icon="ERROR", text_ctxt=ctxt)
             layout.prop(self, "save_name", text_ctxt=ctxt)
 
         if self.action == "Del":
             layout.alert = True
-            layout.label(text=f"法典<{Path(bpy.context.scene.sdn.presets).stem}>即将消亡?", icon="ERROR", text_ctxt=ctxt)
-            layout.label(text=f"单击空白处取消!", icon="ERROR", text_ctxt=ctxt)
+            layout.label(text=f"{_T('Preset')}<{Path(bpy.context.scene.sdn.presets).stem}>{_T('will be removed?')}", icon="ERROR", text_ctxt=ctxt)
+            layout.label(text="Click Outside to Cancel!", icon="ERROR", text_ctxt=ctxt)
         if self.action == "DelGroup":
             layout.alert = True
-            layout.label(text=f"法典<{Path(bpy.context.scene.sdn.groups).stem}>即将消亡?", icon="ERROR", text_ctxt=ctxt)
-            layout.label(text=f"单击空白处取消!", icon="ERROR", text_ctxt=ctxt)
+            layout.label(text=f"{_T('Preset')}<{Path(bpy.context.scene.sdn.groups).stem}>{_T('will be removed?')}", icon="ERROR", text_ctxt=ctxt)
+            layout.label(text="Click Outside to Cancel!", icon="ERROR", text_ctxt=ctxt)
         if self.action == "Preset_from_Image":
-            layout.label(text=f"点击文件夹图标选择魔法图鉴:", text_ctxt=ctxt)
+            layout.label(text="Click Folder Icon to Select Image:", text_ctxt=ctxt)
             layout.prop(self, "import_image", text_ctxt=ctxt)
             
     def invoke(self, context, event: bpy.types.Event):
@@ -179,12 +179,12 @@ class Ops(bpy.types.Operator):
         self.init_pos = context.space_data.cursor_location.copy()
         if self.action in {"Load", "Del"}:
             if not bpy.context.scene.sdn.presets:
-                self.report({"ERROR"}, "没有选择法典!")
+                self.report({"ERROR"}, _T("Preset Not Selected!"))
                 return {"FINISHED"}
 
         if self.action in {"LoadGroup", "DelGroup"}:
             if not bpy.context.scene.sdn.groups:
-                self.report({"ERROR"}, "没有选择法典!")
+                self.report({"ERROR"}, _T("Preset Not Selected!"))
                 return {"FINISHED"}
 
         wm = bpy.context.window_manager
@@ -206,7 +206,7 @@ class Ops(bpy.types.Operator):
         elif self.action == "Save":
             data = tree.save_json()
             if not self.save_name:
-                self.report({"ERROR"}, "无效的法典名!")
+                self.report({"ERROR"}, _T("Invalid Preset Name!"))
                 return {"CANCELLED"}
             file = Path(bpy.context.scene.sdn.presets_dir) / f"{self.save_name}.json"
             with open(file, "w") as f:
@@ -215,22 +215,22 @@ class Ops(bpy.types.Operator):
             
         elif self.action == "Del":
             if not bpy.context.scene.sdn.presets:
-                self.report({"ERROR"}, "没有选择法典!")
+                self.report({"ERROR"}, _T("Preset Not Selected!"))
                 return {"FINISHED"}
             preset = Path(bpy.context.scene.sdn.presets)
             preset.unlink()
-            self.report({"INFO"}, f"{preset.stem} 移除成功")
+            self.report({"INFO"}, f"{preset.stem} {_T('Removed')}")
             Prop.mark_dirty()
         elif self.action == "Load":
             if not bpy.context.scene.sdn.presets:
-                self.report({"ERROR"}, "没有选择法典!")
+                self.report({"ERROR"}, _T("Preset Not Selected!"))
                 return {"FINISHED"}
             tree.load_json(json.load(open(bpy.context.scene.sdn.presets)))
 
         elif self.action == "SaveGroup":
             data = tree.save_json_group()
             if not self.save_name:
-                self.report({"ERROR"}, "无效的法典名!")
+                self.report({"ERROR"}, _T("Invalid Preset Name!"))
                 return {"CANCELLED"}
             file = Path(bpy.context.scene.sdn.groups_dir) / f"{self.save_name}.json"
             with open(file, "w") as f:
@@ -238,15 +238,15 @@ class Ops(bpy.types.Operator):
             Prop.mark_dirty()
         elif self.action == "DelGroup":
             if not bpy.context.scene.sdn.groups:
-                self.report({"ERROR"}, "没有选择法典!")
+                self.report({"ERROR"}, _T("Preset Not Selected!"))
                 return {"FINISHED"}
             preset = Path(bpy.context.scene.sdn.groups)
             preset.unlink()
-            self.report({"INFO"}, f"{preset.stem} 移除成功")
+            self.report({"INFO"}, f"{preset.stem} {_T('Removed')}")
             Prop.mark_dirty()
         elif self.action == "LoadGroup":
             if not bpy.context.scene.sdn.groups:
-                self.report({"ERROR"}, "没有选择法典!")
+                self.report({"ERROR"}, _T("Preset Not Selected!"))
                 return {"FINISHED"}
             select_nodes = tree.load_json_group(json.load(open(bpy.context.scene.sdn.groups)))
             if not select_nodes:
@@ -337,7 +337,7 @@ class Prop(bpy.types.PropertyGroup):
             self.open_presets_dir = False
             os.startfile(str(PRESETS_DIR))
 
-    open_presets_dir: bpy.props.BoolProperty(default=False, name="打开节点预设文件夹", update=update_open_presets_dir)
+    open_presets_dir: bpy.props.BoolProperty(default=False, name="Open NodeGroup Presets Folder", update=update_open_presets_dir)
 
     def groups_dir_items(self, context):
         items = []
@@ -374,7 +374,7 @@ class Prop(bpy.types.PropertyGroup):
             self.open_groups_dir = False
             os.startfile(str(GROUPS_DIR))
 
-    open_groups_dir: bpy.props.BoolProperty(default=False, name="打开节点树预设文件夹", update=update_open_groups_dir)
+    open_groups_dir: bpy.props.BoolProperty(default=False, name="Open NodeTree Presets Folder", update=update_open_groups_dir)
 
     def open_pref_update(self, context):
         if self.open_pref:
@@ -395,22 +395,22 @@ class Prop(bpy.types.PropertyGroup):
                 if mod.__name__ == package:
                     if not mod.bl_info['show_expanded']:
                         bpy.ops.preferences.addon_expand(module=package)
-    open_pref: bpy.props.BoolProperty(default=False, name="打开插件设置", update=open_pref_update)
+    open_pref: bpy.props.BoolProperty(default=False, name="Open Addon Preference", update=open_pref_update)
 
     def restart_webui_update(self, context):
         if self["restart_webui"]:
             self["restart_webui"] = False
             bpy.ops.sdn.ops(action="Restart")
-    restart_webui: bpy.props.BoolProperty(default=False, update=restart_webui_update, name="重启ComfyUI")
+    restart_webui: bpy.props.BoolProperty(default=False, update=restart_webui_update, name="Restart ComfyUI")
 
     def open_webui_update(self, context):
         if self["open_webui"]:
             self["open_webui"] = False
             from .SDNode.manager import url
             bpy.ops.wm.url_open(url=url)
-    open_webui: bpy.props.BoolProperty(default=False, update=open_webui_update, name="打开ComfyUI")
+    open_webui: bpy.props.BoolProperty(default=False, update=open_webui_update, name="Launch ComfyUI")
 
-    rand_all_seed: bpy.props.BoolProperty(default=False, name="随机所有")
+    rand_all_seed: bpy.props.BoolProperty(default=False, name="Random All")
 
 
 clss = [Panel, Ops, Prop, AddonPreference]

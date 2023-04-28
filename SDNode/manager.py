@@ -70,7 +70,7 @@ class TaskManager:
                 return
         else:
             os.kill(pid, signal.SIGKILL)
-        logger.error(f"Kill Last ComfyUI Process {pid}")
+        logger.error(f"{_T('Kill Last ComfyUI Process')} id -> {pid}")
 
     def run_server():
         from .tree import rtnode_reg, rtnode_unreg
@@ -89,14 +89,14 @@ class TaskManager:
         pref = get_pref()
         model_path = pref.model_path
         if not model_path or not Path(model_path).exists():
-            logger.error(_T("ComfyUI路径不存在"))
+            logger.error(_T("ComfyUI Path Not Found"))
             return
-        logger.debug(f"Update Model Path: {model_path}")
+        logger.debug(f"{_T('Model Path')}: {model_path}")
         python = Path(model_path) / "../python_embeded/python.exe"
-        logger.warn("Server Launching")
+        logger.warn(_T("Server Launching"))
         if not python.exists():
-            logger.error("未找到 python解释器:")
-            logger.error("   ↳请确保python_embeded文件夹存放于ComfyUI路径同级目录:")
+            logger.error(f"{_T('python interpreter not found')}:")
+            logger.error(f"   ↳{_T('Ensure that the python_embeded located in the same level as ComfyUI dir')}:")
             logger.error("      SomeDirectory")
             logger.error("      ├─ ComfyUI")
             logger.error("      ├─ python_embeded")
@@ -174,7 +174,7 @@ a111:
                 # logger.info(line)
                 # print(re.findall("\|(.*?)[", line.decode("gbk")))
                 if b"CUDA out of memory" in line:
-                    TaskManager.put_error_msg("错误:显存不足, 请重启blender")
+                    TaskManager.put_error_msg(f"{_T('Error: Out of VRam, try restart blender')}")
                 proc = re.findall("[█ ]\\| (.*?) \\[", line.decode("gbk"))
                 if not proc:
                     # content = line.decode("gbk").replace("██", "=").replace("  ", " ")
@@ -197,7 +197,7 @@ a111:
             except requests.exceptions.ConnectionError:
                 ...
             time.sleep(0.5)
-        logger.warn("Server Launched")
+        logger.warn(_T("Server Launched"))
         atexit.register(p.kill)
 
         Thread(target=TaskManager.poll_task, daemon=True).start()
@@ -216,16 +216,16 @@ a111:
         TaskManager.run_server()
 
     def push_task(task):
-        logger.debug("Add Task")
+        logger.debug(_T('Add Task'))
         if TaskManager.pid == -1:
-            TaskManager.put_error_msg("服务未启动, 任务添加失败")
-            TaskManager.put_error_msg("请检查ComfyUI路径")
-            logger.error("服务未启动")
+            TaskManager.put_error_msg(_T("Server Not Launched, Add Task Failed"))
+            TaskManager.put_error_msg(_T("Please Check ComfyUI Directory"))
+            logger.error(_T("Server Not Launched"))
             return
         TaskManager.task_queue.put(Task(task))
 
     def push_res(res):
-        logger.debug("Add Result")
+        logger.debug(_T("Add Result"))
         TaskManager.cur_task.res = res
         TaskManager.res_queue.put(TaskManager.cur_task)
 
@@ -253,7 +253,7 @@ a111:
                 continue
             task = TaskManager.task_queue.get()
             TaskManager.progress = {'value': 0, 'max': 1}
-            logger.debug("Submit Task")
+            logger.debug(_T("Submit Task"))
             TaskManager.cur_task = task
             TaskManager.submit(task.task)
 
@@ -289,10 +289,10 @@ a111:
                 try:
                     request.urlopen(req)
                 except request.HTTPError:
-                    TaskManager.put_error_msg("无效节点连接")
+                    TaskManager.put_error_msg(_T("Invalid Node Connection"))
                     TaskManager.mark_finished()
                 except URLError:
-                    TaskManager.put_error_msg("服务未启动")
+                    TaskManager.put_error_msg(_T("Server Not Launched"))
                     TaskManager.mark_finished(with_noexe=False)
             else:
                 ...
@@ -303,18 +303,18 @@ a111:
         TaskManager.progress = {}
         TaskManager.cur_task = None
         if not TaskManager.execute_status_record and with_noexe:
-            TaskManager.put_error_msg("节点树未被执行, 可能原因:")
-            TaskManager.put_error_msg("    1.参数未变更")
-            TaskManager.put_error_msg("    2.输入图像错误")
-            TaskManager.put_error_msg("    3.节点连接错误")
-            TaskManager.put_error_msg("    4.服务未启动")
+            TaskManager.put_error_msg(_T("Node Tree Not Executed, May Caused by:"))
+            TaskManager.put_error_msg(f"    1.{_T('Params Not Changed')}")
+            TaskManager.put_error_msg(f"    2.{_T('Input Image Error')}")
+            TaskManager.put_error_msg(f"    3.{_T('Node Connection Error')}")
+            TaskManager.put_error_msg(f"    4.{_T('Server Not Launched')}")
         TaskManager.execute_status_record.clear()
 
     def proc_res():
         while True:
             time.sleep(0.1)
             task = TaskManager.res_queue.get()
-            logger.debug("Proc Resutl")
+            logger.debug(_T("Proc Resutl"))
             node = task.res["node"]
             prompt = task.task["prompt"]
             if node in prompt:
@@ -363,7 +363,7 @@ a111:
             elif mtype == "executed":
                 {"node": "9", "output": {"images": ["ComfyUI_00028_.png"]}}
                 tm.push_res(data)
-                logger.warn(f"Ran Node: {data['node']}", )
+                logger.warn(f"{_T('Ran Node')}: {data['node']}", )
             else:
                 logger.error(message)
 

@@ -35,12 +35,12 @@ class Timer:
             def wrap_job(q):
                 q.put(func(*args, **kwargs))
 
-            Timer.TimerQueue.put((wrap_job, q))
+            Timer.put((wrap_job, q))
             return q.get()
         return wrap
 
     def reg():
-        bpy.app.timers.register(Timer.run, persistent=True)
+        bpy.app.timers.register(Timer.run, persistent=True, first_interval=0.1)
 
     def unreg():
         Timer.clear()

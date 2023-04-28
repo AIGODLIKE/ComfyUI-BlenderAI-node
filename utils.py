@@ -1,16 +1,34 @@
 import struct
 from pathlib import Path
-from bpy.app.translations import pgettext as _T
 from .kclogger import logger
+from .translation import lang_text
+
+translation = {}
+
+def _T(word):
+    import bpy
+    from .timer import Timer
+    from bpy.app.translations import pgettext
+    locale = bpy.context.preferences.view.language
+    culture = translation.setdefault(locale, {})
+    if t := culture.get(word):
+        return t
+
+    def f(word):
+        culture[word] = pgettext(word)
+    Timer.put((f, word))
+    return lang_text.get(locale, {}).get(word, word)
+
 
 def update_screen():
     try:
         import bpy
         for area in bpy.context.screen.areas:
             area.tag_redraw()
-    except:
+    except BaseException:
         ...
-        
+
+
 def clear_cache(d=None):
     from pathlib import Path
     from shutil import rmtree
@@ -94,13 +112,13 @@ class Icon(metaclass=MetaIn):
             return False
         Icon.IMG_STATUS[name] = hash(prev.pixels)
         return True
-    
+
     @staticmethod
     def remove_mark(name) -> bool:
         Icon.IMG_STATUS.pop(name)
         Icon.PREV_DICT.pop(name)
         return True
-    
+
     @staticmethod
     def reg_none(none):
         if not none or none in Icon:
