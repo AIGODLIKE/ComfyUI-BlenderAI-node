@@ -4,7 +4,6 @@ from ..utils import logger
 
 SELECTED_COLLECTIONS = []
 
-
 def gen_mask(self):
     mode = self.mode
     mask_path = self.image

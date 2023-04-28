@@ -1799,6 +1799,72 @@
     "description": "",
     "category": "preprocessors/edge_line"
   },
+  "LineArtPreprocessor": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ],
+        "coarse": [
+          [
+            "disable",
+            "enable"
+          ],
+          {
+            "default": "disable"
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "LineArtPreprocessor",
+    "display_name": "LineArtPreprocessor",
+    "description": "",
+    "category": "preprocessors/edge_line"
+  },
+  "AnimeLineArtPreprocessor": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "AnimeLineArtPreprocessor",
+    "display_name": "AnimeLineArtPreprocessor",
+    "description": "",
+    "category": "preprocessors/edge_line"
+  },
+  "Manga2Anime-LineArtPreprocessor": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "Manga2Anime-LineArtPreprocessor",
+    "display_name": "Manga2Anime-LineArtPreprocessor",
+    "description": "",
+    "category": "preprocessors/edge_line"
+  },
   "MiDaS-DepthMapPreprocessor": {
     "input": {
       "required": {
@@ -2059,6 +2125,63 @@
     "description": "",
     "category": "preprocessors/semseg"
   },
+  "UniFormer-SemSegPreprocessor": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "UniFormer-SemSegPreprocessor",
+    "display_name": "UniFormer-SemSegPreprocessor",
+    "description": "",
+    "category": "preprocessors/semseg"
+  },
+  "OneFormer-COCO-SemSegPreprocessor": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "OneFormer-COCO-SemSegPreprocessor",
+    "display_name": "OneFormer-COCO-SemSegPreprocessor",
+    "description": "",
+    "category": "preprocessors/semseg"
+  },
+  "OneFormer-ADE20K-SemSegPreprocessor": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "OneFormer-ADE20K-SemSegPreprocessor",
+    "display_name": "OneFormer-ADE20K-SemSegPreprocessor",
+    "description": "",
+    "category": "preprocessors/semseg"
+  },
   "MediaPipe-FaceMeshPreprocessor": {
     "input": {
       "required": {
@@ -2114,6 +2237,34 @@
     "display_name": "ColorPreprocessor",
     "description": "",
     "category": "preprocessors/color_style"
+  },
+  "TilePreprocessor": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ],
+        "pyrUp_iters": [
+          "INT",
+          {
+            "default": 3,
+            "min": 1,
+            "max": 10,
+            "step": 1
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "TilePreprocessor",
+    "display_name": "TilePreprocessor",
+    "description": "",
+    "category": "preprocessors/tile"
   },
   "输入图像": {
     "input": {

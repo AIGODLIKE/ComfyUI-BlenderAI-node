@@ -85,39 +85,6 @@ def get_fixed_seed():
     return int(random.randrange(4294967294))
 
 
-class UIWrap:
-    def __init__(self, layout: bpy.types.UILayout) -> None:
-        self._layout = layout
-
-    def column(self, *args, **kwargs) -> UIWrap:
-        return UIWrap(self._layout.column(*args, **kwargs))
-
-    def row(self, *args, **kwargs) -> UIWrap:
-        return UIWrap(self._layout.row(*args, **kwargs))
-
-    def box(self, *args, **kwargs) -> UIWrap:
-        return UIWrap(self._layout.box(*args, **kwargs))
-
-    def label(self, *args, **kwargs):
-        kwargs["text_ctxt"] = ctxt
-        return self._layout.label(*args, **kwargs)
-
-    def operator(self, *args, **kwargs):
-        kwargs["text_ctxt"] = ctxt
-        return self._layout.operator(*args, **kwargs)
-
-    def prop(self, data, property, *args, **kwargs):
-        kwargs["text_ctxt"] = ctxt
-        kwargs["text"] = property
-        return self._layout.prop(data, property, *args, **kwargs)
-
-    def template_icon(self, *args, **kwargs):
-        return self._layout.template_icon(*args, **kwargs)
-
-    def template_icon_view(self, *args, **kwargs):
-        return self._layout.template_icon_view(*args, **kwargs)
-
-
 class NodeBase(bpy.types.Node):
     bl_width_min = 200.0
     bl_width_max = 2000.0
@@ -218,7 +185,11 @@ class NodeBase(bpy.types.Node):
         self.pool.discard(self.id)
         self.location[:] = [data["pos"][0], -data["pos"][1]]
         self.width, self.height = [data["size"]["0"], -data["size"]["1"]]
-        self.name = data.get("title", self.name)
+        title = data.get("title", "")
+        if self.class_type in {"KSampler", "KSamplerAdvanced"}:
+            logger.info(_T("Saved Title Name -> ") + title) # do not replace name
+        elif title:
+            self.name = title
         if with_id:
             try:
                 self.id = str(data["id"])
@@ -240,13 +211,13 @@ class NodeBase(bpy.types.Node):
                 if inp_name in {"seed", "noise_seed"}:
                     setattr(self, reg_name, str(v))
                 elif (enum := re.findall(' enum "(.*?)" not found', str(e), re.S)):
-                    logger.warn(f"{_T('|IGNORED|')} {self.class_type} -> {inp_name} -> 未找到项: {enum[0]}")
+                    logger.warn(f"{_T('|IGNORED|')} {self.class_type} -> {inp_name} -> {_T('Not Found Item')}: {enum[0]}")
                 else:
                     logger.error(f"|{e}|")
             except IndexError:
-                logger.info(f"{_T('|IGNORED|')} -> 载入<{self.class_type}>参数与当前节点不匹配")
+                logger.info(f"{_T('|IGNORED|')} -> {_T('Load')}<{self.class_type}>{_T('Params not matching with current node')}")
             except Exception as e:
-                logger.error(f"参数载入错误 {self.class_type} -> {self.class_type}.{inp_name}")
+                logger.error(f"{_T('Params Loading Error')} {self.class_type} -> {self.class_type}.{inp_name}")
                 logger.error(f" -> {e}")
 
     def dump(self):
@@ -341,7 +312,7 @@ class SocketBase(bpy.types.NodeSocket):
         # 连接限制
         for link in list(self.links):
             if link.from_node.bl_label not in self.allowLink:
-                logger.warn(f"Remove Link:{link.from_node.bl_label}",)
+                logger.warn(f"{_T('Remove Link')}:{link.from_node.bl_label}",)
                 context.space_data.edit_tree.links.remove(link)
 
     color: bpy.props.FloatVectorProperty(size=4, default=(1, 0, 0, 1))
@@ -364,7 +335,7 @@ class GetSelCol(bpy.types.Operator):
 
 
 def parse_node():
-    logger.warn("Parsing Node Start")
+    logger.warn(_T("Parsing Node Start"))
     path = Path(__file__).parent / "object_info.json"
     try:
         import requests
@@ -374,7 +345,7 @@ def parse_node():
         object_info = req.json()
         path.write_text(json.dumps(object_info, ensure_ascii=False, indent=2))
     except requests.exceptions.ConnectionError:
-        logger.warn(f"服务启动失败")
+        logger.warn(_T("Server Launch Failed"))
         object_info = json.load(path.open("r"))
 
     nodetree_desc = {}
@@ -452,7 +423,7 @@ def parse_node():
             for index, inp_name in enumerate(self.inp_types):
                 inp = self.inp_types[inp_name]
                 if not inp:
-                    logger.error("None Input: %s", inp)
+                    logger.error(f"{_T('None Input')}: %s", inp)
                     continue
                 socket = inp[0]
                 if isinstance(inp[0], list):
@@ -473,9 +444,6 @@ def parse_node():
             self.calc_slot_index()
 
         def draw_buttons(self, context, layout: bpy.types.UILayout):
-            # layout = UIWrap(layout)
-            # if time.time_ns() & 1000 < 800:
-            #     print(time.time_ns())
             for prop in self.__annotations__:
                 if spec_draw(self, context, layout, prop):
                     continue
@@ -498,7 +466,7 @@ def parse_node():
                 if file.suffix not in {".png", ".jpg", ".jpeg"}:
                     continue
                 # logger.info(f"🌟 Found Icon -> {file.name}")
-                return Icon.reg_icon(str(file.absolute()))
+                return Icon.reg_icon(file.absolute())
             # logger.info(f"🌚 No Icon <- {file.name}")
             return Icon["NONE"]
 
@@ -507,7 +475,7 @@ def parse_node():
             reg_name = get_reg_name(inp_name)
             inp = inp_types[inp_name]
             if not inp:
-                logger.error("None Input: %s", inp)
+                logger.error(f"{_T('None Input')}: %s", inp)
                 continue
             proptype = inp[0]
             if isinstance(inp[0], list):
@@ -534,7 +502,7 @@ def parse_node():
                 prop = bpy.props.EnumProperty(items=get_items(nname, reg_name, inp))
             elif proptype == "INT":
                 # {'default': 20, 'min': 1, 'max': 10000}
-                inp[1]["max"] = min(inp[1]["max"], 2**31 - 1)
+                inp[1]["max"] = min(inp[1].get("max", 9999999), 2**31 - 1)
                 prop = bpy.props.IntProperty(**inp[1])
 
                 if nname == "KSampler" and inp_name == "seed":
@@ -630,7 +598,7 @@ def parse_node():
         '无限圣杯': {
             'items': ['存储', 'ToBlender', 'Mask', '蜡笔']}
     }
-    logger.warn("Parsing Node Finished!")
+    logger.warn(_T("Parsing Node Finished!"))
     return nodetree_desc, node_clss, socket_clss
 
 
@@ -667,7 +635,7 @@ def spec_serialize(self, cfg, execute):
         return
     if self.class_type == "输入图像":
         if self.mode == "渲染":
-            logger.warn(f"渲染->{self.image}")
+            logger.warn(f"{_T('Render')}->{self.image}")
             bpy.context.scene.render.filepath = self.image
             bpy.ops.render.render(write_still=True)
         elif self.mode == "输入":
@@ -697,7 +665,7 @@ def spec_serialize(self, cfg, execute):
 def spec_functions(fields, nname, ndesc):
     if nname == "存储":
         def post_fn(self: NodeBase, t):
-            logger.debug(f"{self.class_type} Post Function")
+            logger.debug(f"{self.class_type} {_T('Post Function')}")
             logger.debug(t.res)
             img_paths = t.res.get("output", {}).get("images", [])
             for img in img_paths:
@@ -711,7 +679,7 @@ def spec_functions(fields, nname, ndesc):
             if not img_paths:
                 return
             img = img_paths[0]
-            logger.warn(f"Load Preview Image: {img}")
+            logger.warn(f"{_T('Load Preview Image')}: {img}")
             def f(img): return setattr(self, "prev", bpy.data.images.load(img))
             Timer.put((f, img))
 
@@ -771,15 +739,15 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
             layout.prop(self, "image", text="", text_ctxt=ctxt)
             layout.prop(self, prop, expand=True, text_ctxt=ctxt)
             if self.mode == "渲染":
-                layout.label(text="设置摄像机渲染图像的保存位置及文件名(.png)，如已设置请忽略", icon="ERROR")
+                layout.label(text="Set Image Path of Render Result(.png)", icon="ERROR")
             return True
         elif prop == "image":
-            if os.path.exists(self.image):  # if self.prev != bpy.data.images.get(img_name[:63]):
+            if os.path.exists(self.image):
                 def f(self):
-                    img_path = Path(self.image)
-                    img_name = img_path.name
                     Icon.load_icon(self.image)
-                    self.prev = bpy.data.images.get(img_name[:63])
+                    if not(img := Icon.find_image(self.image)):
+                        return
+                    self.prev = img
                     w = max(self.prev.size[0], self.prev.size[1])
                     setwidth(self, w)
                     update_screen()
@@ -793,11 +761,9 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
             return True
         elif prop == "prev":
             if self.prev:
-                Icon.reg_icon_by_pixel(self.prev, self.prev.name)
-                idon_id = Icon[self.prev.name]
+                Icon.reg_icon_by_pixel(self.prev, self.prev.filepath)
+                idon_id = Icon[self.prev.filepath]
                 layout.template_icon(idon_id, scale=max(self.prev.size[0], self.prev.size[1]) // 20)
-            # else:
-            #     setwidth(self, 200)
             return True
 
     elif self.class_type == "Mask":
@@ -807,10 +773,10 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
                 layout.prop(self, "gp", text="", text_ctxt=ctxt)
             if self.mode == "Object":
                 # layout.prop(self, "obj", text="")
-                layout.label(text="  选中mask物体(可多选)", text_ctxt=ctxt)
+                layout.label(text="  Select mask Objects", text_ctxt=ctxt)
             if self.mode == "Collection":
                 # layout.prop(self, "col", text="")
-                layout.label(text="  选中mask集合(可多选)", text_ctxt=ctxt)
+                layout.label(text="  Select mask Collections", text_ctxt=ctxt)
             return True
         elif prop in {"gp", "obj", "col"}:
             return True
