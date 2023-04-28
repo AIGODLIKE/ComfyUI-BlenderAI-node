@@ -120,7 +120,7 @@ class Ops(bpy.types.Operator):
     bl_label = "SD Node"
     bl_translation_context = ctxt
     action: bpy.props.StringProperty(default="")
-    save_name: bpy.props.StringProperty(name="法典烙印", default="预设")
+    save_name: bpy.props.StringProperty(name="Preset Name", default="预设")
     
     @classmethod
     def description(cls, context: bpy.types.Context,

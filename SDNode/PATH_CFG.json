@@ -4,8 +4,8 @@
             "D:\\BaiduNetdiskDownload\\AI\\ComfyUI\\models\\checkpoints"
         ],
         [
-            ".pth",
             ".ckpt",
+            ".pth",
             ".safetensors"
         ]
     ],
@@ -22,11 +22,11 @@
             "D:\\BaiduNetdiskDownload\\AI\\ComfyUI\\models\\loras"
         ],
         [
-            ".safetensors",
             ".pt",
+            ".bin",
             ".pth",
             ".ckpt",
-            ".bin"
+            ".safetensors"
         ]
     ],
     "vae": [
@@ -34,11 +34,11 @@
             "D:\\BaiduNetdiskDownload\\AI\\ComfyUI\\models\\vae"
         ],
         [
-            ".safetensors",
             ".pt",
+            ".bin",
             ".pth",
             ".ckpt",
-            ".bin"
+            ".safetensors"
         ]
     ],
     "clip": [
@@ -46,11 +46,11 @@
             "D:\\BaiduNetdiskDownload\\AI\\ComfyUI\\models\\clip"
         ],
         [
-            ".safetensors",
             ".pt",
+            ".bin",
             ".pth",
             ".ckpt",
-            ".bin"
+            ".safetensors"
         ]
     ],
     "clip_vision": [
@@ -58,11 +58,11 @@
             "D:\\BaiduNetdiskDownload\\AI\\ComfyUI\\models\\clip_vision"
         ],
         [
-            ".safetensors",
             ".pt",
+            ".bin",
             ".pth",
             ".ckpt",
-            ".bin"
+            ".safetensors"
         ]
     ],
     "style_models": [
@@ -70,11 +70,11 @@
             "D:\\BaiduNetdiskDownload\\AI\\ComfyUI\\models\\style_models"
         ],
         [
-            ".safetensors",
             ".pt",
+            ".bin",
             ".pth",
             ".ckpt",
-            ".bin"
+            ".safetensors"
         ]
     ],
     "embeddings": [
@@ -82,11 +82,11 @@
             "D:\\BaiduNetdiskDownload\\AI\\ComfyUI\\models\\embeddings"
         ],
         [
-            ".safetensors",
             ".pt",
+            ".bin",
             ".pth",
             ".ckpt",
-            ".bin"
+            ".safetensors"
         ]
     ],
     "diffusers": [
@@ -103,11 +103,11 @@
             "D:\\BaiduNetdiskDownload\\AI\\ComfyUI\\models\\t2i_adapter"
         ],
         [
-            ".safetensors",
             ".pt",
+            ".bin",
             ".pth",
             ".ckpt",
-            ".bin"
+            ".safetensors"
         ]
     ],
     "gligen": [
@@ -115,11 +115,11 @@
             "D:\\BaiduNetdiskDownload\\AI\\ComfyUI\\models\\gligen"
         ],
         [
-            ".safetensors",
             ".pt",
+            ".bin",
             ".pth",
             ".ckpt",
-            ".bin"
+            ".safetensors"
         ]
     ],
     "upscale_models": [
@@ -127,11 +127,11 @@
             "D:\\BaiduNetdiskDownload\\AI\\ComfyUI\\models\\upscale_models"
         ],
         [
-            ".safetensors",
             ".pt",
+            ".bin",
             ".pth",
             ".ckpt",
-            ".bin"
+            ".safetensors"
         ]
     ],
     "custom_nodes": [
@@ -145,11 +145,11 @@
             "D:\\BaiduNetdiskDownload\\AI\\ComfyUI\\models\\hypernetworks"
         ],
         [
-            ".safetensors",
             ".pt",
+            ".bin",
             ".pth",
             ".ckpt",
-            ".bin"
+            ".safetensors"
         ]
     ]
 }

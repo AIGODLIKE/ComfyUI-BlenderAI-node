@@ -104,7 +104,8 @@ other = {
     "Open Addon Preference": "打开插件设置",
     "Restart ComfyUI": "重启ComfyUI",
     "Launch ComfyUI": "打开ComfyUI",
-    "Random All": "随机所有"
+    "Random All": "随机所有",
+    "Preset Name": "法典烙印",
 }
 
 other_cn_en = {

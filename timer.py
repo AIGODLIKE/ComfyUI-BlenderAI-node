@@ -9,19 +9,21 @@ class Timer:
     def put(delegate):
         Timer.TimerQueue.put(delegate)
         
+    def executor(t):
+        if type(t) in {list, tuple}:
+            t[0](*t[1:])
+        else:
+            t()
+            
     def run():
-        try:
-            while not Timer.TimerQueue.empty():
-                t = Timer.TimerQueue.get()
-                # logger.error(t)
-                if type(t) in {list, tuple}:
-                    t[0](*t[1:])
-                else:
-                    t()
-        except KeyboardInterrupt:
-            ...
-        except Exception as e:
-            logger.error(str(e))
+        while not Timer.TimerQueue.empty():
+            t = Timer.TimerQueue.get()
+            try:
+                Timer.executor(t)
+            except Exception as e:
+                logger.error(f"{type(e).__name__}: {e}")
+            except KeyboardInterrupt:
+                ...
         return 0.1
 
     def clear():
@@ -40,7 +42,7 @@ class Timer:
         return wrap
 
     def reg():
-        bpy.app.timers.register(Timer.run, persistent=True, first_interval=0.1)
+        bpy.app.timers.register(Timer.run, persistent=True)
 
     def unreg():
         Timer.clear()

@@ -742,12 +742,12 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
                 layout.label(text="Set Image Path of Render Result(.png)", icon="ERROR")
             return True
         elif prop == "image":
-            if os.path.exists(self.image):  # if self.prev != bpy.data.images.get(img_name[:63]):
+            if os.path.exists(self.image):
                 def f(self):
-                    img_path = Path(self.image)
-                    img_name = img_path.name
                     Icon.load_icon(self.image)
-                    self.prev = bpy.data.images.get(img_name[:63])
+                    if not(img := Icon.find_image(self.image)):
+                        return
+                    self.prev = img
                     w = max(self.prev.size[0], self.prev.size[1])
                     setwidth(self, w)
                     update_screen()
@@ -761,11 +761,9 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
             return True
         elif prop == "prev":
             if self.prev:
-                Icon.reg_icon_by_pixel(self.prev, self.prev.name)
-                idon_id = Icon[self.prev.name]
+                Icon.reg_icon_by_pixel(self.prev, self.prev.filepath)
+                idon_id = Icon[self.prev.filepath]
                 layout.template_icon(idon_id, scale=max(self.prev.size[0], self.prev.size[1]) // 20)
-            # else:
-            #     setwidth(self, 200)
             return True
 
     elif self.class_type == "Mask":

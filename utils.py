@@ -59,7 +59,7 @@ def hex2rgb(hex_val):
 def to_str(path: Path):
     if isinstance(path, Path):
         return path.as_posix()
-    return path
+    return Path(path).as_posix()
 
 
 def to_path(path: Path):
@@ -78,6 +78,8 @@ class Icon(metaclass=MetaIn):
     PREV_DICT = bpy.utils.previews.new()
     NONE_IMAGE = ""
     IMG_STATUS = {}
+    PIX_STATUS = {}
+    PATH2BPY = {}
     ENABLE_HQ_PREVIEW = False
     INSTANCE = None
 
@@ -91,10 +93,18 @@ class Icon(metaclass=MetaIn):
             cls.INSTANCE = object.__new__(cls, *args, **kwargs)
         return cls.INSTANCE
 
+    def update_path2bpy():
+        import bpy
+        Icon.PATH2BPY.clear()
+        for i in bpy.data.images:
+            Icon.PATH2BPY[to_str(i.filepath)] = i
+
     @staticmethod
     def clear():
         Icon.PREV_DICT.clear()
         Icon.IMG_STATUS.clear()
+        Icon.PIX_STATUS.clear()
+        Icon.PATH2BPY.clear()
         Icon.reg_icon(Icon.NONE_IMAGE)
 
     @staticmethod
@@ -124,15 +134,16 @@ class Icon(metaclass=MetaIn):
     @staticmethod
     def can_mark_pixel(prev, name) -> bool:
         name = to_str(name)
-        if Icon.IMG_STATUS.get(name) == hash(prev.pixels):
+        if Icon.PIX_STATUS.get(name) == hash(prev.pixels):
             return False
-        Icon.IMG_STATUS[name] = hash(prev.pixels)
+        Icon.PIX_STATUS[name] = hash(prev.pixels)
         return True
 
     @staticmethod
     def remove_mark(name) -> bool:
         name = to_str(name)
         Icon.IMG_STATUS.pop(name)
+        Icon.PIX_STATUS.pop(name)
         Icon.PREV_DICT.pop(name)
         return True
 
@@ -173,20 +184,37 @@ class Icon(metaclass=MetaIn):
             Icon.reg_icon_by_pixel(img, path)
             bpy.data.images.remove(img)
 
+    def find_image(path):
+        img = Icon.PATH2BPY.get(to_str(path), None)
+        if not img:
+            return None
+        try:
+            _ = img.name # hack ref detect
+            return img
+        except ReferenceError:
+            Icon.update_path2bpy()
+        return None
+
     @staticmethod
     def load_icon(path):
+        import bpy
         p = to_path(path)
         path = to_str(path)
-        
+
         if not Icon.can_mark_image(path):
             return
-        import bpy
-        if p.name[:63] not in bpy.data.images:
-            if p.suffix in {".png", ".jpg", ".jpeg"}:
-                bpy.data.images.load(path)
-        else:
-            img = bpy.data.images[p.name[:63]]
-            Icon.update_icon_pixel(img.name, img)
+
+        # if p.name[:63] in bpy.data.images:
+        #     img = bpy.data.images[p.name[:63]]
+        #     Icon.update_icon_pixel(img.name, img)
+        if img := Icon.find_image(path):
+            Icon.update_icon_pixel(path, img)
+            return img
+        elif p.suffix in {".png", ".jpg", ".jpeg"}:
+            img = bpy.data.images.load(path)
+            Icon.update_path2bpy()
+            # img.name = path
+            return img
 
     @staticmethod
     def reg_icon_by_pixel(prev, name):
@@ -203,7 +231,7 @@ class Icon(metaclass=MetaIn):
     def get_icon_id(name: Path):
         p = Icon.PREV_DICT.get(to_str(name), None)
         if not p:
-            p = Icon.PREV_DICT.get(Icon.NONE_IMAGE, None)
+            p = Icon.PREV_DICT.get(to_str(Icon.NONE_IMAGE), None)
         return p.icon_id if p else 0
 
     @staticmethod
@@ -214,7 +242,7 @@ class Icon(metaclass=MetaIn):
         prev.reload()
         p = Icon.PREV_DICT.get(name, None)
         if not p:
-            logger.error("No")
+            # logger.error("No")
             return
         p.icon_size = (32, 32)
         p.image_size = (prev.size[0], prev.size[1])
@@ -234,7 +262,6 @@ class Icon(metaclass=MetaIn):
 
 
 class PngParse:
-    @staticmethod
     def read_head(pngpath):
         with open(pngpath, 'rb') as f:
             png_header = f.read(25)
