@@ -43,7 +43,8 @@ class TaskManager:
     cur_task: Task = None
     execute_status_record = []
     error_msg = []
-
+    progress_bar = 0
+    
     def __new__(cls, *args, **kw):
         if cls._instance is None:
             cls._instance = object.__new__(cls, *args, **kw)
@@ -352,17 +353,22 @@ a111:
                     TaskManager.execute_status_record.append(data["node"])
                 # logger.debug(data)
             elif mtype == "progress":
-                v = data["value"]
-                m = data["max"]
-                fac = 40 / m
-                v = int(v * fac)
                 m = 40
-                content = f"\r{v*100/m:3.0f}%  " + "█" * v + "░" * (m - v) + f" {v}/{m}" + "\n" * int(v == m)
+                fac = m / data["max"]
+                v = int(data["value"] * fac)
+                TaskManager.progress_bar = v
+                cf = "\033[92m" + "█" * v + "\033[0m"
+                cp = "\033[32m" + "░" * (m - v) + "\033[0m"
+                content = f"\r{v*100/m:3.0f}% " + cf + cp + f" {v}/{m}"
                 sys.stdout.write(content)
                 sys.stdout.flush()
 
             elif mtype == "executed":
                 {"node": "9", "output": {"images": ["ComfyUI_00028_.png"]}}
+                if TaskManager.progress_bar != 0:
+                    sys.stdout.write("\n")
+                    sys.stdout.flush()
+                    TaskManager.progress_bar = 0
                 tm.push_res(data)
                 logger.warn(f"{_T('Ran Node')}: {data['node']}", )
             else:

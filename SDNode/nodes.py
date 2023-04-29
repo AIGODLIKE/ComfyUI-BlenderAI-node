@@ -4,6 +4,7 @@ import random
 import os
 import re
 import json
+from math import ceil
 from typing import Any
 from pathlib import Path
 from random import random as rand
@@ -187,7 +188,7 @@ class NodeBase(bpy.types.Node):
         self.width, self.height = [data["size"]["0"], -data["size"]["1"]]
         title = data.get("title", "")
         if self.class_type in {"KSampler", "KSamplerAdvanced"}:
-            logger.info(_T("Saved Title Name -> ") + title) # do not replace name
+            logger.info(_T("Saved Title Name -> ") + title)  # do not replace name
         elif title:
             self.name = title
         if with_id:
@@ -371,6 +372,10 @@ def parse_node():
                 sockets.add("ENUM")
             else:
                 sockets.add(inp_desc[0])
+        for index, out_type in enumerate(desc.get("output", [])):
+            desc["output"][index] = [out_type, out_type]
+        for index, out_name in enumerate(desc.get("output_name", [])):
+            desc["output"][index][1] = out_name
         cpath = cat.split("/")
         nodes_desc[name] = desc
         ncur = nodetree_desc
@@ -399,7 +404,9 @@ def parse_node():
                     'positive': ['CONDITIONING'],
                     'latent_image': ['LATENT']}},
             'output': ['LATENT'],
+            'output_name': ['LATENT'], # optional
             'name': 'KSampler',
+            'display_name': "", # optional
             'description': '',
             'category': 'sampling'}
     }
@@ -423,7 +430,7 @@ def parse_node():
             for index, inp_name in enumerate(self.inp_types):
                 inp = self.inp_types[inp_name]
                 if not inp:
-                    logger.error(f"{_T('None Input')}: %s", inp)
+                    logger.error(f"{_T('None Input')}: %s", inp_name)
                     continue
                 socket = inp[0]
                 if isinstance(inp[0], list):
@@ -436,8 +443,10 @@ def parse_node():
                 in1.display_shape = "DIAMOND_DOT"
                 # in1.link_limit = 0
                 in1.index = index
-            for index, out_type in enumerate(self.out_types):
-                out = self.outputs.new(out_type, out_type)
+            for index, [out_type, out_name] in enumerate(self.out_types):
+                if out_type in {"ENUM", "INT", "FLOAT"}:
+                    continue
+                out = self.outputs.new(out_type, out_name)
                 out.display_shape = "DIAMOND_DOT"
                 # out.link_limit = 0
                 out.index = index
@@ -502,7 +511,11 @@ def parse_node():
                 prop = bpy.props.EnumProperty(items=get_items(nname, reg_name, inp))
             elif proptype == "INT":
                 # {'default': 20, 'min': 1, 'max': 10000}
-                inp[1]["max"] = min(inp[1].get("max", 9999999), 2**31 - 1)
+                inp[1]["max"] = min(int(inp[1].get("max", 9999999)), 2**31 - 1)
+                inp[1]["min"] = max(int(inp[1].get("min", -999999)), -2**31)
+                inp[1]["default"] = int(inp[1].get("default", 0))
+                inp[1]["step"] = ceil(inp[1].get("step", 1))
+
                 prop = bpy.props.IntProperty(**inp[1])
 
                 if nname == "KSampler" and inp_name == "seed":
@@ -556,7 +569,7 @@ def parse_node():
                     subtype = "DIR_PATH"
                 else:
                     def update(_, __): return
-                prop = bpy.props.StringProperty(default=inp[1].get("default", ""),
+                prop = bpy.props.StringProperty(default=str(inp[1].get("default", "")),
                                                 subtype=subtype,
                                                 update=update)
 
@@ -577,7 +590,7 @@ def parse_node():
     socket_clss = []
     for stype in sockets:
         {'STYLE_MODEL', 'VAE', 'CLIP_VISION', 'MASK', 'UPSCALE_MODEL', 'FLOAT', 'CLIP_VISION_OUTPUT', 'STRING', 'INT', 'IMAGE', 'MODEL', 'CONDITIONING', 'ENUM', 'CONTROL_NET', 'LATENT', 'CLIP'}
-        if stype in {"ENUM", "INT", "FLOAT", "STRING"}:
+        if stype in {"ENUM", "INT", "FLOAT"}:
             continue
 
         def draw(self, context, layout, node, text):
@@ -745,7 +758,7 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
             if os.path.exists(self.image):
                 def f(self):
                     Icon.load_icon(self.image)
-                    if not(img := Icon.find_image(self.image)):
+                    if not (img := Icon.find_image(self.image)):
                         return
                     self.prev = img
                     w = max(self.prev.size[0], self.prev.size[1])

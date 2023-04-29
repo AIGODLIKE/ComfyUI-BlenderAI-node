@@ -2372,6 +2372,4787 @@
     "description": "",
     "category": "Blender"
   },
+  "Checkpoint Loader": {
+    "input": {
+      "required": {
+        "config_name": [
+          [
+            "anything_v3.yaml",
+            "v1-inference.yaml",
+            "v1-inference_clip_skip_2.yaml",
+            "v1-inference_clip_skip_2_fp16.yaml",
+            "v1-inference_fp16.yaml",
+            "v1-inpainting-inference.yaml",
+            "v2-inference-v.yaml",
+            "v2-inference-v_fp32.yaml",
+            "v2-inference.yaml",
+            "v2-inference_fp32.yaml",
+            "v2-inpainting-inference.yaml"
+          ]
+        ],
+        "ckpt_name": [
+          [
+            "AIGODLIKE华丽_4000.ckpt",
+            "GuoFeng3.2_f16.safetensors",
+            "Shyaku_Tonades.ckpt",
+            "Shyaku_qofo.ckpt",
+            "wd-1-5-beta2-aesthetic-unclip-h-fp16.safetensors",
+            "wd-1-5-beta2-aesthetic-unclip-l-fp16.safetensors",
+            "wd-1-5-beta2-unclip-h-fp16.safetensors",
+            "苍玄.safetensors"
+          ]
+        ]
+      }
+    },
+    "output": [
+      "MODEL",
+      "CLIP",
+      "VAE",
+      "STRING"
+    ],
+    "output_name": [
+      "MODEL",
+      "CLIP",
+      "VAE",
+      "NAME_STRING"
+    ],
+    "name": "Checkpoint Loader",
+    "display_name": "Checkpoint Loader",
+    "description": "",
+    "category": "WAS Suite/Loaders/Advanced"
+  },
+  "Checkpoint Loader (Simple)": {
+    "input": {
+      "required": {
+        "ckpt_name": [
+          [
+            "AIGODLIKE华丽_4000.ckpt",
+            "GuoFeng3.2_f16.safetensors",
+            "Shyaku_Tonades.ckpt",
+            "Shyaku_qofo.ckpt",
+            "wd-1-5-beta2-aesthetic-unclip-h-fp16.safetensors",
+            "wd-1-5-beta2-aesthetic-unclip-l-fp16.safetensors",
+            "wd-1-5-beta2-unclip-h-fp16.safetensors",
+            "苍玄.safetensors"
+          ]
+        ]
+      }
+    },
+    "output": [
+      "MODEL",
+      "CLIP",
+      "VAE",
+      "STRING"
+    ],
+    "output_name": [
+      "MODEL",
+      "CLIP",
+      "VAE",
+      "NAME_STRING"
+    ],
+    "name": "Checkpoint Loader (Simple)",
+    "display_name": "Checkpoint Loader (Simple)",
+    "description": "",
+    "category": "WAS Suite/Loaders"
+  },
+  "CLIPTextEncode (NSP)": {
+    "input": {
+      "required": {
+        "noodle_key": [
+          "STRING",
+          {
+            "default": "__",
+            "multiline": false
+          }
+        ],
+        "seed": [
+          "INT",
+          {
+            "default": 0,
+            "min": 0,
+            "max": 18446744073709551615
+          }
+        ],
+        "text": [
+          "STRING",
+          {
+            "multiline": true
+          }
+        ],
+        "clip": [
+          "CLIP"
+        ]
+      }
+    },
+    "output": [
+      "CONDITIONING"
+    ],
+    "output_name": [
+      "CONDITIONING"
+    ],
+    "name": "CLIPTextEncode (NSP)",
+    "display_name": "CLIPTextEncode (NSP)",
+    "description": "",
+    "category": "WAS Suite/Conditioning"
+  },
+  "Conditioning Input Switch": {
+    "input": {
+      "required": {
+        "conditioning_a": [
+          "CONDITIONING"
+        ],
+        "conditioning_b": [
+          "CONDITIONING"
+        ],
+        "boolean_number": [
+          "NUMBER"
+        ]
+      }
+    },
+    "output": [
+      "CONDITIONING"
+    ],
+    "output_name": [
+      "CONDITIONING"
+    ],
+    "name": "Conditioning Input Switch",
+    "display_name": "Conditioning Input Switch",
+    "description": "",
+    "category": "WAS Suite/Logic"
+  },
+  "Constant Number": {
+    "input": {
+      "required": {
+        "number_type": [
+          [
+            "integer",
+            "float",
+            "bool"
+          ]
+        ],
+        "number": [
+          "FLOAT",
+          {
+            "default": 0,
+            "min": -18446744073709551615,
+            "max": 18446744073709551615
+          }
+        ]
+      }
+    },
+    "output": [
+      "NUMBER"
+    ],
+    "output_name": [
+      "NUMBER"
+    ],
+    "name": "Constant Number",
+    "display_name": "Constant Number",
+    "description": "",
+    "category": "WAS Suite/Number"
+  },
+  "Create Grid Image": {
+    "input": {
+      "required": {
+        "images_path": [
+          "STRING",
+          {
+            "default": "./ComfyUI/input/",
+            "multiline": false
+          }
+        ],
+        "pattern_glob": [
+          "STRING",
+          {
+            "default": "*",
+            "multiline": false
+          }
+        ],
+        "include_subfolders": [
+          [
+            "false",
+            "true"
+          ]
+        ],
+        "border_width": [
+          "INT",
+          {
+            "default": 3,
+            "min": 0,
+            "max": 100,
+            "step": 1
+          }
+        ],
+        "number_of_columns": [
+          "INT",
+          {
+            "default": 6,
+            "min": 1,
+            "max": 24,
+            "step": 1
+          }
+        ],
+        "max_cell_size": [
+          "INT",
+          {
+            "default": 256,
+            "min": 32,
+            "max": 1280,
+            "step": 1
+          }
+        ],
+        "border_red": [
+          "INT",
+          {
+            "default": 0,
+            "min": 0,
+            "max": 255,
+            "step": 1
+          }
+        ],
+        "border_green": [
+          "INT",
+          {
+            "default": 0,
+            "min": 0,
+            "max": 255,
+            "step": 1
+          }
+        ],
+        "border_blue": [
+          "INT",
+          {
+            "default": 0,
+            "min": 0,
+            "max": 255,
+            "step": 1
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "Create Grid Image",
+    "display_name": "Create Grid Image",
+    "description": "",
+    "category": "WAS Suite/Image/Process"
+  },
+  "Create Morph Image": {
+    "input": {
+      "required": {
+        "image_a": [
+          "IMAGE"
+        ],
+        "image_b": [
+          "IMAGE"
+        ],
+        "transition_frames": [
+          "INT",
+          {
+            "default": 30,
+            "min": 2,
+            "max": 60,
+            "step": 1
+          }
+        ],
+        "still_image_delay_ms": [
+          "FLOAT",
+          {
+            "default": 2500.0,
+            "min": 0.1,
+            "max": 60000.0,
+            "step": 0.1
+          }
+        ],
+        "duration_ms": [
+          "FLOAT",
+          {
+            "default": 0.1,
+            "min": 0.1,
+            "max": 60000.0,
+            "step": 0.1
+          }
+        ],
+        "loops": [
+          "INT",
+          {
+            "default": 0,
+            "min": 0,
+            "max": 100,
+            "step": 1
+          }
+        ],
+        "max_size": [
+          "INT",
+          {
+            "default": 512,
+            "min": 128,
+            "max": 1280,
+            "step": 1
+          }
+        ],
+        "output_path": [
+          "STRING",
+          {
+            "default": "./ComfyUI/output",
+            "multiline": false
+          }
+        ],
+        "filename": [
+          "STRING",
+          {
+            "default": "morph",
+            "multiline": false
+          }
+        ],
+        "filetype": [
+          [
+            "GIF",
+            "APNG"
+          ]
+        ]
+      }
+    },
+    "output": [
+      "IMAGE",
+      "IMAGE",
+      "ASCII",
+      "ASCII"
+    ],
+    "output_name": [
+      "image_a_pass",
+      "image_b_pass",
+      "filepath_text",
+      "filename_text"
+    ],
+    "name": "Create Morph Image",
+    "display_name": "Create Morph Image",
+    "description": "",
+    "category": "WAS Suite/Image/Process"
+  },
+  "Create Morph Image from Path": {
+    "input": {
+      "required": {
+        "transition_frames": [
+          "INT",
+          {
+            "default": 30,
+            "min": 2,
+            "max": 60,
+            "step": 1
+          }
+        ],
+        "still_image_delay_ms": [
+          "FLOAT",
+          {
+            "default": 2500.0,
+            "min": 0.1,
+            "max": 60000.0,
+            "step": 0.1
+          }
+        ],
+        "duration_ms": [
+          "FLOAT",
+          {
+            "default": 0.1,
+            "min": 0.1,
+            "max": 60000.0,
+            "step": 0.1
+          }
+        ],
+        "loops": [
+          "INT",
+          {
+            "default": 0,
+            "min": 0,
+            "max": 100,
+            "step": 1
+          }
+        ],
+        "max_size": [
+          "INT",
+          {
+            "default": 512,
+            "min": 128,
+            "max": 1280,
+            "step": 1
+          }
+        ],
+        "input_path": [
+          "STRING",
+          {
+            "default": "./ComfyUI",
+            "multiline": false
+          }
+        ],
+        "input_pattern": [
+          "STRING",
+          {
+            "default": "*",
+            "multiline": false
+          }
+        ],
+        "output_path": [
+          "STRING",
+          {
+            "default": "./ComfyUI/output",
+            "multiline": false
+          }
+        ],
+        "filename": [
+          "STRING",
+          {
+            "default": "morph",
+            "multiline": false
+          }
+        ],
+        "filetype": [
+          [
+            "GIF",
+            "APNG"
+          ]
+        ]
+      }
+    },
+    "output": [
+      "ASCII",
+      "ASCII"
+    ],
+    "output_name": [
+      "filepath_text",
+      "filename_text"
+    ],
+    "name": "Create Morph Image from Path",
+    "display_name": "Create Morph Image from Path",
+    "description": "",
+    "category": "WAS Suite/Image/Process"
+  },
+  "Debug Number to Console": {
+    "input": {
+      "required": {
+        "number": [
+          "NUMBER"
+        ],
+        "label": [
+          "STRING",
+          {
+            "default": "Debug to Console",
+            "multiline": false
+          }
+        ]
+      }
+    },
+    "output": [
+      "NUMBER"
+    ],
+    "output_name": [
+      "NUMBER"
+    ],
+    "name": "Debug Number to Console",
+    "display_name": "Debug Number to Console",
+    "description": "",
+    "category": "WAS Suite/Debug"
+  },
+  "Dictionary to Console": {
+    "input": {
+      "required": {
+        "dictionary": [
+          "DICT"
+        ],
+        "label": [
+          "STRING",
+          {
+            "default": "Dictionary Output",
+            "multiline": false
+          }
+        ]
+      }
+    },
+    "output": [
+      "DICT"
+    ],
+    "output_name": [
+      "DICT"
+    ],
+    "name": "Dictionary to Console",
+    "display_name": "Dictionary to Console",
+    "description": "",
+    "category": "WAS Suite/Debug"
+  },
+  "Diffusers Model Loader": {
+    "input": {
+      "required": {
+        "model_path": [
+          [
+            "stable-diffusion-v1-5"
+          ]
+        ]
+      }
+    },
+    "output": [
+      "MODEL",
+      "CLIP",
+      "VAE",
+      "STRING"
+    ],
+    "output_name": [
+      "MODEL",
+      "CLIP",
+      "VAE",
+      "NAME_STRING"
+    ],
+    "name": "Diffusers Model Loader",
+    "display_name": "Diffusers Model Loader",
+    "description": "",
+    "category": "WAS Suite/Loaders/Advanced"
+  },
+  "Latent Input Switch": {
+    "input": {
+      "required": {
+        "latent_a": [
+          "LATENT"
+        ],
+        "latent_b": [
+          "LATENT"
+        ],
+        "boolean_number": [
+          "NUMBER"
+        ]
+      }
+    },
+    "output": [
+      "LATENT"
+    ],
+    "output_name": [
+      "LATENT"
+    ],
+    "name": "Latent Input Switch",
+    "display_name": "Latent Input Switch",
+    "description": "",
+    "category": "WAS Suite/Logic"
+  },
+  "Logic Boolean": {
+    "input": {
+      "required": {
+        "boolean_number": [
+          "INT",
+          {
+            "default": 1,
+            "min": 0,
+            "max": 1,
+            "step": 1
+          }
+        ]
+      }
+    },
+    "output": [
+      "NUMBER"
+    ],
+    "output_name": [
+      "NUMBER"
+    ],
+    "name": "Logic Boolean",
+    "display_name": "Logic Boolean",
+    "description": "",
+    "category": "WAS Suite/Logic"
+  },
+  "Lora Loader": {
+    "input": {
+      "required": {
+        "model": [
+          "MODEL"
+        ],
+        "clip": [
+          "CLIP"
+        ],
+        "lora_name": [
+          [
+            "AIGODLIKE_HUAN_V1.safetensors",
+            "GuoFeng3.2_Lora.safetensors"
+          ]
+        ],
+        "strength_model": [
+          "FLOAT",
+          {
+            "default": 1.0,
+            "min": -10.0,
+            "max": 10.0,
+            "step": 0.01
+          }
+        ],
+        "strength_clip": [
+          "FLOAT",
+          {
+            "default": 1.0,
+            "min": -10.0,
+            "max": 10.0,
+            "step": 0.01
+          }
+        ]
+      }
+    },
+    "output": [
+      "MODEL",
+      "CLIP",
+      "STRING"
+    ],
+    "output_name": [
+      "MODEL",
+      "CLIP",
+      "NAME_STRING"
+    ],
+    "name": "Lora Loader",
+    "display_name": "Lora Loader",
+    "description": "",
+    "category": "WAS Suite/Loaders"
+  },
+  "Image Analyze": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ],
+        "mode": [
+          [
+            "Black White Levels",
+            "RGB Levels"
+          ]
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "Image Analyze",
+    "display_name": "Image Analyze",
+    "description": "",
+    "category": "WAS Suite/Image/Analyze"
+  },
+  "Image Blank": {
+    "input": {
+      "required": {
+        "width": [
+          "INT",
+          {
+            "default": 512,
+            "min": 8,
+            "max": 4096,
+            "step": 1
+          }
+        ],
+        "height": [
+          "INT",
+          {
+            "default": 512,
+            "min": 8,
+            "max": 4096,
+            "step": 1
+          }
+        ],
+        "red": [
+          "INT",
+          {
+            "default": 255,
+            "min": 0,
+            "max": 255,
+            "step": 1
+          }
+        ],
+        "green": [
+          "INT",
+          {
+            "default": 255,
+            "min": 0,
+            "max": 255,
+            "step": 1
+          }
+        ],
+        "blue": [
+          "INT",
+          {
+            "default": 255,
+            "min": 0,
+            "max": 255,
+            "step": 1
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "Image Blank",
+    "display_name": "Image Blank",
+    "description": "",
+    "category": "WAS Suite/Image"
+  },
+  "Image Blend by Mask": {
+    "input": {
+      "required": {
+        "image_a": [
+          "IMAGE"
+        ],
+        "image_b": [
+          "IMAGE"
+        ],
+        "mask": [
+          "IMAGE"
+        ],
+        "blend_percentage": [
+          "FLOAT",
+          {
+            "default": 0.5,
+            "min": 0.0,
+            "max": 1.0,
+            "step": 0.01
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "Image Blend by Mask",
+    "display_name": "Image Blend by Mask",
+    "description": "",
+    "category": "WAS Suite/Image"
+  },
+  "Image Blend": {
+    "input": {
+      "required": {
+        "image_a": [
+          "IMAGE"
+        ],
+        "image_b": [
+          "IMAGE"
+        ],
+        "blend_percentage": [
+          "FLOAT",
+          {
+            "default": 0.5,
+            "min": 0.0,
+            "max": 1.0,
+            "step": 0.01
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "Image Blend",
+    "display_name": "Image Blend",
+    "description": "",
+    "category": "WAS Suite/Image"
+  },
+  "Image Blending Mode": {
+    "input": {
+      "required": {
+        "image_a": [
+          "IMAGE"
+        ],
+        "image_b": [
+          "IMAGE"
+        ],
+        "mode": [
+          [
+            "add",
+            "color",
+            "color_burn",
+            "color_dodge",
+            "darken",
+            "difference",
+            "exclusion",
+            "hard_light",
+            "hue",
+            "lighten",
+            "multiply",
+            "overlay",
+            "screen",
+            "soft_light"
+          ]
+        ],
+        "blend_percentage": [
+          "FLOAT",
+          {
+            "default": 1.0,
+            "min": 0.0,
+            "max": 1.0,
+            "step": 0.01
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "Image Blending Mode",
+    "display_name": "Image Blending Mode",
+    "description": "",
+    "category": "WAS Suite/Image"
+  },
+  "Image Bloom Filter": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ],
+        "radius": [
+          "FLOAT",
+          {
+            "default": 10,
+            "min": 0.0,
+            "max": 1024,
+            "step": 0.1
+          }
+        ],
+        "intensity": [
+          "FLOAT",
+          {
+            "default": 1,
+            "min": 0.0,
+            "max": 1.0,
+            "step": 0.1
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "Image Bloom Filter",
+    "display_name": "Image Bloom Filter",
+    "description": "",
+    "category": "WAS Suite/Image/Filter"
+  },
+  "Image Canny Filter": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ],
+        "enable_threshold": [
+          [
+            "false",
+            "true"
+          ]
+        ],
+        "threshold_low": [
+          "FLOAT",
+          {
+            "default": 0.0,
+            "min": 0.0,
+            "max": 1.0,
+            "step": 0.01
+          }
+        ],
+        "threshold_high": [
+          "FLOAT",
+          {
+            "default": 1.0,
+            "min": 0.0,
+            "max": 1.0,
+            "step": 0.01
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "Image Canny Filter",
+    "display_name": "Image Canny Filter",
+    "description": "",
+    "category": "WAS Suite/Image/Filter"
+  },
+  "Image Chromatic Aberration": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ],
+        "red_offset": [
+          "INT",
+          {
+            "default": 2,
+            "min": -255,
+            "max": 255,
+            "step": 1
+          }
+        ],
+        "green_offset": [
+          "INT",
+          {
+            "default": -1,
+            "min": -255,
+            "max": 255,
+            "step": 1
+          }
+        ],
+        "blue_offset": [
+          "INT",
+          {
+            "default": 1,
+            "min": -255,
+            "max": 255,
+            "step": 1
+          }
+        ],
+        "intensity": [
+          "FLOAT",
+          {
+            "default": 0.5,
+            "min": 0.0,
+            "max": 1.0,
+            "step": 0.01
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "Image Chromatic Aberration",
+    "display_name": "Image Chromatic Aberration",
+    "description": "",
+    "category": "WAS Suite/Image/Filter"
+  },
+  "Image Color Palette": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ],
+        "colors": [
+          "INT",
+          {
+            "default": 16,
+            "min": 8,
+            "max": 256,
+            "step": 1
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "Image Color Palette",
+    "display_name": "Image Color Palette",
+    "description": "",
+    "category": "WAS Suite/Image/Analyze"
+  },
+  "Image Crop Face": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ],
+        "crop_padding_factor": [
+          "FLOAT",
+          {
+            "default": 0.25,
+            "min": 0.0,
+            "max": 2.0,
+            "step": 0.01
+          }
+        ],
+        "cascade_xml": [
+          [
+            "lbpcascade_animeface.xml",
+            "haarcascade_frontalface_default.xml",
+            "haarcascade_frontalface_alt.xml",
+            "haarcascade_frontalface_alt2.xml",
+            "haarcascade_frontalface_alt_tree.xml",
+            "haarcascade_profileface.xml",
+            "haarcascade_upperbody.xml"
+          ]
+        ],
+        "use_face_recognition_gpu": [
+          [
+            "false",
+            "true"
+          ]
+        ]
+      }
+    },
+    "output": [
+      "IMAGE",
+      "CROP_DATA"
+    ],
+    "output_name": [
+      "IMAGE",
+      "CROP_DATA"
+    ],
+    "name": "Image Crop Face",
+    "display_name": "Image Crop Face",
+    "description": "",
+    "category": "WAS Suite/Image/Process"
+  },
+  "Image Crop Location": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ],
+        "top": [
+          "INT",
+          {
+            "default": 0,
+            "max": 10000000,
+            "min": 0,
+            "step": 1
+          }
+        ],
+        "left": [
+          "INT",
+          {
+            "default": 0,
+            "max": 10000000,
+            "min": 0,
+            "step": 1
+          }
+        ],
+        "right": [
+          "INT",
+          {
+            "default": 256,
+            "max": 10000000,
+            "min": 0,
+            "step": 1
+          }
+        ],
+        "bottom": [
+          "INT",
+          {
+            "default": 256,
+            "max": 10000000,
+            "min": 0,
+            "step": 1
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE",
+      "CROP_DATA"
+    ],
+    "output_name": [
+      "IMAGE",
+      "CROP_DATA"
+    ],
+    "name": "Image Crop Location",
+    "display_name": "Image Crop Location",
+    "description": "",
+    "category": "WAS Suite/Image/Process"
+  },
+  "Image Paste Face": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ],
+        "crop_image": [
+          "IMAGE"
+        ],
+        "crop_data": [
+          "CROP_DATA"
+        ],
+        "crop_blending": [
+          "FLOAT",
+          {
+            "default": 0.25,
+            "min": 0.0,
+            "max": 1.0,
+            "step": 0.01
+          }
+        ],
+        "crop_sharpening": [
+          "INT",
+          {
+            "default": 0,
+            "min": 0,
+            "max": 3,
+            "step": 1
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE",
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE",
+      "MASK_IMAGE"
+    ],
+    "name": "Image Paste Face",
+    "display_name": "Image Paste Face",
+    "description": "",
+    "category": "WAS Suite/Image/Process"
+  },
+  "Image Paste Crop": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ],
+        "crop_image": [
+          "IMAGE"
+        ],
+        "crop_data": [
+          "CROP_DATA"
+        ],
+        "crop_blending": [
+          "FLOAT",
+          {
+            "default": 0.25,
+            "min": 0.0,
+            "max": 1.0,
+            "step": 0.01
+          }
+        ],
+        "crop_sharpening": [
+          "INT",
+          {
+            "default": 0,
+            "min": 0,
+            "max": 3,
+            "step": 1
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE",
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE",
+      "IMAGE"
+    ],
+    "name": "Image Paste Crop",
+    "display_name": "Image Paste Crop",
+    "description": "",
+    "category": "WAS Suite/Image/Process"
+  },
+  "Image Paste Crop by Location": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ],
+        "crop_image": [
+          "IMAGE"
+        ],
+        "top": [
+          "INT",
+          {
+            "default": 0,
+            "max": 10000000,
+            "min": 0,
+            "step": 1
+          }
+        ],
+        "left": [
+          "INT",
+          {
+            "default": 0,
+            "max": 10000000,
+            "min": 0,
+            "step": 1
+          }
+        ],
+        "right": [
+          "INT",
+          {
+            "default": 256,
+            "max": 10000000,
+            "min": 0,
+            "step": 1
+          }
+        ],
+        "bottom": [
+          "INT",
+          {
+            "default": 256,
+            "max": 10000000,
+            "min": 0,
+            "step": 1
+          }
+        ],
+        "crop_blending": [
+          "FLOAT",
+          {
+            "default": 0.25,
+            "min": 0.0,
+            "max": 1.0,
+            "step": 0.01
+          }
+        ],
+        "crop_sharpening": [
+          "INT",
+          {
+            "default": 0,
+            "min": 0,
+            "max": 3,
+            "step": 1
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE",
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE",
+      "IMAGE"
+    ],
+    "name": "Image Paste Crop by Location",
+    "display_name": "Image Paste Crop by Location",
+    "description": "",
+    "category": "WAS Suite/Image/Process"
+  },
+  "Image Dragan Photography Filter": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ],
+        "saturation": [
+          "FLOAT",
+          {
+            "default": 1.0,
+            "min": 0.0,
+            "max": 16.0,
+            "step": 0.01
+          }
+        ],
+        "contrast": [
+          "FLOAT",
+          {
+            "default": 1.0,
+            "min": 0.0,
+            "max": 16.0,
+            "step": 0.01
+          }
+        ],
+        "brightness": [
+          "FLOAT",
+          {
+            "default": 1.0,
+            "min": 0.0,
+            "max": 16.0,
+            "step": 0.01
+          }
+        ],
+        "sharpness": [
+          "FLOAT",
+          {
+            "default": 1.0,
+            "min": 0.0,
+            "max": 6.0,
+            "step": 0.01
+          }
+        ],
+        "highpass_radius": [
+          "FLOAT",
+          {
+            "default": 6.0,
+            "min": 0.0,
+            "max": 255.0,
+            "step": 0.01
+          }
+        ],
+        "highpass_samples": [
+          "INT",
+          {
+            "default": 1,
+            "min": 0,
+            "max": 6.0,
+            "step": 1
+          }
+        ],
+        "highpass_strength": [
+          "FLOAT",
+          {
+            "default": 1.0,
+            "min": 0.0,
+            "max": 1.0,
+            "step": 0.01
+          }
+        ],
+        "colorize": [
+          [
+            "true",
+            "false"
+          ]
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "Image Dragan Photography Filter",
+    "display_name": "Image Dragan Photography Filter",
+    "description": "",
+    "category": "WAS Suite/Image/Filter"
+  },
+  "Image Edge Detection Filter": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ],
+        "mode": [
+          [
+            "normal",
+            "laplacian"
+          ]
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "Image Edge Detection Filter",
+    "display_name": "Image Edge Detection Filter",
+    "description": "",
+    "category": "WAS Suite/Image/Filter"
+  },
+  "Image Film Grain": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ],
+        "density": [
+          "FLOAT",
+          {
+            "default": 1.0,
+            "min": 0.01,
+            "max": 1.0,
+            "step": 0.01
+          }
+        ],
+        "intensity": [
+          "FLOAT",
+          {
+            "default": 1.0,
+            "min": 0.01,
+            "max": 1.0,
+            "step": 0.01
+          }
+        ],
+        "highlights": [
+          "FLOAT",
+          {
+            "default": 1.0,
+            "min": 0.01,
+            "max": 255.0,
+            "step": 0.01
+          }
+        ],
+        "supersample_factor": [
+          "INT",
+          {
+            "default": 4,
+            "min": 1,
+            "max": 8,
+            "step": 1
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "Image Film Grain",
+    "display_name": "Image Film Grain",
+    "description": "",
+    "category": "WAS Suite/Image/Filter"
+  },
+  "Image Filter Adjustments": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ],
+        "brightness": [
+          "FLOAT",
+          {
+            "default": 0.0,
+            "min": -1.0,
+            "max": 1.0,
+            "step": 0.01
+          }
+        ],
+        "contrast": [
+          "FLOAT",
+          {
+            "default": 1.0,
+            "min": -1.0,
+            "max": 2.0,
+            "step": 0.01
+          }
+        ],
+        "saturation": [
+          "FLOAT",
+          {
+            "default": 1.0,
+            "min": 0.0,
+            "max": 5.0,
+            "step": 0.01
+          }
+        ],
+        "sharpness": [
+          "FLOAT",
+          {
+            "default": 1.0,
+            "min": -5.0,
+            "max": 5.0,
+            "step": 0.01
+          }
+        ],
+        "blur": [
+          "INT",
+          {
+            "default": 0,
+            "min": 0,
+            "max": 16,
+            "step": 1
+          }
+        ],
+        "gaussian_blur": [
+          "FLOAT",
+          {
+            "default": 0.0,
+            "min": 0.0,
+            "max": 1024.0,
+            "step": 0.1
+          }
+        ],
+        "edge_enhance": [
+          "FLOAT",
+          {
+            "default": 0.0,
+            "min": 0.0,
+            "max": 1.0,
+            "step": 0.01
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "Image Filter Adjustments",
+    "display_name": "Image Filter Adjustments",
+    "description": "",
+    "category": "WAS Suite/Image/Filter"
+  },
+  "Image Flip": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ],
+        "mode": [
+          [
+            "horizontal",
+            "vertical"
+          ]
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "Image Flip",
+    "display_name": "Image Flip",
+    "description": "",
+    "category": "WAS Suite/Image/Transform"
+  },
+  "Image Gradient Map": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ],
+        "gradient_image": [
+          "IMAGE"
+        ],
+        "flip_left_right": [
+          [
+            "false",
+            "true"
+          ]
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "Image Gradient Map",
+    "display_name": "Image Gradient Map",
+    "description": "",
+    "category": "WAS Suite/Image/Filter"
+  },
+  "Image Generate Gradient": {
+    "input": {
+      "required": {
+        "width": [
+          "INT",
+          {
+            "default": 512,
+            "max": 4096,
+            "min": 64,
+            "step": 1
+          }
+        ],
+        "height": [
+          "INT",
+          {
+            "default": 512,
+            "max": 4096,
+            "min": 64,
+            "step": 1
+          }
+        ],
+        "direction": [
+          [
+            "horizontal",
+            "vertical"
+          ]
+        ],
+        "tolerance": [
+          "INT",
+          {
+            "default": 0,
+            "max": 255,
+            "min": 0,
+            "step": 1
+          }
+        ],
+        "gradient_stops": [
+          "STRING",
+          {
+            "default": "0:255,0,0\n25:255,255,255\n50:0,255,0\n75:0,0,255",
+            "multiline": true
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "Image Generate Gradient",
+    "display_name": "Image Generate Gradient",
+    "description": "",
+    "category": "WAS Suite/Image/Generate"
+  },
+  "Image High Pass Filter": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ],
+        "radius": [
+          "INT",
+          {
+            "default": 10,
+            "min": 1,
+            "max": 500,
+            "step": 1
+          }
+        ],
+        "strength": [
+          "FLOAT",
+          {
+            "default": 1.5,
+            "min": 0.0,
+            "max": 255.0,
+            "step": 0.1
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "Image High Pass Filter",
+    "display_name": "Image High Pass Filter",
+    "description": "",
+    "category": "WAS Suite/Image/Filter"
+  },
+  "Image History Loader": {
+    "input": {
+      "required": {
+        "image": [
+          [
+            "No History"
+          ]
+        ]
+      }
+    },
+    "output": [
+      "IMAGE",
+      "ASCII"
+    ],
+    "output_name": [
+      "image",
+      "filename_text"
+    ],
+    "name": "Image History Loader",
+    "display_name": "Image History Loader",
+    "description": "",
+    "category": "WAS Suite/History"
+  },
+  "Image Input Switch": {
+    "input": {
+      "required": {
+        "image_a": [
+          "IMAGE"
+        ],
+        "image_b": [
+          "IMAGE"
+        ],
+        "boolean_number": [
+          "NUMBER"
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "Image Input Switch",
+    "display_name": "Image Input Switch",
+    "description": "",
+    "category": "WAS Suite/Logic"
+  },
+  "Image Levels Adjustment": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ],
+        "black_level": [
+          "FLOAT",
+          {
+            "default": 0.0,
+            "min": 0.0,
+            "max": 255.0,
+            "step": 0.1
+          }
+        ],
+        "mid_level": [
+          "FLOAT",
+          {
+            "default": 127.5,
+            "min": 0.0,
+            "max": 255.0,
+            "step": 0.1
+          }
+        ],
+        "white_level": [
+          "FLOAT",
+          {
+            "default": 255,
+            "min": 0.0,
+            "max": 255.0,
+            "step": 0.1
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "Image Levels Adjustment",
+    "display_name": "Image Levels Adjustment",
+    "description": "",
+    "category": "WAS Suite/Image/Adjustment"
+  },
+  "Image Load": {
+    "input": {
+      "required": {
+        "image_path": [
+          "STRING",
+          {
+            "default": "./ComfyUI/input/example.png",
+            "multiline": false
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE",
+      "MASK",
+      "ASCII"
+    ],
+    "output_name": [
+      "image",
+      "mask",
+      "filename_text"
+    ],
+    "name": "Image Load",
+    "display_name": "Image Load",
+    "description": "",
+    "category": "WAS Suite/IO"
+  },
+  "Image Median Filter": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ],
+        "diameter": [
+          "INT",
+          {
+            "default": 2.0,
+            "min": 0.1,
+            "max": 255,
+            "step": 1
+          }
+        ],
+        "sigma_color": [
+          "FLOAT",
+          {
+            "default": 10.0,
+            "min": -255.0,
+            "max": 255.0,
+            "step": 0.1
+          }
+        ],
+        "sigma_space": [
+          "FLOAT",
+          {
+            "default": 10.0,
+            "min": -255.0,
+            "max": 255.0,
+            "step": 0.1
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "Image Median Filter",
+    "display_name": "Image Median Filter",
+    "description": "",
+    "category": "WAS Suite/Image/Filter"
+  },
+  "Image Mix RGB Channels": {
+    "input": {
+      "required": {
+        "red_channel": [
+          "IMAGE"
+        ],
+        "green_channel": [
+          "IMAGE"
+        ],
+        "blue_channel": [
+          "IMAGE"
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "Image Mix RGB Channels",
+    "display_name": "Image Mix RGB Channels",
+    "description": "",
+    "category": "WAS Suite/Image/Process"
+  },
+  "Image Monitor Effects Filter": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ],
+        "mode": [
+          [
+            "Digital Distortion",
+            "Signal Distortion",
+            "TV Distortion"
+          ]
+        ],
+        "amplitude": [
+          "INT",
+          {
+            "default": 5,
+            "min": 1,
+            "max": 255,
+            "step": 1
+          }
+        ],
+        "offset": [
+          "INT",
+          {
+            "default": 10,
+            "min": 1,
+            "max": 255,
+            "step": 1
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "Image Monitor Effects Filter",
+    "display_name": "Image Monitor Effects Filter",
+    "description": "",
+    "category": "WAS Suite/Image/Filter"
+  },
+  "Image Nova Filter": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ],
+        "amplitude": [
+          "FLOAT",
+          {
+            "default": 0.1,
+            "min": 0.0,
+            "max": 1.0,
+            "step": 0.001
+          }
+        ],
+        "frequency": [
+          "FLOAT",
+          {
+            "default": 3.14,
+            "min": 0.0,
+            "max": 100.0,
+            "step": 0.001
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "Image Nova Filter",
+    "display_name": "Image Nova Filter",
+    "description": "",
+    "category": "WAS Suite/Image/Filter"
+  },
+  "Image Padding": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ],
+        "feathering": [
+          "INT",
+          {
+            "default": 120,
+            "min": 0,
+            "max": 2048,
+            "step": 1
+          }
+        ],
+        "feather_second_pass": [
+          [
+            "true",
+            "false"
+          ]
+        ],
+        "left_padding": [
+          "INT",
+          {
+            "default": 512,
+            "min": 8,
+            "max": 48000,
+            "step": 1
+          }
+        ],
+        "right_padding": [
+          "INT",
+          {
+            "default": 512,
+            "min": 8,
+            "max": 48000,
+            "step": 1
+          }
+        ],
+        "top_padding": [
+          "INT",
+          {
+            "default": 512,
+            "min": 8,
+            "max": 48000,
+            "step": 1
+          }
+        ],
+        "bottom_padding": [
+          "INT",
+          {
+            "default": 512,
+            "min": 8,
+            "max": 48000,
+            "step": 1
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE",
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE",
+      "IMAGE"
+    ],
+    "name": "Image Padding",
+    "display_name": "Image Padding",
+    "description": "",
+    "category": "WAS Suite/Image/Transform"
+  },
+  "Image Perlin Noise Filter": {
+    "input": {
+      "required": {
+        "width": [
+          "INT",
+          {
+            "default": 512,
+            "max": 2048,
+            "min": 64,
+            "step": 1
+          }
+        ],
+        "height": [
+          "INT",
+          {
+            "default": 512,
+            "max": 2048,
+            "min": 64,
+            "step": 1
+          }
+        ],
+        "shape": [
+          "INT",
+          {
+            "default": 4,
+            "max": 8,
+            "min": 2,
+            "step": 2
+          }
+        ],
+        "density": [
+          "FLOAT",
+          {
+            "default": 0.25,
+            "max": 1.0,
+            "min": 0.0,
+            "step": 0.01
+          }
+        ],
+        "octaves": [
+          "INT",
+          {
+            "default": 4,
+            "max": 8,
+            "min": 0,
+            "step": 1
+          }
+        ],
+        "seed": [
+          "INT",
+          {
+            "default": 0,
+            "min": 0,
+            "max": 18446744073709551615
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "Image Perlin Noise Filter",
+    "display_name": "Image Perlin Noise Filter",
+    "description": "",
+    "category": "WAS Suite/Image/Generate/Noise"
+  },
+  "Image Remove Background (Alpha)": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ],
+        "mode": [
+          [
+            "background",
+            "foreground"
+          ]
+        ],
+        "threshold": [
+          "INT",
+          {
+            "default": 127,
+            "min": 0,
+            "max": 255,
+            "step": 1
+          }
+        ],
+        "threshold_tolerance": [
+          "INT",
+          {
+            "default": 2,
+            "min": 1,
+            "max": 24,
+            "step": 1
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "Image Remove Background (Alpha)",
+    "display_name": "Image Remove Background (Alpha)",
+    "description": "",
+    "category": "WAS Suite/Image/Process"
+  },
+  "Image Remove Color": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ],
+        "target_red": [
+          "INT",
+          {
+            "default": 255,
+            "min": 0,
+            "max": 255,
+            "step": 1
+          }
+        ],
+        "target_green": [
+          "INT",
+          {
+            "default": 255,
+            "min": 0,
+            "max": 255,
+            "step": 1
+          }
+        ],
+        "target_blue": [
+          "INT",
+          {
+            "default": 255,
+            "min": 0,
+            "max": 255,
+            "step": 1
+          }
+        ],
+        "replace_red": [
+          "INT",
+          {
+            "default": 255,
+            "min": 0,
+            "max": 255,
+            "step": 1
+          }
+        ],
+        "replace_green": [
+          "INT",
+          {
+            "default": 255,
+            "min": 0,
+            "max": 255,
+            "step": 1
+          }
+        ],
+        "replace_blue": [
+          "INT",
+          {
+            "default": 255,
+            "min": 0,
+            "max": 255,
+            "step": 1
+          }
+        ],
+        "clip_threshold": [
+          "INT",
+          {
+            "default": 10,
+            "min": 0,
+            "max": 255,
+            "step": 1
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "Image Remove Color",
+    "display_name": "Image Remove Color",
+    "description": "",
+    "category": "WAS Suite/Image/Process"
+  },
+  "Image Resize": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ],
+        "mode": [
+          [
+            "rescale",
+            "resize"
+          ]
+        ],
+        "supersample": [
+          [
+            "true",
+            "false"
+          ]
+        ],
+        "resampling": [
+          [
+            "lanczos",
+            "nearest",
+            "bilinear",
+            "bicubic"
+          ]
+        ],
+        "rescale_factor": [
+          "FLOAT",
+          {
+            "default": 2,
+            "min": 0.01,
+            "max": 16.0,
+            "step": 0.01
+          }
+        ],
+        "resize_width": [
+          "INT",
+          {
+            "default": 1024,
+            "min": 1,
+            "max": 48000,
+            "step": 1
+          }
+        ],
+        "resize_height": [
+          "INT",
+          {
+            "default": 1536,
+            "min": 1,
+            "max": 48000,
+            "step": 1
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "Image Resize",
+    "display_name": "Image Resize",
+    "description": "",
+    "category": "WAS Suite/Image/Transform"
+  },
+  "Image Rotate": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ],
+        "mode": [
+          [
+            "transpose",
+            "internal"
+          ]
+        ],
+        "rotation": [
+          "INT",
+          {
+            "default": 0,
+            "min": 0,
+            "max": 360,
+            "step": 90
+          }
+        ],
+        "sampler": [
+          [
+            "nearest",
+            "bilinear",
+            "bicubic"
+          ]
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "Image Rotate",
+    "display_name": "Image Rotate",
+    "description": "",
+    "category": "WAS Suite/Image/Transform"
+  },
+  "Image Save": {
+    "input": {
+      "required": {
+        "images": [
+          "IMAGE"
+        ],
+        "output_path": [
+          "STRING",
+          {
+            "default": "./ComfyUI/output",
+            "multiline": false
+          }
+        ],
+        "filename_prefix": [
+          "STRING",
+          {
+            "default": "ComfyUI"
+          }
+        ],
+        "extension": [
+          [
+            "png",
+            "jpeg",
+            "gif",
+            "tiff"
+          ]
+        ],
+        "quality": [
+          "INT",
+          {
+            "default": 100,
+            "min": 1,
+            "max": 100,
+            "step": 1
+          }
+        ],
+        "overwrite_mode": [
+          [
+            "false",
+            "prefix_as_filename"
+          ]
+        ]
+      },
+      "hidden": {
+        "prompt": "PROMPT",
+        "extra_pnginfo": "EXTRA_PNGINFO"
+      }
+    },
+    "output": [],
+    "output_name": [],
+    "name": "Image Save",
+    "display_name": "Image Save",
+    "description": "",
+    "category": "WAS Suite/IO"
+  },
+  "Image Seamless Texture": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ],
+        "blending": [
+          "FLOAT",
+          {
+            "default": 0.4,
+            "max": 1.0,
+            "min": 0.0,
+            "step": 0.01
+          }
+        ],
+        "tiled": [
+          [
+            "true",
+            "false"
+          ]
+        ],
+        "tiles": [
+          "INT",
+          {
+            "default": 2,
+            "max": 6,
+            "min": 2,
+            "step": 2
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "Image Seamless Texture",
+    "display_name": "Image Seamless Texture",
+    "description": "",
+    "category": "WAS Suite/Image/Process"
+  },
+  "Image Select Channel": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ],
+        "channel": [
+          [
+            "red",
+            "green",
+            "blue"
+          ]
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "Image Select Channel",
+    "display_name": "Image Select Channel",
+    "description": "",
+    "category": "WAS Suite/Image/Process"
+  },
+  "Image Select Color": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ],
+        "red": [
+          "INT",
+          {
+            "default": 255.0,
+            "min": 0.0,
+            "max": 255.0,
+            "step": 0.1
+          }
+        ],
+        "green": [
+          "INT",
+          {
+            "default": 255.0,
+            "min": 0.0,
+            "max": 255.0,
+            "step": 0.1
+          }
+        ],
+        "blue": [
+          "INT",
+          {
+            "default": 255.0,
+            "min": 0.0,
+            "max": 255.0,
+            "step": 0.1
+          }
+        ],
+        "variance": [
+          "INT",
+          {
+            "default": 10,
+            "min": 0,
+            "max": 255,
+            "step": 1
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "Image Select Color",
+    "display_name": "Image Select Color",
+    "description": "",
+    "category": "WAS Suite/Image/Process"
+  },
+  "Image Shadows and Highlights": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ],
+        "shadow_threshold": [
+          "FLOAT",
+          {
+            "default": 75,
+            "min": 0.0,
+            "max": 255.0,
+            "step": 0.1
+          }
+        ],
+        "shadow_factor": [
+          "FLOAT",
+          {
+            "default": 1.5,
+            "min": -12.0,
+            "max": 12.0,
+            "step": 0.1
+          }
+        ],
+        "shadow_smoothing": [
+          "FLOAT",
+          {
+            "default": 0.25,
+            "min": -255.0,
+            "max": 255.0,
+            "step": 0.1
+          }
+        ],
+        "highlight_threshold": [
+          "FLOAT",
+          {
+            "default": 175,
+            "min": 0.0,
+            "max": 255.0,
+            "step": 0.1
+          }
+        ],
+        "highlight_factor": [
+          "FLOAT",
+          {
+            "default": 0.5,
+            "min": -12.0,
+            "max": 12.0,
+            "step": 0.1
+          }
+        ],
+        "highlight_smoothing": [
+          "FLOAT",
+          {
+            "default": 0.25,
+            "min": -255.0,
+            "max": 255.0,
+            "step": 0.1
+          }
+        ],
+        "simplify_isolation": [
+          "FLOAT",
+          {
+            "default": 0,
+            "min": -255.0,
+            "max": 255.0,
+            "step": 0.1
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE",
+      "IMAGE",
+      "IMAGE"
+    ],
+    "output_name": [
+      "image",
+      "shadow_map",
+      "highlight_map"
+    ],
+    "name": "Image Shadows and Highlights",
+    "display_name": "Image Shadows and Highlights",
+    "description": "",
+    "category": "WAS Suite/Image/Adjustment"
+  },
+  "Image Size to Number": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ]
+      }
+    },
+    "output": [
+      "NUMBER",
+      "NUMBER"
+    ],
+    "output_name": [
+      "width_num",
+      "height_num"
+    ],
+    "name": "Image Size to Number",
+    "display_name": "Image Size to Number",
+    "description": "",
+    "category": "WAS Suite/Number/Operations"
+  },
+  "Image Stitch": {
+    "input": {
+      "required": {
+        "image_a": [
+          "IMAGE"
+        ],
+        "image_b": [
+          "IMAGE"
+        ],
+        "stitch": [
+          [
+            "top",
+            "left",
+            "bottom",
+            "right"
+          ]
+        ],
+        "feathering": [
+          "INT",
+          {
+            "default": 50,
+            "min": 0,
+            "max": 2048,
+            "step": 1
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "Image Stitch",
+    "display_name": "Image Stitch",
+    "description": "",
+    "category": "WAS Suite/Image/Transform"
+  },
+  "Image Style Filter": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ],
+        "style": [
+          [
+            "1977",
+            "aden",
+            "brannan",
+            "brooklyn",
+            "clarendon",
+            "earlybird",
+            "fairy tale",
+            "gingham",
+            "hudson",
+            "inkwell",
+            "kelvin",
+            "lark",
+            "lofi",
+            "maven",
+            "mayfair",
+            "moon",
+            "nashville",
+            "perpetua",
+            "reyes",
+            "rise",
+            "sci-fi",
+            "slumber",
+            "stinson",
+            "toaster",
+            "valencia",
+            "walden",
+            "willow",
+            "xpro2"
+          ]
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "Image Style Filter",
+    "display_name": "Image Style Filter",
+    "description": "",
+    "category": "WAS Suite/Image/Filter"
+  },
+  "Image Threshold": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ],
+        "threshold": [
+          "FLOAT",
+          {
+            "default": 0.5,
+            "min": 0.0,
+            "max": 1.0,
+            "step": 0.01
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "Image Threshold",
+    "display_name": "Image Threshold",
+    "description": "",
+    "category": "WAS Suite/Image/Process"
+  },
+  "Image Transpose": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ],
+        "image_overlay": [
+          "IMAGE"
+        ],
+        "width": [
+          "INT",
+          {
+            "default": 512,
+            "min": -48000,
+            "max": 48000,
+            "step": 1
+          }
+        ],
+        "height": [
+          "INT",
+          {
+            "default": 512,
+            "min": -48000,
+            "max": 48000,
+            "step": 1
+          }
+        ],
+        "X": [
+          "INT",
+          {
+            "default": 0,
+            "min": -48000,
+            "max": 48000,
+            "step": 1
+          }
+        ],
+        "Y": [
+          "INT",
+          {
+            "default": 0,
+            "min": -48000,
+            "max": 48000,
+            "step": 1
+          }
+        ],
+        "rotation": [
+          "INT",
+          {
+            "default": 0,
+            "min": -360,
+            "max": 360,
+            "step": 1
+          }
+        ],
+        "feathering": [
+          "INT",
+          {
+            "default": 0,
+            "min": 0,
+            "max": 4096,
+            "step": 1
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "Image Transpose",
+    "display_name": "Image Transpose",
+    "description": "",
+    "category": "WAS Suite/Image/Transform"
+  },
+  "Image fDOF Filter": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ],
+        "depth": [
+          "IMAGE"
+        ],
+        "mode": [
+          [
+            "mock",
+            "gaussian",
+            "box"
+          ]
+        ],
+        "radius": [
+          "INT",
+          {
+            "default": 8,
+            "min": 1,
+            "max": 128,
+            "step": 1
+          }
+        ],
+        "samples": [
+          "INT",
+          {
+            "default": 1,
+            "min": 1,
+            "max": 3,
+            "step": 1
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "Image fDOF Filter",
+    "display_name": "Image fDOF Filter",
+    "description": "",
+    "category": "WAS Suite/Image/Filter"
+  },
+  "Image to Latent Mask": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ],
+        "channel": [
+          [
+            "alpha",
+            "red",
+            "green",
+            "blue"
+          ]
+        ]
+      }
+    },
+    "output": [
+      "MASK"
+    ],
+    "output_name": [
+      "MASK"
+    ],
+    "name": "Image to Latent Mask",
+    "display_name": "Image to Latent Mask",
+    "description": "",
+    "category": "WAS Suite/Image/Transform"
+  },
+  "Image Voronoi Noise Filter": {
+    "input": {
+      "required": {
+        "width": [
+          "INT",
+          {
+            "default": 512,
+            "max": 4096,
+            "min": 64,
+            "step": 1
+          }
+        ],
+        "height": [
+          "INT",
+          {
+            "default": 512,
+            "max": 4096,
+            "min": 64,
+            "step": 1
+          }
+        ],
+        "density": [
+          "INT",
+          {
+            "default": 50,
+            "max": 256,
+            "min": 10,
+            "step": 2
+          }
+        ],
+        "modulator": [
+          "INT",
+          {
+            "default": 0,
+            "max": 8,
+            "min": 0,
+            "step": 1
+          }
+        ],
+        "seed": [
+          "INT",
+          {
+            "default": 0,
+            "min": 0,
+            "max": 18446744073709551615
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "Image Voronoi Noise Filter",
+    "display_name": "Image Voronoi Noise Filter",
+    "description": "",
+    "category": "WAS Suite/Image/Generate/Noise"
+  },
+  "KSampler (WAS)": {
+    "input": {
+      "required": {
+        "model": [
+          "MODEL"
+        ],
+        "seed": [
+          "SEED"
+        ],
+        "steps": [
+          "INT",
+          {
+            "default": 20,
+            "min": 1,
+            "max": 10000
+          }
+        ],
+        "cfg": [
+          "FLOAT",
+          {
+            "default": 8.0,
+            "min": 0.0,
+            "max": 100.0
+          }
+        ],
+        "sampler_name": [
+          [
+            "euler",
+            "euler_ancestral",
+            "heun",
+            "dpm_2",
+            "dpm_2_ancestral",
+            "lms",
+            "dpm_fast",
+            "dpm_adaptive",
+            "dpmpp_2s_ancestral",
+            "dpmpp_sde",
+            "dpmpp_2m",
+            "ddim",
+            "uni_pc",
+            "uni_pc_bh2"
+          ]
+        ],
+        "scheduler": [
+          [
+            "karras",
+            "normal",
+            "simple",
+            "ddim_uniform"
+          ]
+        ],
+        "positive": [
+          "CONDITIONING"
+        ],
+        "negative": [
+          "CONDITIONING"
+        ],
+        "latent_image": [
+          "LATENT"
+        ],
+        "denoise": [
+          "FLOAT",
+          {
+            "default": 1.0,
+            "min": 0.0,
+            "max": 1.0,
+            "step": 0.01
+          }
+        ]
+      }
+    },
+    "output": [
+      "LATENT"
+    ],
+    "output_name": [
+      "LATENT"
+    ],
+    "name": "KSampler (WAS)",
+    "display_name": "KSampler (WAS)",
+    "description": "",
+    "category": "WAS Suite/Sampling"
+  },
+  "Latent Noise Injection": {
+    "input": {
+      "required": {
+        "samples": [
+          "LATENT"
+        ],
+        "noise_std": [
+          "FLOAT",
+          {
+            "default": 0.1,
+            "min": 0.0,
+            "max": 1.0,
+            "step": 0.01
+          }
+        ]
+      }
+    },
+    "output": [
+      "LATENT"
+    ],
+    "output_name": [
+      "LATENT"
+    ],
+    "name": "Latent Noise Injection",
+    "display_name": "Latent Noise Injection",
+    "description": "",
+    "category": "WAS Suite/Latent/Generate"
+  },
+  "Latent Size to Number": {
+    "input": {
+      "required": {
+        "samples": [
+          "LATENT"
+        ]
+      }
+    },
+    "output": [
+      "NUMBER",
+      "NUMBER"
+    ],
+    "output_name": [
+      "tensor_w_num",
+      "tensor_h_num"
+    ],
+    "name": "Latent Size to Number",
+    "display_name": "Latent Size to Number",
+    "description": "",
+    "category": "WAS Suite/Number/Operations"
+  },
+  "Latent Upscale by Factor (WAS)": {
+    "input": {
+      "required": {
+        "samples": [
+          "LATENT"
+        ],
+        "mode": [
+          [
+            "area",
+            "bicubic",
+            "bilinear",
+            "nearest"
+          ]
+        ],
+        "factor": [
+          "FLOAT",
+          {
+            "default": 2.0,
+            "min": 0.1,
+            "max": 8.0,
+            "step": 0.01
+          }
+        ],
+        "align": [
+          [
+            "true",
+            "false"
+          ]
+        ]
+      }
+    },
+    "output": [
+      "LATENT"
+    ],
+    "output_name": [
+      "LATENT"
+    ],
+    "name": "Latent Upscale by Factor (WAS)",
+    "display_name": "Latent Upscale by Factor (WAS)",
+    "description": "",
+    "category": "WAS Suite/Latent/Transform"
+  },
+  "Load Image Batch": {
+    "input": {
+      "required": {
+        "mode": [
+          [
+            "single_image",
+            "incremental_image"
+          ]
+        ],
+        "index": [
+          "INT",
+          {
+            "default": 0,
+            "min": 0,
+            "max": 150000,
+            "step": 1
+          }
+        ],
+        "label": [
+          "STRING",
+          {
+            "default": "Batch 001",
+            "multiline": false
+          }
+        ],
+        "path": [
+          "STRING",
+          {
+            "default": "./ComfyUI/input/",
+            "multiline": false
+          }
+        ],
+        "pattern": [
+          "STRING",
+          {
+            "default": "*",
+            "multiline": false
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE",
+      "ASCII"
+    ],
+    "output_name": [
+      "image",
+      "filename_text"
+    ],
+    "name": "Load Image Batch",
+    "display_name": "Load Image Batch",
+    "description": "",
+    "category": "WAS Suite/IO"
+  },
+  "Load Text File": {
+    "input": {
+      "required": {
+        "file_path": [
+          "STRING",
+          {
+            "default": "",
+            "multiline": false
+          }
+        ],
+        "dictionary_name": [
+          "STRING",
+          {
+            "default": "[filename]",
+            "multiline": false
+          }
+        ]
+      }
+    },
+    "output": [
+      "ASCII",
+      "DICT"
+    ],
+    "output_name": [
+      "ASCII",
+      "DICT"
+    ],
+    "name": "Load Text File",
+    "display_name": "Load Text File",
+    "description": "",
+    "category": "WAS Suite/IO"
+  },
+  "MiDaS Depth Approximation": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ],
+        "use_cpu": [
+          [
+            "false",
+            "true"
+          ]
+        ],
+        "midas_model": [
+          [
+            "DPT_Large",
+            "DPT_Hybrid",
+            "DPT_Small"
+          ]
+        ],
+        "invert_depth": [
+          [
+            "false",
+            "true"
+          ]
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "MiDaS Depth Approximation",
+    "display_name": "MiDaS Depth Approximation",
+    "description": "",
+    "category": "WAS Suite/Image/AI"
+  },
+  "MiDaS Mask Image": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ],
+        "use_cpu": [
+          [
+            "false",
+            "true"
+          ]
+        ],
+        "midas_model": [
+          [
+            "DPT_Large",
+            "DPT_Hybrid",
+            "DPT_Small"
+          ]
+        ],
+        "remove": [
+          [
+            "background",
+            "foregroud"
+          ]
+        ],
+        "threshold": [
+          [
+            "false",
+            "true"
+          ]
+        ],
+        "threshold_low": [
+          "FLOAT",
+          {
+            "default": 10,
+            "min": 0,
+            "max": 255,
+            "step": 1
+          }
+        ],
+        "threshold_mid": [
+          "FLOAT",
+          {
+            "default": 200,
+            "min": 0,
+            "max": 255,
+            "step": 1
+          }
+        ],
+        "threshold_high": [
+          "FLOAT",
+          {
+            "default": 210,
+            "min": 0,
+            "max": 255,
+            "step": 1
+          }
+        ],
+        "smoothing": [
+          "FLOAT",
+          {
+            "default": 0.25,
+            "min": 0.0,
+            "max": 16.0,
+            "step": 0.01
+          }
+        ],
+        "background_red": [
+          "INT",
+          {
+            "default": 0,
+            "min": 0,
+            "max": 255,
+            "step": 1
+          }
+        ],
+        "background_green": [
+          "INT",
+          {
+            "default": 0,
+            "min": 0,
+            "max": 255,
+            "step": 1
+          }
+        ],
+        "background_blue": [
+          "INT",
+          {
+            "default": 0,
+            "min": 0,
+            "max": 255,
+            "step": 1
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE",
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE",
+      "IMAGE"
+    ],
+    "name": "MiDaS Mask Image",
+    "display_name": "MiDaS Mask Image",
+    "description": "",
+    "category": "WAS Suite/Image/AI"
+  },
+  "Number Operation": {
+    "input": {
+      "required": {
+        "number_a": [
+          "NUMBER"
+        ],
+        "number_b": [
+          "NUMBER"
+        ],
+        "operation": [
+          [
+            "addition",
+            "subtraction",
+            "division",
+            "floor division",
+            "multiplication",
+            "exponentiation",
+            "modulus",
+            "greater-than",
+            "greater-than or equels",
+            "less-than",
+            "less-than or equals",
+            "equals",
+            "does not equal"
+          ]
+        ]
+      }
+    },
+    "output": [
+      "NUMBER"
+    ],
+    "output_name": [
+      "NUMBER"
+    ],
+    "name": "Number Operation",
+    "display_name": "Number Operation",
+    "description": "",
+    "category": "WAS Suite/Number/Operations"
+  },
+  "Number to Float": {
+    "input": {
+      "required": {
+        "number": [
+          "NUMBER"
+        ]
+      }
+    },
+    "output": [
+      "FLOAT"
+    ],
+    "output_name": [
+      "FLOAT"
+    ],
+    "name": "Number to Float",
+    "display_name": "Number to Float",
+    "description": "",
+    "category": "WAS Suite/Number/Operations"
+  },
+  "Number Input Switch": {
+    "input": {
+      "required": {
+        "number_a": [
+          "NUMBER"
+        ],
+        "number_b": [
+          "NUMBER"
+        ],
+        "boolean_number": [
+          "NUMBER"
+        ]
+      }
+    },
+    "output": [
+      "NUMBER"
+    ],
+    "output_name": [
+      "NUMBER"
+    ],
+    "name": "Number Input Switch",
+    "display_name": "Number Input Switch",
+    "description": "",
+    "category": "WAS Suite/Logic"
+  },
+  "Number Input Condition": {
+    "input": {
+      "required": {
+        "number_a": [
+          "NUMBER"
+        ],
+        "number_b": [
+          "NUMBER"
+        ],
+        "comparison": [
+          [
+            "greater-than",
+            "greater-than or equels",
+            "less-than",
+            "less-than or equals",
+            "equals",
+            "does not equal",
+            "divisible by",
+            "if A odd",
+            "if A even",
+            "if A prime",
+            "factor of"
+          ]
+        ]
+      }
+    },
+    "output": [
+      "NUMBER"
+    ],
+    "output_name": [
+      "NUMBER"
+    ],
+    "name": "Number Input Condition",
+    "display_name": "Number Input Condition",
+    "description": "",
+    "category": "WAS Suite/Logic"
+  },
+  "Number Multiple Of": {
+    "input": {
+      "required": {
+        "number": [
+          "NUMBER"
+        ],
+        "multiple": [
+          "INT",
+          {
+            "default": 8,
+            "min": -18446744073709551615,
+            "max": 18446744073709551615
+          }
+        ]
+      }
+    },
+    "output": [
+      "NUMBER"
+    ],
+    "output_name": [
+      "NUMBER"
+    ],
+    "name": "Number Multiple Of",
+    "display_name": "Number Multiple Of",
+    "description": "",
+    "category": "WAS Suite/Number/Functions"
+  },
+  "Number PI": {
+    "input": {
+      "required": {}
+    },
+    "output": [
+      "NUMBER"
+    ],
+    "output_name": [
+      "NUMBER"
+    ],
+    "name": "Number PI",
+    "display_name": "Number PI",
+    "description": "",
+    "category": "WAS Suite/Number"
+  },
+  "Number to Int": {
+    "input": {
+      "required": {
+        "number": [
+          "NUMBER"
+        ]
+      }
+    },
+    "output": [
+      "INT"
+    ],
+    "output_name": [
+      "INT"
+    ],
+    "name": "Number to Int",
+    "display_name": "Number to Int",
+    "description": "",
+    "category": "WAS Suite/Number/Operations"
+  },
+  "Number to Seed": {
+    "input": {
+      "required": {
+        "number": [
+          "NUMBER"
+        ]
+      }
+    },
+    "output": [
+      "SEED"
+    ],
+    "output_name": [
+      "SEED"
+    ],
+    "name": "Number to Seed",
+    "display_name": "Number to Seed",
+    "description": "",
+    "category": "WAS Suite/Number/Operations"
+  },
+  "Number to String": {
+    "input": {
+      "required": {
+        "number": [
+          "NUMBER"
+        ]
+      }
+    },
+    "output": [
+      "STRING"
+    ],
+    "output_name": [
+      "STRING"
+    ],
+    "name": "Number to String",
+    "display_name": "Number to String",
+    "description": "",
+    "category": "WAS Suite/Number/Operations"
+  },
+  "Number to Text": {
+    "input": {
+      "required": {
+        "number": [
+          "NUMBER"
+        ]
+      }
+    },
+    "output": [
+      "ASCII"
+    ],
+    "output_name": [
+      "ASCII"
+    ],
+    "name": "Number to Text",
+    "display_name": "Number to Text",
+    "description": "",
+    "category": "WAS Suite/Number/Operations"
+  },
+  "Prompt Styles Selector": {
+    "input": {
+      "required": {
+        "style": [
+          [
+            "None"
+          ]
+        ]
+      }
+    },
+    "output": [
+      "ASCII",
+      "ASCII"
+    ],
+    "output_name": [
+      "ASCII",
+      "ASCII"
+    ],
+    "name": "Prompt Styles Selector",
+    "display_name": "Prompt Styles Selector",
+    "description": "",
+    "category": "WAS Suite/Text"
+  },
+  "Random Number": {
+    "input": {
+      "required": {
+        "number_type": [
+          [
+            "integer",
+            "float",
+            "bool"
+          ]
+        ],
+        "minimum": [
+          "FLOAT",
+          {
+            "default": 0,
+            "min": -18446744073709551615,
+            "max": 18446744073709551615
+          }
+        ],
+        "maximum": [
+          "FLOAT",
+          {
+            "default": 0,
+            "min": -18446744073709551615,
+            "max": 18446744073709551615
+          }
+        ],
+        "seed": [
+          "INT",
+          {
+            "default": 0,
+            "min": 0,
+            "max": 18446744073709551615
+          }
+        ]
+      }
+    },
+    "output": [
+      "NUMBER"
+    ],
+    "output_name": [
+      "NUMBER"
+    ],
+    "name": "Random Number",
+    "display_name": "Random Number",
+    "description": "",
+    "category": "WAS Suite/Number"
+  },
+  "Save Text File": {
+    "input": {
+      "required": {
+        "text": [
+          "ASCII"
+        ],
+        "path": [
+          "STRING",
+          {
+            "default": "",
+            "multiline": false
+          }
+        ],
+        "filename": [
+          "STRING",
+          {
+            "default": "text_[time]",
+            "multiline": false
+          }
+        ]
+      }
+    },
+    "output": [],
+    "output_name": [],
+    "name": "Save Text File",
+    "display_name": "Save Text File",
+    "description": "",
+    "category": "WAS Suite/IO"
+  },
+  "Seed": {
+    "input": {
+      "required": {
+        "seed": [
+          "INT",
+          {
+            "default": 0,
+            "min": 0,
+            "max": 18446744073709551615
+          }
+        ]
+      }
+    },
+    "output": [
+      "SEED"
+    ],
+    "output_name": [
+      "SEED"
+    ],
+    "name": "Seed",
+    "display_name": "Seed",
+    "description": "",
+    "category": "WAS Suite/Number"
+  },
+  "Tensor Batch to Image": {
+    "input": {
+      "required": {
+        "images_batch": [
+          "IMAGE"
+        ],
+        "batch_image_number": [
+          "INT",
+          {
+            "default": 0,
+            "min": 0,
+            "max": 64,
+            "step": 1
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "Tensor Batch to Image",
+    "display_name": "Tensor Batch to Image",
+    "description": "",
+    "category": "WAS Suite/Latent/Transform"
+  },
+  "BLIP Analyze Image": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ],
+        "mode": [
+          [
+            "caption",
+            "interrogate"
+          ]
+        ],
+        "question": [
+          "STRING",
+          {
+            "default": "What does the background consist of?",
+            "multiline": true
+          }
+        ]
+      }
+    },
+    "output": [
+      "ASCII"
+    ],
+    "output_name": [
+      "ASCII"
+    ],
+    "name": "BLIP Analyze Image",
+    "display_name": "BLIP Analyze Image",
+    "description": "",
+    "category": "WAS Suite/Text/AI"
+  },
+  "SAM Model Loader": {
+    "input": {
+      "required": {
+        "model_size": [
+          [
+            "ViT-H (91M)",
+            "ViT-L (308M)",
+            "ViT-B (636M)"
+          ]
+        ]
+      }
+    },
+    "output": [
+      "SAM_MODEL"
+    ],
+    "output_name": [
+      "SAM_MODEL"
+    ],
+    "name": "SAM Model Loader",
+    "display_name": "SAM Model Loader",
+    "description": "",
+    "category": "WAS Suite/Image/AI/SAM"
+  },
+  "SAM Parameters": {
+    "input": {
+      "required": {
+        "points": [
+          "STRING",
+          {
+            "default": "[128, 128]; [0, 0]",
+            "multiline": false
+          }
+        ],
+        "labels": [
+          "STRING",
+          {
+            "default": "[1, 0]",
+            "multiline": false
+          }
+        ]
+      }
+    },
+    "output": [
+      "SAM_PARAMETERS"
+    ],
+    "output_name": [
+      "SAM_PARAMETERS"
+    ],
+    "name": "SAM Parameters",
+    "display_name": "SAM Parameters",
+    "description": "",
+    "category": "WAS Suite/Image/AI/SAM"
+  },
+  "SAM Parameters Combine": {
+    "input": {
+      "required": {
+        "sam_parameters_a": [
+          "SAM_PARAMETERS"
+        ],
+        "sam_parameters_b": [
+          "SAM_PARAMETERS"
+        ]
+      }
+    },
+    "output": [
+      "SAM_PARAMETERS"
+    ],
+    "output_name": [
+      "SAM_PARAMETERS"
+    ],
+    "name": "SAM Parameters Combine",
+    "display_name": "SAM Parameters Combine",
+    "description": "",
+    "category": "WAS Suite/Image/AI/SAM"
+  },
+  "SAM Image Mask": {
+    "input": {
+      "required": {
+        "sam_model": [
+          "SAM_MODEL"
+        ],
+        "sam_parameters": [
+          "SAM_PARAMETERS"
+        ],
+        "image": [
+          "IMAGE"
+        ]
+      }
+    },
+    "output": [
+      "IMAGE",
+      "MASK"
+    ],
+    "output_name": [
+      "IMAGE",
+      "MASK"
+    ],
+    "name": "SAM Image Mask",
+    "display_name": "SAM Image Mask",
+    "description": "",
+    "category": "WAS Suite/Image/AI/SAM"
+  },
+  "String to Text": {
+    "input": {
+      "required": {
+        "string": [
+          "STRING",
+          {}
+        ]
+      }
+    },
+    "output": [
+      "ASCII"
+    ],
+    "output_name": [
+      "ASCII"
+    ],
+    "name": "String to Text",
+    "display_name": "String to Text",
+    "description": "",
+    "category": "WAS Suite/Text/Operations"
+  },
+  "Image Bounds": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ]
+      }
+    },
+    "output": [
+      "IMAGE_BOUNDS"
+    ],
+    "output_name": [
+      "IMAGE_BOUNDS"
+    ],
+    "name": "Image Bounds",
+    "display_name": "Image Bounds",
+    "description": "",
+    "category": "WAS Suite/Image/Bound"
+  },
+  "Inset Image Bounds": {
+    "input": {
+      "required": {
+        "image_bounds": [
+          "IMAGE_BOUNDS"
+        ],
+        "inset_left": [
+          "INT",
+          {
+            "default": 64,
+            "min": 0,
+            "max": 18446744073709551615
+          }
+        ],
+        "inset_right": [
+          "INT",
+          {
+            "default": 64,
+            "min": 0,
+            "max": 18446744073709551615
+          }
+        ],
+        "inset_top": [
+          "INT",
+          {
+            "default": 64,
+            "min": 0,
+            "max": 18446744073709551615
+          }
+        ],
+        "inset_bottom": [
+          "INT",
+          {
+            "default": 64,
+            "min": 0,
+            "max": 18446744073709551615
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE_BOUNDS"
+    ],
+    "output_name": [
+      "IMAGE_BOUNDS"
+    ],
+    "name": "Inset Image Bounds",
+    "display_name": "Inset Image Bounds",
+    "description": "",
+    "category": "WAS Suite/Image/Bound"
+  },
+  "Bounded Image Blend": {
+    "input": {
+      "required": {
+        "target": [
+          "IMAGE"
+        ],
+        "target_bounds": [
+          "IMAGE_BOUNDS"
+        ],
+        "source": [
+          "IMAGE"
+        ],
+        "blend_factor": [
+          "FLOAT",
+          {
+            "default": 1.0,
+            "min": 0.0,
+            "max": 1.0
+          }
+        ],
+        "feathering": [
+          "INT",
+          {
+            "default": 16,
+            "min": 0,
+            "max": 18446744073709551615
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "Bounded Image Blend",
+    "display_name": "Bounded Image Blend",
+    "description": "",
+    "category": "WAS Suite/Image/Bound"
+  },
+  "Bounded Image Blend with Mask": {
+    "input": {
+      "required": {
+        "target": [
+          "IMAGE"
+        ],
+        "target_mask": [
+          "MASK"
+        ],
+        "target_bounds": [
+          "IMAGE_BOUNDS"
+        ],
+        "source": [
+          "IMAGE"
+        ],
+        "blend_factor": [
+          "FLOAT",
+          {
+            "default": 1.0,
+            "min": 0.0,
+            "max": 1.0
+          }
+        ],
+        "feathering": [
+          "INT",
+          {
+            "default": 16,
+            "min": 0,
+            "max": 18446744073709551615
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "Bounded Image Blend with Mask",
+    "display_name": "Bounded Image Blend with Mask",
+    "description": "",
+    "category": "WAS Suite/Image/Bound"
+  },
+  "Bounded Image Crop": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ],
+        "image_bounds": [
+          "IMAGE_BOUNDS"
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "Bounded Image Crop",
+    "display_name": "Bounded Image Crop",
+    "description": "",
+    "category": "WAS Suite/Image/Bound"
+  },
+  "Bounded Image Crop with Mask": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ],
+        "mask": [
+          "MASK"
+        ],
+        "padding_left": [
+          "INT",
+          {
+            "default": 64,
+            "min": 0,
+            "max": 18446744073709551615
+          }
+        ],
+        "padding_right": [
+          "INT",
+          {
+            "default": 64,
+            "min": 0,
+            "max": 18446744073709551615
+          }
+        ],
+        "padding_top": [
+          "INT",
+          {
+            "default": 64,
+            "min": 0,
+            "max": 18446744073709551615
+          }
+        ],
+        "padding_bottom": [
+          "INT",
+          {
+            "default": 64,
+            "min": 0,
+            "max": 18446744073709551615
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE",
+      "IMAGE_BOUNDS"
+    ],
+    "output_name": [
+      "IMAGE",
+      "IMAGE_BOUNDS"
+    ],
+    "name": "Bounded Image Crop with Mask",
+    "display_name": "Bounded Image Crop with Mask",
+    "description": "",
+    "category": "WAS Suite/Image/Bound"
+  },
+  "Text Dictionary Update": {
+    "input": {
+      "required": {
+        "dictionary_a": [
+          "DICT"
+        ],
+        "dictionary_b": [
+          "DICT"
+        ]
+      },
+      "optional": {
+        "dictionary_c": [
+          "DICT"
+        ],
+        "dictionary_d": [
+          "DICT"
+        ]
+      }
+    },
+    "output": [
+      "DICT"
+    ],
+    "output_name": [
+      "DICT"
+    ],
+    "name": "Text Dictionary Update",
+    "display_name": "Text Dictionary Update",
+    "description": "",
+    "category": "WAS Suite/Text"
+  },
+  "Text Add Tokens": {
+    "input": {
+      "required": {
+        "tokens": [
+          "STRING",
+          {
+            "default": "[hello]: world",
+            "multiline": true
+          }
+        ]
+      }
+    },
+    "output": [],
+    "output_name": [],
+    "name": "Text Add Tokens",
+    "display_name": "Text Add Tokens",
+    "description": "",
+    "category": "WAS Suite/Text/Tokens"
+  },
+  "Text Add Token by Input": {
+    "input": {
+      "required": {
+        "token_name": [
+          "ASCII"
+        ],
+        "token_value": [
+          "ASCII"
+        ]
+      }
+    },
+    "output": [],
+    "output_name": [],
+    "name": "Text Add Token by Input",
+    "display_name": "Text Add Token by Input",
+    "description": "",
+    "category": "WAS Suite/Text/Tokens"
+  },
+  "Text Concatenate": {
+    "input": {
+      "required": {
+        "text_a": [
+          "ASCII"
+        ],
+        "text_b": [
+          "ASCII"
+        ],
+        "linebreak_addition": [
+          [
+            "false",
+            "true"
+          ]
+        ]
+      },
+      "optional": {
+        "text_c": [
+          "ASCII"
+        ],
+        "text_d": [
+          "ASCII"
+        ]
+      }
+    },
+    "output": [
+      "ASCII"
+    ],
+    "output_name": [
+      "ASCII"
+    ],
+    "name": "Text Concatenate",
+    "display_name": "Text Concatenate",
+    "description": "",
+    "category": "WAS Suite/Text"
+  },
+  "Text File History Loader": {
+    "input": {
+      "required": {
+        "file": [
+          [
+            "No History"
+          ]
+        ],
+        "dictionary_name": [
+          "STRING",
+          {
+            "default": "[filename]",
+            "multiline": true
+          }
+        ]
+      }
+    },
+    "output": [
+      "ASCII",
+      "DICT"
+    ],
+    "output_name": [
+      "ASCII",
+      "DICT"
+    ],
+    "name": "Text File History Loader",
+    "display_name": "Text File History Loader",
+    "description": "",
+    "category": "WAS Suite/History"
+  },
+  "Text Find and Replace by Dictionary": {
+    "input": {
+      "required": {
+        "text": [
+          "ASCII"
+        ],
+        "dictionary": [
+          "DICT"
+        ],
+        "replacement_key": [
+          "STRING",
+          {
+            "default": "__",
+            "multiline": false
+          }
+        ],
+        "seed": [
+          "INT",
+          {
+            "default": 0,
+            "min": 0,
+            "max": 18446744073709551615
+          }
+        ]
+      }
+    },
+    "output": [
+      "ASCII"
+    ],
+    "output_name": [
+      "ASCII"
+    ],
+    "name": "Text Find and Replace by Dictionary",
+    "display_name": "Text Find and Replace by Dictionary",
+    "description": "",
+    "category": "WAS Suite/Text/Search"
+  },
+  "Text Find and Replace Input": {
+    "input": {
+      "required": {
+        "text": [
+          "ASCII"
+        ],
+        "find": [
+          "ASCII"
+        ],
+        "replace": [
+          "ASCII"
+        ]
+      }
+    },
+    "output": [
+      "ASCII"
+    ],
+    "output_name": [
+      "ASCII"
+    ],
+    "name": "Text Find and Replace Input",
+    "display_name": "Text Find and Replace Input",
+    "description": "",
+    "category": "WAS Suite/Text/Search"
+  },
+  "Text Find and Replace": {
+    "input": {
+      "required": {
+        "text": [
+          "ASCII"
+        ],
+        "find": [
+          "STRING",
+          {
+            "default": "",
+            "multiline": false
+          }
+        ],
+        "replace": [
+          "STRING",
+          {
+            "default": "",
+            "multiline": false
+          }
+        ]
+      }
+    },
+    "output": [
+      "ASCII"
+    ],
+    "output_name": [
+      "ASCII"
+    ],
+    "name": "Text Find and Replace",
+    "display_name": "Text Find and Replace",
+    "description": "",
+    "category": "WAS Suite/Text/Search"
+  },
+  "Text Input Switch": {
+    "input": {
+      "required": {
+        "text_a": [
+          "ASCII"
+        ],
+        "text_b": [
+          "ASCII"
+        ],
+        "boolean_number": [
+          "NUMBER"
+        ]
+      }
+    },
+    "output": [
+      "ASCII"
+    ],
+    "output_name": [
+      "ASCII"
+    ],
+    "name": "Text Input Switch",
+    "display_name": "Text Input Switch",
+    "description": "",
+    "category": "WAS Suite/Logic"
+  },
+  "Text Multiline": {
+    "input": {
+      "required": {
+        "text": [
+          "STRING",
+          {
+            "default": "",
+            "multiline": true
+          }
+        ]
+      }
+    },
+    "output": [
+      "ASCII"
+    ],
+    "output_name": [
+      "ASCII"
+    ],
+    "name": "Text Multiline",
+    "display_name": "Text Multiline",
+    "description": "",
+    "category": "WAS Suite/Text"
+  },
+  "Text Parse A1111 Embeddings": {
+    "input": {
+      "required": {
+        "text": [
+          "ASCII"
+        ]
+      }
+    },
+    "output": [
+      "ASCII"
+    ],
+    "output_name": [
+      "ASCII"
+    ],
+    "name": "Text Parse A1111 Embeddings",
+    "display_name": "Text Parse A1111 Embeddings",
+    "description": "",
+    "category": "WAS Suite/Text/Parse"
+  },
+  "Text Parse Noodle Soup Prompts": {
+    "input": {
+      "required": {
+        "noodle_key": [
+          "STRING",
+          {
+            "default": "__",
+            "multiline": false
+          }
+        ],
+        "seed": [
+          "INT",
+          {
+            "default": 0,
+            "min": 0,
+            "max": 18446744073709551615
+          }
+        ],
+        "text": [
+          "ASCII"
+        ]
+      }
+    },
+    "output": [
+      "ASCII"
+    ],
+    "output_name": [
+      "ASCII"
+    ],
+    "name": "Text Parse Noodle Soup Prompts",
+    "display_name": "Text Parse Noodle Soup Prompts",
+    "description": "",
+    "category": "WAS Suite/Text/Parse"
+  },
+  "Text Parse Tokens": {
+    "input": {
+      "required": {
+        "text": [
+          "ASCII"
+        ]
+      }
+    },
+    "output": [
+      "ASCII"
+    ],
+    "output_name": [
+      "ASCII"
+    ],
+    "name": "Text Parse Tokens",
+    "display_name": "Text Parse Tokens",
+    "description": "",
+    "category": "WAS Suite/Text/Tokens"
+  },
+  "Text Random Line": {
+    "input": {
+      "required": {
+        "text": [
+          "ASCII"
+        ],
+        "seed": [
+          "INT",
+          {
+            "default": 0,
+            "min": 0,
+            "max": 18446744073709551615
+          }
+        ]
+      }
+    },
+    "output": [
+      "ASCII"
+    ],
+    "output_name": [
+      "ASCII"
+    ],
+    "name": "Text Random Line",
+    "display_name": "Text Random Line",
+    "description": "",
+    "category": "WAS Suite/Text"
+  },
+  "Text String": {
+    "input": {
+      "required": {
+        "text": [
+          "STRING",
+          {
+            "default": "",
+            "multiline": false
+          }
+        ]
+      },
+      "optional": {
+        "text_b": [
+          "STRING",
+          {
+            "default": "",
+            "multiline": false
+          }
+        ],
+        "text_c": [
+          "STRING",
+          {
+            "default": "",
+            "multiline": false
+          }
+        ],
+        "text_d": [
+          "STRING",
+          {
+            "default": "",
+            "multiline": false
+          }
+        ]
+      }
+    },
+    "output": [
+      "ASCII",
+      "ASCII",
+      "ASCII",
+      "ASCII"
+    ],
+    "output_name": [
+      "ASCII",
+      "ASCII",
+      "ASCII",
+      "ASCII"
+    ],
+    "name": "Text String",
+    "display_name": "Text String",
+    "description": "",
+    "category": "WAS Suite/Text"
+  },
+  "Text to Conditioning": {
+    "input": {
+      "required": {
+        "clip": [
+          "CLIP"
+        ],
+        "text": [
+          "ASCII"
+        ]
+      }
+    },
+    "output": [
+      "CONDITIONING"
+    ],
+    "output_name": [
+      "CONDITIONING"
+    ],
+    "name": "Text to Conditioning",
+    "display_name": "Text to Conditioning",
+    "description": "",
+    "category": "WAS Suite/Text/Operations"
+  },
+  "Text to Console": {
+    "input": {
+      "required": {
+        "text": [
+          "ASCII"
+        ],
+        "label": [
+          "STRING",
+          {
+            "default": "Text Output",
+            "multiline": false
+          }
+        ]
+      }
+    },
+    "output": [
+      "ASCII"
+    ],
+    "output_name": [
+      "ASCII"
+    ],
+    "name": "Text to Console",
+    "display_name": "Text to Console",
+    "description": "",
+    "category": "WAS Suite/Debug"
+  },
+  "Text to Number": {
+    "input": {
+      "required": {
+        "text": [
+          "ASCII"
+        ]
+      }
+    },
+    "output": [
+      "NUMBER"
+    ],
+    "output_name": [
+      "NUMBER"
+    ],
+    "name": "Text to Number",
+    "display_name": "Text to Number",
+    "description": "",
+    "category": "WAS Suite/Text/Operations"
+  },
+  "Text to String": {
+    "input": {
+      "required": {
+        "text": [
+          "ASCII"
+        ]
+      }
+    },
+    "output": [
+      "STRING"
+    ],
+    "output_name": [
+      "STRING"
+    ],
+    "name": "Text to String",
+    "display_name": "Text to String",
+    "description": "",
+    "category": "WAS Suite/Text/Operations"
+  },
+  "True Random.org Number Generator": {
+    "input": {
+      "required": {
+        "api_key": [
+          "STRING",
+          {
+            "default": "00000000-0000-0000-0000-000000000000",
+            "multiline": false
+          }
+        ],
+        "minimum": [
+          "FLOAT",
+          {
+            "default": 0,
+            "min": -18446744073709551615,
+            "max": 18446744073709551615
+          }
+        ],
+        "maximum": [
+          "FLOAT",
+          {
+            "default": 10000000,
+            "min": -18446744073709551615,
+            "max": 18446744073709551615
+          }
+        ]
+      }
+    },
+    "output": [
+      "NUMBER"
+    ],
+    "output_name": [
+      "NUMBER"
+    ],
+    "name": "True Random.org Number Generator",
+    "display_name": "True Random.org Number Generator",
+    "description": "",
+    "category": "WAS Suite/Number"
+  },
+  "unCLIP Checkpoint Loader": {
+    "input": {
+      "required": {
+        "ckpt_name": [
+          [
+            "AIGODLIKE华丽_4000.ckpt",
+            "GuoFeng3.2_f16.safetensors",
+            "Shyaku_Tonades.ckpt",
+            "Shyaku_qofo.ckpt",
+            "wd-1-5-beta2-aesthetic-unclip-h-fp16.safetensors",
+            "wd-1-5-beta2-aesthetic-unclip-l-fp16.safetensors",
+            "wd-1-5-beta2-unclip-h-fp16.safetensors",
+            "苍玄.safetensors"
+          ]
+        ]
+      }
+    },
+    "output": [
+      "MODEL",
+      "CLIP",
+      "VAE",
+      "CLIP_VISION",
+      "STRING"
+    ],
+    "output_name": [
+      "MODEL",
+      "CLIP",
+      "VAE",
+      "CLIP_VISION",
+      "NAME_STRING"
+    ],
+    "name": "unCLIP Checkpoint Loader",
+    "display_name": "unCLIP Checkpoint Loader",
+    "description": "",
+    "category": "WAS Suite/Loaders"
+  },
+  "Write to Morph GIF": {
+    "input": {
+      "required": {
+        "image": [
+          "IMAGE"
+        ],
+        "transition_frames": [
+          "INT",
+          {
+            "default": 30,
+            "min": 2,
+            "max": 60,
+            "step": 1
+          }
+        ],
+        "image_delay_ms": [
+          "FLOAT",
+          {
+            "default": 2500.0,
+            "min": 0.1,
+            "max": 60000.0,
+            "step": 0.1
+          }
+        ],
+        "duration_ms": [
+          "FLOAT",
+          {
+            "default": 0.1,
+            "min": 0.1,
+            "max": 60000.0,
+            "step": 0.1
+          }
+        ],
+        "loops": [
+          "INT",
+          {
+            "default": 0,
+            "min": 0,
+            "max": 100,
+            "step": 1
+          }
+        ],
+        "max_size": [
+          "INT",
+          {
+            "default": 512,
+            "min": 128,
+            "max": 1280,
+            "step": 1
+          }
+        ],
+        "output_path": [
+          "STRING",
+          {
+            "default": "./ComfyUI/output",
+            "multiline": false
+          }
+        ],
+        "filename": [
+          "STRING",
+          {
+            "default": "morph_writer",
+            "multiline": false
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE",
+      "ASCII",
+      "ASCII"
+    ],
+    "output_name": [
+      "IMAGE_PASS",
+      "filepath_text",
+      "filename_text"
+    ],
+    "name": "Write to Morph GIF",
+    "display_name": "Write to Morph GIF",
+    "description": "",
+    "category": "WAS Suite/Image/Process"
+  },
   "HypernetworkLoader": {
     "input": {
       "required": {
