@@ -3,17 +3,34 @@ import json
 from threading import Thread
 from ..timer import Timer
 from ..kclogger import logger
+
 address = "127.0.0.1"
 port = 54534
 
-config = {'seed': 79,
-          'steps': 20,
-          'cfg': 8.0,
-          'sampler_name': 'euler',
-          'scheduler': 'karras',
-          'positive': "one girl",
-          'negative': "bad hand",
-          'denoise': 1.0}
+apn_name_map = {
+    'prmopt': 'positive',  # 正面
+    'negativeprmopt': 'negative',  # 反面
+    'sampler': '',  # 采样ID
+    'samplerName': 'sampler_name',  # 采样名
+    'step': 'steps',  # 步数
+    'width': '',  # 宽
+    'height': '',  # 高
+    'batch': '',  # 批次
+    'batchnum': '',  # 批量
+    'cfg': 'cfg',  # 相关性
+    'seed': 'seed',  # 种子
+}
+
+config = {
+    'seed': 79,
+    'steps': 20,
+    'cfg': 8.0,
+    'sampler_name': 'euler',
+    'scheduler': 'karras',
+    'positive': "one girl",
+    'negative': "bad hand",
+    'denoise': 1.0
+}
 
 
 def get_tree():
@@ -48,6 +65,11 @@ def load_apn_config(config):
         logger.error(f"|已忽略| APN Parse Error -> {e}")
         return
 
+    for k in list(config.keys()):
+        if k not in apn_name_map:
+            continue
+        config[apn_name_map[k]] = config[k]
+
     ksampler = get_ksampler(tree)
     if not isinstance(config, dict):
         logger.warn(f"|已忽略| APN Config Not Matching")
@@ -80,6 +102,7 @@ def load_apn_config(config):
             clip.location = Vector((-292, -237)) + ksampler.location
             tree.links.new(ksampler.inputs["negative"], clip.outputs[0])
         clip.text = negative
+
 
 def run_forever():
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
