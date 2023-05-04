@@ -12,9 +12,10 @@ from ..datas import EnumCache
 from ..timer import Timer
 
 TREE_NAME = "CFNODES_SYS"
+TREE_TYPE = "CFNodeTree"
 
 class CFNodeTree(NodeTree):
-    bl_idname = "CFNodeTree"
+    bl_idname = TREE_TYPE
     bl_label = "ComfyUI Node"
     bl_icon = "EVENT_T"
     display_shape = {"CIRCLE"}
@@ -424,7 +425,7 @@ class CFNodeTree(NodeTree):
 class CFNodeCategory(NodeCategory):
     @classmethod
     def poll(cls, context):
-        return context.space_data.tree_type == 'CFNodeTree'
+        return context.space_data.tree_type == TREE_TYPE
 
     def __init__(self, *args, **kwargs) -> None:
         self.menus = kwargs.pop("menus", [])

@@ -175,7 +175,7 @@ a111:
                 # line = line.replace(b"\xa8\x80", b"=")
                 # logger.info(line)
                 # print(re.findall("\|(.*?)[", line.decode("gbk")))
-                if b"CUDA out of memory" in line:
+                if b"CUDA out of memory" in line or b"not enough memory" in line:
                     TaskManager.put_error_msg(f"{_T('Error: Out of VRam, try restart blender')}")
                 proc = re.findall("[█ ]\\| (.*?) \\[", line.decode("gbk"))
                 if not proc:

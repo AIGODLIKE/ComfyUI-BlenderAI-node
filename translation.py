@@ -106,6 +106,7 @@ other = {
     "Launch ComfyUI": "打开ComfyUI",
     "Random All": "随机所有",
     "Preset Name": "法典烙印",
+    "Load Preset from Image Error -> MetaData Not Found in": "从图鉴加载失败, 元数据为"
 }
 
 other_cn_en = {

@@ -18,6 +18,7 @@ from mathutils import Vector
 from .translation import translations_dict, ctxt
 from .utils import logger, Icon, PngParse, _T
 from .SDNode import rtnode_reg, rtnode_unreg, TaskManager, Task
+from .SDNode.tree import TREE_TYPE
 from .timer import Timer, timer_reg, timer_unreg
 from .preference import AddonPreference, get_pref
 from .datas import PRESETS_DIR, GROUPS_DIR, PROP_CACHE
@@ -37,6 +38,10 @@ class Panel(bpy.types.Panel):
     bl_region_type = "UI"
     bl_category = "圣杯节点"
 
+    @classmethod
+    def poll(cls, context):
+        return context.space_data.tree_type == TREE_TYPE
+    
     def draw_header(self, context):
         sdn = bpy.context.scene.sdn
         row = self.layout.row(align=True)
@@ -137,8 +142,10 @@ class Ops(bpy.types.Operator):
             logger.error(str(png))
             logger.error(png.cwd())
             return
-        data = PngParse.read_text_chunk(value).get("workflow")
+        odata = PngParse.read_text_chunk(value)
+        data = odata.get("workflow")
         if not data:
+            logger.error(_T("Load Preset from Image Error -> MetaData Not Found in") + " " + str(odata))
             return
         tree = bpy.context.space_data.edit_tree
         if not tree:
