@@ -44,7 +44,7 @@ class TaskManager:
     execute_status_record = []
     error_msg = []
     progress_bar = 0
-    
+
     def __new__(cls, *args, **kw):
         if cls._instance is None:
             cls._instance = object.__new__(cls, *args, **kw)
@@ -77,11 +77,11 @@ class TaskManager:
     def run_server():
         from .tree import rtnode_reg, rtnode_unreg
         rtnode_unreg()
-        
+
         TaskManager.run_server_ex()
-        
+
         rtnode_reg()
-        
+
     def run_server_ex():
         pidpath = Path(__file__).parent / "pid"
         if pidpath.exists():
@@ -121,7 +121,7 @@ class TaskManager:
         # arg = f"-s {str(model_path)}/main.py"
         args.append("-s")
         args.append(f"{str(model_path)}/main.py")
-        
+
         # arg += f" --port {port}"
         args.append("--port")
         args.append(f"{port}")
@@ -131,24 +131,50 @@ class TaskManager:
         else:
             # arg += f" {pref.mem_level}"
             args.append(f"{pref.mem_level}")
-        if Path(pref.with_webui_model).exists():
-            ...
-            yaml = """
+        yaml = ""
+        if pref.with_webui_model and Path(pref.with_webui_model).exists():
+            wmp = Path(pref.with_webui_model).as_posix()
+            wmpp = Path(pref.with_webui_model).parent.as_posix()
+            yaml += f"""
 a111:
-    base_path: {}path/to/stable-diffusion-webui/
+    base_path: {wmpp}
 
-    checkpoints: {}models/Stable-diffusion
-    configs: {}models/Stable-diffusion
-    vae: {}models/VAE
-    loras: {}models/Lora
+    checkpoints: {wmp}/Stable-diffusion
+    configs: {wmp}/Stable-diffusion
+    vae: {wmp}/VAE
+    loras: {wmp}/Lora
     upscale_models: |
-                  {}models/ESRGAN
-                  {}models/SwinIR
-    embeddings: {}embeddings
-    controlnet: {}models/ControlNet
+                  {wmp}/ESRGAN
+                  {wmp}/SwinIR
+    embeddings: {wmpp}/embeddings
+    controlnet: {wmp}/ControlNet
             """
-            with open(Path(__file__).parent / "config.yaml", "w") as f:
-                f.write(yaml)
+        if pref.with_comfyui_model and Path(pref.with_comfyui_model).exists():
+            cmp = Path(pref.with_comfyui_model).as_posix() # 指定到 models
+            cmpp = Path(pref.with_comfyui_model).parent.as_posix()
+            yaml += f"""
+mycomfyui:
+    base_path: {cmpp}
+    checkpoints: {cmp}/checkpoints
+    configs: {cmp}/configs
+    loras: {cmp}/loras
+    vae: {cmp}/vae
+    clip: {cmp}/clip
+    clip_vision: {cmp}/clip_vision
+    style_models: {cmp}/style_models
+    embeddings: {cmp}/embeddings
+    diffusers: {cmp}/diffusers
+    controlnet: {cmp}/controlnet
+    gligen: {cmp}/gligen
+    upscale_models: {cmp}/upscale_models
+    hypernetworks: {cmp}/hypernetworks
+    # custom_nodes: {cmpp}/custom_nodes
+            """
+        if yaml:
+            extra_model_paths = Path(__file__).parent / "config.yaml"
+            extra_model_paths.write_text(yaml)
+            args.append("--extra-model-paths-config")
+            args.append(extra_model_paths.as_posix())
         # cmd = " ".join([str(python), arg])
         # 加了 stderr后 无法获取 进度?
         # logger.debug(args)
@@ -205,7 +231,7 @@ a111:
         Thread(target=TaskManager.poll_task, daemon=True).start()
         Thread(target=TaskManager.poll_res, daemon=True).start()
         Thread(target=TaskManager.proc_res, daemon=True).start()
-        
+
     def close_server():
         if TaskManager.child:
             TaskManager.child.kill()
@@ -270,7 +296,7 @@ a111:
 
     def submit(task: dict[str, tuple]):
         TaskManager.clear_error_msg()
-        
+
         def queue_task(task: dict):
             res = TaskManager.query_server_task()
             logger.debug("P/R: %s/%s", len(res["queue_pending"]), len(res["queue_running"]))

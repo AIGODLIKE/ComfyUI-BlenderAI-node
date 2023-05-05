@@ -106,7 +106,10 @@ other = {
     "Launch ComfyUI": "打开ComfyUI",
     "Random All": "随机所有",
     "Preset Name": "法典烙印",
-    "Load Preset from Image Error -> MetaData Not Found in": "从图鉴加载失败, 元数据为"
+    "Load Preset from Image Error -> MetaData Not Found in": "从图鉴加载失败, 元数据为",
+    # preference.py
+    "With WEBUI Model": "兼容WEBUI模型",
+    "With ComfyUI Model": "兼容ComfyUI模型",
 }
 
 other_cn_en = {

@@ -41,7 +41,7 @@ class Panel(bpy.types.Panel):
     @classmethod
     def poll(cls, context):
         return context.space_data.tree_type == TREE_TYPE
-    
+
     def draw_header(self, context):
         sdn = bpy.context.scene.sdn
         row = self.layout.row(align=True)
@@ -54,7 +54,7 @@ class Panel(bpy.types.Panel):
     def draw(self, context: bpy.types.Context):
         scale_popup = get_pref().popup_scale
         layout = self.layout
-        
+
         layout.operator(Ops.bl_idname, text="Execute Node Tree", text_ctxt=ctxt).action = "Submit"
         self.show_progress(layout)
         box = layout.box()
@@ -71,7 +71,7 @@ class Panel(bpy.types.Panel):
         rrow = col.row(align=True)
         rrow.operator(Ops.bl_idname, text="Replace Node Tree", text_ctxt=ctxt).action = "Load"
         rrow.operator(Ops.bl_idname, text="", icon="TEXTURE", text_ctxt=ctxt).action = "Preset_from_Image"
-        
+
         box = layout.box()
         row = box.row()
         row.label(text="Node Group", text_ctxt=ctxt)
@@ -85,8 +85,6 @@ class Panel(bpy.types.Panel):
         row.operator(Ops.bl_idname, text="Delete", text_ctxt=ctxt).action = "DelGroup"
         col.operator(Ops.bl_idname, text="Append Node Group", text_ctxt=ctxt).action = "LoadGroup"
 
-
-
     def show_progress(self, layout: bpy.types.UILayout):
         layout = layout.box()
         qr_num = len(TaskManager.query_server_task().get('queue_running', []))
@@ -99,7 +97,7 @@ class Panel(bpy.types.Panel):
 
         prog = TaskManager.progress
         if prog and prog.get("value"):
-            width = bpy.context.region.width // int(10 * bpy.context.preferences.view.ui_scale) - 14
+            width = bpy.context.region.width // int(7 * bpy.context.preferences.view.ui_scale) - 14
             per = prog["value"] / prog["max"]
             v = int(per * width)
             m = width
@@ -119,6 +117,7 @@ class Panel(bpy.types.Panel):
             row.alert = True
             row.label(text="Adjust node tree and try again", text_ctxt=ctxt)
 
+
 class Ops(bpy.types.Operator):
     bl_idname = "sdn.ops"
     bl_description = "SD Node"
@@ -126,7 +125,7 @@ class Ops(bpy.types.Operator):
     bl_translation_context = ctxt
     action: bpy.props.StringProperty(default="")
     save_name: bpy.props.StringProperty(name="Preset Name", default="预设")
-    
+
     @classmethod
     def description(cls, context: bpy.types.Context,
                     properties: bpy.types.OperatorProperties) -> str:
@@ -134,7 +133,7 @@ class Ops(bpy.types.Operator):
         if properties.get("action") == "Preset_from_Image":
             desc = "Load from Image"
         return desc
-    
+
     def import_image_set(self, value):
         png = Path(value)
         if not png.exists() or png.suffix != ".png":
@@ -151,7 +150,7 @@ class Ops(bpy.types.Operator):
         if not tree:
             return
         tree.load_json(json.loads(data))
-        
+
     import_image: bpy.props.StringProperty(name="Preset Image", default=str(Path.cwd()), subtype="FILE_PATH", set=import_image_set)
 
     def draw(self, context):
@@ -180,7 +179,7 @@ class Ops(bpy.types.Operator):
         if self.action == "Preset_from_Image":
             layout.label(text="Click Folder Icon to Select Image:", text_ctxt=ctxt)
             layout.prop(self, "import_image", text_ctxt=ctxt)
-            
+
     def invoke(self, context, event: bpy.types.Event):
         # logger.error("INVOKE")
         self.select_nodes = []
@@ -220,7 +219,7 @@ class Ops(bpy.types.Operator):
             with open(file, "w") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
             Prop.mark_dirty()
-            
+
         elif self.action == "Del":
             if not bpy.context.scene.sdn.presets:
                 self.report({"ERROR"}, _T("Preset Not Selected!"))

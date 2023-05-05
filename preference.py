@@ -1,7 +1,7 @@
 import bpy
 import os
 from pathlib import Path
-from .utils import Icon
+from .utils import Icon, _T
 from .translation import ctxt
 
 
@@ -33,7 +33,8 @@ class AddonPreference(bpy.types.AddonPreferences):
                                              ("--cpu", "仅CPU", "只使用CPU", 5),
                                              ],
                                       default="--lowvram")
-    with_webui_model: bpy.props.StringProperty(default="", name="兼容webui模型", description="webui位置", subtype="DIR_PATH")
+    with_webui_model: bpy.props.StringProperty(default="", name="With WEBUI Model", description="webui位置", subtype="DIR_PATH")
+    with_comfyui_model: bpy.props.StringProperty(default="", name="With ComfyUI Model", description="ComfyUI位置", subtype="DIR_PATH")
 
     def update_open_dir1(self, context):
         if self.open_dir1:
@@ -70,6 +71,8 @@ class AddonPreference(bpy.types.AddonPreferences):
         row = layout.row(align=True)
         row.prop(self, "popup_scale", text_ctxt=ctxt)
         row.prop(self, "enable_hq_preview", text="", icon="IMAGE_BACKGROUND", text_ctxt=ctxt)
+        layout.prop(self, "with_webui_model")
+        layout.prop(self, "with_comfyui_model")
         
     def draw_website(self, layout: bpy.types.UILayout):
 

@@ -4,6 +4,7 @@ import random
 import os
 import re
 import json
+import textwrap
 from math import ceil
 from typing import Any
 from pathlib import Path
@@ -805,6 +806,12 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
         #     setwidth(self, 200)
         if prop == "prev":
             return True
+    elif self.class_type == "CLIPTextEncode":
+        if prop == "text":
+            width = int(self.width) // 7
+            lines = textwrap.wrap(text=str(self.text), width=width)
+            for line in lines:
+                layout.label(text=line, text_ctxt=ctxt)
     return False
 
 
