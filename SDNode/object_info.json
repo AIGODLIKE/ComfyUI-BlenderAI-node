@@ -90,19 +90,7 @@
     "input": {
       "required": {
         "ckpt_name": [
-          [
-            "AIGODLIKE华丽_4000.ckpt",
-            "GuoFeng3.2_f16.safetensors",
-            "Shyaku_Tonades.ckpt",
-            "Shyaku_qofo.ckpt",
-            "abyssorangemix2SFW_abyssorangemix2Sfw.safetensors",
-            "pastelMixStylizedAnime_pastelMixPrunedFP16.safetensors",
-            "pastelmix.ckpt",
-            "wd-1-5-beta2-aesthetic-unclip-h-fp16.safetensors",
-            "wd-1-5-beta2-aesthetic-unclip-l-fp16.safetensors",
-            "wd-1-5-beta2-unclip-h-fp16.safetensors",
-            "苍玄.safetensors"
-          ]
+          []
         ]
       }
     },
@@ -247,10 +235,7 @@
     "input": {
       "required": {
         "vae_name": [
-          [
-            "pastel-waifu-diffusion.vae.pt",
-            "苍玄.vae.pt"
-          ]
+          []
         ]
       }
     },
@@ -995,10 +980,7 @@
           "CLIP"
         ],
         "lora_name": [
-          [
-            "AIGODLIKE_HUAN_V1.safetensors",
-            "GuoFeng3.2_Lora.safetensors"
-          ]
+          []
         ],
         "strength_model": [
           "FLOAT",
@@ -1037,9 +1019,7 @@
     "input": {
       "required": {
         "clip_name": [
-          [
-            "v1-5-pruned.safetensors"
-          ]
+          []
         ]
       }
     },
@@ -1179,39 +1159,7 @@
     "input": {
       "required": {
         "control_net_name": [
-          [
-            "人脸识别-control_v2p_sd15_mediapipe_face.pth",
-            "内补-control_v11p_sd15_inpaint.pth",
-            "姿态-control_openpose-fp16.safetensors",
-            "姿态-control_v11p_sd15_openpose.pth",
-            "姿态-pototypeControlnet_e11.ckpt",
-            "姿态-t2iadapter_keypose-fp16.safetensors",
-            "姿态-t2iadapter_openpose-fp16.safetensors",
-            "平铺-control_v11u_sd15_tile.pth",
-            "法向-control_normal-fp16.safetensors",
-            "法向-control_v11p_sd15_normalbae.pth",
-            "深度-control_depth-fp16.safetensors",
-            "深度-control_v11p_sd15_depth.pth",
-            "深度-t2iadapter_depth-fp16.safetensors",
-            "线(直)-control_mlsd-fp16.safetensors",
-            "线(直)-control_v11p_sd15_mlsd.pth",
-            "线-control_canny-fp16.safetensors",
-            "线-control_hed-fp16.safetensors",
-            "线-control_scribble-fp16.safetensors",
-            "线-control_v11p_sd15_canny.pth",
-            "线-control_v11p_sd15_lineart.pth",
-            "线-control_v11p_sd15_scribble.pth",
-            "线-control_v11p_sd15_softedge.pth",
-            "线-control_v11p_sd15s2_lineart_anime.pth",
-            "线-t2iadapter_canny-fp16.safetensors",
-            "线-t2iadapter_sketch-fp16.safetensors",
-            "视觉-control_v11e_sd15_ip2p.pth",
-            "语义-control_seg-fp16.safetensors",
-            "语义-control_v11p_sd15_seg.pth",
-            "语义-t2iadapter_seg-fp16.safetensors",
-            "随机-control_v11e_sd15_shuffle.pth",
-            "颜色-t2iadapter_color-fp16.safetensors"
-          ]
+          []
         ]
       }
     },
@@ -1233,39 +1181,7 @@
           "MODEL"
         ],
         "control_net_name": [
-          [
-            "人脸识别-control_v2p_sd15_mediapipe_face.pth",
-            "内补-control_v11p_sd15_inpaint.pth",
-            "姿态-control_openpose-fp16.safetensors",
-            "姿态-control_v11p_sd15_openpose.pth",
-            "姿态-pototypeControlnet_e11.ckpt",
-            "姿态-t2iadapter_keypose-fp16.safetensors",
-            "姿态-t2iadapter_openpose-fp16.safetensors",
-            "平铺-control_v11u_sd15_tile.pth",
-            "法向-control_normal-fp16.safetensors",
-            "法向-control_v11p_sd15_normalbae.pth",
-            "深度-control_depth-fp16.safetensors",
-            "深度-control_v11p_sd15_depth.pth",
-            "深度-t2iadapter_depth-fp16.safetensors",
-            "线(直)-control_mlsd-fp16.safetensors",
-            "线(直)-control_v11p_sd15_mlsd.pth",
-            "线-control_canny-fp16.safetensors",
-            "线-control_hed-fp16.safetensors",
-            "线-control_scribble-fp16.safetensors",
-            "线-control_v11p_sd15_canny.pth",
-            "线-control_v11p_sd15_lineart.pth",
-            "线-control_v11p_sd15_scribble.pth",
-            "线-control_v11p_sd15_softedge.pth",
-            "线-control_v11p_sd15s2_lineart_anime.pth",
-            "线-t2iadapter_canny-fp16.safetensors",
-            "线-t2iadapter_sketch-fp16.safetensors",
-            "视觉-control_v11e_sd15_ip2p.pth",
-            "语义-control_seg-fp16.safetensors",
-            "语义-control_v11p_sd15_seg.pth",
-            "语义-t2iadapter_seg-fp16.safetensors",
-            "随机-control_v11e_sd15_shuffle.pth",
-            "颜色-t2iadapter_color-fp16.safetensors"
-          ]
+          []
         ]
       }
     },
@@ -1284,9 +1200,7 @@
     "input": {
       "required": {
         "style_model_name": [
-          [
-            "t2iadapter_style-fp16.safetensors"
-          ]
+          []
         ]
       }
     },
@@ -1305,9 +1219,7 @@
     "input": {
       "required": {
         "clip_name": [
-          [
-            "clip-vit-large-patch14.bin"
-          ]
+          []
         ]
       }
     },
@@ -1398,19 +1310,7 @@
     "input": {
       "required": {
         "ckpt_name": [
-          [
-            "AIGODLIKE华丽_4000.ckpt",
-            "GuoFeng3.2_f16.safetensors",
-            "Shyaku_Tonades.ckpt",
-            "Shyaku_qofo.ckpt",
-            "abyssorangemix2SFW_abyssorangemix2Sfw.safetensors",
-            "pastelMixStylizedAnime_pastelMixPrunedFP16.safetensors",
-            "pastelmix.ckpt",
-            "wd-1-5-beta2-aesthetic-unclip-h-fp16.safetensors",
-            "wd-1-5-beta2-aesthetic-unclip-l-fp16.safetensors",
-            "wd-1-5-beta2-unclip-h-fp16.safetensors",
-            "苍玄.safetensors"
-          ]
+          []
         ]
       }
     },
@@ -1435,9 +1335,7 @@
     "input": {
       "required": {
         "gligen_name": [
-          [
-            "gligen_sd14_textbox_pruned.safetensors"
-          ]
+          []
         ]
       }
     },
@@ -1523,34 +1421,10 @@
     "input": {
       "required": {
         "config_name": [
-          [
-            "anything_v3.yaml",
-            "v1-inference.yaml",
-            "v1-inference_clip_skip_2.yaml",
-            "v1-inference_clip_skip_2_fp16.yaml",
-            "v1-inference_fp16.yaml",
-            "v1-inpainting-inference.yaml",
-            "v2-inference-v.yaml",
-            "v2-inference-v_fp32.yaml",
-            "v2-inference.yaml",
-            "v2-inference_fp32.yaml",
-            "v2-inpainting-inference.yaml"
-          ]
+          []
         ],
         "ckpt_name": [
-          [
-            "AIGODLIKE华丽_4000.ckpt",
-            "GuoFeng3.2_f16.safetensors",
-            "Shyaku_Tonades.ckpt",
-            "Shyaku_qofo.ckpt",
-            "abyssorangemix2SFW_abyssorangemix2Sfw.safetensors",
-            "pastelMixStylizedAnime_pastelMixPrunedFP16.safetensors",
-            "pastelmix.ckpt",
-            "wd-1-5-beta2-aesthetic-unclip-h-fp16.safetensors",
-            "wd-1-5-beta2-aesthetic-unclip-l-fp16.safetensors",
-            "wd-1-5-beta2-unclip-h-fp16.safetensors",
-            "苍玄.safetensors"
-          ]
+          []
         ]
       }
     },
@@ -1573,9 +1447,7 @@
     "input": {
       "required": {
         "model_path": [
-          [
-            "stable-diffusion-v1-5"
-          ]
+          []
         ]
       }
     },
@@ -2385,34 +2257,10 @@
     "input": {
       "required": {
         "config_name": [
-          [
-            "anything_v3.yaml",
-            "v1-inference.yaml",
-            "v1-inference_clip_skip_2.yaml",
-            "v1-inference_clip_skip_2_fp16.yaml",
-            "v1-inference_fp16.yaml",
-            "v1-inpainting-inference.yaml",
-            "v2-inference-v.yaml",
-            "v2-inference-v_fp32.yaml",
-            "v2-inference.yaml",
-            "v2-inference_fp32.yaml",
-            "v2-inpainting-inference.yaml"
-          ]
+          []
         ],
         "ckpt_name": [
-          [
-            "AIGODLIKE华丽_4000.ckpt",
-            "GuoFeng3.2_f16.safetensors",
-            "Shyaku_Tonades.ckpt",
-            "Shyaku_qofo.ckpt",
-            "abyssorangemix2SFW_abyssorangemix2Sfw.safetensors",
-            "pastelMixStylizedAnime_pastelMixPrunedFP16.safetensors",
-            "pastelmix.ckpt",
-            "wd-1-5-beta2-aesthetic-unclip-h-fp16.safetensors",
-            "wd-1-5-beta2-aesthetic-unclip-l-fp16.safetensors",
-            "wd-1-5-beta2-unclip-h-fp16.safetensors",
-            "苍玄.safetensors"
-          ]
+          []
         ]
       }
     },
@@ -2437,19 +2285,7 @@
     "input": {
       "required": {
         "ckpt_name": [
-          [
-            "AIGODLIKE华丽_4000.ckpt",
-            "GuoFeng3.2_f16.safetensors",
-            "Shyaku_Tonades.ckpt",
-            "Shyaku_qofo.ckpt",
-            "abyssorangemix2SFW_abyssorangemix2Sfw.safetensors",
-            "pastelMixStylizedAnime_pastelMixPrunedFP16.safetensors",
-            "pastelmix.ckpt",
-            "wd-1-5-beta2-aesthetic-unclip-h-fp16.safetensors",
-            "wd-1-5-beta2-aesthetic-unclip-l-fp16.safetensors",
-            "wd-1-5-beta2-unclip-h-fp16.safetensors",
-            "苍玄.safetensors"
-          ]
+          []
         ]
       }
     },
@@ -2902,9 +2738,7 @@
     "input": {
       "required": {
         "model_path": [
-          [
-            "stable-diffusion-v1-5"
-          ]
+          []
         ]
       }
     },
@@ -2985,10 +2819,7 @@
           "CLIP"
         ],
         "lora_name": [
-          [
-            "AIGODLIKE_HUAN_V1.safetensors",
-            "GuoFeng3.2_Lora.safetensors"
-          ]
+          []
         ],
         "strength_model": [
           "FLOAT",
@@ -7054,19 +6885,7 @@
     "input": {
       "required": {
         "ckpt_name": [
-          [
-            "AIGODLIKE华丽_4000.ckpt",
-            "GuoFeng3.2_f16.safetensors",
-            "Shyaku_Tonades.ckpt",
-            "Shyaku_qofo.ckpt",
-            "abyssorangemix2SFW_abyssorangemix2Sfw.safetensors",
-            "pastelMixStylizedAnime_pastelMixPrunedFP16.safetensors",
-            "pastelmix.ckpt",
-            "wd-1-5-beta2-aesthetic-unclip-h-fp16.safetensors",
-            "wd-1-5-beta2-aesthetic-unclip-l-fp16.safetensors",
-            "wd-1-5-beta2-unclip-h-fp16.safetensors",
-            "苍玄.safetensors"
-          ]
+          []
         ]
       }
     },
@@ -7178,9 +6997,7 @@
           "MODEL"
         ],
         "hypernetwork_name": [
-          [
-            "animate_lineart.pt"
-          ]
+          []
         ],
         "strength": [
           "FLOAT",
@@ -7208,15 +7025,7 @@
     "input": {
       "required": {
         "model_name": [
-          [
-            "BSRGAN.pth",
-            "ESRGAN_4x.pth",
-            "RealESRGAN_x4plus.pth",
-            "RealESRGAN_x4plus_anime_6B.pth",
-            "SwinIR_4x.pth",
-            "realesr-general-wdn-x4v3.pth",
-            "realesr-general-x4v3.pth"
-          ]
+          []
         ]
       }
     },

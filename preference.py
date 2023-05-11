@@ -1,10 +1,25 @@
+import typing
 import bpy
 import os
 from pathlib import Path
+
+from bpy.types import Context
 from .utils import Icon, _T
 from .translation import ctxt
 
-
+class EnableMLT(bpy.types.Operator):
+    bl_idname = "sdn.enable_mlt"
+    bl_description = "Enable MLT"
+    bl_label = "Enable MLT"
+    bl_translation_context = ctxt
+    
+    def execute(self, context: Context):
+        from .MultiLineText import enable_multiline_text
+        if not enable_multiline_text():
+            self.report({"ERROR"}, "MultiLineText Not Enabled")
+        bpy.ops.object.multiline_text("INVOKE_DEFAULT")
+        return {"FINISHED"}
+    
 class AddonPreference(bpy.types.AddonPreferences):
     bl_idname = __package__
     bl_translation_context = ctxt

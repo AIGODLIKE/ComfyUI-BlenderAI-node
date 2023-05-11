@@ -189,7 +189,7 @@ class Icon(metaclass=MetaIn):
         if not img:
             return None
         try:
-            _ = img.name # hack ref detect
+            _ = img.name  # hack ref detect
             return img
         except ReferenceError:
             Icon.update_path2bpy()
@@ -303,3 +303,59 @@ class PngParse:
                 elif chunk_type == b'IEND':
                     break
         return data
+
+
+class PkgInstaller:
+    source = [
+        "https://pypi.tuna.tsinghua.edu.cn/simple",
+        "https://pypi.org/simple",
+    ]
+    fast_url = ""
+
+    def select_pip_source():
+        if not PkgInstaller.fast_url:
+            import requests
+            t, PkgInstaller.fast_url = 999, PkgInstaller.source[0]
+            for url in PkgInstaller.source:
+                try:
+                    tping = requests.get(url).elapsed.total_seconds()
+                except:
+                    continue
+                if tping < 0.1:
+                    PkgInstaller.fast_url = url
+                    break
+                if tping < t:
+                    t, PkgInstaller.fast_url = tping, url
+        return PkgInstaller.fast_url
+
+    def is_installed(package):
+        import importlib
+        try:
+            return importlib.import_module(package)
+        except ModuleNotFoundError:
+            return False
+
+    def prepare_pip():
+        import ensurepip
+        if PkgInstaller.is_installed("pip"):
+            return True
+        try:
+            ensurepip.bootstrap()
+            return True
+        except BaseException:
+            ...
+        return False
+
+    def try_install(*packages):
+        if not PkgInstaller.prepare_pip():
+            return False
+        from pip._internal import main
+        url = PkgInstaller.select_pip_source()
+        for pkg in packages:
+            if PkgInstaller.is_installed(pkg):
+                continue
+            try:
+                main(['install', pkg, "-i", url])
+            except Exception:
+                return False
+        return True

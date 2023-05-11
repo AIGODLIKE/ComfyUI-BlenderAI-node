@@ -20,9 +20,8 @@ from .utils import logger, Icon, PngParse, _T
 from .SDNode import rtnode_reg, rtnode_unreg, TaskManager, Task
 from .SDNode.tree import TREE_TYPE
 from .timer import Timer, timer_reg, timer_unreg
-from .preference import AddonPreference, get_pref
+from .preference import AddonPreference, EnableMLT, get_pref
 from .datas import PRESETS_DIR, GROUPS_DIR, PROP_CACHE
-
 
 def get_version():
     # from . import bl_info
@@ -54,7 +53,7 @@ class Panel(bpy.types.Panel):
     def draw(self, context: bpy.types.Context):
         scale_popup = get_pref().popup_scale
         layout = self.layout
-
+        layout.operator(EnableMLT.bl_idname)
         layout.operator(Ops.bl_idname, text="Execute Node Tree", text_ctxt=ctxt).action = "Submit"
         self.show_progress(layout)
         box = layout.box()
@@ -420,7 +419,7 @@ class Prop(bpy.types.PropertyGroup):
     rand_all_seed: bpy.props.BoolProperty(default=False, name="Random All")
 
 
-clss = [Panel, Ops, Prop, AddonPreference]
+clss = [Panel, Ops, Prop, AddonPreference, EnableMLT]
 reg, unreg = bpy.utils.register_classes_factory(clss)
 
 

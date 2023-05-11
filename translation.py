@@ -49,12 +49,12 @@ other = {
     "Server Not Launched": "服务未启动",
     "Add Result": "获取结果",
     "Submit Task": "提交任务",
-    "Invalid Node Connection":"无效节点连接",
+    "Invalid Node Connection": "无效节点连接",
     "Node Connection Error": "节点连接错误",
-    "Input Image Error":"输入图像错误",
-    "Params Not Changed":"参数未变更",
+    "Input Image Error": "输入图像错误",
+    "Params Not Changed": "参数未变更",
     "Node Tree Not Executed, May Caused by:": "节点树未被执行, 可能原因:",
-    "Proc Resutl":"处理结果",
+    "Proc Resutl": "处理结果",
     "Ran Node": "运行节点",
     # SDNode/nodes.py
     "icon path load error": "预览图配置解析失败",
@@ -66,7 +66,7 @@ other = {
     "Remove Link": "移除连接",
     "Parsing Node Start": "解析节点中...",
     "Server Launch Failed": "服务启动失败, 使用缓存节点信息数据",
-    "None Input":"节点输入",
+    "None Input": "节点输入",
     "Parsing Node Finished!": "解析节点完成!",
     "Render": "渲染",
     "Post Function": "后处理函数",
@@ -86,7 +86,7 @@ other = {
     "Append Node Group": "追加节点",
     "Pending / Running": "排队 / 运行",
     "Adjust node tree and try again": "请调整后重新执行节点树",
-    "Preset Image":"魔法图鉴",
+    "Preset Image": "魔法图鉴",
     "Load from Image": "加载魔法图鉴",
     "Preset": "法典",
     "exists, Click Ok to Overwrite!": "已存在, 确认将覆盖!",
@@ -94,7 +94,7 @@ other = {
     "will be removed?": "即将消亡?",
     "Click Folder Icon to Select Image:": "点击文件夹图标选择魔法图鉴:",
     "Preset Not Selected!": "没有选择法典!",
-    "Invalid Preset Name!":"无效的法典名!",
+    "Invalid Preset Name!": "无效的法典名!",
     "Removed": "移除成功",
     "Presets": "预设",
     "Open NodeGroup Presets Folder": "打开节点预设文件夹",
@@ -110,10 +110,14 @@ other = {
     # preference.py
     "With WEBUI Model": "兼容WEBUI模型",
     "With ComfyUI Model": "兼容ComfyUI模型",
+    "Enable MLT": "开启多行文本",
+    # MLT
+    " Prompts": "提示词",
+    "MLT": "多行文本",
 }
 
 other_cn_en = {
-    
+
 }
 lang_text = {
     "zh_CN": {
@@ -208,7 +212,7 @@ lang_text = {
         "Value": "值",
         "OK": "确认",
         "add_noise": "添加噪波",
-        #？
+        # ？
         "noise_seed": "噪波随机种",
         "Random seed after every gen": "每次生成后随机化随机种",
         "steps": "步数",
