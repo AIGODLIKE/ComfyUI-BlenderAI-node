@@ -318,8 +318,7 @@ class GlobalImgui:
         context = bpy.context
         region = context.region
         imgui.get_io().display_size = region.width, region.height
-        
-        
+
         style = imgui.get_style()
         style.window_padding = (1, 1)
         style.window_rounding = 6
@@ -370,17 +369,10 @@ class GlobalImgui:
             io.key_map[k] = k
 
 
-class Box:
-    def __init__(self, x, y, w, h):
-        self.x = x
-        self.y = y
-        self.w = w
-        self.h = h
-
-    def inbox(self, x, y):
-        if (self.x < x < self.x + self.w) and (self.y - self.h < y < self.y):
-            return True
-        return False
+def inbox(x, y, w, h, mpos):
+    if (x < mpos[0] < x + w) and (y - h < mpos[1] < y):
+        return True
+    return False
 
 
 @lru_cache
@@ -425,16 +417,15 @@ class MLTOps(bpy.types.Operator):
     }
 
     def invoke(self, context, event):
-        self.mx = 0
-        self.my = 0
+        self.mpos = (0, 0)
         self.cover = False
-        self.box = Box(0, 0, 1, 1)
         GlobalImgui().handler_add(self.draw, SpaceNodeEditor)
+        self.io = imgui.get_io()
         context.window_manager.modal_handler_add(self)
         return {'RUNNING_MODAL'}
 
     def modal(self, context, event):
-        self.mx, self.my = event.mouse_region_x, event.mouse_region_y
+        self.mpos = event.mouse_region_x, event.mouse_region_y
         context.area.tag_redraw()
 
         # if event.type in {'RIGHTMOUSE', 'ESC'}:
@@ -451,7 +442,7 @@ class MLTOps(bpy.types.Operator):
 
     def modal_imgui(self, context, event):
         region = context.region
-        io = imgui.get_io()
+        io = self.io
 
         io.mouse_pos = (event.mouse_region_x, region.height - 1 - event.mouse_region_y)
 
@@ -465,11 +456,11 @@ class MLTOps(bpy.types.Operator):
             io.mouse_down[2] = event.value == 'PRESS'
 
         elif event.type == 'WHEELUPMOUSE':
-            io.mouse_wheel = -1
-
-        elif event.type == 'WHEELUPDOWN':
             io.mouse_wheel = +1
 
+        elif event.type == 'WHEELDOWNMOUSE':
+            io.mouse_wheel = -1
+            
         # print(f"Event type={event.type}, unicode={event.unicode}")
 
         if event.type in self.key_map:
@@ -498,24 +489,30 @@ class MLTOps(bpy.types.Operator):
         if event.unicode and 0 < (char := ord(event.unicode)) < 0x10000:
             io.add_input_character(char)
 
-    def draw(self, context: bpy.types.Context):
+    def can_draw(self):
         tree = bpy.context.space_data.edit_tree
-        if not tree or context.space_data.tree_type != TREE_TYPE:
-            return {"FINISHED"}
-        act_node = tree.nodes.active
-        if not act_node or act_node.bl_idname != "CLIPTextEncode":
-            return {"FINISHED"}
+        if not tree or bpy.context.space_data.tree_type != TREE_TYPE:
+            return
+        node = tree.nodes.active
+        if not node or node.bl_idname != "CLIPTextEncode":
+            return
+        return node
+
+    def draw(self, context: bpy.types.Context):
+        if not (node := self.can_draw()):
+            return
         flags = imgui.WINDOW_NO_COLLAPSE | imgui.WINDOW_NO_BRING_TO_FRONT_ON_FOCUS | imgui.WINDOW_NO_SAVED_SETTINGS
-        imgui.begin(_T(" Prompts") + f" [{act_node.name}]", closable=False, flags=flags)
+        imgui.begin(_T(" Prompts"), closable=False, flags=flags)
         imgui.set_window_position(50, 20, condition=imgui.ONCE)
         imgui.set_window_size(300, 300, condition=imgui.ONCE)
         # imgui.core.set_window_position(300, 300)
         # imgui.core.set_window_size(300, 300)
+        # char_width = imgui.core.calc_text_size("W").x
         w, h = imgui.core.get_window_size()
-        char_width = imgui.core.calc_text_size("-").x
-        lwidth = max(1, int(w * 2// imgui.get_font_size()) - 4)
-        io = imgui.get_io()
-        
+        lnum = max(1, int(w * 2 // imgui.get_font_size()) - 3)
+        # if self.io.mouse_down[2]: # middle mouse
+        #     imgui.WIN_POS = imgui.core.get_window_position()
+        #     imgui.WIN_MOVED = True
         def cb(data):
             p = data.cursor_pos
             # print(imgui.core.get_clipboard_text())
@@ -525,18 +522,20 @@ class MLTOps(bpy.types.Operator):
             # if io.keys_down[self.key_map["RET"]]:
             #     return
             if data.event_flag == imgui.INPUT_TEXT_CALLBACK_EDIT:
-                act_node.text = data.buffer
-                text = get_wrap_text(data.buffer, lwidth)
+                node.text = data.buffer.replace("\n", "")
+                text = get_wrap_text(data.buffer, lnum)
                 data.delete_chars(0, len(data.buffer))
                 data.insert_chars(0, text)
                 data.buffer_dirty = True
-                backspace = io.keys_down[self.key_map['BACK_SPACE']]
-                if not backspace and (p - 1) % lwidth == 0:
+                backspace = self.io.keys_down[self.key_map['BACK_SPACE']]
+                # print(p, len(data.buffer), (p - 1) % (lnum+1), p%(lnum+1), lnum)
+                # if p < len(data.buffer) and data.buffer[p] == "\n":
+                #     p += 1
+                if not backspace and p % (lnum+1) == 0:
                     p += 1
                 data.cursor_pos = min(max(0, p), data.buffer_size)
 
-        ttt = get_wrap_text(act_node.text, lwidth)
-
+        ttt = get_wrap_text(node.text, lnum)
         imgui.input_text_multiline(
             '',
             ttt,
@@ -545,23 +544,13 @@ class MLTOps(bpy.types.Operator):
             # height=h - 10,
             flags=imgui.INPUT_TEXT_CALLBACK_EDIT | imgui.INPUT_TEXT_CALLBACK_COMPLETION,
             callback=cb,
-            user_data=act_node.text
+            # user_data=node.text
         )
-        
         x, y = imgui.core.get_window_position()
-        y = context.region.height - y
-        self.box = Box(x, y, w, h)
-        self.cover = self.box.inbox(self.mx, self.my)
-
-        # self.cover = io.want_capture_mouse
-        # io.keys_down[self.key_map["ESC"]] = not self.cover
-
-        # print("WantCaptureMouse: ", io.want_capture_mouse, self.cover)
-        # print("WantCaptureKeyboard: " + str(io.want_capture_keyboard))
-        # print("WantTextInput: " + str(io.want_text_input))
+        y = context.region.height - 1 - y
+        self.cover = inbox(x, y, w, h, self.mpos)
 
         imgui.end()
-
 
 
 def multiline_register():
