@@ -655,6 +655,7 @@ def spec_serialize(self, cfg, execute):
         elif self.mode == "输入":
             ...
     elif self.class_type == "Mask":
+        print(self.channel)
         gen_mask(self)
     elif self.class_type == "KSampler":
         cfg["inputs"]["seed"] = int(cfg["inputs"]["seed"])
