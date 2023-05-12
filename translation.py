@@ -114,6 +114,7 @@ other = {
     # MLT
     " Prompts": "提示词",
     "MLT": "多行文本",
+    "Enable MLT": "开启多行文本"
 }
 
 other_cn_en = {

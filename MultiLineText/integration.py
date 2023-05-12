@@ -271,6 +271,9 @@ class BlenderImguiRenderer(BaseOpenGLRenderer):
 class GlobalImgui:
     _instance = None
     imgui_ctx = None
+    draw_handlers = {}
+    callbacks = set()
+    imgui_backend = None
 
     def __new__(cls):
         if cls._instance is None:
@@ -288,8 +291,7 @@ class GlobalImgui:
     def init_imgui(self):
         if self.imgui_ctx:
             return
-        self.draw_handlers = {}
-        self.callbacks = []
+
         self.imgui_ctx = imgui.create_context()
         self.init_font()
         self.imgui_backend = BlenderImguiRenderer()
@@ -298,41 +300,52 @@ class GlobalImgui:
     def shutdown_imgui(self):
         for SpaceType, draw_handler in self.draw_handlers.items():
             SpaceType.draw_handler_remove(draw_handler, 'WINDOW')
-        imgui.destroy_context(self.imgui_ctx)
-        self.imgui_ctx = None
+        self.draw_handlers.clear()
+        # imgui.destroy_context(self.imgui_ctx)
+        # self.imgui_ctx = None
 
-    def handler_add(self, callback, SpaceType):
+    def handler_add(self, callback):
         self.init_imgui()
+        space, area = bpy.context.space_data.__class__, bpy.context.area
+        if (space, area) not in self.draw_handlers:
+            self.draw_handlers[(space, area)] = space.draw_handler_add(self.draw, (space, area), 'WINDOW', 'POST_PIXEL')
+        self.callbacks.add(callback)
 
-        if SpaceType not in self.draw_handlers:
-            self.draw_handlers[SpaceType] = SpaceType.draw_handler_add(self.draw, (SpaceType, bpy.context.area), 'WINDOW', 'POST_PIXEL')
-        self.callbacks.append((callback, SpaceType))
+    def handler_remove(self, handle=None):
+        if not handle:
+            self.callbacks.clear()
+            self.shutdown_imgui()
+        elif handle in self.callbacks:
+            for (space, area) in self.draw_handlers:
+                if area != bpy.context.area:
+                    continue
+                self.draw_handlers.pop((space, area))
+            self.callbacks.discard(handle)
 
-    def handler_remove(self):
-        self.callbacks.clear()
-        self.shutdown_imgui()
-
-    def draw(self, CurrentSpaceType, area):
-        if area != bpy.context.area:
-            return
-        context = bpy.context
-        region = context.region
+    def apply_ui_settings(self):
+        region = bpy.context.region
         imgui.get_io().display_size = region.width, region.height
-
         style = imgui.get_style()
         style.window_padding = (1, 1)
         style.window_rounding = 6
         style.frame_rounding = 4
         style.frame_border_size = 1
         # io.font_global_scale = context.preferences.view.ui_scale
+
+    def draw(self, space, area):
+        if area != bpy.context.area:
+            return
+
+        self.apply_ui_settings()
+
         imgui.new_frame()
         title_bg_active_color = (0.546, 0.322, 0.730, 0.9)
         frame_bg_color = (0.512, 0.494, 0.777, 0.573)
         imgui.push_style_color(imgui.COLOR_TITLE_BACKGROUND_ACTIVE, *title_bg_active_color)
         imgui.push_style_color(imgui.COLOR_FRAME_BACKGROUND, *frame_bg_color)
-        for cb, SpaceType in self.callbacks:
-            if SpaceType == CurrentSpaceType:
-                cb(context)
+        for cb in self.callbacks:
+            if bpy.context.space_data.__class__ == space:
+                cb(bpy.context)
         imgui.pop_style_color()
         imgui.pop_style_color()
         imgui.end_frame()
@@ -382,7 +395,7 @@ def get_wrap_text(text, lwidth):
 
 
 class MLTOps(bpy.types.Operator):
-    bl_idname = "object.multiline_text"
+    bl_idname = "sdn.multiline_text"
     bl_label = "MLT"
 
     key_map = {
@@ -415,21 +428,28 @@ class MLTOps(bpy.types.Operator):
         'RIGHT_SHIFT': 128 + 6,
         'OSKEY': 128 + 7,
     }
+    REG = False
 
     def invoke(self, context, event):
+        if MLTOps.REG:
+            return {"FINISHED"}
         self.mpos = (0, 0)
         self.cover = False
-        GlobalImgui().handler_add(self.draw, SpaceNodeEditor)
+        GlobalImgui().handler_add(self.draw)
+        MLTOps.REG = True
         self.io = imgui.get_io()
         context.window_manager.modal_handler_add(self)
         return {'RUNNING_MODAL'}
 
     def modal(self, context, event):
+        if not context.area:
+            self.clear()
+            return {'CANCELLED'}
         self.mpos = event.mouse_region_x, event.mouse_region_y
         context.area.tag_redraw()
 
         # if event.type in {'RIGHTMOUSE', 'ESC'}:
-        #     self.shutdown_imgui()
+        #     self.shutdown()
         #     return {'CANCELLED'}
 
         if not self.cover:
@@ -437,8 +457,9 @@ class MLTOps(bpy.types.Operator):
         self.modal_imgui(context, event)
         return {"RUNNING_MODAL"}
 
-    def shutdown_imgui(self):
-        GlobalImgui().handler_remove()
+    def clear(self):
+        GlobalImgui().handler_remove(self.draw)
+        MLTOps.REG = False
 
     def modal_imgui(self, context, event):
         region = context.region
@@ -460,7 +481,7 @@ class MLTOps(bpy.types.Operator):
 
         elif event.type == 'WHEELDOWNMOUSE':
             io.mouse_wheel = -1
-            
+
         # print(f"Event type={event.type}, unicode={event.unicode}")
 
         if event.type in self.key_map:
@@ -513,6 +534,7 @@ class MLTOps(bpy.types.Operator):
         # if self.io.mouse_down[2]: # middle mouse
         #     imgui.WIN_POS = imgui.core.get_window_position()
         #     imgui.WIN_MOVED = True
+
         def cb(data):
             p = data.cursor_pos
             # print(imgui.core.get_clipboard_text())
@@ -531,7 +553,7 @@ class MLTOps(bpy.types.Operator):
                 # print(p, len(data.buffer), (p - 1) % (lnum+1), p%(lnum+1), lnum)
                 # if p < len(data.buffer) and data.buffer[p] == "\n":
                 #     p += 1
-                if not backspace and p % (lnum+1) == 0:
+                if not backspace and p % (lnum + 1) == 0:
                     p += 1
                 data.cursor_pos = min(max(0, p), data.buffer_size)
 
@@ -541,10 +563,8 @@ class MLTOps(bpy.types.Operator):
             ttt,
             width=-1,
             height=-1,
-            # height=h - 10,
             flags=imgui.INPUT_TEXT_CALLBACK_EDIT | imgui.INPUT_TEXT_CALLBACK_COMPLETION,
-            callback=cb,
-            # user_data=node.text
+            callback=cb
         )
         x, y = imgui.core.get_window_position()
         y = context.region.height - 1 - y

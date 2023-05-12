@@ -812,6 +812,10 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
             lines = textwrap.wrap(text=str(self.text), width=width)
             for line in lines:
                 layout.label(text=line, text_ctxt=ctxt)
+            row = layout.row(align=True)
+            row.prop(self, prop)
+            row.operator("sdn.enable_mlt", text="", icon="TEXT")
+            return True
     return False
 
 

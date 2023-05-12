@@ -1,9 +1,10 @@
+import bpy
 from ..utils import PkgInstaller
-from ..timer import Timer
-
+from ..translation import ctxt
 REGISTERED = [False]
 
 REQUIREMENTS = ["imgui"]
+
 
 def install():
     return PkgInstaller.try_install(*REQUIREMENTS)
@@ -26,3 +27,16 @@ def disable_multiline_text():
     from .integration import multiline_unregister
     multiline_unregister()
     REGISTERED[0] = False
+
+
+class EnableMLT(bpy.types.Operator):
+    bl_idname = "sdn.enable_mlt"
+    bl_description = "Enable MLT"
+    bl_label = "Enable MLT"
+    bl_translation_context = ctxt
+
+    def execute(self, context):
+        if not enable_multiline_text():
+            self.report({"ERROR"}, "MultiLineText Not Enabled")
+        bpy.ops.sdn.multiline_text("INVOKE_DEFAULT")
+        return {"FINISHED"}

@@ -150,7 +150,7 @@ a111:
     controlnet: {wmp}/ControlNet
             """
         if pref.with_comfyui_model and Path(pref.with_comfyui_model).exists():
-            cmp = Path(pref.with_comfyui_model).as_posix() # 指定到 models
+            cmp = Path(pref.with_comfyui_model).as_posix()  # 指定到 models
             cmpp = Path(pref.with_comfyui_model).parent.as_posix()
             yaml += f"""
 mycomfyui:
@@ -288,10 +288,12 @@ mycomfyui:
     def query_server_task():
         if TaskManager.pid == -1:
             return {"queue_pending": [], "queue_running": []}
-        req = request.Request(f"{url}/queue")
-        res = request.urlopen(req)
-        res = json.loads(res.read().decode())
-        {"queue_pending": [], "queue_running": []}
+        try:
+            req = request.Request(f"{url}/queue")
+            res = request.urlopen(req)
+            res = json.loads(res.read().decode())
+        except:
+            res = {"queue_pending": [], "queue_running": []}
         return res
 
     def submit(task: dict[str, tuple]):
@@ -397,6 +399,10 @@ mycomfyui:
                     TaskManager.progress_bar = 0
                 tm.push_res(data)
                 logger.warn(f"{_T('Ran Node')}: {data['node']}", )
+            elif mtype == "execution_cached":
+                # {"type": "execution_cached", "data": {"nodes": ["12", "7", "10"], "prompt_id": "ddd"}}
+                # logger.warn(message)
+                ... # pass
             else:
                 logger.error(message)
 

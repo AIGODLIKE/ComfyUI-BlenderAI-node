@@ -1,17 +1,4 @@
 
-a111:
-    base_path: D:/BaiduNetdiskDownload/AI/SD0201
-
-    checkpoints: D:/BaiduNetdiskDownload/AI/SD0201/models/Stable-diffusion
-    configs: D:/BaiduNetdiskDownload/AI/SD0201/models/Stable-diffusion
-    vae: D:/BaiduNetdiskDownload/AI/SD0201/models/VAE
-    loras: D:/BaiduNetdiskDownload/AI/SD0201/models/Lora
-    upscale_models: |
-                  D:/BaiduNetdiskDownload/AI/SD0201/models/ESRGAN
-                  D:/BaiduNetdiskDownload/AI/SD0201/models/SwinIR
-    embeddings: D:/BaiduNetdiskDownload/AI/SD0201/embeddings
-    controlnet: D:/BaiduNetdiskDownload/AI/SD0201/models/ControlNet
-            
 mycomfyui:
     base_path: D:/BaiduNetdiskDownload/AI
     checkpoints: D:/BaiduNetdiskDownload/AI/ComfyUImodels/checkpoints
