@@ -569,7 +569,7 @@ class MLTOps(bpy.types.Operator):
         x, y = imgui.core.get_window_position()
         y = context.region.height - 1 - y
         self.cover = inbox(x, y, w, h, self.mpos)
-
+        self.io.keys_down[self.key_map["ESC"]] = not self.cover
         imgui.end()
 
 
