@@ -292,7 +292,7 @@ mycomfyui:
             req = request.Request(f"{url}/queue")
             res = request.urlopen(req)
             res = json.loads(res.read().decode())
-        except:
+        except BaseException:
             res = {"queue_pending": [], "queue_running": []}
         return res
 
@@ -399,10 +399,12 @@ mycomfyui:
                     TaskManager.progress_bar = 0
                 tm.push_res(data)
                 logger.warn(f"{_T('Ran Node')}: {data['node']}", )
+            elif mtype == "execution_error":
+                logger.error(data.get("message"))
             elif mtype == "execution_cached":
                 # {"type": "execution_cached", "data": {"nodes": ["12", "7", "10"], "prompt_id": "ddd"}}
                 # logger.warn(message)
-                ... # pass
+                ...  # pass
             else:
                 logger.error(message)
 

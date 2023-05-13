@@ -785,7 +785,9 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
         if prop == "mode":
             layout.prop(self, prop, expand=True, text_ctxt=ctxt)
             if self.mode == "Grease Pencil":
-                layout.prop(self, "gp", text="", text_ctxt=ctxt)
+                row = layout.row(align=True)
+                row.prop(self, "gp", text="", text_ctxt=ctxt)
+                row.operator("sdn.mask", text="", icon="ADD").node_name = self.name
             if self.mode == "Object":
                 # layout.prop(self, "obj", text="")
                 layout.label(text="  Select mask Objects", text_ctxt=ctxt)

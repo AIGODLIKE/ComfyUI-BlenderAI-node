@@ -107,6 +107,9 @@ other = {
     "Random All": "随机所有",
     "Preset Name": "法典烙印",
     "Load Preset from Image Error -> MetaData Not Found in": "从图鉴加载失败, 元数据为",
+    # ops.py
+    "No NodeTree Found": "节点树为空",
+    "Node Not Found: ": "节点未找到",
     # preference.py
     "With WEBUI Model": "兼容WEBUI模型",
     "With ComfyUI Model": "兼容ComfyUI模型",

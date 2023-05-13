@@ -5,6 +5,12 @@ from .translation import lang_text
 
 translation = {}
 
+def get_version():
+    from . import bl_info
+    return ".".join([str(i) for i in bl_info['version']])
+
+def get_addon_name():
+    return _T("无限圣杯 Node" ) + get_version()
 
 def _T(word):
     import bpy
