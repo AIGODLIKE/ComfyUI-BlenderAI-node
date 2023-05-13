@@ -1,11 +1,11 @@
 import bpy
+import blf
 from .ops import Ops
 from .translation import ctxt
 from .SDNode import TaskManager
 from .SDNode.tree import TREE_TYPE
 from .preference import get_pref
 from .utils import get_addon_name
-
 class Panel(bpy.types.Panel):
     bl_idname = "SDN_PT_UI"
     bl_translation_context = ctxt
@@ -73,10 +73,11 @@ class Panel(bpy.types.Panel):
 
         prog = TaskManager.progress
         if prog and prog.get("value"):
-            width = bpy.context.region.width // int(7 * bpy.context.preferences.view.ui_scale) - 14
+            lnum = int(bpy.context.region.width / bpy.context.preferences.view.ui_scale / 7 - 21) 
+            lnum = int(lnum * 0.8)
             per = prog["value"] / prog["max"]
-            v = int(per * width)
-            m = width
+            v = int(per * lnum)
+            m = lnum
             # content = "█" * v + "░" * (m - v) + f" {v}/{m}" + f" {per*100:3.0f}%"
             content = f"{per*100:3.0f}% " + "█" * v + "░" * (m - v)
             row = layout.row()
