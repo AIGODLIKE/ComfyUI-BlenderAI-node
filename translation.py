@@ -392,6 +392,13 @@ lang_text = {
         "tile": "平铺",
         "TilePreprocessor": "平铺预处理器",
         "pyrUp_iters": "向上采样迭代",
+        "ConditioningAverage ": "条件平均",
+        "conditioning_from": "条件源",
+        "conditioning_to_strength": "采样到强度",
+        "ConditioningSetMask": "条件设置遮罩",
+        "set_cond_area": "设置条件区域",
+        "mask bounds": "遮罩边界",
+        "grow_mask_by": "遮罩延展",
     }
 }
 cat = {'default_real': None,
