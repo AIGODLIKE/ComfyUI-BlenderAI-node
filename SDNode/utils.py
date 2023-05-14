@@ -5,12 +5,14 @@ from ..utils import logger
 
 SELECTED_COLLECTIONS = []
 
+
 def get_cmpt(nt):
     for node in nt.nodes:
         if node.type != 'COMPOSITE':
             continue
         return node
     return nt.nodes.new("CompositorNodeRLayers")
+
 
 def get_renderlayer(nt):
     for node in nt.nodes:
@@ -19,13 +21,14 @@ def get_renderlayer(nt):
         return node
     return nt.nodes.new("CompositorNodeRLayers")
 
+
 @contextmanager
 def set_composite(nt):
     cmp = get_cmpt(nt)
     old_socket = None
     try:
         old_socket = cmp.inputs['Image'].links[0].from_socket
-    except:
+    except BaseException:
         ...
     yield cmp
 
@@ -40,8 +43,6 @@ def set_setting():
                   bpy.context.scene.view_settings.view_transform)
     yield r
     r.filepath, r.image_settings.color_mode, r.image_settings.compression, bpy.context.scene.view_settings.view_transform = oldsetting
-
-
 
 
 def gen_mask(self):
@@ -99,11 +100,11 @@ def gen_mask(self):
                 nt.nodes.remove(inv)
                 nt.nodes.remove(cmb)
 
-
         elif mode == "Grease Pencil":
             if self.gp.name not in bpy.context.scene.objects:
                 logger.error("蜡笔物体未存在当前场景中")
                 return
+            self.gp.hide_render = False
             hide_map = {}
             for o in bpy.context.scene.objects:
                 hide_map[o.name] = o.hide_render
@@ -128,7 +129,7 @@ def gen_mask(self):
                 if not cmp:
                     logger.error("未找到合成节点")
                     return
-                if not (rly:=get_renderlayer(nt)):
+                if not (rly := get_renderlayer(nt)):
                     logger.error("未找到渲染层节点")
                     return
                 cmp.use_alpha = True
@@ -143,7 +144,7 @@ def gen_mask(self):
 
                 # 移除新建节点
                 nt.nodes.remove(cmb)
-                
 
             for o in bpy.context.scene.objects:
                 o.hide_render = hide_map.get(o.name, o.hide_render)
+            self.gp.hide_render = True

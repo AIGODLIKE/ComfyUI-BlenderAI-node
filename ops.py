@@ -237,6 +237,7 @@ class Ops_Mask(bpy.types.Operator):
             # for frame in layer.frames:
             #     print("Layer: %s, Frame: %d" % (layer.info, frame.frame_number))
             gpo = bpy.data.objects.new(name=gp.name, object_data=gp)
+            gpo.hide_render = True
             node.gp = gpo
             
             bpy.context.scene.collection.objects.link(gpo)
