@@ -101,6 +101,9 @@ def gen_mask(self):
                 nt.nodes.remove(cmb)
 
         elif mode == "Grease Pencil":
+            if not self.gp:
+                logger.error("蜡笔未设置")
+                return
             if self.gp.name not in bpy.context.scene.objects:
                 logger.error("蜡笔物体未存在当前场景中")
                 return

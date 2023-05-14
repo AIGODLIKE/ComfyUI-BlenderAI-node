@@ -706,8 +706,11 @@ def spec_serialize_pre(self):
 def spec_serialize(self, cfg, execute):
     def hide_gp():
         if (cam := bpy.context.scene.camera) and (gpos := cam.get("SD_Mask", [])):
-            for gpo in gpos:
-                gpo.hide_render = True
+            try:
+                for gpo in gpos:
+                    gpo.hide_render = True
+            except:
+                ...
     if not execute:
         return
     if self.class_type == "输入图像":
