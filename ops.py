@@ -227,10 +227,7 @@ class Ops_Mask(bpy.types.Operator):
 
                 return {"FINISHED"}
 
-            mask = []
-            if cam and "SD_Mask" in cam:
-                mask.extend(cam["SD_Mask"])
-
+            
             gp = bpy.data.grease_pencils.new("AI_GP")
             layer = gp.layers.new("GP_Layer")
             layer.frames.new(bpy.context.scene.frame_current)
@@ -252,7 +249,8 @@ class Ops_Mask(bpy.types.Operator):
             brush = bpy.context.tool_settings.gpencil_paint.brush
             brush.gpencil_settings.pen_strength = 1
             brush.size = 250
-            mask.append(gpo)
             if cam:
+                mask = cam.get("SD_Mask", [])
+                mask.append(gpo)
                 cam["SD_Mask"] = mask
         return {"FINISHED"}

@@ -76,6 +76,8 @@ other = {
     "Set Image Path of Render Result(.png)": "设置摄像机渲染图像的保存位置及文件名(.png)，如已设置请忽略",
     "Saved Title Name -> ": "存储名称",
     "Sync Rand" : "统一随机",
+    # SDNode/utils.py
+    "Gen Mask": "遮罩生成",
     # __init__.py
     "Image not found or format error(png only)": "魔法图鉴不存在或格式不正确(仅png)",
     "Execute Node Tree": "运行节点树",

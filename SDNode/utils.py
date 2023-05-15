@@ -1,8 +1,7 @@
 import bpy
 from contextlib import contextmanager
 from pathlib import Path
-from ..utils import logger
-
+from ..utils import logger, _T
 SELECTED_COLLECTIONS = []
 
 
@@ -51,7 +50,7 @@ def gen_mask(self):
     mask_path = self.image
     if not Path(mask_path).parent.exists():
         return
-    logger.debug("Gen Mask")
+    logger.debug(_T("Gen Mask"))
     # 设置节点
     bpy.context.scene.use_nodes = True
     nt = bpy.context.scene.node_tree

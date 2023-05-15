@@ -348,8 +348,14 @@ class GlobalImgui:
         frame_bg_color = (0.512, 0.494, 0.777, 0.573)
         imgui.push_style_color(imgui.COLOR_TITLE_BACKGROUND_ACTIVE, *title_bg_active_color)
         imgui.push_style_color(imgui.COLOR_FRAME_BACKGROUND, *frame_bg_color)
+        invalid_callback = []
         for cb in self.callbacks[area]:
-            cb(bpy.context)
+            try:
+                cb(bpy.context)
+            except ReferenceError:
+                invalid_callback.append(cb)
+        for cb in invalid_callback:
+            self.callbacks[area].discard(cb)
         imgui.pop_style_color()
         imgui.pop_style_color()
         imgui.end_frame()
