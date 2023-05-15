@@ -36,7 +36,6 @@ def register():
 
 
 def unregister():
-    print("UNREG---------")
     bpy.app.translations.unregister(__name__)
     unreg()
     rtnode_unreg()
@@ -45,6 +44,8 @@ def unregister():
     modules_update()
 
 def modules_update():
+    from .kclogger import close_logger
+    close_logger()
     import sys
     modules = []
     for i in sys.modules.keys():

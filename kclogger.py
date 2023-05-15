@@ -65,3 +65,18 @@ logger = getLogger(NAME, level)
 # logger.warn("WARN")
 # logger.error("ERROR")
 # logger.critical("CRITICAL")
+
+def close_logger():
+    for h in reversed(logger.handlers[:]):
+        try:
+            try:
+                h.acquire()
+                h.flush()
+                h.close()
+            except (OSError, ValueError):
+                pass
+            finally:
+                h.release()
+        except:
+            ...
+
