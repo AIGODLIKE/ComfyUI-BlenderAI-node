@@ -15,7 +15,7 @@ from threading import Thread
 from subprocess import Popen, PIPE
 from pathlib import Path
 from queue import Queue
-from ..utils import logger, _T
+from ..utils import logger, _T, PkgInstaller
 from ..timer import Timer
 
 port = 8189
@@ -59,7 +59,14 @@ class TaskManager:
     def force_kill(pid):
         if not pid:
             return
-        from ..External import psutil
+        
+        if not PkgInstaller.try_install("psutil"):
+            logger.error("psutil not installed please disable proxy and try again!")
+            return
+        if not PkgInstaller.is_installed("psutil"):
+            logger.error("psutil not installed please disable proxy and try again!")
+            return
+        import psutil
         pid = int(pid)
         if sys.platform == "win32":
             try:

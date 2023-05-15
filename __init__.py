@@ -36,8 +36,20 @@ def register():
 
 
 def unregister():
+    print("UNREG---------")
     bpy.app.translations.unregister(__name__)
     unreg()
     rtnode_unreg()
     timer_unreg()
     del bpy.types.Scene.sdn
+    modules_update()
+
+def modules_update():
+    import sys
+    modules = []
+    for i in sys.modules.keys():
+        if i.startswith(__package__) and i != __package__:
+            modules.append(i)
+    for i in modules:
+        del sys.modules[i]
+    del sys.modules[__package__]
