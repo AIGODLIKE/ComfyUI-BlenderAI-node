@@ -251,6 +251,7 @@ class Ops_Mask(bpy.types.Operator):
             brush.size = 250
             if cam:
                 mask = cam.get("SD_Mask", [])
+                if None in mask: mask.remove(None)
                 mask.append(gpo)
                 cam["SD_Mask"] = mask
         return {"FINISHED"}
