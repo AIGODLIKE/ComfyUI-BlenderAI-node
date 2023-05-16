@@ -7,6 +7,7 @@ import json
 import time
 import atexit
 import signal
+from urllib.parse import urlparse
 from copy import deepcopy
 from shutil import rmtree
 from urllib import request
@@ -100,12 +101,33 @@ class TaskManager:
         if controlnet.exists():
             fvcore = Path(model_path) / "../python_embeded/Lib/site-packages/fvcore"
             if not fvcore.exists():
-                args = [str(python)]
-                # arg = f"-s {str(model_path)}/main.py"
-                args.append("-s")
-                args.append((controlnet / "install.py").as_posix())
-                p = Popen(args, cwd=model_path)
-                p.wait()
+                command = [python.as_posix()]
+                command.append("-s")
+                command.append("-m")
+                command.append("pip")
+                command.append("install")
+                command.append("-r")
+                command.append((controlnet / "requirements.txt").as_posix())
+                command.append("--extra-index-url")
+                command.append("https://download.pytorch.org/whl/cu117")
+                command.append("--no-warn-script-location")
+                if fast_url := PkgInstaller.select_pip_source():
+                    site = urlparse(fast_url)
+                    command.append("-i")
+                    command.append(fast_url)
+                    command.append("--trusted-host")
+                    command.append(site.netloc)
+                    
+                proc = Popen(command, cwd=model_path)
+                proc.wait()
+
+                # args = [str(python)]
+                # args.append("-s")
+                # args.append((controlnet / "install.py").as_posix())
+                # p = Popen(args, cwd=model_path)
+                # p.wait()
+                
+                
         logger.warn(_T("ControlNet Init Finished."))
         logger.warn(_T("If controlnet still not worked, install manually by double clicked {}").format((controlnet / "install.bat").as_posix()))
         
