@@ -519,8 +519,7 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
             return {"CANCELLED"}
         self.mpos = event.mouse_region_x, event.mouse_region_y
         w, h = context.region.width, context.region.height
-        x = context.region.x
-        in_area = x < self.mpos[0] < x + w and 0 < self.mpos[1] < h
+        in_area = 0 < self.mpos[0] < w and 0 < self.mpos[1] < h
         if not in_area:  # multi windows cause event miss
             return {"PASS_THROUGH"}
         context.area.tag_redraw()
@@ -613,8 +612,7 @@ class GuiTest(bpy.types.Operator, BaseDrawCall):
             return {"CANCELLED"}
         self.mpos = event.mouse_region_x, event.mouse_region_y
         w, h = context.region.width, context.region.height
-        x = context.region.x
-        in_area = x < self.mpos[0] < x + w and 0 < self.mpos[1] < h
+        in_area = 0 < self.mpos[0] < w and 0 < self.mpos[1] < h
         if not in_area:  # multi windows cause event miss
             return {"PASS_THROUGH"}
         context.area.tag_redraw()
