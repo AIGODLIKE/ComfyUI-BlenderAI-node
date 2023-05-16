@@ -59,7 +59,7 @@ class TaskManager:
     def force_kill(pid):
         if not pid:
             return
-        
+
         if not PkgInstaller.try_install("psutil"):
             logger.error("psutil not installed please disable proxy and try again!")
             return
@@ -89,6 +89,26 @@ class TaskManager:
 
         rtnode_reg()
 
+    def run_server_pre(model_path):
+        """
+        Check pre install
+        """
+        # controlnet check
+        logger.warn(_T("ControlNet Init...."))
+        python = Path(model_path) / "../python_embeded/python.exe"
+        controlnet = Path(model_path) / "custom_nodes/comfy_controlnet_preprocessors"
+        if controlnet.exists():
+            fvcore = Path(model_path) / "../python_embeded/Lib/site-packages/fvcore"
+            if not fvcore.exists():
+                args = [str(python)]
+                # arg = f"-s {str(model_path)}/main.py"
+                args.append("-s")
+                args.append((controlnet / "install.py").as_posix())
+                p = Popen(args, cwd=model_path)
+                p.wait()
+        logger.warn(_T("ControlNet Init Finished."))
+        logger.warn(_T("If controlnet still not worked, install manually by double clicked {}").format((controlnet / "install.bat").as_posix()))
+        
     def run_server_ex():
         pidpath = Path(__file__).parent / "pid"
         if pidpath.exists():
@@ -102,6 +122,8 @@ class TaskManager:
             return
         logger.debug(f"{_T('Model Path')}: {model_path}")
         python = Path(model_path) / "../python_embeded/python.exe"
+        TaskManager.run_server_pre(model_path)
+
         logger.warn(_T("Server Launching"))
         if not python.exists():
             logger.error(f"{_T('python interpreter not found')}:")

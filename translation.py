@@ -56,6 +56,9 @@ other = {
     "Node Tree Not Executed, May Caused by:": "节点树未被执行, 可能原因:",
     "Proc Resutl": "处理结果",
     "Ran Node": "运行节点",
+    "ControlNet Init....": "ControlNet 初始化...",
+    "ControlNet Init Finished.": "ControlNet 初始化完毕.",
+    "If controlnet still not worked, install manually by double clicked {}": "若ControlNet依然无法正常使用, 请手动双击 {} 安装",
     # SDNode/nodes.py
     "icon path load error": "预览图配置解析失败",
     "|IGNORED|": "|已忽略|",

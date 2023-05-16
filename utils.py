@@ -313,7 +313,10 @@ class PngParse:
 
 class PkgInstaller:
     source = [
-        "https://pypi.tuna.tsinghua.edu.cn/simple",
+        "http://mirrors.aliyun.com/pypi/simple/",
+        "https://pypi.tuna.tsinghua.edu.cn/simple/",
+        "https://pypi.mirrors.ustc.edu.cn/simple/",
+        "https://pypi.python.org/simple/",
         "https://pypi.org/simple",
     ]
     fast_url = ""
@@ -324,8 +327,9 @@ class PkgInstaller:
             t, PkgInstaller.fast_url = 999, PkgInstaller.source[0]
             for url in PkgInstaller.source:
                 try:
-                    tping = requests.get(url).elapsed.total_seconds()
-                except:
+                    tping = requests.get(url, timeout=1).elapsed.total_seconds()
+                except Exception as e:
+                    logger.warn(e)
                     continue
                 if tping < 0.1:
                     PkgInstaller.fast_url = url
