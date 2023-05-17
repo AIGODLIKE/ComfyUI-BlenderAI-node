@@ -2,7 +2,7 @@ import struct
 from pathlib import Path
 from .kclogger import logger
 from .translation import lang_text
-
+from urllib.parse import urlparse
 translation = {}
 
 def get_version():
@@ -365,7 +365,11 @@ class PkgInstaller:
             if PkgInstaller.is_installed(pkg):
                 continue
             try:
-                main(['install', pkg, "-i", url])
+                site = urlparse(url)
+                command = ['install', pkg, "-i", url]
+                command.append("--trusted-host")
+                command.append(site.netloc)
+                main(command)
             except Exception:
                 return False
         return True

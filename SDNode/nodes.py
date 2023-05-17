@@ -345,6 +345,12 @@ def parse_node():
     logger.warn(_T("Parsing Node Start"))
     path = Path(__file__).parent / "object_info.json"
     try:
+        # linux may not include request
+        try:
+            from requests import get as ______
+        except:
+            from ..utils import PkgInstaller
+            PkgInstaller.try_install("requests")
         import requests
         req = requests.get(f"{url}/object_info")
         if req.status_code != 200:

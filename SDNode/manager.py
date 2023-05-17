@@ -117,7 +117,6 @@ class TaskManager:
                     command.append(fast_url)
                     command.append("--trusted-host")
                     command.append(site.netloc)
-                    
                 proc = Popen(command, cwd=model_path)
                 proc.wait()
 
