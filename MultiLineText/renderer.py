@@ -101,7 +101,7 @@ class Renderer(BaseOpenGLRenderer):
         pixel_buffer = gl.Buffer(gl.GL_BYTE, [4 * width * height])
         pixel_buffer[:] = pixels  # 非常慢
         gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGBA, width, height, 0, gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, pixel_buffer)
-        logger.error(self._font_texture)
+        # logger.error(self._font_texture)
         self.io.fonts.texture_id = self._font_texture
         gl.glBindTexture(gl.GL_TEXTURE_2D, last_texture)
         self.io.fonts.clear_tex_data()
@@ -164,7 +164,7 @@ class Renderer(BaseOpenGLRenderer):
         # pixel_buffer = gl.Buffer(gl.GL_BYTE, [4 * width * height])
         # pixel_buffer[:] = pixels  # 非常慢
         gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGBA, width, height, 0, gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, pixels)
-        logger.error(self._font_texture)
+        # logger.error(self._font_texture)
         self.io.fonts.texture_id = self._font_texture
         gl.glBindTexture(gl.GL_TEXTURE_2D, last_texture)
         self.io.fonts.clear_tex_data()
