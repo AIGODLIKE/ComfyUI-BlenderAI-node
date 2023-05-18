@@ -255,7 +255,13 @@ class Mask:
         else:
             mask = torch.zeros((64, 64), dtype=torch.float32, device="cpu")
         return (mask,)
-
+    
+    @classmethod
+    def IS_CHANGED(s, image, channel):
+        image_path = Path(image_path)
+        if not image or not image_path.exists():
+            return ""
+        return Path(image_path).stat().st_mtime_ns
 
 # A dictionary that contains all nodes you want to export with their names
 # NOTE: names should be globally unique

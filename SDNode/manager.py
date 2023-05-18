@@ -7,6 +7,7 @@ import json
 import time
 import atexit
 import signal
+from urllib.parse import urlparse
 from copy import deepcopy
 from shutil import rmtree
 from urllib import request
@@ -15,7 +16,7 @@ from threading import Thread
 from subprocess import Popen, PIPE
 from pathlib import Path
 from queue import Queue
-from ..utils import logger, _T
+from ..utils import logger, _T, PkgInstaller
 from ..timer import Timer
 
 port = 8189
@@ -43,6 +44,7 @@ class TaskManager:
     cur_task: Task = None
     execute_status_record = []
     error_msg = []
+    progress_bar = 0
 
     def __new__(cls, *args, **kw):
         if cls._instance is None:
@@ -58,7 +60,14 @@ class TaskManager:
     def force_kill(pid):
         if not pid:
             return
-        from ..External import psutil
+
+        if not PkgInstaller.try_install("psutil"):
+            logger.error("psutil not installed please disable proxy and try again!")
+            return
+        if not PkgInstaller.is_installed("psutil"):
+            logger.error("psutil not installed please disable proxy and try again!")
+            return
+        import psutil
         pid = int(pid)
         if sys.platform == "win32":
             try:
@@ -76,10 +85,50 @@ class TaskManager:
     def run_server():
         from .tree import rtnode_reg, rtnode_unreg
         rtnode_unreg()
-        
+
         TaskManager.run_server_ex()
-        
+
         rtnode_reg()
+
+    def run_server_pre(model_path):
+        """
+        Check pre install
+        """
+        # controlnet check
+        logger.warn(_T("ControlNet Init...."))
+        python = Path(model_path) / "../python_embeded/python.exe"
+        controlnet = Path(model_path) / "custom_nodes/comfy_controlnet_preprocessors"
+        if controlnet.exists():
+            fvcore = Path(model_path) / "../python_embeded/Lib/site-packages/fvcore"
+            if not fvcore.exists():
+                command = [python.as_posix()]
+                command.append("-s")
+                command.append("-m")
+                command.append("pip")
+                command.append("install")
+                command.append("-r")
+                command.append((controlnet / "requirements.txt").as_posix())
+                command.append("--extra-index-url")
+                command.append("https://download.pytorch.org/whl/cu117")
+                command.append("--no-warn-script-location")
+                if fast_url := PkgInstaller.select_pip_source():
+                    site = urlparse(fast_url)
+                    command.append("-i")
+                    command.append(fast_url)
+                    command.append("--trusted-host")
+                    command.append(site.netloc)
+                proc = Popen(command, cwd=model_path)
+                proc.wait()
+
+                # args = [str(python)]
+                # args.append("-s")
+                # args.append((controlnet / "install.py").as_posix())
+                # p = Popen(args, cwd=model_path)
+                # p.wait()
+                
+                
+        logger.warn(_T("ControlNet Init Finished."))
+        logger.warn(_T("If controlnet still not worked, install manually by double clicked {}").format((controlnet / "install.bat").as_posix()))
         
     def run_server_ex():
         pidpath = Path(__file__).parent / "pid"
@@ -94,6 +143,8 @@ class TaskManager:
             return
         logger.debug(f"{_T('Model Path')}: {model_path}")
         python = Path(model_path) / "../python_embeded/python.exe"
+        TaskManager.run_server_pre(model_path)
+
         logger.warn(_T("Server Launching"))
         if not python.exists():
             logger.error(f"{_T('python interpreter not found')}:")
@@ -120,7 +171,7 @@ class TaskManager:
         # arg = f"-s {str(model_path)}/main.py"
         args.append("-s")
         args.append(f"{str(model_path)}/main.py")
-        
+
         # arg += f" --port {port}"
         args.append("--port")
         args.append(f"{port}")
@@ -130,24 +181,50 @@ class TaskManager:
         else:
             # arg += f" {pref.mem_level}"
             args.append(f"{pref.mem_level}")
-        if Path(pref.with_webui_model).exists():
-            ...
-            yaml = """
+        yaml = ""
+        if pref.with_webui_model and Path(pref.with_webui_model).exists():
+            wmp = Path(pref.with_webui_model).as_posix()
+            wmpp = Path(pref.with_webui_model).parent.as_posix()
+            yaml += f"""
 a111:
-    base_path: {}path/to/stable-diffusion-webui/
+    base_path: {wmpp}
 
-    checkpoints: {}models/Stable-diffusion
-    configs: {}models/Stable-diffusion
-    vae: {}models/VAE
-    loras: {}models/Lora
+    checkpoints: {wmp}/Stable-diffusion
+    configs: {wmp}/Stable-diffusion
+    vae: {wmp}/VAE
+    loras: {wmp}/Lora
     upscale_models: |
-                  {}models/ESRGAN
-                  {}models/SwinIR
-    embeddings: {}embeddings
-    controlnet: {}models/ControlNet
+                  {wmp}/ESRGAN
+                  {wmp}/SwinIR
+    embeddings: {wmpp}/embeddings
+    controlnet: {wmp}/ControlNet
             """
-            with open(Path(__file__).parent / "config.yaml", "w") as f:
-                f.write(yaml)
+        if pref.with_comfyui_model and Path(pref.with_comfyui_model).exists():
+            cmp = Path(pref.with_comfyui_model).as_posix()  # 指定到 models
+            cmpp = Path(pref.with_comfyui_model).parent.as_posix()
+            yaml += f"""
+mycomfyui:
+    base_path: {cmpp}
+    checkpoints: {cmp}/checkpoints
+    configs: {cmp}/configs
+    loras: {cmp}/loras
+    vae: {cmp}/vae
+    clip: {cmp}/clip
+    clip_vision: {cmp}/clip_vision
+    style_models: {cmp}/style_models
+    embeddings: {cmp}/embeddings
+    diffusers: {cmp}/diffusers
+    controlnet: {cmp}/controlnet
+    gligen: {cmp}/gligen
+    upscale_models: {cmp}/upscale_models
+    hypernetworks: {cmp}/hypernetworks
+    # custom_nodes: {cmpp}/custom_nodes
+            """
+        if yaml:
+            extra_model_paths = Path(__file__).parent / "config.yaml"
+            extra_model_paths.write_text(yaml)
+            args.append("--extra-model-paths-config")
+            args.append(extra_model_paths.as_posix())
         # cmd = " ".join([str(python), arg])
         # 加了 stderr后 无法获取 进度?
         # logger.debug(args)
@@ -174,7 +251,7 @@ a111:
                 # line = line.replace(b"\xa8\x80", b"=")
                 # logger.info(line)
                 # print(re.findall("\|(.*?)[", line.decode("gbk")))
-                if b"CUDA out of memory" in line:
+                if b"CUDA out of memory" in line or b"not enough memory" in line:
                     TaskManager.put_error_msg(f"{_T('Error: Out of VRam, try restart blender')}")
                 proc = re.findall("[█ ]\\| (.*?) \\[", line.decode("gbk"))
                 if not proc:
@@ -204,7 +281,7 @@ a111:
         Thread(target=TaskManager.poll_task, daemon=True).start()
         Thread(target=TaskManager.poll_res, daemon=True).start()
         Thread(target=TaskManager.proc_res, daemon=True).start()
-        
+
     def close_server():
         if TaskManager.child:
             TaskManager.child.kill()
@@ -261,15 +338,17 @@ a111:
     def query_server_task():
         if TaskManager.pid == -1:
             return {"queue_pending": [], "queue_running": []}
-        req = request.Request(f"{url}/queue")
-        res = request.urlopen(req)
-        res = json.loads(res.read().decode())
-        {"queue_pending": [], "queue_running": []}
+        try:
+            req = request.Request(f"{url}/queue")
+            res = request.urlopen(req)
+            res = json.loads(res.read().decode())
+        except BaseException:
+            res = {"queue_pending": [], "queue_running": []}
         return res
 
     def submit(task: dict[str, tuple]):
         TaskManager.clear_error_msg()
-        
+
         def queue_task(task: dict):
             res = TaskManager.query_server_task()
             logger.debug("P/R: %s/%s", len(res["queue_pending"]), len(res["queue_running"]))
@@ -352,19 +431,30 @@ a111:
                     TaskManager.execute_status_record.append(data["node"])
                 # logger.debug(data)
             elif mtype == "progress":
-                v = data["value"]
-                m = data["max"]
-                fac = 40 / m
-                v = int(v * fac)
                 m = 40
-                content = f"\r{v*100/m:3.0f}%  " + "█" * v + "░" * (m - v) + f" {v}/{m}" + "\n" * int(v == m)
+                fac = m / data["max"]
+                v = int(data["value"] * fac)
+                TaskManager.progress_bar = v
+                cf = "\033[92m" + "█" * v + "\033[0m"
+                cp = "\033[32m" + "░" * (m - v) + "\033[0m"
+                content = f"\r{v*100/m:3.0f}% " + cf + cp + f" {v}/{m}"
                 sys.stdout.write(content)
                 sys.stdout.flush()
 
             elif mtype == "executed":
                 {"node": "9", "output": {"images": ["ComfyUI_00028_.png"]}}
+                if TaskManager.progress_bar != 0:
+                    sys.stdout.write("\n")
+                    sys.stdout.flush()
+                    TaskManager.progress_bar = 0
                 tm.push_res(data)
                 logger.warn(f"{_T('Ran Node')}: {data['node']}", )
+            elif mtype == "execution_error":
+                logger.error(data.get("message"))
+            elif mtype == "execution_cached":
+                # {"type": "execution_cached", "data": {"nodes": ["12", "7", "10"], "prompt_id": "ddd"}}
+                # logger.warn(message)
+                ...  # pass
             else:
                 logger.error(message)
 

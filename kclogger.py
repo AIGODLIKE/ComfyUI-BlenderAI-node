@@ -11,17 +11,22 @@ class Filter(logging.Filter):
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
 
-    def filter(self, record: logging.LogRecord) -> bool:
+    def fill_color(self, c="[37m", msg=""):
+        return f'\033{c}{msg}\033[0m'
+
+    def filter(self, rec: logging.LogRecord) -> bool:
         # 颜色map
-        FMTDCIT = {
-            'DEBUG': "\033[36mDBG\033[0m",
-            'INFO': "\033[37mINF\033[0m",
-            'WARN': "\033[33mWAR\033[0m",
-            'WARNING': "\033[33mWAR\033[0m",
-            'ERROR': "\033[31mERR\033[0m",
-            'CRITICAL': "\033[35mCRT\033[0m",
+        FMTDICT = {
+            'DEBUG':    ["[36m", "DBG"],
+            'INFO':     ["[37m", "INF"],
+            'WARN':     ["[33m", "WAR"],
+            'WARNING':  ["[33m", "WAR"],
+            'ERROR':    ["[31m", "ERR"],
+            'CRITICAL': ["[35m", "CRT"],
         }
-        record.levelname = FMTDCIT.get(record.levelname)
+        c, n = FMTDICT.get(rec.levelname, ["[37m", "UN"])
+        rec.msg = self.fill_color(c, rec.msg)
+        rec.levelname = self.fill_color(c, n)
         return True
 
 
@@ -60,3 +65,18 @@ logger = getLogger(NAME, level)
 # logger.warn("WARN")
 # logger.error("ERROR")
 # logger.critical("CRITICAL")
+
+def close_logger():
+    for h in reversed(logger.handlers[:]):
+        try:
+            try:
+                h.acquire()
+                h.flush()
+                h.close()
+            except (OSError, ValueError):
+                pass
+            finally:
+                h.release()
+        except:
+            ...
+

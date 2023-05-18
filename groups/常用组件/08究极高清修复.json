@@ -1,0 +1,682 @@
+{
+    "last_node_id": 18,
+    "last_link_id": 17,
+    "nodes": [
+        {
+            "id": 17,
+            "type": "预览",
+            "pos": [
+                3298.15380859375,
+                493.6214599609375
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 13,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "images",
+                    "type": "IMAGE",
+                    "link": 15,
+                    "slot_index": 0
+                }
+            ],
+            "outputs": [],
+            "title": "预览(Blender专用-采样修复)",
+            "properties": {},
+            "widgets_values": []
+        },
+        {
+            "id": 11,
+            "type": "ImageUpscaleWithModel",
+            "pos": [
+                1731.263916015625,
+                552.3533325195312
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 4,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "upscale_model",
+                    "type": "UPSCALE_MODEL",
+                    "link": 5,
+                    "slot_index": 0
+                },
+                {
+                    "name": "image",
+                    "type": "IMAGE",
+                    "link": 4,
+                    "slot_index": 1
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "IMAGE",
+                    "type": "IMAGE",
+                    "links": [
+                        7
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "图像通过模型放大",
+            "properties": {},
+            "widgets_values": []
+        },
+        {
+            "id": 18,
+            "type": "VAEDecode",
+            "pos": [
+                2932.96875,
+                500.0902099609375
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 12,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "samples",
+                    "type": "LATENT",
+                    "link": 14,
+                    "slot_index": 0
+                },
+                {
+                    "name": "vae",
+                    "type": "VAE",
+                    "link": 16,
+                    "slot_index": 1
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "IMAGE",
+                    "type": "IMAGE",
+                    "links": [
+                        15
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "VAE解码(大尺寸)",
+            "properties": {},
+            "widgets_values": []
+        },
+        {
+            "id": 13,
+            "type": "预览",
+            "pos": [
+                1642.1182861328125,
+                905.2190551757812
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 3,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "images",
+                    "type": "IMAGE",
+                    "link": 6,
+                    "slot_index": 0
+                }
+            ],
+            "outputs": [],
+            "title": "预览(Blender专用-小尺寸)",
+            "properties": {},
+            "widgets_values": []
+        },
+        {
+            "id": 14,
+            "type": "ImageScale",
+            "pos": [
+                1984.720458984375,
+                556.0820922851562
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 5,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "image",
+                    "type": "IMAGE",
+                    "link": 7,
+                    "slot_index": 0
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "IMAGE",
+                    "type": "IMAGE",
+                    "links": [
+                        2,
+                        8
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "图像缩放(设置最终尺寸)",
+            "properties": {},
+            "widgets_values": [
+                "nearest-exact",
+                960,
+                960,
+                "disabled"
+            ]
+        },
+        {
+            "id": 16,
+            "type": "KSampler",
+            "pos": [
+                2660.511474609375,
+                287.5484619140625
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 11,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "model",
+                    "type": "MODEL",
+                    "link": 11,
+                    "slot_index": 0
+                },
+                {
+                    "name": "positive",
+                    "type": "CONDITIONING",
+                    "link": 12,
+                    "slot_index": 1
+                },
+                {
+                    "name": "negative",
+                    "type": "CONDITIONING",
+                    "link": 13,
+                    "slot_index": 2
+                },
+                {
+                    "name": "latent_image",
+                    "type": "LATENT",
+                    "link": 10,
+                    "slot_index": 3
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "LATENT",
+                    "type": "LATENT",
+                    "links": [
+                        14
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "K采样器.001",
+            "properties": {},
+            "widgets_values": [
+                "123456789",
+                false,
+                20,
+                12.0,
+                "euler",
+                "karras",
+                0.6000000238418579
+            ]
+        },
+        {
+            "id": 6,
+            "type": "CLIPTextEncode",
+            "pos": [
+                2093.458740234375,
+                352.6426086425781
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 9,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "clip",
+                    "type": "CLIP",
+                    "link": 1,
+                    "slot_index": 0
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "CONDITIONING",
+                    "type": "CONDITIONING",
+                    "links": [
+                        13
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "CLIP文本编码器(负)",
+            "properties": {},
+            "widgets_values": [
+                "embedding:EasyNegative"
+            ]
+        },
+        {
+            "id": 5,
+            "type": "CLIPTextEncode",
+            "pos": [
+                2041.176513671875,
+                -20.874210357666016
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 10,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "clip",
+                    "type": "CLIP",
+                    "link": 0,
+                    "slot_index": 0
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "CONDITIONING",
+                    "type": "CONDITIONING",
+                    "links": [
+                        12
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "CLIP文本编码器(正)",
+            "properties": {},
+            "widgets_values": [
+                "1girl, bangs, blue_eyes, blue_hair, hair_ornament, halo, looking_at_viewer, multicolored_hair, open_mouth, simple_background, solo, streaked_hair, teeth, virtual_youtuber, white_hair"
+            ]
+        },
+        {
+            "id": 4,
+            "type": "CheckpointLoaderSimple",
+            "pos": [
+                1695.0032958984375,
+                117.9401626586914
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 8,
+            "mode": 0,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "MODEL",
+                    "type": "MODEL",
+                    "links": [
+                        11
+                    ],
+                    "slot_index": 0
+                },
+                {
+                    "name": "CLIP",
+                    "type": "CLIP",
+                    "links": [
+                        0,
+                        1
+                    ],
+                    "slot_index": 1
+                },
+                {
+                    "name": "VAE",
+                    "type": "VAE",
+                    "links": [],
+                    "slot_index": 2
+                }
+            ],
+            "title": "Checkpoint简易加载器",
+            "properties": {},
+            "widgets_values": [
+                "AIGODLIKE华丽_4000.ckpt"
+            ]
+        },
+        {
+            "id": 10,
+            "type": "VAELoader",
+            "pos": [
+                1861.228515625,
+                1028.529052734375
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 1,
+            "mode": 0,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "VAE",
+                    "type": "VAE",
+                    "links": [
+                        3,
+                        9,
+                        16
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "VAE加载器",
+            "properties": {},
+            "widgets_values": [
+                "pastel-waifu-diffusion.vae.pt"
+            ]
+        },
+        {
+            "id": 12,
+            "type": "UpscaleModelLoader",
+            "pos": [
+                1485.1026611328125,
+                471.47332763671875
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 0,
+            "mode": 0,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "UPSCALE_MODEL",
+                    "type": "UPSCALE_MODEL",
+                    "links": [
+                        5
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "放大模型加载器",
+            "properties": {},
+            "widgets_values": [
+                "BSRGAN.pth"
+            ]
+        },
+        {
+            "id": 8,
+            "type": "VAEDecode",
+            "pos": [
+                1287.2982177734375,
+                704.42236328125
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 2,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "vae",
+                    "type": "VAE",
+                    "link": 3,
+                    "slot_index": 1
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "IMAGE",
+                    "type": "IMAGE",
+                    "links": [
+                        4,
+                        6
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "VAE解码(小尺寸)",
+            "properties": {},
+            "widgets_values": []
+        },
+        {
+            "id": 15,
+            "type": "VAEEncode",
+            "pos": [
+                2300.338134765625,
+                689.3731079101562
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 6,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "pixels",
+                    "type": "IMAGE",
+                    "link": 8,
+                    "slot_index": 0
+                },
+                {
+                    "name": "vae",
+                    "type": "VAE",
+                    "link": 9,
+                    "slot_index": 1
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "LATENT",
+                    "type": "LATENT",
+                    "links": [
+                        10
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "VAE编码(大尺寸\"画布\")",
+            "properties": {},
+            "widgets_values": []
+        },
+        {
+            "id": 9,
+            "type": "预览",
+            "pos": [
+                2302.755126953125,
+                846.8172607421875
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 7,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "images",
+                    "type": "IMAGE",
+                    "link": 2,
+                    "slot_index": 0
+                }
+            ],
+            "outputs": [],
+            "title": "预览(Blender专用-放大)",
+            "properties": {},
+            "widgets_values": []
+        }
+    ],
+    "links": [
+        [
+            0,
+            4,
+            1,
+            5,
+            0,
+            "CheckpointLoaderSimple"
+        ],
+        [
+            1,
+            4,
+            1,
+            6,
+            0,
+            "CheckpointLoaderSimple"
+        ],
+        [
+            2,
+            14,
+            0,
+            9,
+            0,
+            "ImageScale"
+        ],
+        [
+            3,
+            10,
+            0,
+            8,
+            1,
+            "VAELoader"
+        ],
+        [
+            4,
+            8,
+            0,
+            11,
+            1,
+            "VAEDecode"
+        ],
+        [
+            5,
+            12,
+            0,
+            11,
+            0,
+            "UpscaleModelLoader"
+        ],
+        [
+            6,
+            8,
+            0,
+            13,
+            0,
+            "VAEDecode"
+        ],
+        [
+            7,
+            11,
+            0,
+            14,
+            0,
+            "ImageUpscaleWithModel"
+        ],
+        [
+            8,
+            14,
+            0,
+            15,
+            0,
+            "ImageScale"
+        ],
+        [
+            9,
+            10,
+            0,
+            15,
+            1,
+            "VAELoader"
+        ],
+        [
+            10,
+            15,
+            0,
+            16,
+            3,
+            "VAEEncode"
+        ],
+        [
+            11,
+            4,
+            0,
+            16,
+            0,
+            "CheckpointLoaderSimple"
+        ],
+        [
+            12,
+            5,
+            0,
+            16,
+            1,
+            "CLIPTextEncode"
+        ],
+        [
+            13,
+            6,
+            0,
+            16,
+            2,
+            "CLIPTextEncode"
+        ],
+        [
+            14,
+            16,
+            0,
+            18,
+            0,
+            "KSampler"
+        ],
+        [
+            15,
+            18,
+            0,
+            17,
+            0,
+            "VAEDecode"
+        ],
+        [
+            16,
+            10,
+            0,
+            18,
+            1,
+            "VAELoader"
+        ]
+    ],
+    "groups": [],
+    "config": {},
+    "extra": {},
+    "version": 0.4
+}
