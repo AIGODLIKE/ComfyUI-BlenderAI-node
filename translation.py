@@ -114,9 +114,9 @@ other = {
     "Preset Name": "法典烙印",
     "Load Preset from Image Error -> MetaData Not Found in": "从图鉴加载失败, 元数据为",
     # prop.py
-    "Frame Mode: ": "渲染模式",
-    "SingleFrame: ": "单帧",
-    "MultiFrame: ": "多帧",
+    "Frame Mode": "渲染模式",
+    "SingleFrame": "单帧",
+    "MultiFrame": "多帧",
     # ops.py
     "No NodeTree Found": "节点树为空",
     "Node Not Found: ": "节点未找到",

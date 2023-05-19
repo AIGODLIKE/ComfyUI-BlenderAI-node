@@ -124,6 +124,6 @@ class Prop(bpy.types.PropertyGroup):
 
     rand_all_seed: bpy.props.BoolProperty(default=False, name="Random All")
     frame_mode: bpy.props.EnumProperty(name="Frame Mode",
-                                       items=[("SingleFrame", "SingleFrame", "", 0),
-                                              ("MultiFrame", "MultiFrame", "", 1),
+                                       items=[("SingleFrame", "SingleFrame", "SingleFrame", 0),
+                                              ("MultiFrame", "MultiFrame", "MultiFrame", 1),
                                               ])
