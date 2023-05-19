@@ -102,6 +102,8 @@ class Ops(bpy.types.Operator):
             TaskManager.push_task({"prompt": prompt, "workflow": workflow, "api": "prompt"})
         elif self.action == "Restart":
             TaskManager.restart_server()
+        elif self.action == "ClearTask":
+            TaskManager.clear_all()
         elif self.action == "Save":
             data = tree.save_json()
             if not self.save_name:

@@ -3,7 +3,8 @@ import os
 from pathlib import Path
 
 from .utils import Icon
-from .datas import PRESETS_DIR, PROP_CACHE,GROUPS_DIR
+from .datas import PRESETS_DIR, PROP_CACHE, GROUPS_DIR
+
 
 class Prop(bpy.types.PropertyGroup):
     cache = PROP_CACHE
@@ -122,3 +123,7 @@ class Prop(bpy.types.PropertyGroup):
     open_webui: bpy.props.BoolProperty(default=False, update=open_webui_update, name="Launch ComfyUI")
 
     rand_all_seed: bpy.props.BoolProperty(default=False, name="Random All")
+    frame_mode: bpy.props.EnumProperty(name="Frame Mode",
+                                       items=[("SingleFrame", "SingleFrame", "", 0),
+                                              ("MultiFrame", "MultiFrame", "", 1),
+                                              ])

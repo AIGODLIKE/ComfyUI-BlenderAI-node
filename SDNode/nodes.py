@@ -310,6 +310,9 @@ class NodeBase(bpy.types.Node):
     def post_fn(self, task):
         ...
 
+    def pre_fn(self):
+        ...
+
 
 class SocketBase(bpy.types.NodeSocket):
     allowLink = set()
@@ -344,22 +347,25 @@ class GetSelCol(bpy.types.Operator):
 def parse_node():
     logger.warn(_T("Parsing Node Start"))
     path = Path(__file__).parent / "object_info.json"
+    if path.exists():
+        object_info = json.load(path.open("r"))
     try:
         # linux may not include request
         try:
             from requests import get as ______
-        except:
+        except BaseException:
             from ..utils import PkgInstaller
             PkgInstaller.try_install("requests")
         import requests
         req = requests.get(f"{url}/object_info")
         if req.status_code != 200:
             return {"FINISHED"}
-        object_info = req.json()
+        cur_object_info = req.json()
+        object_info.update(cur_object_info)
         path.write_text(json.dumps(object_info, ensure_ascii=False, indent=2))
+        object_info = cur_object_info
     except requests.exceptions.ConnectionError:
         logger.warn(_T("Server Launch Failed"))
-        object_info = json.load(path.open("r"))
 
     nodetree_desc = {}
     nodes_desc = {}
@@ -387,6 +393,8 @@ def parse_node():
         for index, out_type in enumerate(desc.get("output", [])):
             desc["output"][index] = [out_type, out_type]
         for index, out_name in enumerate(desc.get("output_name", [])):
+            if not out_name:
+                continue
             desc["output"][index][1] = out_name
         cpath = cat.split("/")
         nodes_desc[name] = desc
@@ -715,18 +723,19 @@ def spec_serialize(self, cfg, execute):
             try:
                 for gpo in gpos:
                     gpo.hide_render = True
-            except:
+            except BaseException:
                 ...
     if not execute:
         return
     if self.class_type == "输入图像":
-        if self.mode == "渲染":
-            logger.warn(f"{_T('Render')}->{self.image}")
-            bpy.context.scene.render.filepath = self.image
-            hide_gp()
-            bpy.ops.render.render(write_still=True)
-        elif self.mode == "输入":
-            ...
+        ...
+        # if self.mode == "渲染":
+        #     logger.warn(f"{_T('Render')}->{self.image}")
+        #     bpy.context.scene.render.filepath = self.image
+        #     hide_gp()
+        #     bpy.ops.render.render(write_still=True)
+        # elif self.mode == "输入":
+        #     ...
     elif self.class_type == "Mask":
         # print(self.channel)
         gen_mask(self)
@@ -737,19 +746,36 @@ def spec_serialize(self, cfg, execute):
 
 
 def spec_functions(fields, nname, ndesc):
+    if nname == "输入图像":
+        def render(self: NodeBase):
+            if self.mode != "渲染":
+                return
+            @Timer.wait_run
+            def r():
+                logger.warn(f"{_T('Render')}->{self.image}")
+                bpy.context.scene.render.filepath = self.image
+                if (cam := bpy.context.scene.camera) and (gpos := cam.get("SD_Mask", [])):
+                    try:
+                        for gpo in gpos:
+                            gpo.hide_render = True
+                    except BaseException:
+                        ...
+                bpy.ops.render.render(write_still=True)
+            r()
+        fields["pre_fn"] = render
     if nname == "存储":
-        def post_fn(self: NodeBase, t):
-            logger.debug(f"{self.class_type} {_T('Post Function')}")
-            logger.debug(t.res)
-            img_paths = t.res.get("output", {}).get("images", [])
+        def post_fn(self: NodeBase, t: Task, result):
+            logger.debug(f"{self.class_type}{_T('Post Function')}->{result}")
+            img_paths = result.get("output", {}).get("images", [])
             for img in img_paths:
                 def f(img): return bpy.data.images.load(img)
                 Timer.put((f, img))
 
         fields["post_fn"] = post_fn
     if nname == "预览":
-        def post_fn(self: NodeBase, t: Task):
-            img_paths = t.res.get("output", {}).get("images", [])
+        def post_fn(self: NodeBase, t: Task, result):
+            logger.debug(f"{self.class_type}{_T('Post Function')}->{result}")
+            img_paths = result.get("output", {}).get("images", [])
             if not img_paths:
                 return
             img = img_paths[0]

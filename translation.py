@@ -72,7 +72,7 @@ other = {
     "None Input": "节点输入",
     "Parsing Node Finished!": "解析节点完成!",
     "Render": "渲染",
-    "Post Function": "后处理函数",
+    "Post Function": "后处理",
     "Load Preview Image": "加载预览图",
     "  Select mask Objects": "  选中mask物体(可多选)",
     "  Select mask Collections": "  选中mask集合(可多选)",
@@ -113,9 +113,15 @@ other = {
     "Random All": "随机所有",
     "Preset Name": "法典烙印",
     "Load Preset from Image Error -> MetaData Not Found in": "从图鉴加载失败, 元数据为",
+    # prop.py
+    "Frame Mode: ": "渲染模式",
+    "SingleFrame: ": "单帧",
+    "MultiFrame: ": "多帧",
     # ops.py
     "No NodeTree Found": "节点树为空",
     "Node Not Found: ": "节点未找到",
+    # ui.py
+    "ClearTask": "清理任务",
     # preference.py
     "With WEBUI Model": "兼容WEBUI模型",
     "With ComfyUI Model": "兼容ComfyUI模型",

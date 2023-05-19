@@ -31,7 +31,10 @@ class Panel(bpy.types.Panel):
     def draw(self, context: bpy.types.Context):
         scale_popup = get_pref().popup_scale
         layout = self.layout
-        layout.operator(Ops.bl_idname, text="Execute Node Tree", text_ctxt=ctxt).action = "Submit"
+        row = layout.row(align=True)
+        row.operator(Ops.bl_idname, text="Execute Node Tree", text_ctxt=ctxt).action = "Submit"
+        row.operator(Ops.bl_idname, text="ClearTask", text_ctxt=ctxt).action = "ClearTask"
+        
         self.show_progress(layout)
         box = layout.box()
         row = box.row()
