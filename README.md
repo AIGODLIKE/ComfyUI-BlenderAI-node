@@ -1,5 +1,7 @@
 # ComfyUI-BlenderAI-node
-Blender Node integration of [ComfyUI](https://github.com/comfyanonymous/ComfyUI).
+Blender Node integration of [ComfyUI](https://github.com/comfyanonymous/ComfyUI)
+
+[中文](README.md) [EN](README_EN.md)
 
 [工具手册](https://shimo.im/docs/Ee32m0w80rfLp4A2)
 
@@ -10,6 +12,7 @@ Blender Node integration of [ComfyUI](https://github.com/comfyanonymous/ComfyUI)
 ## 第零章 前言
 
 ### 简介
+
 > 无限圣杯工具是由只剩一瓶辣椒酱-幻之境开发小组开发的一款基于STABLE DIFFUISON ComfyUI核心的Blender AI工具，它将以开源&免费的方式提供给blender用户使用。
 
 ### 下载地址
@@ -23,7 +26,7 @@ Blender Node integration of [ComfyUI](https://github.com/comfyanonymous/ComfyUI)
 #### B站全集(更新中)
 
 # [Blender x ComfyUI节点式AI绘画大冒险-00安装与部署(含满血版整合包)](https://www.bilibili.com/video/BV1Fo4y187HC/)
-第一章 全节点介绍（中文）
+第二章 全节点介绍（中文）
 
 编写者-谷缘芷月、只剩一瓶辣椒酱
 
@@ -31,7 +34,7 @@ Blender Node integration of [ComfyUI](https://github.com/comfyanonymous/ComfyUI)
 
 ### K 采样器
 
-![图片](.img/-5607831384945817796.jpg)
+![图片](.img/1c43021ca391f52743c782e92078470a208ccd5bdf411f3394b1325ea60b5b85.jpg)
 
 
 
@@ -79,7 +82,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * [高级 K 采样器](https://shimo.im/docs/Ee32m0w80rfLp4A2#anchor-IJ7C 《无限圣杯AI节点(ComfyUI)使用者手册》)
 ### 高级 K 采样器
 
-![图片](.img/1760000599144247356.jpg)
+![图片](.img/88c1cf46e12b60e7e2ed762960675d49d4473f8e4eae02384e250222c068da99.jpg)
 
 
 
@@ -107,7 +110,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 
 ### **checkpoint 简易加载器**
 
-![图片](.img/548658381116303245.jpg)
+![图片](.img/a4f0e0fdde087d257ed38add8ecfcade49ee40b1c3cfd8a63d24ff4484de4474.jpg)
 
 
 
@@ -126,7 +129,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * [CLIP 设置最后一层](https://shimo.im/docs/Ee32m0w80rfLp4A2#anchor-OFAv 《无限圣杯AI节点(ComfyUI)使用者手册》)
 ### **VAE 加载器**
 
-![图片](.img/-516135905444845601.jpg)
+![图片](.img/10511c94fd4eae8dd647b02207b41a64438d5ea4462178e4aa0eb441da36b4ea.jpg)
 
 
 
@@ -138,7 +141,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * [VAE编码](https://shimo.im/docs/Ee32m0w80rfLp4A2#anchor-FJ4Q 《无限圣杯AI节点(ComfyUI)使用者手册》)
 ### **LoRA 加载器**
 
-![图片](.img/-5712379536764316276.jpg)
+![图片](.img/2c283ccde00bbe9274eaf8c2e3a79396a7af26de294652e1fd569b379dc64ddb.jpg)
 
 
 
@@ -153,7 +156,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * [CLIP加载器](https://shimo.im/docs/Ee32m0w80rfLp4A2#anchor-4xjf 《无限圣杯AI节点(ComfyUI)使用者手册》)
 ### **CLIP 加载器**
 
-![图片](.img/-5718765209191591051.jpg)
+![图片](.img/3e4b1ae88715870dbac31b604bb4f71f8cb27ba1c238c9c31b5598b255ac5c2e.jpg)
 
 
 
@@ -165,7 +168,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * [逆 CLIPcheckpoint 加载器](https://shimo.im/docs/Ee32m0w80rfLp4A2#anchor-0ACT 《无限圣杯AI节点(ComfyUI)使用者手册》)
 ### **ControlNet 加载器**
 
-![图片](.img/-6360768395492594737.jpg)
+![图片](.img/1c83a08afd65aaa803c4221f164bced6a47f1b8b3ae0acb413ee6eef6058821e.jpg)
 
 
 
@@ -177,7 +180,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * [另一种 ControlNet 加载器](https://shimo.im/docs/Ee32m0w80rfLp4A2#anchor-cw0Z 《无限圣杯AI节点(ComfyUI)使用者手册》)
 ### **另一种 ControlNet 加载器**
 
-![图片](.img/-5640786053832795215.jpg)
+![图片](.img/3044f1b017331b40e2691e41b5dbf58be955068d15153d6bbc9cfd36cbe1a1fa.jpg)
 
 
 
@@ -188,7 +191,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * [ControlNet 加载器](https://shimo.im/docs/Ee32m0w80rfLp4A2#anchor-ZBu4 《无限圣杯AI节点(ComfyUI)使用者手册》)
 ### **视觉风格加载器**
 
-![图片](.img/-1531585371120942131.jpg)
+![图片](.img/40e3982123844b4afd89b3ab418bc3a1ab8bb75e208d2f800faa7d111003db62.jpg)
 
 
 
@@ -200,7 +203,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * [CLIP 视觉编码](https://shimo.im/docs/Ee32m0w80rfLp4A2#anchor-Gh0K 《无限圣杯AI节点(ComfyUI)使用者手册》)
 ### **CLIP 视觉加载器**
 
-![图片](.img/9107114881129452174.jpg)
+![图片](.img/0bd1627f2bc7439193e2a4eb9d6185a1a2626d092997da59c82063bee30a6d1d.jpg)
 
 
 
@@ -211,13 +214,13 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * [CLIP 视觉编码](https://shimo.im/docs/Ee32m0w80rfLp4A2#anchor-Gh0K 《无限圣杯AI节点(ComfyUI)使用者手册》)
 #### 使用例
 
-![图片](.img/-5100258126704529168.jpg)
+![图片](.img/eb6e06efac2e1e03f0b3512a3ce9135a8215ce652fe7dfa220d7d50ef3a09cdf.jpg)
 
 
 
 ### **逆 CLIPcheckpoint 加载器**
 
-![图片](.img/3153707408154557438.jpg)
+![图片](.img/1d1886056b2ef5137cc8a5ecaf3f97d3605aff887a8a0e11743dc121586846de.jpg)
 
 
 
@@ -230,13 +233,13 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * [CLIP 视觉编码](https://shimo.im/docs/Ee32m0w80rfLp4A2#anchor-Gh0K 《无限圣杯AI节点(ComfyUI)使用者手册》)
 #### 使用例
 
-![图片](.img/-1618198833924474600.jpg)
+![图片](.img/bb96218e74e59a69a339ee9df2fb15f20a3447a5d57568dd0d84fcbf05f178b0.jpg)
 
 
 
 ### **GLIGEN 加载器**
 
-![图片](.img/8579312265077720829.jpg)
+![图片](.img/f2d1f4f32e5b3b63bc310aac3051beb25c6adee9d61196163033609eb5168450.jpg)
 
 
 
@@ -247,13 +250,13 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * [GLIGEN 文本框应用](https://shimo.im/docs/Ee32m0w80rfLp4A2#anchor-f2Ff 《无限圣杯AI节点(ComfyUI)使用者手册》)
 #### 使用例
 
-![图片](.img/6036063601180229698.jpg)
+![图片](.img/1e4a4aae030ca15108331bce470cc491b850588fd59258a75696da37f04843c4.jpg)
 
 
 
 ### **超网格加载器**
 
-![图片](.img/-5505772575706576414.jpg)
+![图片](.img/1a44b038d2c6a29f56c6e4936d51504c0349f3caa3b6240011ff28374a956024.jpg)
 
 
 
@@ -265,7 +268,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * [K 采样器](https://shimo.im/docs/Ee32m0w80rfLp4A2#anchor-UvgV 《无限圣杯AI节点(ComfyUI)使用者手册》)
 #### 使用例
 
-![图片](.img/-5050439335776003745.jpg)
+![图片](.img/62ee22d88748df1caed456267ba1de5c5d30bfcdf5a518093674605a17050820.jpg)
 
 
 
@@ -275,7 +278,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 
 ### 风格模型应用
 
-![图片](.img/-457521276298426053.jpg)
+![图片](.img/7772ad74be8b3c85228fe0972d34f1ac5b7803d4f167abc726cbca9b016054fa.jpg)
 
 
 
@@ -292,7 +295,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * [CLIP 视觉编码](https://shimo.im/docs/Ee32m0w80rfLp4A2#anchor-Gh0K 《无限圣杯AI节点(ComfyUI)使用者手册》)
 #### 使用例
 
-![图片](.img/3283981341982124143.jpg)
+![图片](.img/082dc6d7086301a9d3c694f064ab8d1abd73b42a336afd473c242b5d3873c9f6.jpg)
 
 
 
@@ -300,7 +303,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 
 #### GLIGEN 文本框应用
 
-## ![图片](.img/-8395104664805731035.jpg)
+## ![图片](.img/b5b2b183322a340534a2f19afe4c5da0eafd1e8a80c5230a8fae441615556758.jpg)
 
 
 
@@ -324,13 +327,13 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * [GLIGEN 加载器](https://shimo.im/docs/Ee32m0w80rfLp4A2#anchor-chaq 《无限圣杯AI节点(ComfyUI)使用者手册》)
 #### 使用例
 
-![图片](.img/5213353036789634252.jpg)
+![图片](.img/a4b3704da9770c7b23e2e401b7c78226ea0cf6a4dad1ed4b51a3f64ba24dfbfa.jpg)
 
 
 
 ### CLIP 文本编码器
 
-![图片](.img/-4570840557984223047.jpg)
+![图片](.img/f78f60ed4a4e168da6072a7f8c6d1cec1b8950aee37930479dde7b5a2da7e5fc.jpg)
 
 
 
@@ -351,7 +354,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * [K 采样器](https://shimo.im/docs/Ee32m0w80rfLp4A2#anchor-deRh 《无限圣杯AI节点(ComfyUI)使用者手册》)
 ### CLIP 设置最后一层
 
-![图片](.img/993005588831601094.jpg)
+![图片](.img/ad8a24cdd56a5a83bebe35551b76e395ef2265b08eee4a2a65a35cf8ccdda00a.jpg)
 
 
 
@@ -371,13 +374,13 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * [文本编码器](https://shimo.im/docs/Ee32m0w80rfLp4A2#anchor-jthz 《无限圣杯AI节点(ComfyUI)使用者手册》)
 #### 使用例
 
-![图片](.img/572355771610605429.jpg)
+![图片](.img/751780b572338ece4dc3d551bf357d21c7ae224b5cf0d12bf56a9c98bccaeab3.jpg)
 
 
 
 ### 条件平均
 
-![图片](.img/-6639072899508471517.jpg)
+![图片](.img/a25488468bab5b2823b5727428c4df67b4f48891f01b5110124239954c4ee1e3.jpg)
 
 
 
@@ -391,7 +394,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * 当“条件源”包含多组条件时，仅使用第一组条件
 ### 条件合并
 
-![图片](.img/-172093101249916749.jpg)
+![图片](.img/c36f80a8b0fa4aee063985c31d3d08736fe2027fa8fa27a6f6b8dc5b2756c134.jpg)
 
 
 
@@ -408,7 +411,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * [条件区域](https://shimo.im/docs/Ee32m0w80rfLp4A2#anchor-msbm 《无限圣杯AI节点(ComfyUI)使用者手册》)
 ### 条件区域
 
-![图片](.img/5038856347222185661.jpg)
+![图片](.img/ba83a5337a79d3b3008b0021db2e88408531bb3d87aa1aac99aac698806e6654.jpg)
 
 
 
@@ -434,7 +437,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * [条件遮罩](https://shimo.im/docs/Ee32m0w80rfLp4A2#anchor-KiX1 《无限圣杯AI节点(ComfyUI)使用者手册》)
 ### 条件设置遮罩
 
-![图片](.img/563802524240073249.jpg)
+![图片](.img/bb9280ad9f8b0a6343fb8d08c604d4caf328f6ecb8ac526eca86034135178009.jpg)
 
 
 
@@ -457,13 +460,13 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * [条件合并](https://shimo.im/docs/Ee32m0w80rfLp4A2#anchor-0pZn 《无限圣杯AI节点(ComfyUI)使用者手册》)
 #### 使用例
 
-![图片](.img/-6619474076726254040.jpg)
+![图片](.img/e7cb527ce43bb41bb724382f085ef54d6791cdd4bf6a6a509dd84b515a8be084.jpg)
 
 
 
 ### CLIP 视觉编码
 
-![图片](.img/2030932268765830845.jpg)
+![图片](.img/00900c48a5838f9df5d95571534e58d4fa1cab5818fab252152b942afd3616bb.jpg)
 
 
 
@@ -476,13 +479,13 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * [逆 CLIP 条件](https://shimo.im/docs/Ee32m0w80rfLp4A2#anchor-XZD8 《无限圣杯AI节点(ComfyUI)使用者手册》)
 #### 使用例
 
-![图片](.img/6330350579284771345.jpg)
+![图片](.img/130200a24de1e8a2288c61926a013c4804e2b76849d1d6a3ddfe6a75f53da2ab.jpg)
 
 
 
 ### 逆 CLIP 条件
 
-![图片](.img/1901981875591452973.jpg)
+![图片](.img/f1231247bc2cd0aea56d9e1ee812c32a78b2c25e1d1243c9dfe5d76af2e69ddf.jpg)
 
 
 
@@ -497,13 +500,13 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * [CLIP 视觉编码](https://shimo.im/docs/Ee32m0w80rfLp4A2#anchor-Gh0K 《无限圣杯AI节点(ComfyUI)使用者手册》)
 #### 使用例
 
-![图片](.img/5677359316152510332.jpg)
+![图片](.img/48ea3f53a128ed5ba9b4a5d0911b54bf4b1cbebd24adda1829e72938d8f24658.jpg)
 
 
 
 ### ControlNet 应用
 
-![图片](.img/3149720879438026921.jpg)
+![图片](.img/ef254685553dc7379869e3eadf1377cbefe41ef3032febcbe9d602474e35d597.jpg)
 
 
 
@@ -515,7 +518,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * [CLIP 文本编码器](https://shimo.im/docs/Ee32m0w80rfLp4A2#anchor-jthz 《无限圣杯AI节点(ComfyUI)使用者手册》)
 #### 使用例
 
-![图片](.img/2082480378723587174.jpg)
+![图片](.img/543e14cc700d47d4c934168f0bb62fcd99c5735ccfefbc80c2a4527273fb6c2e.jpg)
 
 
 
@@ -525,7 +528,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 
 ### VAE 内补编码器
 
-![图片](.img/7849928672454496580.jpg)
+![图片](.img/adf8e3799466086e85f3082728fbdf3544c01c07c3be6f59c1360dbc07de4ef8.jpg)
 
 
 
@@ -540,13 +543,13 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * [K 采样器](https://shimo.im/docs/Ee32m0w80rfLp4A2#anchor-UvgV 《无限圣杯AI节点(ComfyUI)使用者手册》)
 #### 使用例
 
-![图片](.img/-5011629049678648795.jpg)
+![图片](.img/f43afdce2045f8aadf0b1bad751e24abe54f1cc8666173ef8163bf4346471f13.jpg)
 
 
 
 ### 设置 latent 噪波遮罩
 
-![图片](.img/6260331194906748259.jpg)
+![图片](.img/63706e29440515f3e919fcd81fff1226699a36141ee75b4fb48bd2a535af17b0.jpg)
 
 
 
@@ -564,7 +567,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 
 ### Latent 旋转
 
-![图片](.img/954793950782543127.jpg)
+![图片](.img/cada6ca9c6d332ccac220a38e2ae8dcb49b9e1a7917cb9b1dd272dbdbc0972c2.jpg)
 
 
 
@@ -579,7 +582,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * [K 采样器](https://shimo.im/docs/Ee32m0w80rfLp4A2#anchor-UvgV 《无限圣杯AI节点(ComfyUI)使用者手册》)
 ### Latent 翻转
 
-![图片](.img/8749743267568565701.jpg)
+![图片](.img/c3f586c16e4109bcb612ce20466eeaa8da9f0bb923f037a9dc87be717898422a.jpg)
 
 
 
@@ -591,7 +594,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * [K 采样器](https://shimo.im/docs/Ee32m0w80rfLp4A2#anchor-UvgV 《无限圣杯AI节点(ComfyUI)使用者手册》)
 ### Latent 修剪
 
-![图片](.img/3611225897139060032.jpg)
+![图片](.img/85a24bb076d8da4c9bd0783ae3501603a0b047ef11649d53e0d7a45995019859.jpg)
 
 
 
@@ -613,7 +616,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * [latent 复合](https://shimo.im/docs/Ee32m0w80rfLp4A2#anchor-DRGK 《无限圣杯AI节点(ComfyUI)使用者手册》)
 ### VAE 解码
 
-![图片](.img/7584938157265430266.jpg)
+![图片](.img/6f6571ad1e8e5dc4b4df7efb01226604a1f92017a5b7a2ecf48ba5948969e9e5.jpg)
 
 
 
@@ -626,7 +629,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * [VAE 平铺解码](https://shimo.im/docs/Ee32m0w80rfLp4A2#anchor-v4pB 《无限圣杯AI节点(ComfyUI)使用者手册》)
 ### VAE 编码
 
-![图片](.img/3341137443278011514.jpg)
+![图片](.img/57bf89a442751d3bddfbfa1c40a29b79b6f5b2889c63a0c61a9b404101e01b9b.jpg)
 
 
 
@@ -639,7 +642,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * [VAE 平铺编码](https://shimo.im/docs/Ee32m0w80rfLp4A2#anchor-yuDk 《无限圣杯AI节点(ComfyUI)使用者手册》)
 ### 空 latent 图像
 
-![图片](.img/9046930770021878023.jpg)
+![图片](.img/dc085bcfe5fde4e85eb98312f9a19028e5fa9f392cd3af00e1ab362b4c2eaa25.jpg)
 
 
 
@@ -661,7 +664,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * [从队列获取latent](https://shimo.im/docs/Ee32m0w80rfLp4A2#anchor-19QR 《无限圣杯AI节点(ComfyUI)使用者手册》)
 ### Latent缩放
 
-![图片](.img/3036000211812762697.jpg)
+![图片](.img/e85f07824ca281a5c686aed994c89af475ad657f073f9ca8ab8a4f0dac359e07.jpg)
 
 
 
@@ -684,7 +687,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * [图像缩放](https://shimo.im/docs/Ee32m0w80rfLp4A2#anchor-PieC 《无限圣杯AI节点(ComfyUI)使用者手册》)
 ### 从队列获取 latent
 
-![图片](.img/966946419051059074.jpg)
+![图片](.img/08ee84612ca985ab7c1518b398e52e9080d2b70c91514b920151f739f1cc5b1b.jpg)
 
 
 
@@ -699,13 +702,13 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * [VAE 解码](https://shimo.im/docs/Ee32m0w80rfLp4A2#anchor-T9uA 《无限圣杯AI节点(ComfyUI)使用者手册》)
 #### 使用例
 
-![图片](.img/891434870592488013.jpg)
+![图片](.img/b3f8c208d5cef2e896a9194bdf0ba1810555ba3c8193376f3c1ad10c2b3340d4.jpg)
 
 
 
 ### latent 复合
 
-![图片](.img/-9106226718496401495.jpg)
+![图片](.img/2d78b3b079936204a909716d1c16e5c9a5bc67d7227e9fb69a5d2fbac728938d.jpg)
 
 
 
@@ -724,7 +727,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * [Latent 遮罩复合](https://shimo.im/docs/Ee32m0w80rfLp4A2#anchor-KXj5 《无限圣杯AI节点(ComfyUI)使用者手册》)
 ### Latent 遮罩复合
 
-![图片](.img/7197883311688368385.jpg)
+![图片](.img/028ce3fcee7b158022d1e61e8f2ad94ab3b7db4c0a16730f98b6778e44c9e64f.jpg)
 
 
 
@@ -745,7 +748,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 
 ### 图像缩放
 
-![图片](.img/6538241828975221318.jpg)
+![图片](.img/d0d5910ec3657aac672e68a9924d22096a7b39640eda22dd9a51ccc4c3e16235.jpg)
 
 
 
@@ -768,7 +771,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * [图像通过模型放大](https://shimo.im/docs/Ee32m0w80rfLp4A2#anchor-5JVV 《无限圣杯AI节点(ComfyUI)使用者手册》)
 ### 图像通过模型放大
 
-![图片](.img/2125271968533766207.jpg)
+![图片](.img/4a8bc6f3cd8cfc7196aa3c68138a8d8b1cb1d74744b736a9ae6e61d8cc85c9b3.jpg)
 
 
 
@@ -781,7 +784,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 
 ### 图像混合
 
-![图片](.img/2418523309494007157.jpg)
+![图片](.img/fa07ac297ffa111f0dadb5329025c99fbefd576278ec6d7717d8c8c21d8cc7c1.jpg)
 
 
 
@@ -804,7 +807,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * 法向：img2
 ### 图像模糊
 
-![图片](.img/3350280672402477863.jpg)
+![图片](.img/5a783ad49043173371fc9a9b43f50dca3d8daf9cf03177e3adba55121db57f02.jpg)
 
 
 
@@ -818,7 +821,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * 值越大，模糊范围越大
 ### 图像量化
 
-![图片](.img/218717231986471891.jpg)
+![图片](.img/594633de229d78aad5375ac1d1108dcea3a69e6bb55b93b0279c3e0c47e8cf1a.jpg)
 
 
 
@@ -832,7 +835,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * 是否通过添加少量噪波的方式减少色带
 ### 图像锐化
 
-![图片](.img/-911060984387907613.jpg)
+![图片](.img/ea351b594416caa0fd74342f78910622135113da39e46a4ce8f1c11722a16321.jpg)
 
 
 
@@ -846,7 +849,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * 值越大，锐化强度越大
 ### 保存图像
 
-![图片](.img/5458546047994097811.jpg)
+![图片](.img/e716b4a21d010795c2bd2b2f8f9a113386f51edb7d59447eb98682080f6b5a36.jpg)
 
 
 
@@ -859,7 +862,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * [存储](https://shimo.im/docs/Ee32m0w80rfLp4A2#anchor-zU1U 《无限圣杯AI节点(ComfyUI)使用者手册》)
 ### 预览图像
 
-![图片](.img/4362726978035835986.jpg)
+![图片](.img/f83526f60733a8999435401c5fa33d6d4f97b4e3e4c8664f41efc77eca660850.jpg)
 
 
 
@@ -872,7 +875,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * [预览](https://shimo.im/docs/Ee32m0w80rfLp4A2#anchor-3UOO 《无限圣杯AI节点(ComfyUI)使用者手册》)
 ### 加载图像
 
-![图片](.img/5887308443766986595.jpg)
+![图片](.img/0669a8fec4dac5d5c41d72b2311ed4f4e868892a48a51416da54e33d71efc775.jpg)
 
 
 
@@ -885,7 +888,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * [输入图像](https://shimo.im/docs/Ee32m0w80rfLp4A2#anchor-2J6R 《无限圣杯AI节点(ComfyUI)使用者手册》)
 ### 图像反转
 
-![图片](.img/7289352192150750970.jpg)
+![图片](.img/d21226521ed1713977cf8242b62fcd3e13b863a893db6d7da2190c7a5a3452ec.jpg)
 
 
 
@@ -893,7 +896,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 
 ### 外补绘画填充画板
 
-![图片](.img/-5776415136441015190.jpg)
+![图片](.img/d492246c5fa65186b8e8edadde648acf1715ff79611ca4318c3c23bc8bd62164.jpg)
 
 
 
@@ -908,7 +911,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 
 ### 加载图像遮罩
 
-![图片](.img/4682804245185411097.jpg)
+![图片](.img/9abbbcde9d069a57bc37af34b6064e8d05c5d1bb38870642edd49584fd3d51db.jpg)
 
 
 
@@ -921,7 +924,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * [遮罩](https://shimo.im/docs/Ee32m0w80rfLp4A2#anchor-SBvb 《无限圣杯AI节点(ComfyUI)使用者手册》)
 ### 遮罩转图像
 
-![图片](.img/-3577873117474346636.jpg)
+![图片](.img/7fd2dcc7113962424b10c4f1a435166d3dd8150b22926b150930b9203597f8c1.jpg)
 
 
 
@@ -929,7 +932,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 
 ### 图像转遮罩
 
-![图片](.img/8138536798666557855.jpg)
+![图片](.img/7c81bb16309b18f2c7f38f464bf4d483e8526b126712625d52d27372c47b052d.jpg)
 
 
 
@@ -937,7 +940,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 
 ### 纯块遮罩
 
-![图片](.img/619541363957686249.jpg)
+![图片](.img/059f14f8c3e747072bd66f32ba70a1e982b81c44b030661bab5a2cd073016e65.jpg)
 
 
 
@@ -951,7 +954,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * 指定遮罩大小
 ### 反转遮罩
 
-![图片](.img/1680102991064108872.jpg)
+![图片](.img/d0d9a1245f9e946d201089e899715424b25597222891d688cdafb572135539c3.jpg)
 
 
 
@@ -961,7 +964,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 
 ### 遮罩裁剪
 
-![图片](.img/-1274627213971358739.jpg)
+![图片](.img/576eeaa0cf85b65d4eabdc802b9d21bea7df53d44ee74d622a2ada48bdc94615.jpg)
 
 
 
@@ -975,7 +978,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * 指定要裁剪出的的遮罩的大小。
 ### 遮罩混合
 
-![图片](.img/8908486402841118388.jpg)
+![图片](.img/a1dff3bbc6d39025e682a1765c6f2b265cb0b59895eb758274e6ae9d389ad1cc.jpg)
 
 
 
@@ -991,7 +994,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * substract：目标-源
 ### 羽化遮罩
 
-![图片](.img/-4759783238149471214.jpg)
+![图片](.img/a930108e6324f90c2a2efbc447e39b95e9ab0cffaf7adf346279b851a538b9e9.jpg)
 
 
 
@@ -1007,7 +1010,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 
 ### VAE 平铺解码
 
-![图片](.img/-846116875820839680.jpg)
+![图片](.img/78fa2721fa31d5ca652b66c382ccabf43a598c8d586ec35a9a2bdefacfaad880.jpg)
 
 
 
@@ -1018,7 +1021,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * [VAE解码](https://shimo.im/docs/Ee32m0w80rfLp4A2#anchor-T9uA 《无限圣杯AI节点(ComfyUI)使用者手册》)
 ### VAE 平铺编码
 
-![图片](.img/6489743864290082405.jpg)
+![图片](.img/134a9bf1db74c561667cbea0db332cebcab940f5b10b5def364a4d82f9ca5f00.jpg)
 
 
 
@@ -1029,7 +1032,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * [VAE编码](https://shimo.im/docs/Ee32m0w80rfLp4A2#anchor-FJ4Q 《无限圣杯AI节点(ComfyUI)使用者手册》)
 ### Token 合并修补模型
 
-![图片](.img/3943602307182506226.jpg)
+![图片](.img/5727cde9bda022dbf00f402fa3b7b2d6525c2c0bdbd15089b93a28a697e60775.jpg)
 
 
 
@@ -1044,7 +1047,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 
 ### **checkpoint 加载器**
 
-![图片](.img/-6604682729508239425.jpg)
+![图片](.img/e8338b062f059523827680cee58ca77e424bb0ea30721ee26b90a97b9be139de.jpg)
 
 
 
@@ -1054,7 +1057,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 
 ### 扩散载入器
 
-![图片](.img/8238180070216688446.jpg)
+![图片](.img/232e681ade8e9cf5a64a973eeefbb327049c8ef61133aae129656fd172d9d47f.jpg)
 
 
 
@@ -1066,7 +1069,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 
 ### Canny 预处理
 
-![图片](.img/7717772338225331208.jpg)
+![图片](.img/2c8494178844600400e48f873c54256cdc6f2aef686b9cafb12bad0e247c1156.jpg)
 
 
 
@@ -1082,7 +1085,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * L2 相比 L1 提高了准确度，但降低了计算速度
 ### M-LSD 预处理
 
-![图片](.img/-4579440027088484274.jpg)
+![图片](.img/ba6925d18092690ce6413cfb3cfd5ef61bf32889dde5e0ba835b3b07a1b9d831.jpg)
 
 
 
@@ -1096,7 +1099,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * 控制线条距离的阈值，线条间的距离低于阈值时会被合并
 ### HED 预处理
 
-![图片](.img/4154665429164744548.jpg)
+![图片](.img/1d9a070c838d5f358e6a44ce2b7f83f22ea54a2d87baecb13d621b8b6bebd6d5.jpg)
 
 
 
@@ -1110,7 +1113,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * 选择是否增稳线条，具体表现为更清晰的线条
 ### Scribble 预处理
 
-![图片](.img/2779684101088838746.jpg)
+![图片](.img/fccdc007036c66cff66d7ca884caf48ec4adcd8e2d31369814283b6473742228.jpg)
 
 
 
@@ -1118,7 +1121,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 
 ### FakeScribble 预处理
 
-![图片](.img/-5287392639359261908.jpg)
+![图片](.img/764422bc8455ad20e9b1894a213da8a6436e564455ab0569f8438cc59e631798.jpg)
 
 
 
@@ -1126,7 +1129,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 
 ### Binary 预处理
 
-![图片](.img/3879337559375091230.jpg)
+![图片](.img/548bf795887ca18cf9ad41bafe3406aec095fd02f514597905eb1413fee1104b.jpg)
 
 
 
@@ -1138,7 +1141,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * 当阈值为 0 时，效果与 255 相同
 ### PidNet 预处理
 
-![图片](.img/4109065618730812911.jpg)
+![图片](.img/cc68f28d057a69215884b5b04443c5ca5f1c05a62d1cee5beeedc2ac7fe01b15.jpg)
 
 
 
@@ -1151,7 +1154,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 
 ### Midas-DepthMap 预处理
 
-![图片](.img/828259475321724813.jpg)
+![图片](.img/113756275cf084e7873a1dedc0d28440cc75fc50e3f7a5c5d3ffa380eaa3790c.jpg)
 
 
 
@@ -1169,7 +1172,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * [Zoe-DepthMap 预处理](https://shimo.im/docs/Ee32m0w80rfLp4A2#anchor-1jyt 《无限圣杯AI节点(ComfyUI)使用者手册》)
 ### Midas-NormalMap 预处理
 
-## ![图片](.img/-8155858289022922312.jpg)
+## ![图片](.img/d6707c58ec5edbdef9cc5582c49d76391b8dee6642024bce94d3adb9335a0a27.jpg)
 
 
 
@@ -1186,7 +1189,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * [BAE-NormalMap 预处理](https://shimo.im/docs/Ee32m0w80rfLp4A2#anchor-SAg2 《无限圣杯AI节点(ComfyUI)使用者手册》)
 ### Leres-DepthMap 预处理
 
-## ![图片](.img/3149568376440956207.jpg)
+## ![图片](.img/b46d9a9bda4dcece5390617b9e9c29a13a5a467847c6f3e33125ab2796a7f776.jpg)
 
 
 
@@ -1204,7 +1207,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * [Zoe-DepthMap 预处理](https://shimo.im/docs/Ee32m0w80rfLp4A2#anchor-1jyt 《无限圣杯AI节点(ComfyUI)使用者手册》)
 ### Zoe-DepthMap 预处理
 
-## ![图片](.img/-742558552328280651.jpg)
+## ![图片](.img/b1ae424814ccdcf903c80edace0bf2f2558b0b380264777ec51bb03002fb6da0.jpg)
 
 
 
@@ -1216,7 +1219,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * [Leres-DepthMap 预处理](https://shimo.im/docs/Ee32m0w80rfLp4A2#anchor-ag5w 《无限圣杯AI节点(ComfyUI)使用者手册》)
 ### BAE-NormalMap 预处理
 
-![图片](.img/-8551794939966088448.jpg)
+![图片](.img/e4d6c2fdcf5c4e73c78bf2ed551a829f8534d441664bf62f9a8bd1c1f2e7aee0.jpg)
 
 
 
@@ -1229,7 +1232,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 
 ### Openpose 预处理
 
-![图片](.img/3193054927077445086.jpg)
+![图片](.img/475a02201b5ab212deb76574dd836eff8f56420eceea73a9d8a98d083a22438f.jpg)
 
 
 
@@ -1246,7 +1249,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * [MediaPipe-HandPose 预处理](https://shimo.im/docs/Ee32m0w80rfLp4A2#anchor-IWSt 《无限圣杯AI节点(ComfyUI)使用者手册》)
 ### MediaPipe-HandPose 预处理
 
-![图片](.img/-9136549322991529732.jpg)
+![图片](.img/28bd38fb538f809ad99bb32598bcc68a8d80e474da4367ef8db6f4f726da76ab.jpg)
 
 
 
@@ -1265,7 +1268,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 
 ### SemSeg 预处理
 
-![图片](.img/710773806554376619.jpg)
+![图片](.img/be98bfc59b0c272f203fd8487f3709bc2d5deda98f59c0d8dbab8374ab68f013.jpg)
 
 
 
@@ -1275,7 +1278,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 
 ### MediaPipe-FaceMesh 预处理
 
-![图片](.img/1294662493063801940.jpg)
+![图片](.img/70edeb8235e6792ee738e4e8a4b3a04949f3ce4020797b06ef5f3b9ffa833bba.jpg)
 
 
 
@@ -1291,7 +1294,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 
 ### Color 预处理
 
-![图片](.img/-8567412535666913625.jpg)
+![图片](.img/2d420ff27476370403f987ba08f06a194d8dfec6bd07e6d6d18d47ee083e306f.jpg)
 
 
 
@@ -1301,7 +1304,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 
 ### 输入图像
 
-![图片](.img/-684211827559439744.jpg)
+![图片](.img/88971033f3434718679651d1ffd02dfa656499d3802e038a56a3ad42ebc6dbbe.jpg)
 
 
 
@@ -1318,7 +1321,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * [加载图像](https://shimo.im/docs/Ee32m0w80rfLp4A2#anchor-XDch 《无限圣杯AI节点(ComfyUI)使用者手册》)
 ### 遮罩
 
-![图片](.img/1401844151485452542.jpg)
+![图片](.img/cca8ae0b16aeeb60f0d465ce7fd6f1249eaf0d82e12ae14e2eafe149feb6cc96.jpg)
 
 
 
@@ -1334,7 +1337,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * [加载图像遮罩](https://shimo.im/docs/Ee32m0w80rfLp4A2#anchor-CHEo 《无限圣杯AI节点(ComfyUI)使用者手册》)
 ### 存储
 
-![图片](.img/-8914931868512916608.jpg)
+![图片](.img/188979105db2dc7768fcba1ed1b50986370568ac866f3aa68914d38d08945282.jpg)
 
 
 
@@ -1347,7 +1350,7 @@ K 采样器可以将噪波加入到潜空间中，然后逐渐去除噪波重生
 * [保存](https://shimo.im/docs/Ee32m0w80rfLp4A2#anchor-fLas 《无限圣杯AI节点(ComfyUI)使用者手册》)
 ### 预览
 
-![图片](.img/-1183209067222596549.jpg)
+![图片](.img/63deea4471a9b65dc8589190756699d7ba7d582f55d35cdba06754f8eb83c2fe.jpg)
 
 
 
