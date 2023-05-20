@@ -864,8 +864,8 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
         elif prop == "prev":
             if self.prev:
                 Icon.reg_icon_by_pixel(self.prev, self.prev.filepath)
-                idon_id = Icon[self.prev.filepath]
-                layout.template_icon(idon_id, scale=max(self.prev.size[0], self.prev.size[1]) // 20)
+                icon_id = Icon[self.prev.filepath]
+                layout.template_icon(icon_id, scale=max(self.prev.size[0], self.prev.size[1]) // 20)
             return True
 
     elif self.class_type == "Mask":
@@ -890,8 +890,8 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
                 Icon.reg_icon_by_pixel(self.prev, self.prev.name)
                 w = max(self.prev.size[0], self.prev.size[1])
                 setwidth(self, w)
-            idon_id = Icon[self.prev.name]
-            layout.template_icon(idon_id, scale=max(self.prev.size[0], self.prev.size[1]) // 20)
+            icon_id = Icon[self.prev.name]
+            layout.template_icon(icon_id, scale=max(self.prev.size[0], self.prev.size[1]) // 20)
         # else:
         #     setwidth(self, 200)
         if prop == "prev":
