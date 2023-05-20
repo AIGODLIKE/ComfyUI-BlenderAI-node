@@ -1,8 +1,9 @@
 import struct
 from pathlib import Path
+from urllib.parse import urlparse
 from .kclogger import logger
 from .translation import lang_text
-from urllib.parse import urlparse
+from .timer import Timer
 translation = {}
 
 def get_version():
@@ -14,7 +15,6 @@ def get_addon_name():
 
 def _T(word):
     import bpy
-    from .timer import Timer
     from bpy.app.translations import pgettext
     locale = bpy.context.preferences.view.language
     culture = translation.setdefault(locale, {})
@@ -170,7 +170,6 @@ class Icon(metaclass=MetaIn):
             try:
                 Icon.reg_icon_hq(path)
             except BaseException:
-                from .timer import Timer
                 Timer.put((Icon.reg_icon_hq, path))
             return Icon[path]
         else:
@@ -224,6 +223,7 @@ class Icon(metaclass=MetaIn):
 
     @staticmethod
     def reg_icon_by_pixel(prev, name):
+        name = to_str(name)
         if not Icon.can_mark_pixel(prev, name):
             return
         if name in Icon:

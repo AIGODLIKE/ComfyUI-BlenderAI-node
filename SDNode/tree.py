@@ -31,7 +31,7 @@ class CFNodeTree(NodeTree):
 
     def serialize(self):
         self.serialize_pre()
-        return {node.id: (node.serialize(), node.post_fn) for node in self.get_nodes()}
+        return {node.id: (node.serialize(), node.pre_fn, node.post_fn) for node in self.get_nodes()}
 
     def get_node_frame_offset(self, node: bpy.types.Node):
         # x  y  w  h  ox oy

@@ -2,12 +2,12 @@ import bpy
 import json
 from pathlib import Path
 from mathutils import Vector
+from functools import partial
 from .translation import ctxt
 from .prop import Prop
 from .utils import _T, logger, PngParse
+from .timer import Timer
 from .SDNode import TaskManager
-
-
 
 
 class Ops(bpy.types.Operator):
@@ -97,11 +97,27 @@ class Ops(bpy.types.Operator):
         if not tree:
             return {"FINISHED"}
         if self.action == "Submit":
-            prompt = tree.serialize()
-            workflow = tree.save_json()
-            TaskManager.push_task({"prompt": prompt, "workflow": workflow, "api": "prompt"})
+            def get_task(tree):
+                prompt = tree.serialize()
+                workflow = tree.save_json()
+                return {"prompt": prompt, "workflow": workflow, "api": "prompt"}
+
+            if bpy.context.scene.sdn.frame_mode == "MultiFrame":
+                sf = bpy.context.scene.frame_start
+                ef = bpy.context.scene.frame_end
+                for cf in range(sf, ef + 1):
+                    @Timer.wait_run
+                    def pre(cf):
+                        bpy.context.scene.frame_set(cf)
+                        logger.error(cf)
+                    pre = partial(pre, cf)
+                    TaskManager.push_task(get_task(tree), pre)
+            else:
+                TaskManager.push_task(get_task(tree))
         elif self.action == "Restart":
             TaskManager.restart_server()
+        elif self.action == "ClearTask":
+            TaskManager.clear_all()
         elif self.action == "Save":
             data = tree.save_json()
             if not self.save_name:
@@ -227,7 +243,6 @@ class Ops_Mask(bpy.types.Operator):
 
                 return {"FINISHED"}
 
-            
             gp = bpy.data.grease_pencils.new("AI_GP")
             layer = gp.layers.new("GP_Layer")
             layer.frames.new(bpy.context.scene.frame_current)
@@ -236,7 +251,7 @@ class Ops_Mask(bpy.types.Operator):
             gpo = bpy.data.objects.new(name=gp.name, object_data=gp)
             gpo.hide_render = True
             node.gp = gpo
-            
+
             bpy.context.scene.collection.objects.link(gpo)
             bpy.context.view_layer.objects.active = gpo
             mat = bpy.data.materials.new(gpo.name)
@@ -251,7 +266,8 @@ class Ops_Mask(bpy.types.Operator):
             brush.size = 250
             if cam:
                 mask = cam.get("SD_Mask", [])
-                if None in mask: mask.remove(None)
+                if None in mask:
+                    mask.remove(None)
                 mask.append(gpo)
                 cam["SD_Mask"] = mask
         return {"FINISHED"}

@@ -7,7 +7,9 @@ import json
 import time
 import atexit
 import signal
+from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import urlparse
+
 from copy import deepcopy
 from shutil import rmtree
 from urllib import request
@@ -23,11 +25,56 @@ port = 8189
 ip = "127.0.0.1"
 url = f"http://{ip}:{port}"
 
+a111_yaml = """
+a111:
+    base_path: {wmpp}
+
+    checkpoints: {wmp}/Stable-diffusion
+    configs: {wmp}/Stable-diffusion
+    vae: {wmp}/VAE
+    loras: {wmp}/Lora
+    upscale_models: |
+                  {wmp}/ESRGAN
+                  {wmp}/SwinIR
+    embeddings: {wmpp}/embeddings
+    controlnet: {wmp}/ControlNet
+            """
+custom_comfyui = """
+mycomfyui:
+    base_path: {cmpp}
+    checkpoints: {cmp}/checkpoints
+    configs: {cmp}/configs
+    loras: {cmp}/loras
+    vae: {cmp}/vae
+    clip: {cmp}/clip
+    clip_vision: {cmp}/clip_vision
+    style_models: {cmp}/style_models
+    embeddings: {cmp}/embeddings
+    diffusers: {cmp}/diffusers
+    controlnet: {cmp}/controlnet
+    gligen: {cmp}/gligen
+    upscale_models: {cmp}/upscale_models
+    hypernetworks: {cmp}/hypernetworks
+    # custom_nodes: {cmpp}/custom_nodes
+            """
+
 
 class Task:
-    def __init__(self, task=None, res=None) -> None:
+    def __init__(self, task=None, pre=None, post=None) -> None:
         self.task = task
-        self.res = res
+        self.res = Queue()
+        self._pre = pre
+        self._post = post
+
+    def submit_pre(self):
+        if not self._pre:
+            return
+        self._pre()
+
+    def post(self):
+        if not self._post:
+            return
+        self._post()
 
 
 class TaskManager:
@@ -45,6 +92,8 @@ class TaskManager:
     execute_status_record = []
     error_msg = []
     progress_bar = 0
+
+    executer = ThreadPoolExecutor(max_workers=1)
 
     def __new__(cls, *args, **kw):
         if cls._instance is None:
@@ -125,11 +174,10 @@ class TaskManager:
                 # args.append((controlnet / "install.py").as_posix())
                 # p = Popen(args, cwd=model_path)
                 # p.wait()
-                
-                
+
         logger.warn(_T("ControlNet Init Finished."))
         logger.warn(_T("If controlnet still not worked, install manually by double clicked {}").format((controlnet / "install.bat").as_posix()))
-        
+
     def run_server_ex():
         pidpath = Path(__file__).parent / "pid"
         if pidpath.exists():
@@ -185,41 +233,11 @@ class TaskManager:
         if pref.with_webui_model and Path(pref.with_webui_model).exists():
             wmp = Path(pref.with_webui_model).as_posix()
             wmpp = Path(pref.with_webui_model).parent.as_posix()
-            yaml += f"""
-a111:
-    base_path: {wmpp}
-
-    checkpoints: {wmp}/Stable-diffusion
-    configs: {wmp}/Stable-diffusion
-    vae: {wmp}/VAE
-    loras: {wmp}/Lora
-    upscale_models: |
-                  {wmp}/ESRGAN
-                  {wmp}/SwinIR
-    embeddings: {wmpp}/embeddings
-    controlnet: {wmp}/ControlNet
-            """
+            yaml += a111_yaml.format(wmp=wmp, wmpp=wmpp)
         if pref.with_comfyui_model and Path(pref.with_comfyui_model).exists():
             cmp = Path(pref.with_comfyui_model).as_posix()  # 指定到 models
             cmpp = Path(pref.with_comfyui_model).parent.as_posix()
-            yaml += f"""
-mycomfyui:
-    base_path: {cmpp}
-    checkpoints: {cmp}/checkpoints
-    configs: {cmp}/configs
-    loras: {cmp}/loras
-    vae: {cmp}/vae
-    clip: {cmp}/clip
-    clip_vision: {cmp}/clip_vision
-    style_models: {cmp}/style_models
-    embeddings: {cmp}/embeddings
-    diffusers: {cmp}/diffusers
-    controlnet: {cmp}/controlnet
-    gligen: {cmp}/gligen
-    upscale_models: {cmp}/upscale_models
-    hypernetworks: {cmp}/hypernetworks
-    # custom_nodes: {cmpp}/custom_nodes
-            """
+            yaml += custom_comfyui.format(cmp=cmp, cmpp=cmpp)
         if yaml:
             extra_model_paths = Path(__file__).parent / "config.yaml"
             extra_model_paths.write_text(yaml)
@@ -233,41 +251,8 @@ mycomfyui:
         TaskManager.pid = p.pid
         pidpath.write_text(str(p.pid))
 
-        def listen(p, tm):
-            while p.poll() is None:
-                if tm.child != p:
-                    return
-                line = p.stdout.readline().strip()
-                if not line:
-                    continue
-                # \xa8\x80
-                # line = line.replace(b"\xa8\x87", b">")
-                # line = line.replace(b"\xa8\x86", b">")
-                # line = line.replace(b"\xa8\x85", b">")
-                # line = line.replace(b"\xa8\x84", b">")
-                # line = line.replace(b"\xa8\x83", b">")
-                # line = line.replace(b"\xa8\x82", b">")
-                # line = line.replace(b"\xa8\x81", b">")
-                # line = line.replace(b"\xa8\x80", b"=")
-                # logger.info(line)
-                # print(re.findall("\|(.*?)[", line.decode("gbk")))
-                if b"CUDA out of memory" in line or b"not enough memory" in line:
-                    TaskManager.put_error_msg(f"{_T('Error: Out of VRam, try restart blender')}")
-                proc = re.findall("[█ ]\\| (.*?) \\[", line.decode("gbk"))
-                if not proc:
-                    # content = line.decode("gbk").replace("██", "=").replace("  ", " ")
-                    logger.info(line.decode("gbk"))
-                # else:
-                #     content = proc[0]
-                #     c, a = content.split("/")
-                #     c, a = int(c), int(a)
-                #     content = f"\r{c*100/a:3.0f}%  " + "█" * c + "░" * (a - c) + f" {c}/{a}" + "\n" * int(c == a)
-                #     sys.stdout.write(content)
-                #     sys.stdout.flush()
-
-        listen = Thread(target=listen, args=(p, TaskManager), daemon=True)
-        listen.start()
-
+        Thread(target=TaskManager.stdout_listen, daemon=True).start()
+        
         while True:
             try:
                 if requests.get(f"{url}/object_info").status_code == 200:
@@ -277,11 +262,25 @@ mycomfyui:
             time.sleep(0.5)
         logger.warn(_T("Server Launched"))
         atexit.register(p.kill)
-
-        Thread(target=TaskManager.poll_task, daemon=True).start()
         Thread(target=TaskManager.poll_res, daemon=True).start()
+        Thread(target=TaskManager.poll_task, daemon=True).start()
         Thread(target=TaskManager.proc_res, daemon=True).start()
 
+    def stdout_listen():
+        p = TaskManager.child
+        while p.poll() is None and TaskManager.child == p:
+            line = p.stdout.readline().strip()
+            if not line:
+                continue
+            # logger.info(line)
+            # print(re.findall("\|(.*?)[", line.decode("gbk")))
+            if b"CUDA out of memory" in line or b"not enough memory" in line:
+                TaskManager.put_error_msg(f"{_T('Error: Out of VRam, try restart blender')}")
+            proc = re.findall("[█ ]\\| (.*?) \\[", line.decode("gbk"))
+            if not proc:
+                logger.info(line.decode("gbk"))
+        logger.debug("STDOUT Listen Thread Exit")
+        
     def close_server():
         if TaskManager.child:
             TaskManager.child.kill()
@@ -293,18 +292,18 @@ mycomfyui:
         TaskManager.close_server()
         TaskManager.run_server()
 
-    def push_task(task):
+    def push_task(task, pre=None, post=None):
         logger.debug(_T('Add Task'))
         if TaskManager.pid == -1:
             TaskManager.put_error_msg(_T("Server Not Launched, Add Task Failed"))
             TaskManager.put_error_msg(_T("Please Check ComfyUI Directory"))
             logger.error(_T("Server Not Launched"))
             return
-        TaskManager.task_queue.put(Task(task))
+        TaskManager.task_queue.put(Task(task, pre=pre, post=post))
 
     def push_res(res):
         logger.debug(_T("Add Result"))
-        TaskManager.cur_task.res = res
+        TaskManager.cur_task.res.put(res)
         TaskManager.res_queue.put(TaskManager.cur_task)
 
     # def get_res():
@@ -325,15 +324,19 @@ mycomfyui:
 
     @staticmethod
     def poll_task():
-        while True:
+        pid = TaskManager.pid
+        while pid == TaskManager.pid:
             time.sleep(0.1)
             if TaskManager.progress:
+                continue
+            if TaskManager.task_queue.empty():
                 continue
             task = TaskManager.task_queue.get()
             TaskManager.progress = {'value': 0, 'max': 1}
             logger.debug(_T("Submit Task"))
             TaskManager.cur_task = task
-            TaskManager.submit(task.task)
+            TaskManager.submit(task)
+        logger.debug("Poll Task Thread Exit")
 
     def query_server_task():
         if TaskManager.pid == -1:
@@ -346,7 +349,12 @@ mycomfyui:
             res = {"queue_pending": [], "queue_running": []}
         return res
 
-    def submit(task: dict[str, tuple]):
+    def submit(task: Task):
+        task.submit_pre()
+        task: dict[str, tuple] = task.task
+        prompt = task["prompt"]
+        for node in prompt:
+            prompt[node][1]()
         TaskManager.clear_error_msg()
 
         def queue_task(task: dict):
@@ -376,8 +384,8 @@ mycomfyui:
                     TaskManager.mark_finished(with_noexe=False)
             else:
                 ...
-
-        Thread(target=queue_task, args=(task, )).start()
+        TaskManager.executer.submit(queue_task, task)
+        # Thread(target=queue_task, args=(task, )).start()
 
     def mark_finished(with_noexe=True):
         TaskManager.progress = {}
@@ -391,14 +399,21 @@ mycomfyui:
         TaskManager.execute_status_record.clear()
 
     def proc_res():
-        while True:
+        pid = TaskManager.pid
+        while pid == TaskManager.pid:
             time.sleep(0.1)
+            if TaskManager.res_queue.empty():
+                continue
             task = TaskManager.res_queue.get()
+            if task.res.empty():
+                continue
             logger.debug(_T("Proc Resutl"))
-            node = task.res["node"]
+            res = task.res.get()
+            node = res["node"]
             prompt = task.task["prompt"]
             if node in prompt:
-                prompt[node][1](task)
+                prompt[node][2](task, res)
+        logger.debug("Proc Task Thread Exit")
 
     @staticmethod
     def poll_res():
@@ -460,6 +475,7 @@ mycomfyui:
 
         ws = WebSocketApp(f"ws://{ip}:{port}/ws?clientId={SessionId['SessionId']}", on_message=on_message)
         ws.run_forever()
+        logger.debug("Poll Result Thread Exit")
 
 
 def removetemp():
