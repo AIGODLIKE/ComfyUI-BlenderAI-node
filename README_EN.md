@@ -15,9 +15,10 @@
 ### Download Address
 
 ## [Blender Infinity Grail Node (ComfyUI Edition)](https://pan.baidu.com/s/1bnVWO9AuurPl2mn9Uc57vg?pwd=2333)
-Video Tutorial
 
 ## [Google Driver](https://drive.google.com/drive/folders/1Akqh3qPt-Zzi_clqkoCwCl_Xjo78FfbM?usp=sharing)
+
+Video Tutorial
 
 #### Complete Collection Of Bilibili (Under Update)
 
