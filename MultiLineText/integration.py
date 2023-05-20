@@ -188,7 +188,7 @@ class BaseDrawCall:
     def poll_events(self, context: bpy.types.Context, event: bpy.types.Event):
         region = context.region
         io = imgui.get_io()
-        
+        # print(event.type, event.value)
         io.mouse_pos = (event.mouse_region_x, region.height - 1 - event.mouse_region_y)
 
         if event.type == 'LEFTMOUSE':
@@ -298,18 +298,22 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
         lnum = max(1, int(w * 2 // imgui.get_font_size()) - 3)
 
         def cb(data):
-            p = data.cursor_pos
             if data.event_flag == imgui.INPUT_TEXT_CALLBACK_EDIT:
+                p = data.cursor_pos
                 node.text = data.buffer.replace("\n", "")
                 text = get_wrap_text(data.buffer, lnum)
                 data.delete_chars(0, len(data.buffer))
                 data.insert_chars(0, text)
                 data.buffer_dirty = True
                 backspace = self.io.keys_down[self.key_map['BACK_SPACE']]
-
                 if not backspace and p % (lnum + 1) == 0:
                     p += 1
-                data.cursor_pos = min(max(0, p), data.buffer_size)
+                data.cursor_pos = min(max(0, p), data.buffer_size, len(data.buffer))
+
+            if data.event_flag == imgui.INPUT_TEXT_CALLBACK_COMPLETION:
+                ...
+            for k in self.key_map.values():
+                self.io.keys_down[k] = False
 
         ttt = get_wrap_text(node.text, lnum)
         imgui.input_text_multiline(
