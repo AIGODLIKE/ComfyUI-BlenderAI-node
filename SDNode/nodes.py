@@ -658,7 +658,24 @@ def spec_extra_properties(properties, nname, ndesc):
     if nname == "输入图像":
         prop = bpy.props.PointerProperty(type=bpy.types.Image)
         properties["prev"] = prop
+        prop = bpy.props.StringProperty(default="", name="Render Layer")
+        properties["render_layer"] = prop
 
+        def search_layers(self, context):
+            items = []
+            if not bpy.context.scene.use_nodes:
+                return items
+            nodes = bpy.context.scene.node_tree.nodes
+            render_layer = nodes.get(self.render_layer, None)
+            if not render_layer:
+                return items
+            for output in render_layer.outputs:
+                if not output.enabled:
+                    continue
+                items.append((output.name, output.name, "", len(items)))
+            return items
+        prop = bpy.props.EnumProperty(items=search_layers, name="Output Layer")
+        properties["out_layers"] = prop
     elif nname == "Mask":
         items = [("Grease Pencil", "Grease Pencil", "", "", 0),
                  ("Object", "Object", "", "", 1),
@@ -750,6 +767,7 @@ def spec_functions(fields, nname, ndesc):
         def render(self: NodeBase):
             if self.mode != "渲染":
                 return
+
             @Timer.wait_run
             def r():
                 logger.warn(f"{_T('Render')}->{self.image}")
@@ -760,7 +778,19 @@ def spec_functions(fields, nname, ndesc):
                             gpo.hide_render = True
                     except BaseException:
                         ...
-                bpy.ops.render.render(write_still=True)
+                if bpy.context.scene.use_nodes:
+                    from .utils import set_composite
+                    nt = bpy.context.scene.node_tree
+                    
+                    with set_composite(nt) as cmp:
+                        render_layer = nt.nodes.new("CompositorNodeRLayers")
+                        out = render_layer.outputs.get(self.out_layers)
+                        if out:
+                            nt.links.new(cmp.inputs["Image"], out)
+                        bpy.ops.render.render(write_still=True)
+                        nt.nodes.remove(render_layer)
+                else:
+                    bpy.ops.render.render(write_still=True)
             r()
         fields["pre_fn"] = render
     if nname == "存储":
@@ -842,6 +872,9 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
             layout.prop(self, prop, expand=True, text_ctxt=ctxt)
             if self.mode == "渲染":
                 layout.label(text="Set Image Path of Render Result(.png)", icon="ERROR")
+                if bpy.context.scene.use_nodes:
+                    layout.prop_search(self, "render_layer", bpy.context.scene.node_tree, "nodes")
+                    layout.prop(self, "out_layers")
             return True
         elif prop == "image":
             if os.path.exists(self.image):
@@ -867,7 +900,8 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
                 icon_id = Icon[self.prev.filepath]
                 layout.template_icon(icon_id, scale=max(self.prev.size[0], self.prev.size[1]) // 20)
             return True
-
+        elif prop in {"render_layer", "out_layers"}:
+            return True
     elif self.class_type == "Mask":
         if prop == "mode":
             layout.prop(self, prop, expand=True, text_ctxt=ctxt)

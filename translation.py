@@ -79,6 +79,10 @@ other = {
     "Set Image Path of Render Result(.png)": "设置摄像机渲染图像的保存位置及文件名(.png)，如已设置请忽略",
     "Saved Title Name -> ": "存储名称",
     "Sync Rand" : "统一随机",
+    "Render Layer": "渲染层",
+    "render_layer": "渲染层",
+    "Output Layer": "输出层",
+    "out_layers": "输出层",
     # SDNode/utils.py
     "Gen Mask": "遮罩生成",
     # __init__.py
