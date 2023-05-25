@@ -7906,5 +7906,665 @@
     "display_name": "ConditioningStretch",
     "description": "",
     "category": "Davemane42"
+  },
+  "openpose_full": {
+    "input": {
+      "required": {
+        "image": [
+          "STRING",
+          {
+            "default": ""
+          }
+        ],
+        "frame": [
+          "INT",
+          {
+            "default": 0,
+            "min": -2147483648,
+            "max": 2147483648,
+            "step": 1
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE",
+      "MASK"
+    ],
+    "output_name": [
+      "IMAGE",
+      "MASK"
+    ],
+    "name": "openpose_full",
+    "display_name": "openpose_full",
+    "description": "",
+    "category": "OpenPose"
+  },
+  "openpose_hand": {
+    "input": {
+      "required": {
+        "image": [
+          "STRING",
+          {
+            "default": ""
+          }
+        ],
+        "frame": [
+          "INT",
+          {
+            "default": 0,
+            "min": -2147483648,
+            "max": 2147483648,
+            "step": 1
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE",
+      "MASK"
+    ],
+    "output_name": [
+      "IMAGE",
+      "MASK"
+    ],
+    "name": "openpose_hand",
+    "display_name": "openpose_hand",
+    "description": "",
+    "category": "OpenPose"
+  },
+  "MediaPipe_face": {
+    "input": {
+      "required": {
+        "image": [
+          "STRING",
+          {
+            "default": ""
+          }
+        ],
+        "frame": [
+          "INT",
+          {
+            "default": 0,
+            "min": -2147483648,
+            "max": 2147483648,
+            "step": 1
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE",
+      "MASK"
+    ],
+    "output_name": [
+      "IMAGE",
+      "MASK"
+    ],
+    "name": "MediaPipe_face",
+    "display_name": "MediaPipe_face",
+    "description": "",
+    "category": "OpenPose"
+  },
+  "depth": {
+    "input": {
+      "required": {
+        "image": [
+          "STRING",
+          {
+            "default": ""
+          }
+        ],
+        "frame": [
+          "INT",
+          {
+            "default": 0,
+            "min": -2147483648,
+            "max": 2147483648,
+            "step": 1
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE",
+      "MASK"
+    ],
+    "output_name": [
+      "IMAGE",
+      "MASK"
+    ],
+    "name": "depth",
+    "display_name": "depth",
+    "description": "",
+    "category": "OpenPose"
+  },
+  "openpose": {
+    "input": {
+      "required": {
+        "image": [
+          "STRING",
+          {
+            "default": ""
+          }
+        ],
+        "frame": [
+          "INT",
+          {
+            "default": 0,
+            "min": -2147483648,
+            "max": 2147483648,
+            "step": 1
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE",
+      "MASK"
+    ],
+    "output_name": [
+      "IMAGE",
+      "MASK"
+    ],
+    "name": "openpose",
+    "display_name": "openpose",
+    "description": "",
+    "category": "OpenPose"
+  },
+  "openpose_face": {
+    "input": {
+      "required": {
+        "image": [
+          "STRING",
+          {
+            "default": ""
+          }
+        ],
+        "frame": [
+          "INT",
+          {
+            "default": 0,
+            "min": -2147483648,
+            "max": 2147483648,
+            "step": 1
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE",
+      "MASK"
+    ],
+    "output_name": [
+      "IMAGE",
+      "MASK"
+    ],
+    "name": "openpose_face",
+    "display_name": "openpose_face",
+    "description": "",
+    "category": "OpenPose"
+  },
+  "Lineart": {
+    "input": {
+      "required": {
+        "image": [
+          "STRING",
+          {
+            "default": ""
+          }
+        ],
+        "frame": [
+          "INT",
+          {
+            "default": 0,
+            "min": -2147483648,
+            "max": 2147483648,
+            "step": 1
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE",
+      "MASK"
+    ],
+    "output_name": [
+      "IMAGE",
+      "MASK"
+    ],
+    "name": "Lineart",
+    "display_name": "Lineart",
+    "description": "",
+    "category": "OpenPose"
+  },
+  "openpose_full_Extra_Limb": {
+    "input": {
+      "required": {
+        "image": [
+          "STRING",
+          {
+            "default": ""
+          }
+        ],
+        "frame": [
+          "INT",
+          {
+            "default": 0,
+            "min": -2147483648,
+            "max": 2147483648,
+            "step": 1
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE",
+      "MASK"
+    ],
+    "output_name": [
+      "IMAGE",
+      "MASK"
+    ],
+    "name": "openpose_full_Extra_Limb",
+    "display_name": "openpose_full_Extra_Limb",
+    "description": "",
+    "category": "OpenPose"
+  },
+  "keypose": {
+    "input": {
+      "required": {
+        "image": [
+          "STRING",
+          {
+            "default": ""
+          }
+        ],
+        "frame": [
+          "INT",
+          {
+            "default": 0,
+            "min": -2147483648,
+            "max": 2147483648,
+            "step": 1
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE",
+      "MASK"
+    ],
+    "output_name": [
+      "IMAGE",
+      "MASK"
+    ],
+    "name": "keypose",
+    "display_name": "keypose",
+    "description": "",
+    "category": "OpenPose"
+  },
+  "canny": {
+    "input": {
+      "required": {
+        "image": [
+          "STRING",
+          {
+            "default": ""
+          }
+        ],
+        "frame": [
+          "INT",
+          {
+            "default": 0,
+            "min": -2147483648,
+            "max": 2147483648,
+            "step": 1
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE",
+      "MASK"
+    ],
+    "output_name": [
+      "IMAGE",
+      "MASK"
+    ],
+    "name": "canny",
+    "display_name": "canny",
+    "description": "",
+    "category": "OpenPose"
+  },
+  "OpenPoseFull": {
+    "input": {
+      "required": {
+        "image": [
+          "STRING",
+          {
+            "default": ""
+          }
+        ],
+        "frame": [
+          "INT",
+          {
+            "default": 0,
+            "min": -2147483648,
+            "max": 2147483648,
+            "step": 1
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE",
+      "MASK"
+    ],
+    "output_name": [
+      "IMAGE",
+      "MASK"
+    ],
+    "name": "OpenPoseFull",
+    "display_name": "OpenPoseFull",
+    "description": "",
+    "category": "OpenPose"
+  },
+  "OpenPoseHand": {
+    "input": {
+      "required": {
+        "image": [
+          "STRING",
+          {
+            "default": ""
+          }
+        ],
+        "frame": [
+          "INT",
+          {
+            "default": 0,
+            "min": -2147483648,
+            "max": 2147483648,
+            "step": 1
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE",
+      "MASK"
+    ],
+    "output_name": [
+      "IMAGE",
+      "MASK"
+    ],
+    "name": "OpenPoseHand",
+    "display_name": "OpenPoseHand",
+    "description": "",
+    "category": "OpenPose"
+  },
+  "OpenPoseMediaPipeFace": {
+    "input": {
+      "required": {
+        "image": [
+          "STRING",
+          {
+            "default": ""
+          }
+        ],
+        "frame": [
+          "INT",
+          {
+            "default": 0,
+            "min": -2147483648,
+            "max": 2147483648,
+            "step": 1
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE",
+      "MASK"
+    ],
+    "output_name": [
+      "IMAGE",
+      "MASK"
+    ],
+    "name": "OpenPoseMediaPipeFace",
+    "display_name": "OpenPoseMediaPipeFace",
+    "description": "",
+    "category": "OpenPose"
+  },
+  "OpenPoseDepth": {
+    "input": {
+      "required": {
+        "image": [
+          "STRING",
+          {
+            "default": ""
+          }
+        ],
+        "frame": [
+          "INT",
+          {
+            "default": 0,
+            "min": -2147483648,
+            "max": 2147483648,
+            "step": 1
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE",
+      "MASK"
+    ],
+    "output_name": [
+      "IMAGE",
+      "MASK"
+    ],
+    "name": "OpenPoseDepth",
+    "display_name": "OpenPoseDepth",
+    "description": "",
+    "category": "OpenPose"
+  },
+  "OpenPose": {
+    "input": {
+      "required": {
+        "image": [
+          "STRING",
+          {
+            "default": ""
+          }
+        ],
+        "frame": [
+          "INT",
+          {
+            "default": 0,
+            "min": -2147483648,
+            "max": 2147483648,
+            "step": 1
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE",
+      "MASK"
+    ],
+    "output_name": [
+      "IMAGE",
+      "MASK"
+    ],
+    "name": "OpenPose",
+    "display_name": "OpenPose",
+    "description": "",
+    "category": "OpenPose"
+  },
+  "OpenPoseFace": {
+    "input": {
+      "required": {
+        "image": [
+          "STRING",
+          {
+            "default": ""
+          }
+        ],
+        "frame": [
+          "INT",
+          {
+            "default": 0,
+            "min": -2147483648,
+            "max": 2147483648,
+            "step": 1
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE",
+      "MASK"
+    ],
+    "output_name": [
+      "IMAGE",
+      "MASK"
+    ],
+    "name": "OpenPoseFace",
+    "display_name": "OpenPoseFace",
+    "description": "",
+    "category": "OpenPose"
+  },
+  "OpenPoseLineart": {
+    "input": {
+      "required": {
+        "image": [
+          "STRING",
+          {
+            "default": ""
+          }
+        ],
+        "frame": [
+          "INT",
+          {
+            "default": 0,
+            "min": -2147483648,
+            "max": 2147483648,
+            "step": 1
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE",
+      "MASK"
+    ],
+    "output_name": [
+      "IMAGE",
+      "MASK"
+    ],
+    "name": "OpenPoseLineart",
+    "display_name": "OpenPoseLineart",
+    "description": "",
+    "category": "OpenPose"
+  },
+  "OpenPoseFullExtraLimb": {
+    "input": {
+      "required": {
+        "image": [
+          "STRING",
+          {
+            "default": ""
+          }
+        ],
+        "frame": [
+          "INT",
+          {
+            "default": 0,
+            "min": -2147483648,
+            "max": 2147483648,
+            "step": 1
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE",
+      "MASK"
+    ],
+    "output_name": [
+      "IMAGE",
+      "MASK"
+    ],
+    "name": "OpenPoseFullExtraLimb",
+    "display_name": "OpenPoseFullExtraLimb",
+    "description": "",
+    "category": "OpenPose"
+  },
+  "OpenPoseKeyPose": {
+    "input": {
+      "required": {
+        "image": [
+          "STRING",
+          {
+            "default": ""
+          }
+        ],
+        "frame": [
+          "INT",
+          {
+            "default": 0,
+            "min": -2147483648,
+            "max": 2147483648,
+            "step": 1
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE",
+      "MASK"
+    ],
+    "output_name": [
+      "IMAGE",
+      "MASK"
+    ],
+    "name": "OpenPoseKeyPose",
+    "display_name": "OpenPoseKeyPose",
+    "description": "",
+    "category": "OpenPose"
+  },
+  "OpenPoseCanny": {
+    "input": {
+      "required": {
+        "image": [
+          "STRING",
+          {
+            "default": ""
+          }
+        ],
+        "frame": [
+          "INT",
+          {
+            "default": 0,
+            "min": -2147483648,
+            "max": 2147483648,
+            "step": 1
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE",
+      "MASK"
+    ],
+    "output_name": [
+      "IMAGE",
+      "MASK"
+    ],
+    "name": "OpenPoseCanny",
+    "display_name": "OpenPoseCanny",
+    "description": "",
+    "category": "OpenPose"
   }
 }

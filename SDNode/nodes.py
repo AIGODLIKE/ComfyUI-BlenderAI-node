@@ -760,7 +760,10 @@ def spec_serialize(self, cfg, execute):
         cfg["inputs"]["seed"] = int(cfg["inputs"]["seed"])
     elif self.class_type == "KSamplerAdvanced":
         cfg["inputs"]["noise_seed"] = int(cfg["inputs"]["noise_seed"])
-
+    elif self.class_type in {"OpenPoseFull", "OpenPoseHand", "OpenPoseMediaPipeFace", "OpenPoseDepth", "OpenPose", "OpenPoseFace", "OpenPoseLineart", "OpenPoseFullExtraLimb", "OpenPoseKeyPose", "OpenPoseCanny", }:
+        rpath = Path(bpy.path.abspath(bpy.context.scene.render.filepath)) / "MultiControlnet"
+        cfg["inputs"]["image"] = rpath.as_posix()
+        cfg["inputs"]["frame"] = bpy.context.scene.frame_current
 
 def spec_functions(fields, nname, ndesc):
     if nname == "输入图像":
@@ -781,7 +784,7 @@ def spec_functions(fields, nname, ndesc):
                 if bpy.context.scene.use_nodes:
                     from .utils import set_composite
                     nt = bpy.context.scene.node_tree
-                    
+
                     with set_composite(nt) as cmp:
                         render_layer = nt.nodes.new("CompositorNodeRLayers")
                         out = render_layer.outputs.get(self.out_layers)
@@ -940,6 +943,8 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
             row.prop(self, prop)
             row.operator("sdn.enable_mlt", text="", icon="TEXT")
             return True
+    elif self.class_type in {"OpenPoseFull", "OpenPoseHand", "OpenPoseMediaPipeFace", "OpenPoseDepth", "OpenPose", "OpenPoseFace", "OpenPoseLineart", "OpenPoseFullExtraLimb", "OpenPoseKeyPose", "OpenPoseCanny", }:
+        return True
     return False
 
 
