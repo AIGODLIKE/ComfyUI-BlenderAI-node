@@ -10,7 +10,7 @@ def get_cmpt(nt):
         if node.type != 'COMPOSITE':
             continue
         return node
-    return nt.nodes.new("CompositorNodeRLayers")
+    return nt.nodes.new("CompositorNodeComposite")
 
 
 def get_renderlayer(nt):

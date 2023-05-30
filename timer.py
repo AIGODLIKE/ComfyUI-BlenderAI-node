@@ -1,4 +1,5 @@
 import bpy
+import traceback
 from queue import Queue
 from .kclogger import logger
 
@@ -32,6 +33,7 @@ class Timer:
             try:
                 Timer.executor(t)
             except Exception as e:
+                traceback.print_exc()
                 logger.error(f"{type(e).__name__}: {e}")
             except KeyboardInterrupt:
                 ...

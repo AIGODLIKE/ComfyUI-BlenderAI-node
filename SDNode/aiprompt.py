@@ -1,6 +1,7 @@
 import socket
 import json
 from threading import Thread
+from mathutils import Vector
 from ..timer import Timer
 from ..kclogger import logger
 
@@ -13,9 +14,9 @@ apn_name_map = {
     'sampler': '',  # 采样ID
     'samplerName': 'sampler_name',  # 采样名
     'step': 'steps',  # 步数
-    'width': '',  # 宽
-    'height': '',  # 高
-    'batch': '',  # 批次
+    'width': 'width',  # 宽
+    'height': 'height',  # 高
+    'batch': 'batch_size',  # 批次
     'batchnum': '',  # 批量
     'cfg': 'cfg',  # 相关性
     'seed': 'seed',  # 种子
@@ -131,7 +132,7 @@ def load_apn_config(data):
     # 而comfyUI的SamplerName分别如下
     # ['euler','euler_ancestral','heun','dpm_2','dpm_2_ancestral','lms','dpm_fast','dpm_adaptive','dpmpp_2s_ancestral','dpmpp_sde','dpmpp_2m','ddim','uni_pc','uni_pc_bh2']
     # ====================================================
-    from mathutils import Vector
+    
     tree = get_tree()
     if not tree:
         return
@@ -149,8 +150,7 @@ def load_apn_config(data):
     if not ksampler:
         logger.warn(f"|已忽略| KSampler Not Found")
         return
-    positive = config.pop("positive")
-    negative = config.pop("negative")
+    pre_proc(config, tree, ksampler)
     for inp in ksampler.inp_types:
         if inp in ksampler.inputs:
             continue
@@ -160,7 +160,10 @@ def load_apn_config(data):
             setattr(ksampler, inp, sampler_name if sampler_name else ori)
         else:
             setattr(ksampler, inp, type(ori)(config.get(inp, ori)))
-    if positive:
+
+
+def pre_proc(config, tree, ksampler):
+    if positive := config.pop("positive", None):
         if ksampler.inputs["positive"].links:
             plink = ksampler.inputs["positive"].links[0]
             clip = tree.find_from_node(plink)
@@ -169,7 +172,7 @@ def load_apn_config(data):
             clip.location = Vector((-292, -110)) + ksampler.location
             tree.links.new(ksampler.inputs["positive"], clip.outputs[0])
         clip.text = positive
-    if negative:
+    if negative := config.pop("negative", None):
         if ksampler.inputs["negative"].links:
             plink = ksampler.inputs["negative"].links[0]
             clip = tree.find_from_node(plink)
@@ -178,7 +181,26 @@ def load_apn_config(data):
             clip.location = Vector((-292, -237)) + ksampler.location
             tree.links.new(ksampler.inputs["negative"], clip.outputs[0])
         clip.text = negative
+    
+    if width := config.pop("width", None):
+        if node := get_latent_image(tree, ksampler):
+            node.sdn_width = width
+    if height := config.pop("height", None):
+        if node := get_latent_image(tree, ksampler):
+            node.sdn_height = height
+    if batch_size := config.pop("batch_size", None):
+        if node := get_latent_image(tree, ksampler):
+            node.batch_size = batch_size
 
+def get_latent_image(tree, ksampler):
+    if ksampler.inputs['latent_image'].is_linked:
+        node = ksampler.inputs['latent_image'].links[0].from_node
+        if node.bl_idname != "EmptyLatentImage":
+            return
+    else:
+        node = tree.nodes.new("EmptyLatentImage")
+        tree.links.new(ksampler.inputs["latent_image"], node.outputs["LATENT"])
+    return node
 
 def run_forever():
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
