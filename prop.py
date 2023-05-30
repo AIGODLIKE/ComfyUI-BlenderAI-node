@@ -126,4 +126,6 @@ class Prop(bpy.types.PropertyGroup):
     frame_mode: bpy.props.EnumProperty(name="Frame Mode",
                                        items=[("SingleFrame", "SingleFrame", "SingleFrame", 0),
                                               ("MultiFrame", "MultiFrame", "MultiFrame", 1),
+                                              ("Batch", "Batch", "Batch", 2),
                                               ])
+    batch_dir: bpy.props.StringProperty(name="Batch Directory", default=Path.home().joinpath("Desktop").as_posix(), subtype="DIR_PATH")

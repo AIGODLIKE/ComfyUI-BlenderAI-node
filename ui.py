@@ -1,11 +1,12 @@
 import bpy
-import blf
 from .ops import Ops
 from .translation import ctxt
 from .SDNode import TaskManager
 from .SDNode.tree import TREE_TYPE
 from .preference import get_pref
-from .utils import get_addon_name
+from .utils import get_addon_name, _T
+
+
 class Panel(bpy.types.Panel):
     bl_idname = "SDN_PT_UI"
     bl_translation_context = ctxt
@@ -35,7 +36,12 @@ class Panel(bpy.types.Panel):
         row.operator(Ops.bl_idname, text="Execute Node Tree").action = "Submit"
         row.operator(Ops.bl_idname, text="ClearTask").action = "ClearTask"
         layout.prop(bpy.context.scene.sdn, "frame_mode", text="")
-
+        if bpy.context.scene.sdn.frame_mode == "Batch":
+            box = layout.box()
+            tree = bpy.context.space_data.edit_tree
+            box.prop(bpy.context.scene.sdn, "batch_dir", text="")
+            if tree and (select_node := tree.nodes.active):
+                box.label(text=_T("Selected Node: ") + select_node.name)
         self.show_progress(layout)
         box = layout.box()
         row = box.row()
@@ -77,7 +83,7 @@ class Panel(bpy.types.Panel):
 
         prog = TaskManager.progress
         if prog and prog.get("value"):
-            lnum = int(bpy.context.region.width / bpy.context.preferences.view.ui_scale / 7 - 21) 
+            lnum = int(bpy.context.region.width / bpy.context.preferences.view.ui_scale / 7 - 21)
             lnum = int(lnum * 0.8)
             per = prog["value"] / prog["max"]
             v = int(per * lnum)

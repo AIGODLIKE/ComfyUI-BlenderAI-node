@@ -109,9 +109,28 @@ class Ops(bpy.types.Operator):
                     @Timer.wait_run
                     def pre(cf):
                         bpy.context.scene.frame_set(cf)
-                        logger.error(cf)
                     pre = partial(pre, cf)
                     TaskManager.push_task(get_task(tree), pre)
+            elif bpy.context.scene.sdn.frame_mode == "Batch":
+                batch_dir = bpy.context.scene.sdn.batch_dir
+                select_node = tree.nodes.active
+                if not select_node or select_node.bl_idname != "输入图像":
+                    self.report({"ERROR"}, "Input Image Node Not Selected!")
+                    return {"FINISHED"}
+                
+                if not batch_dir or not Path(batch_dir).exists():
+                    self.report({"ERROR"}, "Batch Directory Not Set!")
+                    return {"FINISHED"}
+                old_mode, old_image = select_node.mode, select_node.image
+                select_node.mode = "输入"
+                for file in Path(batch_dir).iterdir():
+                    if file.is_dir():
+                        continue
+                    if file.suffix not in {".png", ".jpg", ".jpeg"}:
+                        continue
+                    select_node.image = file.as_posix()
+                    TaskManager.push_task(get_task(tree))
+                select_node.mode, select_node.image = old_mode, old_image
             else:
                 TaskManager.push_task(get_task(tree))
         elif self.action == "Restart":

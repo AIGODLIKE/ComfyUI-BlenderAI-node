@@ -121,9 +121,14 @@ other = {
     "Frame Mode": "渲染模式",
     "SingleFrame": "单帧",
     "MultiFrame": "多帧",
+    "Batch": "批量",
+    "Batch Directory": "批量处理文件夹",
     # ops.py
     "No NodeTree Found": "节点树为空",
     "Node Not Found: ": "节点未找到",
+    "Input Image Node Not Selected!": "未选择输入节点",
+    "Batch Directory Not Set!": "批量处理文件夹 不正确",
+    "Selected Node: ": "所选节点: ",
     # ui.py
     "ClearTask": "清理任务",
     # preference.py
