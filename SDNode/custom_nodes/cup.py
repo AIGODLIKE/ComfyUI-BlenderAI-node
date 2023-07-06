@@ -7,6 +7,10 @@ import torch
 import shutil
 import hashlib
 import atexit
+import server
+import gc
+import execution
+from aiohttp import web
 from pathlib import Path
 from PIL import Image
 from PIL.PngImagePlugin import PngInfo
@@ -30,17 +34,19 @@ atexit.register(removetemp)
 
 
 def hk(func):
-    def wrap(*args, **kwargs):
+    def __print_wrap__(*args, **kwargs):
         try:
             func(*args, **kwargs)
         except BaseException:
             ...
         sys.stdout.flush()
         # sys.stderr.flush()
-    return wrap
+    return __print_wrap__
 
 
-builtins.print = hk(print)
+__print_wrap__ = hk(print)
+globals()["__print_wrap__"] = __print_wrap__
+builtins.print = __print_wrap__
 
 sys.stdout.write = hk(sys.stdout.write)
 sys.stderr.write = builtins.print
@@ -63,6 +69,22 @@ except Exception as e:
     sys.stdout.write("Config Export Error")
     sys.stdout.write(str(e))
     sys.stdout.flush()
+
+CACHED_EXECUTOR = []
+
+@server.PromptServer.instance.routes.post("/cup/clear_cache")
+async def clear_cache(request):
+    inst = server.PromptServer.instance
+    if inst.prompt_queue:
+        inst.prompt_queue.history.clear()
+    if not CACHED_EXECUTOR:
+        CACHED_EXECUTOR.extend([ob for ob in gc.get_objects() if isinstance(ob, execution.PromptExecutor)])
+    for ob in CACHED_EXECUTOR:
+        print("Clear Node Tree Cache", ob)
+        ob.outputs.clear()
+        ob.outputs_ui.clear()
+        ob.old_prompt.clear()
+    return web.Response(status=200)
 
 
 class ToBlender:
@@ -186,7 +208,7 @@ class LoadImage:
         return {
             "required": {
                 "image": ("STRING", {"default": ""}),
-                "mode": (["输入", "渲染"], ),
+                "mode": (["输入", "渲染", "序列图"], ),
             },
         }
 
@@ -293,7 +315,7 @@ class OpenPoseBase:
             for file in img_dir.iterdir():
                 if not file.name.startswith("Image"):
                     continue
-                
+
                 f = int(file.name[len("Image"): -len(file.suffix)])
                 if f == frame:
                     find_img = file.as_posix()
@@ -301,7 +323,7 @@ class OpenPoseBase:
                 sys.stderr.write(f"|错误| Frame Not Found -> Image{frame:04}.png")
                 sys.stderr.flush()
             image_path = find_img
-            
+
             i = Image.open(image_path)
             image = i.convert("RGB")
             image = np.array(image).astype(np.float32) / 255.0

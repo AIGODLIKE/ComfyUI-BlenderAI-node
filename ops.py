@@ -8,6 +8,7 @@ from .prop import Prop
 from .utils import _T, logger, PngParse
 from .timer import Timer
 from .SDNode import TaskManager
+from .SDNode.tree import InvalidNodeType
 
 
 class Ops(bpy.types.Operator):
@@ -17,33 +18,48 @@ class Ops(bpy.types.Operator):
     bl_translation_context = ctxt
     action: bpy.props.StringProperty(default="")
     save_name: bpy.props.StringProperty(name="Preset Name", default="预设")
+    alt: bpy.props.BoolProperty(default=False)
 
     @classmethod
     def description(cls, context: bpy.types.Context,
                     properties: bpy.types.OperatorProperties) -> str:
         desc = "SD Node"
-        if properties.get("action") == "Preset_from_Image":
-            desc = "Load from Image"
+        action = properties.get("action", "")
+        if action == "PresetFromBookmark":
+            desc = _T("Load from Bookmark")
+        if action == "PresetFromClipBoard":
+            desc = _T("Load from ClipBoard")
+        elif action == "Launch":
+            desc = _T(action)
+        elif action == "Restart":
+            desc = _T(action)
+        elif action == "Submit":
+            desc = _T("Submit Task and with Clear Cache if Alt Pressed")
         return desc
 
-    def import_image_set(self, value):
-        png = Path(value)
-        if not png.exists() or png.suffix != ".png":
-            logger.error(_T("Image not found or format error(png only)"))
-            logger.error(str(png))
-            logger.error(png.cwd())
+    def import_bookmark_set(self, value):
+        path = Path(value)
+        if not path.exists() or path.suffix.lower() not in {".png", ".json"}:
+            logger.error(_T("Image not found or format error(png/json)"))
+            logger.error(str(path))
+            logger.error(path.cwd())
             return
-        odata = PngParse.read_text_chunk(value)
-        data = odata.get("workflow")
-        if not data:
-            logger.error(_T("Load Preset from Image Error -> MetaData Not Found in") + " " + str(odata))
-            return
+        data = None
+        if path.suffix.lower() == ".png":
+            odata = PngParse.read_text_chunk(value)
+            data = odata.get("workflow")
+            if not data:
+                logger.error(_T("Load Preset from Image Error -> MetaData Not Found in") + " " + str(odata))
+                return
+        elif path.suffix.lower() == ".json":
+            data = path.read_text()
+
         tree = bpy.context.space_data.edit_tree
         if not tree:
             return
         tree.load_json(json.loads(data))
 
-    import_image: bpy.props.StringProperty(name="Preset Image", default=str(Path.cwd()), subtype="FILE_PATH", set=import_image_set)
+    import_bookmark: bpy.props.StringProperty(name="Preset Bookmark", default=str(Path.cwd()), subtype="FILE_PATH", set=import_bookmark_set)
 
     def draw(self, context):
         layout = self.layout
@@ -68,11 +84,12 @@ class Ops(bpy.types.Operator):
             layout.alert = True
             layout.label(text=f"{_T('Preset')}<{Path(bpy.context.scene.sdn.groups).stem}>{_T('will be removed?')}", icon="ERROR", text_ctxt=ctxt)
             layout.label(text="Click Outside to Cancel!", icon="ERROR", text_ctxt=ctxt)
-        if self.action == "Preset_from_Image":
-            layout.label(text="Click Folder Icon to Select Image:", text_ctxt=ctxt)
-            layout.prop(self, "import_image", text_ctxt=ctxt)
+        if self.action == "PresetFromBookmark":
+            layout.label(text="Click Folder Icon to Select Bookmark:", text_ctxt=ctxt)
+            layout.prop(self, "import_bookmark", text_ctxt=ctxt)
 
     def invoke(self, context, event: bpy.types.Event):
+        self.alt = event.alt
         # logger.error("INVOKE")
         self.select_nodes = []
         self.init_pos = context.space_data.cursor_location.copy()
@@ -87,21 +104,103 @@ class Ops(bpy.types.Operator):
                 return {"FINISHED"}
 
         wm = bpy.context.window_manager
-        if self.action in {"Save", "SaveGroup", "Del", "DelGroup", "Preset_from_Image"}:
+        if self.action in {"Save", "SaveGroup", "Del", "DelGroup", "PresetFromBookmark"}:
             return wm.invoke_props_dialog(self, width=200)
         return self.execute(context)
 
+    def find_frames_nodes(self, tree):
+        frames_nodes = []
+        for node in tree.nodes:
+            if node.bl_idname != "输入图像":
+                continue
+            if node.mode != "序列图":
+                continue
+            frames_nodes.append(node)
+        return frames_nodes
+
     def execute(self, context: bpy.types.Context):
+        try:
+            res = self.execute_ex(context)
+            return res
+        except InvalidNodeType as e:
+            self.report({"ERROR"}, str(e.args))
+            return {"FINISHED"}
+        return {"FINISHED"}
+
+    def execute_ex(self, context: bpy.types.Context):
         # logger.debug("EXE")
+        if self.action == "Launch":
+            if TaskManager.pid != -1:
+                self.report({"ERROR"}, "服务已经启动!")
+                return {"FINISHED"}
+            TaskManager.restart_server()
+            return {"FINISHED"}
+        elif self.action == "Restart":
+            TaskManager.restart_server()
+            return {"FINISHED"}
+        elif self.action == "Cancel":
+            TaskManager.interrupt()
+            return {"FINISHED"}
         tree = bpy.context.space_data.edit_tree
         if not tree:
             return {"FINISHED"}
-        if self.action == "Submit":
-            def get_task(tree):
-                prompt = tree.serialize()
-                workflow = tree.save_json()
-                return {"prompt": prompt, "workflow": workflow, "api": "prompt"}
 
+        def get_task(tree):
+            prompt = tree.serialize()
+            workflow = tree.save_json()
+            return {"prompt": prompt, "workflow": workflow, "api": "prompt"}
+        # special for frames image mode
+        if self.action == "Submit" and (frames_nodes := self.find_frames_nodes(tree)):
+            def find_frames(path):
+                frames_map = {}
+                for file in Path(path).iterdir():
+                    if file.suffix.lower() not in {".png", ".jpg"}:
+                        continue
+                    piece = file.stem.split("_")
+                    try:
+                        frames_map[int(piece[-1])] = file.as_posix()
+                    except BaseException:
+                        ...
+                return frames_map
+            node_frames = {}
+            old_cfg = {}
+            for fnode in frames_nodes:
+                frames_dir = fnode.frames_dir
+                if not frames_dir:
+                    self.report({"ERROR"}, _T("Node<{}>Directory is Empty!").format(fnode.name))
+                    return {"FINISHED"}
+                if not Path(frames_dir).exists():
+                    self.report({"ERROR"}, _T("Node<{}>Directory Not Exists!").format(fnode.name))
+                    return {"FINISHED"}
+                node_frames[fnode] = find_frames(frames_dir)
+                old_cfg[fnode] = {}
+                old_cfg[fnode]["mode"] = fnode.mode
+                old_cfg[fnode]["image"] = fnode.image
+            pnode, pframes = node_frames.popitem()
+            pnode.mode = "输入"
+            for frame in pframes:
+                pnode.image = pframes[frame]
+                # logger.debug(f"F {frame}: {pnode.image}")
+                for fnode in node_frames:
+                    if not (fpath := node_frames[fnode].get(frame, "")):
+                        error_info = _T("Frame <{}> Not Found in <{}> Node Path!").format(frame, fnode.name)
+                        # self.report({"ERROR"}, error_info)
+                        logger.error(error_info)
+                        break
+                    fnode.mode = "输入"
+                    fnode.image = fpath
+                    # logger.debug(f"F {frame}: {fnode.image}")
+                else:
+                    logger.debug(_T("Frame Task <{}> Added!").format(frame))
+                    TaskManager.push_task(get_task(tree))
+            # restore config
+            for fnode in old_cfg:
+                setattr(fnode, "mode", old_cfg[fnode]["mode"])
+                setattr(fnode, "image", old_cfg[fnode]["image"])
+            return {"FINISHED"}
+        elif self.action == "Submit":
+            if self.alt:
+                TaskManager.clear_cache()
             if bpy.context.scene.sdn.frame_mode == "MultiFrame":
                 sf = bpy.context.scene.frame_start
                 ef = bpy.context.scene.frame_end
@@ -117,7 +216,7 @@ class Ops(bpy.types.Operator):
                 if not select_node or select_node.bl_idname != "输入图像":
                     self.report({"ERROR"}, "Input Image Node Not Selected!")
                     return {"FINISHED"}
-                
+
                 if not batch_dir or not Path(batch_dir).exists():
                     self.report({"ERROR"}, "Batch Directory Not Set!")
                     return {"FINISHED"}
@@ -197,15 +296,27 @@ class Ops(bpy.types.Operator):
 
             bpy.context.window_manager.modal_handler_add(self)
             return {"RUNNING_MODAL"}
-        elif self.action == "Preset_from_Image":
+        elif self.action == "PresetFromBookmark":
             return {"FINISHED"}
-            # png = Path(self.import_image)
-            # logger.error(self.import_image)
+            # png = Path(self.import_bookmark)
+            # logger.error(self.import_bookmark)
             # if not png.exists() or png.suffix != ".png":
             #     self.report({"ERROR"}, "魔法图鉴不存在或格式不正确(仅png)")
             #     return {"FINISHED"}
-            # data = PngParse.read_text_chunk(self.import_image)
+            # data = PngParse.read_text_chunk(self.import_bookmark)
             # logger.error(data)
+        elif self.action == "PresetFromClipBoard":
+            try:
+                from . import pyperclip
+            except BaseException:
+                self.report({"ERROR"}, _T("pyperclip import error"))
+                return {"FINISHED"}
+            try:
+                data = pyperclip.paste()
+                tree.load_json(json.loads(data))
+            except json.JSONDecodeError:
+                self.report({"ERROR"}, _T("ClipBoard Content Format Error"))
+                return {"FINISHED"}
         return {"FINISHED"}
 
     def update_nodes_pos(self, event):

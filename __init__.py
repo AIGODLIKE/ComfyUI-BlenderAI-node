@@ -30,7 +30,7 @@ def register():
     bpy.app.translations.register(__name__, translations_dict)
     reg()
     Icon.set_hq_preview()
-    TaskManager.run_server()
+    TaskManager.run_server(fake=True)
     timer_reg()
     bpy.types.Scene.sdn = bpy.props.PointerProperty(type=Prop)
 

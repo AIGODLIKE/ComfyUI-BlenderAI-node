@@ -1,5 +1,6 @@
 import bpy
 import typing
+import time
 import sys
 from threading import Thread
 from functools import partial
@@ -7,12 +8,16 @@ from collections import OrderedDict
 from bpy.types import NodeTree
 from nodeitems_utils import NodeCategory, NodeItem, register_node_categories, unregister_node_categories, _node_categories
 from .nodes import nodes_reg, nodes_unreg, parse_node
-from ..utils import logger, Icon, rgb2hex, hex2rgb
+from ..utils import logger, Icon, rgb2hex, hex2rgb, _T
 from ..datas import EnumCache
 from ..timer import Timer
 
 TREE_NAME = "CFNODES_SYS"
 TREE_TYPE = "CFNodeTree"
+
+
+class InvalidNodeType(Exception):
+    ...
 
 
 class CFNodeTree(NodeTree):
@@ -21,17 +26,27 @@ class CFNodeTree(NodeTree):
     bl_icon = "EVENT_T"
     display_shape = {"CIRCLE"}
     outUpdate: bpy.props.BoolProperty(default=False)
+    instance = None
 
     def update(self):
-        ...
+        CFNodeTree.instance = self
 
     def serialize_pre(self):
         for node in self.get_nodes():
             node.serialize_pre()
 
     def serialize(self):
+        self.validation()
         self.serialize_pre()
-        return {node.id: (node.serialize(), node.pre_fn, node.post_fn) for node in self.get_nodes()}
+        return {node.id: (node.serialize(), node.pre_fn, node.post_fn) for node in self.get_nodes() if node.class_type != "Reroute"}
+
+    def validation(self, nodes=None):
+
+        if nodes is None:
+            nodes = self.nodes
+        for n in nodes:
+            if not n.is_registered_node_type():
+                raise InvalidNodeType(_T("Invalid Node Type: {}").format(n.name))
 
     def get_node_frame_offset(self, node: bpy.types.Node):
         # x  y  w  h  ox oy
@@ -63,6 +78,7 @@ class CFNodeTree(NodeTree):
         return node.location.x + ox, node.location.y + oy
 
     def save_json_ex(self, dump_nodes: list[bpy.types.Node], dump_frames=None):
+        self.validation(dump_nodes)
         self.calc_unique_id()
         self.compute_execution_order()
         nodes_info = []
@@ -96,20 +112,33 @@ class CFNodeTree(NodeTree):
             # links is an OBJECT
             # [id, origin_id, origin_slot, target_id, target_slot, type]
             # TODO: 当有 NodeReroute 的时候 情况比较复杂
-            from_node = self.find_from_node(link)
-            to_node = self.find_to_node(link)
-            if (to_node not in dump_nodes) or (from_node not in dump_nodes):
-                continue
-            from_socket = self.find_from_link(link).from_socket
-            to_socket = self.find_to_link(link).to_socket
+            # from_node = self.find_from_node(link)
+            # to_node = self.find_to_node(link)
+            # if (to_node not in dump_nodes) or (from_node not in dump_nodes):
+            #     continue
+            # from_socket = self.find_from_link(link).from_socket
+            # to_socket = self.find_to_link(link).to_socket
+            # link_info = [
+            #     i,
+            #     int(from_socket.node.id),
+            #     from_socket.slot_index,
+            #     int(to_socket.node.id),
+            #     to_socket.slot_index,
+            #     from_socket.node.class_type
+            # ]
+            from_socket = link.from_socket
+            to_node = link.to_node
+            to_socket = link.to_socket
             link_info = [
                 i,
                 int(from_socket.node.id),
                 from_socket.slot_index,
                 int(to_socket.node.id),
                 to_socket.slot_index,
-                from_socket.node.class_type
+                to_node.class_type
             ]
+            if to_node.class_type == "Reroute":
+                link_info[-1] = "*"
             links.append(link_info)
         if not dump_frames:
             dump_frames = [f for f in self.nodes if f.bl_idname == "NodeFrame"]
@@ -157,7 +186,11 @@ class CFNodeTree(NodeTree):
 
         def delegate(self: CFNodeTree, data):
             for node_info in data["nodes"]:
-                node = self.nodes.new(type=node_info["type"])
+                t = node_info["type"]
+                if t == "Reroute":
+                    node = self.nodes.new(type="NodeReroute")
+                else:
+                    node = self.nodes.new(type=t)
                 node.load(node_info)
 
             for link in data["links"]:
@@ -171,11 +204,17 @@ class CFNodeTree(NodeTree):
                 to_slot = link[4]
                 find_out = None
                 for out in from_node.outputs:
+                    if from_node.class_type == "Reroute":
+                        find_out = out
+                        break
                     if out.slot_index == from_slot:
                         find_out = out
                         break
                 find_in = None
                 for inp in to_node.inputs:
+                    if to_node.class_type == "Reroute":
+                        find_in = inp
+                        break
                     if inp.slot_index == to_slot:
                         find_in = inp
                         break
@@ -275,8 +314,8 @@ class CFNodeTree(NodeTree):
 
     def get_nodes(self, cmf=True):
         if cmf:
-            return [n for n in self.nodes if n.bl_idname not in {"NodeReroute", "NodeFrame"}]
-        return self.nodes[:]
+            return [n for n in self.nodes if n.bl_idname not in {"NodeFrame", } and n.is_registered_node_type()]
+        return [n for n in self.nodes if n.is_registered_node_type()]
 
     def clear_nodes(self):
         def remove_nodes():
@@ -331,6 +370,8 @@ class CFNodeTree(NodeTree):
         """
         nodes = self.get_nodes()
         for n in nodes:
+            if n.id == "-1":
+                n.apply_unique_id()
             for nn in nodes:
                 if nn == n:
                     continue
@@ -420,7 +461,7 @@ class CFNodeTree(NodeTree):
                 node.pool.clear()
             for node in ng.get_nodes():
                 pool = node.pool
-                if node.id in pool | {"0", "1", "2"}:
+                if node.id in pool | {"-1", "0", "1", "2"}:
                     node.apply_unique_id()
                     # logger.debug("Regen: %s", node.id)
                 else:
@@ -435,6 +476,7 @@ class CFNodeCategory(NodeCategory):
 
     def __init__(self, *args, **kwargs) -> None:
         self.menus = kwargs.pop("menus", [])
+        self.draw_fns = kwargs.pop("draw_fns", [])
         super().__init__(*args, **kwargs)
 
 
@@ -449,6 +491,9 @@ def reg_nodetree(identifier, cat_list, sub=False):
             col.menu("NODE_MT_category%s" % menu.identifier)
         for item in self.category.items(context):
             item.draw(item, col, context)
+        for draw_fn in getattr(self.category, "draw_fns", []):
+            draw_fn(self)
+
     menu_types = []
     for cat in cat_list:
         reg_nodetree(cat.identifier, cat.menus, sub=True)
@@ -493,10 +538,58 @@ clss = []
 reg, unreg = bpy.utils.register_classes_factory(clss)
 
 
+def reg_node_reroute():
+    from .nodes import NodeBase
+    bpy.types.NodeSocketColor.slot_index = bpy.props.IntProperty(default=-1)
+    bpy.types.NodeSocketColor.index = bpy.props.IntProperty(default=-1)
+
+    bpy.types.NodeReroute.id = bpy.props.StringProperty(default="-1")
+    bpy.types.NodeReroute.order = bpy.props.IntProperty(default=-1)
+    bpy.types.NodeReroute.pool = NodeBase.pool
+    bpy.types.NodeReroute.load = NodeBase.load
+    bpy.types.NodeReroute.dump = NodeBase.dump
+    bpy.types.NodeReroute.serialize_pre = NodeBase.serialize_pre
+    bpy.types.NodeReroute.serialize = NodeBase.serialize
+    bpy.types.NodeReroute.post_fn = NodeBase.post_fn
+    bpy.types.NodeReroute.pre_fn = NodeBase.pre_fn
+    bpy.types.NodeReroute.apply_unique_id = NodeBase.apply_unique_id
+    bpy.types.NodeReroute.unique_id = NodeBase.unique_id
+    bpy.types.NodeReroute.calc_slot_index = NodeBase.calc_slot_index
+
+    bpy.types.NodeReroute.class_type = "Reroute"
+    bpy.types.NodeReroute.inp_types = []
+    bpy.types.NodeReroute.out_types = []
+
+
+def update_tree_handler():
+    try:
+        CFNodeTree.instance.calc_unique_id()
+    finally:
+        return 1
+
+
 def rtnode_reg():
+    reg_node_reroute()
+
     clss.append(CFNodeTree)
+    t1 = time.time()
     node_desc, node_clss, socket = parse_node()
+    t2 = time.time()
+    logger.info(f"ParseNode Time: {t2-t1:.2f}s")
     node_cat = load_node(node_desc=node_desc)
+
+    def draw_intern(self):
+        layout: bpy.types.UILayout = self.layout
+        props = layout.operator("node.add_node", text="NodeFrame")
+        props.type = "NodeFrame"
+        props.use_transform = True
+        props = layout.operator("node.add_node", text="NodeReroute")
+        props.type = "NodeReroute"
+        props.use_transform = True
+
+    cfn_cat = CFNodeCategory(f"sdn_Internal", "Internal", draw_fns=[draw_intern])
+    node_cat.append(cfn_cat)
+
     clss.extend(node_clss)
     clss.extend(socket)
     nodes_reg()
@@ -504,9 +597,12 @@ def rtnode_reg():
     reg_nodetree(TREE_NAME, node_cat)  # register_node_categories(TREE_NAME, node_cat)
     if CFNodeTree.reinit not in bpy.app.handlers.load_post:
         bpy.app.handlers.load_post.append(CFNodeTree.reinit)
+    if not bpy.app.timers.is_registered(update_tree_handler):
+        bpy.app.timers.register(update_tree_handler, persistent=True)
 
 
 def rtnode_unreg():
+    # bpy.app.timers.unregister(update_tree_handler)
     if CFNodeTree.reinit in bpy.app.handlers.load_post:
         bpy.app.handlers.load_post.remove(CFNodeTree.reinit)
     if TREE_NAME in _node_categories:

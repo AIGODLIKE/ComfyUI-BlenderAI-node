@@ -2,7 +2,6 @@ import os
 import re
 import shutil
 import sys
-import requests
 import json
 import time
 import atexit
@@ -80,7 +79,7 @@ class Task:
 class TaskManager:
     _instance = None
     pid = -1
-    child = None
+    child: Popen = None
 
     task_queue = Queue()
     res_queue = Queue()
@@ -131,13 +130,22 @@ class TaskManager:
             # os.kill(pid, signal.SIGKILL)
         logger.error(f"{_T('Kill Last ComfyUI Process')} id -> {pid}")
 
-    def run_server():
+    def run_server(fake=False):
+        import time
+
         from .tree import rtnode_reg, rtnode_unreg
+        t1 = time.time()
         rtnode_unreg()
-
-        TaskManager.run_server_ex()
-
+        t2 = time.time()
+        logger.info(f"UnregNode Time: {t2-t1:.2f}s")
+        if not fake:
+            TaskManager.run_server_ex()
+            t3 = time.time()
+            logger.info(f"Launch Time: {t3-t2:.2f}s")
+        t3 = time.time()
         rtnode_reg()
+        t4 = time.time()
+        logger.info(f"RegNode Time: {t4-t3:.2f}s")
 
     def run_server_pre(model_path):
         """
@@ -246,16 +254,21 @@ class TaskManager:
         # cmd = " ".join([str(python), arg])
         # 加了 stderr后 无法获取 进度?
         # logger.debug(args)
-        p = Popen(args, stdout=PIPE, cwd=model_path)
+        import bpy
+        if bpy.app.version >= (3, 6):
+            p = Popen(args, cwd=model_path)
+        else:
+            p = Popen(args, stdout=PIPE, cwd=model_path)
         TaskManager.child = p
         TaskManager.pid = p.pid
         pidpath.write_text(str(p.pid))
 
         Thread(target=TaskManager.stdout_listen, daemon=True).start()
-        
+
         while True:
+            import requests
             try:
-                if requests.get(f"{url}/object_info").status_code == 200:
+                if requests.get(f"{url}/object_info", proxies={"http": None, "https": None}).status_code == 200:
                     break
             except requests.exceptions.ConnectionError:
                 ...
@@ -276,11 +289,18 @@ class TaskManager:
             # print(re.findall("\|(.*?)[", line.decode("gbk")))
             if b"CUDA out of memory" in line or b"not enough memory" in line:
                 TaskManager.put_error_msg(f"{_T('Error: Out of VRam, try restart blender')}")
-            proc = re.findall("[█ ]\\| (.*?) \\[", line.decode("gbk"))
+            proc = ""
+            for coding in ["gbk", "utf8"]:
+                try:
+                    line = line.decode(coding)
+                    proc = re.findall("[█ ]\\| (.*?) \\[", line)
+                    break
+                except UnicodeDecodeError:
+                    ...
             if not proc:
-                logger.info(line.decode("gbk"))
+                logger.info(line)
         logger.debug("STDOUT Listen Thread Exit")
-        
+
     def close_server():
         if TaskManager.child:
             TaskManager.child.kill()
@@ -314,8 +334,19 @@ class TaskManager:
     def query_process():
         ...
 
+    def clear_cache():
+        req = request.Request(f"{url}/cup/clear_cache", method="POST")
+        try:
+            request.urlopen(req)
+        except URLError:
+            ...
+
     def interrupt():
-        ...
+        req = request.Request(f"{url}/interrupt", method="POST")
+        try:
+            request.urlopen(req)
+        except URLError:
+            ...
 
     def clear_all():
         TaskManager.interrupt()
@@ -466,6 +497,17 @@ class TaskManager:
                 logger.warn(f"{_T('Ran Node')}: {data['node']}", )
             elif mtype == "execution_error":
                 logger.error(data.get("message"))
+            elif mtype == "execution_start":
+                ...
+            elif mtype == "execution_interrupted":
+                {"type": "execution_interrupted",
+                 "data": {"prompt_id": "e1f3cbf9-4b83-47cf-95c3-9f9a76ab5508",
+                          "node_id": "3",
+                          "node_type": "KSampler",
+                          "executed": ["4", "7", "6", "5"]}
+                 }
+                TaskManager.put_error_msg(_T("Execute Node Cancelled!"))
+                # tm.mark_finished(with_noexe=False)
             elif mtype == "execution_cached":
                 # {"type": "execution_cached", "data": {"nodes": ["12", "7", "10"], "prompt_id": "ddd"}}
                 # logger.warn(message)

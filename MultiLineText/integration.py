@@ -1,12 +1,15 @@
 # Reference from: https://github.com/eliemichel/BlenderImgui
 
 import bpy
+import string
+import json
 from functools import lru_cache
 from math import ceil
 from pathlib import Path
 from ..utils import _T, logger
 from ..SDNode.tree import TREE_TYPE
 from .renderer import BlenderImguiRenderer, imgui
+from .trie import Trie
 
 class GlobalImgui:
     _instance = None
@@ -171,7 +174,7 @@ class BaseDrawCall:
         'OSKEY': 128 + 7,
     }
     REG_AREA = set()
-        
+
     def try_reg(self, area: bpy.types.Area):
         if area in self.__class__.REG_AREA:
             return
@@ -185,12 +188,9 @@ class BaseDrawCall:
     def clear(self):
         GlobalImgui().handler_remove(self.draw_call)
 
-    def poll_events(self, context: bpy.types.Context, event: bpy.types.Event):
-        region = context.region
+    def poll_mouse(self, context: bpy.types.Context, event: bpy.types.Event):
         io = imgui.get_io()
-        # print(event.type, event.value)
-        io.mouse_pos = (event.mouse_region_x, region.height - 1 - event.mouse_region_y)
-
+        io.mouse_pos = (self.mpos[0], context.region.height - 1 - self.mpos[1])
         if event.type == 'LEFTMOUSE':
             io.mouse_down[0] = event.value == 'PRESS'
 
@@ -205,6 +205,9 @@ class BaseDrawCall:
 
         elif event.type == 'WHEELDOWNMOUSE':
             io.mouse_wheel = -1
+
+    def poll_events(self, context: bpy.types.Context, event: bpy.types.Event):
+        io = imgui.get_io()
 
         if event.type in self.key_map:
             if event.value == 'PRESS':
@@ -249,6 +252,8 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
             return {"FINISHED"}
         self.mpos = (0, 0)
         self.cover = False
+        self.candicates_index = 0
+        self.candicates_word = ""
         self.io = imgui.get_io()
         context.window_manager.modal_handler_add(self)
         return {'RUNNING_MODAL'}
@@ -257,18 +262,34 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
         if not context.area:
             self.clear()
             return {"CANCELLED"}
+
+        # 鼠标不在 region 范围则不更新
         self.mpos = event.mouse_region_x, event.mouse_region_y
         w, h = context.region.width, context.region.height
-        in_area = 0 < self.mpos[0] < w and 0 < self.mpos[1] < h
-        if not in_area:  # multi windows cause event miss
+        if 0 > self.mpos[0] or self.mpos[0] > w or 0 > self.mpos[1] or self.mpos[1] > h:
             return {"PASS_THROUGH"}
+        # logger.debug(["Modal", self.cover, id(self)])
+        # in_area = 0 < self.mpos[0] < w and 0 < self.mpos[1] < h
+        # if not in_area:  # multi windows cause event miss
+        #     return {"PASS_THROUGH"}
         context.area.tag_redraw()
 
         # if event.type in {'RIGHTMOUSE', 'ESC'}:
         #     self.shutdown()
         #     return {'CANCELLED'}
+        # print( event.mouse_x, event.mouse_y, context.region.x, context.region.y)
 
+        self.poll_mouse(context, event)
+        if event.type == 'UP_ARROW' and event.value == "PRESS":
+            self.candicates_index -= 1
+            return {"RUNNING_MODAL"}
+        if event.type == 'DOWN_ARROW' and event.value == "PRESS":
+            self.candicates_index += 1
+            return {"RUNNING_MODAL"}
+        # print(context.area, self.mpos, self.cover, imgui.is_any_item_focused())
         if not self.cover:
+            # import random
+            # logger.debug(["Pass Through -- ", random.random()])
             return {"PASS_THROUGH"}
         self.poll_events(context, event)
         return {"RUNNING_MODAL"}
@@ -282,22 +303,88 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
         if not tree or bpy.context.space_data.tree_type != TREE_TYPE:
             return
         node = tree.nodes.active
-        if not node or node.bl_idname != "CLIPTextEncode":
+        if not node:
+            return
+        if node.bl_idname not in {"CLIPTextEncode", "MultiAreaConditioning"}:
             return
         return node
 
     def draw_call(self, context: bpy.types.Context):
         if not (node := self.can_draw()):
             return
-        flags = imgui.WINDOW_NO_COLLAPSE | imgui.WINDOW_NO_BRING_TO_FRONT_ON_FOCUS | imgui.WINDOW_NO_SAVED_SETTINGS
+        self.draw_mlt(context, node)
+        self.draw_rect(context, node)
+
+    def draw_rect(self, context: bpy.types.Context, node):
+        if node.bl_idname != "MultiAreaConditioning":
+            return
+        rx = node.resolutionX
+        ry = node.resolutionY
+        flags = imgui.WINDOW_NO_COLLAPSE | imgui.WINDOW_NO_BRING_TO_FRONT_ON_FOCUS | imgui.WINDOW_NO_SAVED_SETTINGS | imgui.WINDOW_NO_FOCUS_ON_APPEARING
+        imgui.begin(_T(" MultiArea") + "##" + hex(hash(context.area)), closable=False, flags=flags)
+        imgui.set_window_position(50, 20, condition=imgui.ONCE)
+        imgui.set_window_size(rx, ry, condition=imgui.ALWAYS)
+        imgui.text("")
+        
+        # 空心矩形
+        min_x, min_y = imgui.get_item_rect_min()
+        imgui.get_window_draw_list().add_rect_filled(
+            upper_left_x=min_x,
+            upper_left_y=min_y,
+            lower_right_x=min_x + rx,
+            lower_right_y=min_y + ry,
+            col=imgui.get_color_u32_rgba(1, 1, 0, 0.4),
+        )
+
+        # 实心矩形
+        for i, rect in enumerate(json.loads(node.config)):
+            x = rect["x"]
+            y = rect["y"]
+            w = rect["sdn_width"]
+            h = rect["sdn_height"]
+            col = rect["col"]
+            if i == node.index:
+                col[-1] = 1
+            col = imgui.get_color_u32_rgba(*col)
+            imgui.get_window_draw_list().add_rect_filled(
+                upper_left_x=min_x + x,
+                upper_left_y=min_y + y,
+                lower_right_x=min_x + x + w,
+                lower_right_y=min_y + y + h,
+                col=col,
+            )
+            
+        self.cover = imgui.is_item_hovered() or imgui.is_item_focused() or imgui.is_window_hovered() or imgui.is_window_focused()
+        if imgui.is_item_hovered():
+            imgui.core.set_keyboard_focus_here(-1)
+
+        imgui.end()
+
+    def draw_mlt(self, context: bpy.types.Context, node):
+        if node.bl_idname != "CLIPTextEncode":
+            return
+        flags = imgui.WINDOW_NO_COLLAPSE | imgui.WINDOW_NO_BRING_TO_FRONT_ON_FOCUS | imgui.WINDOW_NO_SAVED_SETTINGS | imgui.WINDOW_NO_FOCUS_ON_APPEARING
         imgui.begin(_T(" Prompts") + "##" + hex(hash(context.area)), closable=False, flags=flags)
         imgui.set_window_position(50, 20, condition=imgui.ONCE)
         imgui.set_window_size(300, 300, condition=imgui.ONCE)
 
-        w, h = imgui.core.get_window_size()
+        w = imgui.core.get_window_size().x
         lnum = max(1, int(w * 2 // imgui.get_font_size()) - 3)
 
+        def find_word(buffer, end_pos):
+            for i in range(end_pos - 1, -1, -1):
+                c = buffer[i]
+                if i == 0:
+                    return 0
+                if c in "\n0123456789x:_-/()":
+                    continue
+                if c not in string.ascii_letters:
+                    return i + 1
+            return end_pos
+
         def cb(data):
+            backspace = self.io.keys_down[self.key_map['BACK_SPACE']]
+
             if data.event_flag == imgui.INPUT_TEXT_CALLBACK_EDIT:
                 p = data.cursor_pos
                 node.text = data.buffer.replace("\n", "")
@@ -305,13 +392,34 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
                 data.delete_chars(0, len(data.buffer))
                 data.insert_chars(0, text)
                 data.buffer_dirty = True
-                backspace = self.io.keys_down[self.key_map['BACK_SPACE']]
                 if not backspace and p % (lnum + 1) == 0:
                     p += 1
                 data.cursor_pos = min(max(0, p), data.buffer_size, len(data.buffer))
-
             if data.event_flag == imgui.INPUT_TEXT_CALLBACK_COMPLETION:
-                ...
+                if not self.candicates_word:
+                    return
+                p = data.cursor_pos
+                start_pos = find_word(data.buffer, p)
+                data.delete_chars(start_pos, p - start_pos)
+                data.insert_chars(start_pos, self.candicates_word)
+                data.cursor_pos = start_pos + len(self.candicates_word)
+                if (data.cursor_pos // (lnum + 1) > p // (lnum + 1)):
+                    data.insert_chars((lnum + 1) * (p // (lnum + 1) + 1) - 1, "\n")
+                    data.cursor_pos += 1
+                self.candicates_word = ""
+                data.buffer_dirty = True
+            if data.event_flag == imgui.INPUT_TEXT_CALLBACK_ALWAYS:
+                rect = imgui.get_item_rect_min()
+                curp = imgui.calc_text_size("W" * data.cursor_pos, wrap_width=w)
+                curpx = imgui.calc_text_size("W" * (data.cursor_pos % lnum), wrap_width=w)
+                curp = imgui.Vec2(curpx.x + rect.x, curp.y + rect.y)
+
+                # get_window_content_region_min
+                word = data.buffer[find_word(data.buffer, data.cursor_pos): data.cursor_pos]
+                # print(f"----{word}----")
+                self.t(curp, word, self.candicates_index)
+                # print("SO", imgui.get_cursor_screen_position())
+
             for k in self.key_map.values():
                 self.io.keys_down[k] = False
 
@@ -321,28 +429,122 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
             ttt,
             width=-1,
             height=-1,
-            flags=imgui.INPUT_TEXT_CALLBACK_EDIT | imgui.INPUT_TEXT_CALLBACK_COMPLETION,
+            flags=imgui.INPUT_TEXT_CALLBACK_EDIT | imgui.INPUT_TEXT_CALLBACK_COMPLETION | imgui.INPUT_TEXT_CALLBACK_ALWAYS,
             callback=cb
         )
-        x, y = imgui.core.get_window_position()
-        y = context.region.height - 1 - y
-        self.cover = inbox(x, y, w, h, self.mpos)
-        cx, cy = imgui.core.get_window_content_region_min()
-        cw, ch = imgui.core.get_window_content_region_max()
-        in_content = inbox(x + cx, y - cy, w + cx, ch - cy - 30, self.mpos)
-        if in_content:
-            imgui.core.set_keyboard_focus_here(-1)
-        self.io.keys_down[self.key_map["ESC"]] = not in_content
+        # x, y = imgui.core.get_window_position()
+        # y = context.region.height - 1 - y
+        # self.cover = inbox(x, y, w, h, self.mpos)
+        # cx, cy = imgui.core.get_window_content_region_min()
+        # cw, ch = imgui.core.get_window_content_region_max()
+        # in_content = inbox(x + cx, y - cy, w + cx, ch - cy - 30, self.mpos)
+        # if in_content:
+        #     imgui.core.set_keyboard_focus_here(-1)
+        # self.io.keys_down[self.key_map["ESC"]] = not in_content
 
+        self.cover = imgui.is_item_hovered() or imgui.is_item_focused() or imgui.is_window_hovered() or imgui.is_window_focused()
+        # print(imgui.is_item_hovered(), imgui.is_window_hovered(), imgui.is_item_focused(), imgui.is_window_focused())
+        # self.cover = imgui.is_any_item_focused() or imgui.is_any_item_hovered() or imgui.is_any_item_active()
+        if imgui.is_item_hovered():
+            imgui.core.set_keyboard_focus_here(-1)
+        # self.io.keys_down[self.key_map["ESC"]] = not self.cover
         imgui.end()
+
+    def t(self, pos, word, index):
+        if Trie.TRIE is None:
+            return
+        word = word.replace("\n", "")
+        if not word:
+            return
+        optionList = ["Abc", "abd", "Abcde", "FGSD", "Fsss",
+                      "masterpiece", "main", "master",
+                      "best", "be",
+                      "quality", "quit",
+                      "girl", "good"
+                      ]
+        # (83, 'girly_pred', '0', '', 'e621', {}, (173, 216, 230))
+        candicates_list = Trie.TRIE.bl_search(word, max_size=20)
+        
+        # with imgui.begin("##Example: tooltip"):
+        # imgui.set_next_window_position(imgui.get_item_rect_min().x, imgui.get_item_rect_max().y)
+        
+        # candicates_list = []
+        # for i, t in enumerate(optionList):
+        #     if not t.startswith(word):
+        #         continue
+        #     candicates_list.append(t)
+        
+        index = max(0, min(index, len(candicates_list) - 1))
+        self.candicates_index = index
+        imgui.set_next_window_position(pos.x, pos.y)
+        imgui.set_next_window_size(-1, -1)
+        def freq_to_str(freq):
+            if freq <= 100:
+                return str(freq)
+            if freq >= 500 * 1000:
+                return f"{freq / 1000 / 1000:.2f}M"
+            if freq > 100:
+                return f"{freq / 1000:.2f}K"
+            
+        with imgui.begin_tooltip():
+            for i, t in enumerate(candicates_list):
+                # with imgui.begin_group():
+                col = t[-1]
+                imgui.push_style_color(imgui.COLOR_TEXT, col[0]/256,  col[1]/256,  col[2]/256)
+                imgui.selectable(t[1], i == index)
+                imgui.same_line(position=300)
+                # imgui.text(t[3] if t[3] else t[1])
+                # print(freq_to_str(t[0]), t[3] if t[3] else t[1])
+                imgui.label_text(freq_to_str(t[0]), t[3] if t[3] else t[1])
+                # imgui.same_line(position=900)
+                imgui.pop_style_color(1)
+                
+                # (83, 'girly_pred', '0', '', 'e621', {}, (173, 216, 230))
+                # imgui.selectable(t[1], i == index)
+                # imgui.text(t[3])
+        if candicates_list:
+            c = candicates_list[index]
+            self.candicates_word = c[3] if c[3] else c[1]
+        else:
+            self.candicates_word = ""
+        # with imgui.begin_list_box("List", 200, 100) as list_box:
+        #     if list_box.opened:
+        #         for t in optionList:
+        #             if not t.startswith(word):
+        #                 continue
+        #             imgui.selectable(t, True)
+        return
+        # imgui.input_text("##searchText", "TTT")
+        # id = imgui.get_item_id()
+        # ImGui::InputText("##searchText", &currentText, flags);
+
+        # if imgui.is_item_active():
+        imgui.open_popup("##SearchBar")
+
+        # auto textInputState = ImGui::GetInputTextState((ImGuiID)id);
+        # imgui.set_window_position(50, 20, condition=imgui.ONCE)
+        imgui.set_next_window_position(imgui.get_item_rect_min().x, imgui.get_item_rect_max().y, imgui.ALWAYS)
+        if imgui.begin_popup("##SearchBar"):
+            # imgui.push_allow_keyboard_focus(False)
+            inputStr = ""
+            # inputStr.resize(textInputState->TextW.size());
+            # ImTextStrToUtf8(inputStr.data(), (int)inputStr.size(), textInputState->TextW.Data, textInputState->TextW.Data + textInputState->TextW.Size);
+            # inputStr.resize((size_t)textInputState->CurLenW);
+
+            for option in optionList:
+                if inputStr not in option:
+                    continue
+                imgui.selectable(option)
+            # imgui.pop_allow_keyboard_focus()
+            imgui.end_popup()
 
 
 class GuiTest(bpy.types.Operator, BaseDrawCall):
     bl_idname = "sdn.gui_test"
     bl_label = "Gui Test"
-    
+
     REG_AREA = set()
-    
+
     def invoke(self, context, event):
         self.area = context.area
         if not self.try_reg(self.area):
@@ -372,7 +574,7 @@ def reload(scene):
 def multiline_register():
     bpy.utils.register_class(MLTOps)
     bpy.utils.register_class(GuiTest)
-    
+
     bpy.app.handlers.load_pre.append(reload)
 
 

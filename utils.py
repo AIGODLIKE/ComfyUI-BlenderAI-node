@@ -64,8 +64,8 @@ def hex2rgb(hex_val):
 
 def to_str(path: Path):
     if isinstance(path, Path):
-        return path.as_posix()
-    return Path(path).as_posix()
+        return path.resolve().as_posix()
+    return Path(path).resolve().as_posix()
 
 
 def to_path(path: Path):
@@ -217,6 +217,7 @@ class Icon(metaclass=MetaIn):
             return img
         elif p.suffix in {".png", ".jpg", ".jpeg"}:
             img = bpy.data.images.load(path)
+            img.filepath = path
             Icon.update_path2bpy()
             # img.name = path
             return img

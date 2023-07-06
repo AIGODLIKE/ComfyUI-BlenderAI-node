@@ -13,13 +13,8 @@ class AddonPreference(bpy.types.AddonPreferences):
     popup_scale: bpy.props.IntProperty(default=5, min=1, max=100, name="预览图尺寸")
     enable_hq_preview: bpy.props.BoolProperty(default=True, name="启用高清预览图")
     
-    def update_model(self, context):
-        from .SDNode import TaskManager
-        TaskManager.restart_server()
-
     model_path: bpy.props.StringProperty(subtype="DIR_PATH", name="ComfyUI路径",
-                                         default=str(Path(__file__).parent / "ComfyUI"),
-                                         update=update_model)
+                                         default=str(Path(__file__).parent / "ComfyUI"))
     page: bpy.props.EnumProperty(items=[("通用", "通用", "", "COLLAPSEMENU", 0),
                                         ("常用路径", "常用路径", "", "URL", 1),
                                         ("友情链接", "友情链接", "", "URL", 2),
