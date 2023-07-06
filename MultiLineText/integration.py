@@ -11,6 +11,7 @@ from ..SDNode.tree import TREE_TYPE
 from .renderer import BlenderImguiRenderer, imgui
 from .trie import Trie
 
+
 class GlobalImgui:
     _instance = None
     imgui_ctx = None
@@ -255,6 +256,7 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
         self.candicates_index = 0
         self.candicates_word = ""
         self.io = imgui.get_io()
+        self._timer = context.window_manager.event_timer_add(1 / 60, window=context.window)
         context.window_manager.modal_handler_add(self)
         return {'RUNNING_MODAL'}
 
@@ -278,12 +280,11 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
         #     self.shutdown()
         #     return {'CANCELLED'}
         # print( event.mouse_x, event.mouse_y, context.region.x, context.region.y)
-
         self.poll_mouse(context, event)
-        if event.type == 'UP_ARROW' and event.value == "PRESS":
+        if (event.type == 'UP_ARROW' and event.value == "PRESS") or event.type == 'WHEELDOWNMOUSE':
             self.candicates_index -= 1
             return {"RUNNING_MODAL"}
-        if event.type == 'DOWN_ARROW' and event.value == "PRESS":
+        if (event.type == 'DOWN_ARROW' and event.value == "PRESS") or event.type == 'WHEELUPMOUSE':
             self.candicates_index += 1
             return {"RUNNING_MODAL"}
         # print(context.area, self.mpos, self.cover, imgui.is_any_item_focused())
@@ -298,6 +299,15 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
         super().clear()
         self.__class__.REG_AREA.discard(self.area)
 
+    def track_any_cover(self):
+        # is_window_hovered 鼠标选中当前窗口的标题栏时触发
+        # is_window_focused 当前窗口被聚焦
+        # is_item_hovered 当前项(窗口中的)被hover
+        # is_item_focused 当前项(窗口中的)被聚焦
+        # is_any_item_hovered 有任何项被聚焦
+        # hover 不一定 focus,  focus也不一定hover
+        self.cover |= imgui.is_any_item_hovered() or imgui.is_window_hovered()
+
     def can_draw(self):
         tree = bpy.context.space_data.edit_tree
         if not tree or bpy.context.space_data.tree_type != TREE_TYPE:
@@ -310,6 +320,7 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
         return node
 
     def draw_call(self, context: bpy.types.Context):
+        self.cover = False
         if not (node := self.can_draw()):
             return
         self.draw_mlt(context, node)
@@ -325,7 +336,7 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
         imgui.set_window_position(50, 20, condition=imgui.ONCE)
         imgui.set_window_size(rx, ry, condition=imgui.ALWAYS)
         imgui.text("")
-        
+
         # 空心矩形
         min_x, min_y = imgui.get_item_rect_min()
         imgui.get_window_draw_list().add_rect_filled(
@@ -353,8 +364,8 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
                 lower_right_y=min_y + y + h,
                 col=col,
             )
-            
-        self.cover = imgui.is_item_hovered() or imgui.is_item_focused() or imgui.is_window_hovered() or imgui.is_window_focused()
+
+        self.track_any_cover()
         if imgui.is_item_hovered():
             imgui.core.set_keyboard_focus_here(-1)
 
@@ -381,6 +392,7 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
                 if c not in string.ascii_letters:
                     return i + 1
             return end_pos
+
         def edit(data):
             backspace = self.io.keys_down[self.key_map['BACK_SPACE']]
             p = data.cursor_pos
@@ -392,6 +404,7 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
             if not backspace and p % (lnum + 1) == 0:
                 p += 1
             data.cursor_pos = min(max(0, p), data.buffer_size, len(data.buffer))
+
         def complection(data):
             if not self.candicates_word:
                 return
@@ -405,6 +418,7 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
                 data.cursor_pos += 1
             self.candicates_word = ""
             data.buffer_dirty = True
+
         def always(data):
             rect = imgui.get_item_rect_min()
             curp = imgui.calc_text_size("W" * data.cursor_pos, wrap_width=w)
@@ -421,6 +435,7 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
             imgui.INPUT_TEXT_CALLBACK_COMPLETION: complection,
             imgui.INPUT_TEXT_CALLBACK_ALWAYS: always,
         }
+
         def cb(data):
             if cb := cb_map.get(data.event_flag, None):
                 try:
@@ -429,7 +444,8 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
                     logger.debug(str(e))
                 except Exception as e:
                     ...
-            for k in self.key_map.values():
+            # fix ctrl c/v duplicate
+            for k in [imgui.KEY_A, imgui.KEY_C, imgui.KEY_V, imgui.KEY_X, imgui.KEY_Y, imgui.KEY_Z]:
                 self.io.keys_down[k] = False
 
         ttt = get_wrap_text(node.text, lnum)
@@ -451,7 +467,7 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
         #     imgui.core.set_keyboard_focus_here(-1)
         # self.io.keys_down[self.key_map["ESC"]] = not in_content
 
-        self.cover = imgui.is_item_hovered() or imgui.is_item_focused() or imgui.is_window_hovered() or imgui.is_window_focused()
+        self.track_any_cover()
         # print(imgui.is_item_hovered(), imgui.is_window_hovered(), imgui.is_item_focused(), imgui.is_window_focused())
         # self.cover = imgui.is_any_item_focused() or imgui.is_any_item_hovered() or imgui.is_any_item_active()
         if imgui.is_item_hovered():
@@ -465,28 +481,13 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
         word = word.replace("\n", "")
         if not word:
             return
-        optionList = ["Abc", "abd", "Abcde", "FGSD", "Fsss",
-                      "masterpiece", "main", "master",
-                      "best", "be",
-                      "quality", "quit",
-                      "girl", "good"
-                      ]
         # (83, 'girly_pred', '0', '', 'e621', {}, (173, 216, 230))
         candicates_list = Trie.TRIE.bl_search(word, max_size=20)
-        
-        # with imgui.begin("##Example: tooltip"):
-        # imgui.set_next_window_position(imgui.get_item_rect_min().x, imgui.get_item_rect_max().y)
-        
-        # candicates_list = []
-        # for i, t in enumerate(optionList):
-        #     if not t.startswith(word):
-        #         continue
-        #     candicates_list.append(t)
-        
         index = max(0, min(index, len(candicates_list) - 1))
         self.candicates_index = index
         imgui.set_next_window_position(pos.x, pos.y)
         imgui.set_next_window_size(-1, -1)
+
         def freq_to_str(freq):
             if freq <= 100:
                 return str(freq)
@@ -494,12 +495,12 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
                 return f"{freq / 1000 / 1000:.2f}M"
             if freq > 100:
                 return f"{freq / 1000:.2f}K"
-            
+
         with imgui.begin_tooltip():
             for i, t in enumerate(candicates_list):
                 # with imgui.begin_group():
                 col = t[-1]
-                imgui.push_style_color(imgui.COLOR_TEXT, col[0]/256,  col[1]/256,  col[2]/256)
+                imgui.push_style_color(imgui.COLOR_TEXT, col[0] / 256, col[1] / 256, col[2] / 256)
                 imgui.selectable(t[1], i == index)
                 imgui.same_line(position=300)
                 # imgui.text(t[3] if t[3] else t[1])
@@ -507,45 +508,11 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
                 imgui.label_text(freq_to_str(t[0]), t[3] if t[3] else t[1])
                 # imgui.same_line(position=900)
                 imgui.pop_style_color(1)
-                
-                # (83, 'girly_pred', '0', '', 'e621', {}, (173, 216, 230))
-                # imgui.selectable(t[1], i == index)
-                # imgui.text(t[3])
         if candicates_list:
             c = candicates_list[index]
             self.candicates_word = c[3] if c[3] else c[1]
         else:
             self.candicates_word = ""
-        # with imgui.begin_list_box("List", 200, 100) as list_box:
-        #     if list_box.opened:
-        #         for t in optionList:
-        #             if not t.startswith(word):
-        #                 continue
-        #             imgui.selectable(t, True)
-        return
-        # imgui.input_text("##searchText", "TTT")
-        # id = imgui.get_item_id()
-        # ImGui::InputText("##searchText", &currentText, flags);
-
-        # if imgui.is_item_active():
-        imgui.open_popup("##SearchBar")
-
-        # auto textInputState = ImGui::GetInputTextState((ImGuiID)id);
-        # imgui.set_window_position(50, 20, condition=imgui.ONCE)
-        imgui.set_next_window_position(imgui.get_item_rect_min().x, imgui.get_item_rect_max().y, imgui.ALWAYS)
-        if imgui.begin_popup("##SearchBar"):
-            # imgui.push_allow_keyboard_focus(False)
-            inputStr = ""
-            # inputStr.resize(textInputState->TextW.size());
-            # ImTextStrToUtf8(inputStr.data(), (int)inputStr.size(), textInputState->TextW.Data, textInputState->TextW.Data + textInputState->TextW.Size);
-            # inputStr.resize((size_t)textInputState->CurLenW);
-
-            for option in optionList:
-                if inputStr not in option:
-                    continue
-                imgui.selectable(option)
-            # imgui.pop_allow_keyboard_focus()
-            imgui.end_popup()
 
 
 class GuiTest(bpy.types.Operator, BaseDrawCall):
