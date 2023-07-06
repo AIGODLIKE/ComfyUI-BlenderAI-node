@@ -153,7 +153,21 @@ class TaskManager:
         """
         # controlnet check
         logger.warn(_T("ControlNet Init...."))
-        python = Path(model_path) / "../python_embeded/python.exe"
+        python = Path("python3")
+        if sys.platform == "win32":
+            python = Path(model_path) / "../python_embeded/python.exe"
+        elif sys.platform == "darwin":
+            requirements = Path(model_path) / "requirements.txt"
+            command = [python.as_posix(), "-m", "pip", "install", "-r", requirements.as_posix()]
+            if fast_url := PkgInstaller.select_pip_source():
+                site = urlparse(fast_url)
+                command.append("-i")
+                command.append(fast_url)
+                command.append("--trusted-host")
+                command.append(site.netloc)
+            proc = Popen(command, cwd=model_path)
+            proc.wait()
+            
         controlnet = Path(model_path) / "custom_nodes/comfy_controlnet_preprocessors"
         if controlnet.exists():
             fvcore = Path(model_path) / "../python_embeded/Lib/site-packages/fvcore"
@@ -198,11 +212,13 @@ class TaskManager:
             logger.error(_T("ComfyUI Path Not Found"))
             return
         logger.debug(f"{_T('Model Path')}: {model_path}")
-        python = Path(model_path) / "../python_embeded/python.exe"
+        python = Path("python3")
+        if sys.platform == "win32":
+            python = Path(model_path) / "../python_embeded/python.exe"
         TaskManager.run_server_pre(model_path)
 
         logger.warn(_T("Server Launching"))
-        if not python.exists():
+        if sys.platform == "win32" and not python.exists():
             logger.error(f"{_T('python interpreter not found')}:")
             logger.error(f"   ↳{_T('Ensure that the python_embeded located in the same level as ComfyUI dir')}:")
             logger.error("      SomeDirectory")
@@ -223,7 +239,7 @@ class TaskManager:
                 (Path(model_path) / "custom_nodes" / file.name).write_text(t)
                 continue
             shutil.copyfile(file, Path(model_path) / "custom_nodes" / file.name)
-        args = [str(python)]
+        args = [python.as_posix()]
         # arg = f"-s {str(model_path)}/main.py"
         args.append("-s")
         args.append(f"{str(model_path)}/main.py")

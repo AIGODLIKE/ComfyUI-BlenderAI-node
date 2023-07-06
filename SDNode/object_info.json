@@ -41,8 +41,10 @@
             "dpm_adaptive",
             "dpmpp_2s_ancestral",
             "dpmpp_sde",
+            "dpmpp_sde_gpu",
             "dpmpp_2m",
             "dpmpp_2m_sde",
+            "dpmpp_2m_sde_gpu",
             "ddim",
             "uni_pc",
             "uni_pc_bh2"
@@ -97,7 +99,14 @@
       "required": {
         "ckpt_name": [
           [
-            "v1-5-pruned.ckpt"
+            "AIGODLIKE华丽_4000.ckpt",
+            "GuoFeng3.2_f16.safetensors",
+            "Shyaku_Tonades.ckpt",
+            "Shyaku_qofo.ckpt",
+            "wd-1-5-beta2-aesthetic-unclip-h-fp16.safetensors",
+            "wd-1-5-beta2-aesthetic-unclip-l-fp16.safetensors",
+            "wd-1-5-beta2-unclip-h-fp16.safetensors",
+            "苍玄.safetensors"
           ]
         ]
       }
@@ -354,6 +363,7 @@
             "nearest-exact",
             "bilinear",
             "area",
+            "bicubic",
             "bislerp"
           ]
         ],
@@ -409,6 +419,7 @@
             "nearest-exact",
             "bilinear",
             "area",
+            "bicubic",
             "bislerp"
           ]
         ],
@@ -561,7 +572,6 @@
       "required": {
         "image": [
           [
-            "comfyui_screenshot.png",
             "example.png"
           ]
         ]
@@ -590,7 +600,6 @@
       "required": {
         "image": [
           [
-            "comfyui_screenshot.png",
             "example.png"
           ]
         ],
@@ -629,7 +638,8 @@
           [
             "nearest-exact",
             "bilinear",
-            "area"
+            "area",
+            "bicubic"
           ]
         ],
         "width": [
@@ -683,7 +693,8 @@
           [
             "nearest-exact",
             "bilinear",
-            "area"
+            "area",
+            "bicubic"
           ]
         ],
         "scale_by": [
@@ -1024,8 +1035,10 @@
             "dpm_adaptive",
             "dpmpp_2s_ancestral",
             "dpmpp_sde",
+            "dpmpp_sde_gpu",
             "dpmpp_2m",
             "dpmpp_2m_sde",
+            "dpmpp_2m_sde_gpu",
             "ddim",
             "uni_pc",
             "uni_pc_bh2"
@@ -1356,7 +1369,7 @@
     "name": "CLIPLoader",
     "display_name": "Load CLIP",
     "description": "",
-    "category": "loaders",
+    "category": "advanced/loaders",
     "output_node": false
   },
   "CLIPVisionEncode": {
@@ -1680,7 +1693,14 @@
       "required": {
         "ckpt_name": [
           [
-            "v1-5-pruned.ckpt"
+            "AIGODLIKE华丽_4000.ckpt",
+            "GuoFeng3.2_f16.safetensors",
+            "Shyaku_Tonades.ckpt",
+            "Shyaku_qofo.ckpt",
+            "wd-1-5-beta2-aesthetic-unclip-h-fp16.safetensors",
+            "wd-1-5-beta2-aesthetic-unclip-l-fp16.safetensors",
+            "wd-1-5-beta2-unclip-h-fp16.safetensors",
+            "苍玄.safetensors"
           ]
         ]
       }
@@ -1823,7 +1843,14 @@
         ],
         "ckpt_name": [
           [
-            "v1-5-pruned.ckpt"
+            "AIGODLIKE华丽_4000.ckpt",
+            "GuoFeng3.2_f16.safetensors",
+            "Shyaku_Tonades.ckpt",
+            "Shyaku_qofo.ckpt",
+            "wd-1-5-beta2-aesthetic-unclip-h-fp16.safetensors",
+            "wd-1-5-beta2-aesthetic-unclip-l-fp16.safetensors",
+            "wd-1-5-beta2-unclip-h-fp16.safetensors",
+            "苍玄.safetensors"
           ]
         ]
       }
@@ -1875,7 +1902,7 @@
     "name": "DiffusersLoader",
     "display_name": "DiffusersLoader",
     "description": "",
-    "category": "advanced/loaders",
+    "category": "advanced/loaders/deprecated",
     "output_node": false
   },
   "LoadLatent": {
@@ -8607,7 +8634,7 @@
         "output_dir": [
           "STRING",
           {
-            "default": "C:\\Users\\KarryCharon\\Desktop"
+            "default": "/Users/karrycharon/Desktop"
           }
         ]
       },
@@ -10787,6 +10814,364 @@
     "display_name": "Simple Eval Examples",
     "description": "",
     "category": "Efficiency Nodes/Simple Eval",
+    "output_node": false
+  },
+  "UNETLoader": {
+    "input": {
+      "required": {
+        "unet_name": [
+          []
+        ]
+      }
+    },
+    "output": [
+      "MODEL"
+    ],
+    "output_is_list": [
+      false
+    ],
+    "output_name": [
+      "MODEL"
+    ],
+    "name": "UNETLoader",
+    "display_name": "UNETLoader",
+    "description": "",
+    "category": "advanced/loaders",
+    "output_node": false
+  },
+  "DualCLIPLoader": {
+    "input": {
+      "required": {
+        "clip_name1": [
+          []
+        ],
+        "clip_name2": [
+          []
+        ]
+      }
+    },
+    "output": [
+      "CLIP"
+    ],
+    "output_is_list": [
+      false
+    ],
+    "output_name": [
+      "CLIP"
+    ],
+    "name": "DualCLIPLoader",
+    "display_name": "DualCLIPLoader",
+    "description": "",
+    "category": "advanced/loaders",
+    "output_node": false
+  },
+  "ConditioningZeroOut": {
+    "input": {
+      "required": {
+        "conditioning": [
+          "CONDITIONING"
+        ]
+      }
+    },
+    "output": [
+      "CONDITIONING"
+    ],
+    "output_is_list": [
+      false
+    ],
+    "output_name": [
+      "CONDITIONING"
+    ],
+    "name": "ConditioningZeroOut",
+    "display_name": "ConditioningZeroOut",
+    "description": "",
+    "category": "advanced/conditioning",
+    "output_node": false
+  },
+  "ConditioningConcat": {
+    "input": {
+      "required": {
+        "conditioning_to": [
+          "CONDITIONING"
+        ],
+        "conditioning_from": [
+          "CONDITIONING"
+        ]
+      }
+    },
+    "output": [
+      "CONDITIONING"
+    ],
+    "output_is_list": [
+      false
+    ],
+    "output_name": [
+      "CONDITIONING"
+    ],
+    "name": "ConditioningConcat",
+    "display_name": "ConditioningConcat",
+    "description": "",
+    "category": "advanced/conditioning",
+    "output_node": false
+  },
+  "ModelMergeSimple": {
+    "input": {
+      "required": {
+        "model1": [
+          "MODEL"
+        ],
+        "model2": [
+          "MODEL"
+        ],
+        "ratio": [
+          "FLOAT",
+          {
+            "default": 1.0,
+            "min": 0.0,
+            "max": 1.0,
+            "step": 0.01
+          }
+        ]
+      }
+    },
+    "output": [
+      "MODEL"
+    ],
+    "output_is_list": [
+      false
+    ],
+    "output_name": [
+      "MODEL"
+    ],
+    "name": "ModelMergeSimple",
+    "display_name": "ModelMergeSimple",
+    "description": "",
+    "category": "advanced/model_merging",
+    "output_node": false
+  },
+  "ModelMergeBlocks": {
+    "input": {
+      "required": {
+        "model1": [
+          "MODEL"
+        ],
+        "model2": [
+          "MODEL"
+        ],
+        "input": [
+          "FLOAT",
+          {
+            "default": 1.0,
+            "min": 0.0,
+            "max": 1.0,
+            "step": 0.01
+          }
+        ],
+        "middle": [
+          "FLOAT",
+          {
+            "default": 1.0,
+            "min": 0.0,
+            "max": 1.0,
+            "step": 0.01
+          }
+        ],
+        "out": [
+          "FLOAT",
+          {
+            "default": 1.0,
+            "min": 0.0,
+            "max": 1.0,
+            "step": 0.01
+          }
+        ]
+      }
+    },
+    "output": [
+      "MODEL"
+    ],
+    "output_is_list": [
+      false
+    ],
+    "output_name": [
+      "MODEL"
+    ],
+    "name": "ModelMergeBlocks",
+    "display_name": "ModelMergeBlocks",
+    "description": "",
+    "category": "advanced/model_merging",
+    "output_node": false
+  },
+  "CheckpointSave": {
+    "input": {
+      "required": {
+        "model": [
+          "MODEL"
+        ],
+        "clip": [
+          "CLIP"
+        ],
+        "vae": [
+          "VAE"
+        ],
+        "filename_prefix": [
+          "STRING",
+          {
+            "default": "checkpoints/ComfyUI"
+          }
+        ]
+      },
+      "hidden": {
+        "prompt": "PROMPT",
+        "extra_pnginfo": "EXTRA_PNGINFO"
+      }
+    },
+    "output": [],
+    "output_is_list": [],
+    "output_name": [],
+    "name": "CheckpointSave",
+    "display_name": "CheckpointSave",
+    "description": "",
+    "category": "advanced/model_merging",
+    "output_node": true
+  },
+  "CLIPTextEncodeSDXLRefiner": {
+    "input": {
+      "required": {
+        "ascore": [
+          "FLOAT",
+          {
+            "default": 6.0,
+            "min": 0.0,
+            "max": 1000.0,
+            "step": 0.01
+          }
+        ],
+        "width": [
+          "INT",
+          {
+            "default": 1024.0,
+            "min": 0,
+            "max": 8192
+          }
+        ],
+        "height": [
+          "INT",
+          {
+            "default": 1024.0,
+            "min": 0,
+            "max": 8192
+          }
+        ],
+        "text": [
+          "STRING",
+          {
+            "multiline": true
+          }
+        ],
+        "clip": [
+          "CLIP"
+        ]
+      }
+    },
+    "output": [
+      "CONDITIONING"
+    ],
+    "output_is_list": [
+      false
+    ],
+    "output_name": [
+      "CONDITIONING"
+    ],
+    "name": "CLIPTextEncodeSDXLRefiner",
+    "display_name": "CLIPTextEncodeSDXLRefiner",
+    "description": "",
+    "category": "advanced/conditioning",
+    "output_node": false
+  },
+  "CLIPTextEncodeSDXL": {
+    "input": {
+      "required": {
+        "width": [
+          "INT",
+          {
+            "default": 1024.0,
+            "min": 0,
+            "max": 8192
+          }
+        ],
+        "height": [
+          "INT",
+          {
+            "default": 1024.0,
+            "min": 0,
+            "max": 8192
+          }
+        ],
+        "crop_w": [
+          "INT",
+          {
+            "default": 0,
+            "min": 0,
+            "max": 8192
+          }
+        ],
+        "crop_h": [
+          "INT",
+          {
+            "default": 0,
+            "min": 0,
+            "max": 8192
+          }
+        ],
+        "target_width": [
+          "INT",
+          {
+            "default": 1024.0,
+            "min": 0,
+            "max": 8192
+          }
+        ],
+        "target_height": [
+          "INT",
+          {
+            "default": 1024.0,
+            "min": 0,
+            "max": 8192
+          }
+        ],
+        "text_g": [
+          "STRING",
+          {
+            "multiline": true,
+            "default": "CLIP_G"
+          }
+        ],
+        "clip": [
+          "CLIP"
+        ],
+        "text_l": [
+          "STRING",
+          {
+            "multiline": true,
+            "default": "CLIP_L"
+          }
+        ]
+      }
+    },
+    "output": [
+      "CONDITIONING"
+    ],
+    "output_is_list": [
+      false
+    ],
+    "output_name": [
+      "CONDITIONING"
+    ],
+    "name": "CLIPTextEncodeSDXL",
+    "display_name": "CLIPTextEncodeSDXL",
+    "description": "",
+    "category": "advanced/conditioning",
     "output_node": false
   }
 }
