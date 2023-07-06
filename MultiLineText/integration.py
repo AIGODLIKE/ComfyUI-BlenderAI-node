@@ -415,7 +415,10 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
                 curp = imgui.Vec2(curpx.x + rect.x, curp.y + rect.y)
 
                 # get_window_content_region_min
-                word = data.buffer[find_word(data.buffer, data.cursor_pos): data.cursor_pos]
+                try:
+                    word = data.buffer[find_word(data.buffer, data.cursor_pos): data.cursor_pos]
+                except IndexError:
+                    word = ""
                 # print(f"----{word}----")
                 self.t(curp, word, self.candicates_index)
                 # print("SO", imgui.get_cursor_screen_position())
