@@ -381,48 +381,54 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
                 if c not in string.ascii_letters:
                     return i + 1
             return end_pos
-
-        def cb(data):
+        def edit(data):
             backspace = self.io.keys_down[self.key_map['BACK_SPACE']]
+            p = data.cursor_pos
+            node.text = data.buffer.replace("\n", "")
+            text = get_wrap_text(data.buffer, lnum)
+            data.delete_chars(0, len(data.buffer))
+            data.insert_chars(0, text)
+            data.buffer_dirty = True
+            if not backspace and p % (lnum + 1) == 0:
+                p += 1
+            data.cursor_pos = min(max(0, p), data.buffer_size, len(data.buffer))
+        def complection(data):
+            if not self.candicates_word:
+                return
+            p = data.cursor_pos
+            start_pos = find_word(data.buffer, p)
+            data.delete_chars(start_pos, p - start_pos)
+            data.insert_chars(start_pos, self.candicates_word)
+            data.cursor_pos = start_pos + len(self.candicates_word)
+            if (data.cursor_pos // (lnum + 1) > p // (lnum + 1)):
+                data.insert_chars((lnum + 1) * (p // (lnum + 1) + 1) - 1, "\n")
+                data.cursor_pos += 1
+            self.candicates_word = ""
+            data.buffer_dirty = True
+        def always(data):
+            rect = imgui.get_item_rect_min()
+            curp = imgui.calc_text_size("W" * data.cursor_pos, wrap_width=w)
+            curpx = imgui.calc_text_size("W" * (data.cursor_pos % lnum), wrap_width=w)
+            curp = imgui.Vec2(curpx.x + rect.x, curp.y + rect.y)
 
-            if data.event_flag == imgui.INPUT_TEXT_CALLBACK_EDIT:
-                p = data.cursor_pos
-                node.text = data.buffer.replace("\n", "")
-                text = get_wrap_text(data.buffer, lnum)
-                data.delete_chars(0, len(data.buffer))
-                data.insert_chars(0, text)
-                data.buffer_dirty = True
-                if not backspace and p % (lnum + 1) == 0:
-                    p += 1
-                data.cursor_pos = min(max(0, p), data.buffer_size, len(data.buffer))
-            if data.event_flag == imgui.INPUT_TEXT_CALLBACK_COMPLETION:
-                if not self.candicates_word:
-                    return
-                p = data.cursor_pos
-                start_pos = find_word(data.buffer, p)
-                data.delete_chars(start_pos, p - start_pos)
-                data.insert_chars(start_pos, self.candicates_word)
-                data.cursor_pos = start_pos + len(self.candicates_word)
-                if (data.cursor_pos // (lnum + 1) > p // (lnum + 1)):
-                    data.insert_chars((lnum + 1) * (p // (lnum + 1) + 1) - 1, "\n")
-                    data.cursor_pos += 1
-                self.candicates_word = ""
-                data.buffer_dirty = True
-            if data.event_flag == imgui.INPUT_TEXT_CALLBACK_ALWAYS:
-                rect = imgui.get_item_rect_min()
-                curp = imgui.calc_text_size("W" * data.cursor_pos, wrap_width=w)
-                curpx = imgui.calc_text_size("W" * (data.cursor_pos % lnum), wrap_width=w)
-                curp = imgui.Vec2(curpx.x + rect.x, curp.y + rect.y)
-
-                # get_window_content_region_min
+            # get_window_content_region_min
+            word = data.buffer[find_word(data.buffer, data.cursor_pos): data.cursor_pos]
+            # print(f"----{word}----")
+            self.t(curp, word, self.candicates_index)
+            # print("SO", imgui.get_cursor_screen_position())
+        cb_map = {
+            imgui.INPUT_TEXT_CALLBACK_EDIT: edit,
+            imgui.INPUT_TEXT_CALLBACK_COMPLETION: complection,
+            imgui.INPUT_TEXT_CALLBACK_ALWAYS: always,
+        }
+        def cb(data):
+            if cb := cb_map.get(data.event_flag, None):
                 try:
-                    word = data.buffer[find_word(data.buffer, data.cursor_pos): data.cursor_pos]
-                except IndexError:
-                    word = ""
-                # print(f"----{word}----")
-                self.t(curp, word, self.candicates_index)
-                # print("SO", imgui.get_cursor_screen_position())
-
+                    cb(data)
+                except IndexError as e:
+                    logger.debug(str(e))
+                except Exception as e:
+                    ...
             for k in self.key_map.values():
                 self.io.keys_down[k] = False
 
