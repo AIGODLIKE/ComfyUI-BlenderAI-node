@@ -1056,9 +1056,11 @@ def spec_functions(fields, nname, ndesc):
                     nt = bpy.context.scene.node_tree
 
                     with set_composite(nt) as cmp:
-                        render_layer = nt.nodes.new("CompositorNodeRLayers")
-                        out = render_layer.outputs.get(self.out_layers)
-                        if out:
+                        render_layer : bpy.types.CompositorNodeRLayers = nt.nodes.new("CompositorNodeRLayers")
+                        if sel_render_layer := nt.nodes.get(self.render_layer, None):
+                            render_layer.scene = sel_render_layer.scene
+                            render_layer.layer = sel_render_layer.layer
+                        if out := render_layer.outputs.get(self.out_layers):
                             nt.links.new(cmp.inputs["Image"], out)
                         bpy.ops.render.render(write_still=True)
                         nt.nodes.remove(render_layer)

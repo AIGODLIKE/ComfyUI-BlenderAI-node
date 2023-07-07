@@ -125,6 +125,14 @@ class TaskManager:
                 os.system(f'taskkill /F /IM {process.name()}')
             except psutil.NoSuchProcess:
                 return
+        elif sys.platform == "darwin":
+            try:
+                process = psutil.Process(pid)
+                if "python" in process.name().lower():
+                    # process.kill()
+                    os.system(f"kill -9 {pid}")
+            except psutil.NoSuchProcess:
+                return
         else:
             ...
             # os.kill(pid, signal.SIGKILL)

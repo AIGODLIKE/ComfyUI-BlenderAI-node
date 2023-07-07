@@ -314,7 +314,7 @@ class PngParse:
 
 class PkgInstaller:
     source = [
-        "http://mirrors.aliyun.com/pypi/simple/",
+        "https://mirrors.aliyun.com/pypi/simple/",
         "https://pypi.tuna.tsinghua.edu.cn/simple/",
         "https://pypi.mirrors.ustc.edu.cn/simple/",
         "https://pypi.python.org/simple/",
