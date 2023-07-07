@@ -470,6 +470,63 @@ class SocketBase(bpy.types.NodeSocket):
 
     def draw_color(self, context, node):
         return self.color
+    
+class Ops_Active_Tex(bpy.types.Operator):
+    bl_idname = "sdn.act_tex"
+    bl_label = "选择纹理"
+    img_name: bpy.props.StringProperty()
+    node_name: bpy.props.StringProperty()
+
+    def execute(self, context):
+        if img := bpy.data.images.get(self.img_name):
+            tree = bpy.context.space_data.edit_tree
+            node = tree.nodes.get(self.node_name)
+            node.image = img
+        print(self.node_name)
+        print(self.img_name)
+        return {"FINISHED"}
+
+class TEX_UL_DrawSDN(bpy.types.UIList):
+    def find_tex(self, root):
+        for node in root.node_tree.nodes:
+            if node.type in {"TEX_IMAGE", "TEX_ENVIRONMENT"}:
+                if not node.image:
+                    continue
+                self.tex.append(node.image)
+            if node.type == "GROUP":
+                self.find_tex(node)
+
+    def draw_item(self, context, layout, data, item, icon, active_data, active_propname):
+        print(data, item, icon, active_data, active_propname)
+        # <bpy_struct, Object("头发") at 0x149f22c08> <bpy_struct, MaterialSlot("头发") at 0x149f22c08> 1137 <bpy_struct, Object("头发") at 0x149f22c08> active_material_index
+        layout = layout.column()
+        slot = item
+        ma = slot.material
+        if not ma:
+            layout.label(text="空材质", icon_value=icon)
+            return
+        layout.prop(ma, "name", text="", icon_value=icon)
+
+        self.tex = []
+        world = bpy.context.scene.world
+        if world and world.use_nodes:
+            self.find_tex(bpy.context.scene.world)
+        if ma:
+            self.find_tex(ma)
+
+        if not self.tex:
+            return
+
+        row = layout.row().split(factor=0.15)
+
+        row.label(text="")
+        box = row.box()
+        for tex in self.tex:
+            row = box.row(align=True)
+            row.label(text=tex.name)
+            row.prop(tex, "sdn_to_tex_sel", toggle=True, text="")
+            op = row.operator(Ops_Active_Tex.bl_idname)
+            
 
 
 class GetSelCol(bpy.types.Operator):
@@ -829,6 +886,17 @@ def spec_extra_properties(properties, nname, ndesc):
                                         subtype="DIR_PATH",
                                         default=Path.home().joinpath("Desktop").as_posix())
         properties["frames_dir"] = prop
+    elif nname == "存储":
+        items = [("Save", "Save", "", "", 0),
+                 ("Import", "Import", "", "", 1),
+                 ]
+        prop = bpy.props.EnumProperty(items=items)
+        properties["mode"] = prop
+        prop = bpy.props.PointerProperty(type=bpy.types.Object)
+        properties["obj"] = prop
+        prop = bpy.props.PointerProperty(type=bpy.types.Image)
+        properties["image"] = prop
+        
     elif nname == "Mask":
         items = [("Grease Pencil", "Grease Pencil", "", "", 0),
                  ("Object", "Object", "", "", 1),
@@ -1073,8 +1141,18 @@ def spec_functions(fields, nname, ndesc):
             logger.debug(f"{self.class_type}{_T('Post Function')}->{result}")
             img_paths = result.get("output", {}).get("images", [])
             for img in img_paths:
-                def f(img): return bpy.data.images.load(img)
-                Timer.put((f, img))
+                if self.mode == "Save":
+                    def f(self, img):
+                        return bpy.data.images.load(img)
+                elif self.mode == "Import":
+                    def f(self, img):
+                        self.image.filepath = img
+                        self.image.filepath_raw = img
+                        self.image.source = "FILE"
+                        if self.image.packed_file:
+                            self.image.unpack(method="REMOVE")
+                        self.image.reload()
+                Timer.put((f, self, img))
 
         fields["post_fn"] = post_fn
     if nname == "预览":
@@ -1185,9 +1263,47 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
                 Icon.reg_icon_by_pixel(self.prev, self.prev.filepath)
                 icon_id = Icon[self.prev.filepath]
                 layout.template_icon(icon_id, scale=max(self.prev.size[0], self.prev.size[1]) // 20)
+                layout.label(text=f"{self.prev.file_format} : [{self.prev.size[1]} x {self.prev.size[1]}]")
             return True
         elif prop in {"render_layer", "out_layers", "frames_dir"}:
             return True
+    elif self.class_type == "存储":
+        if prop == "mode":
+            layout.prop(self, prop, expand=True, text_ctxt=ctxt)
+            if self.mode == "Save":
+                layout.prop(self, "filename_prefix", text_ctxt=ctxt)
+                layout.prop(self, "output_dir", text_ctxt=ctxt)
+                return True
+            elif self.mode == "Import":
+                layout.prop(self, "obj", text="")
+                if obj := self.obj:
+                    # box = layout.box()
+                    # box.template_list("TEX_UL_DrawSDN", "", obj, "material_slots", obj, "active_material_index")
+                    tex = []
+                    def find_tex(root):
+                        for node in root.node_tree.nodes:
+                            if node.type in {"TEX_IMAGE", "TEX_ENVIRONMENT"}:
+                                if not node.image:
+                                    continue
+                                tex.append(node.image)
+                            if node.type == "GROUP":
+                                find_tex(node)
+                    find_tex(obj.active_material)
+                    if tex:
+                        row = layout.row().split(factor=0.15)
+                        row.label(text="")
+                        box = row.box()
+                        for t in tex:
+                            row = box.row(align=True)
+                            row.label(text=t.name)
+                            # row.prop(tex, "sdn_to_tex_sel", toggle=True, text="")
+                            op = row.operator(Ops_Active_Tex.bl_idname)
+                            op.node_name = self.name
+                            op.img_name = t.name
+                if self.image:
+                    layout.label(text=f"当前纹理: {self.image.name}")
+                return True
+        return True
     elif self.class_type == "Mask":
         if prop == "mode":
             layout.prop(self, prop, expand=True, text_ctxt=ctxt)
@@ -1212,6 +1328,7 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
                 setwidth(self, w)
             icon_id = Icon[self.prev.name]
             layout.template_icon(icon_id, scale=max(self.prev.size[0], self.prev.size[1]) // 20)
+            layout.label(text=f"{self.prev.file_format} : [{self.prev.size[1]} x {self.prev.size[1]}]")
         # else:
         #     setwidth(self, 200)
         if prop == "prev":
@@ -1234,13 +1351,19 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
     return False
 
 
-clss = [GetSelCol, ]
+clss = [GetSelCol, Ops_Active_Tex, TEX_UL_DrawSDN]
+
 reg, unreg = bpy.utils.register_classes_factory(clss)
 
 
 def nodes_reg():
     reg()
-
+    
+    def update(self, context):
+        for img in bpy.data.images:
+            img['sdn_to_tex_sel'] = False
+        self['sdn_to_tex_sel'] = True
+    bpy.types.Image.sdn_to_tex_sel = bpy.props.BoolProperty(default=False, update=update)
 
 def nodes_unreg():
     ENUM_ITEMS_CACHE.clear()
@@ -1248,3 +1371,5 @@ def nodes_unreg():
         unreg()
     except BaseException:
         ...
+    if hasattr(bpy.types.Image, "sdn_to_tex_sel"):
+        del bpy.types.Image.sdn_to_tex_sel

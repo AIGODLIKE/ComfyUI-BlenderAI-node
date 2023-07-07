@@ -85,6 +85,7 @@ other = {
     "Output Layer": "输出层",
     "out_layers": "输出层",
     "Frames Directory": "序列图文件夹",
+    "sdn_to_tex_sel": "选择被替换纹理",
     # SDNode/tree.py
     "Invalid Node Type: {}": "检查到无效的节点: {}",
     # SDNode/utils.py

@@ -164,17 +164,17 @@ class TaskManager:
         python = Path("python3")
         if sys.platform == "win32":
             python = Path(model_path) / "../python_embeded/python.exe"
-        elif sys.platform == "darwin":
-            requirements = Path(model_path) / "requirements.txt"
-            command = [python.as_posix(), "-m", "pip", "install", "-r", requirements.as_posix()]
-            if fast_url := PkgInstaller.select_pip_source():
-                site = urlparse(fast_url)
-                command.append("-i")
-                command.append(fast_url)
-                command.append("--trusted-host")
-                command.append(site.netloc)
-            proc = Popen(command, cwd=model_path)
-            proc.wait()
+        # elif sys.platform == "darwin":
+        #     requirements = Path(model_path) / "requirements.txt"
+        #     command = [python.as_posix(), "-m", "pip", "install", "-r", requirements.as_posix()]
+        #     if fast_url := PkgInstaller.select_pip_source():
+        #         site = urlparse(fast_url)
+        #         command.append("-i")
+        #         command.append(fast_url)
+        #         command.append("--trusted-host")
+        #         command.append(site.netloc)
+        #     proc = Popen(command, cwd=model_path)
+        #     proc.wait()
             
         controlnet = Path(model_path) / "custom_nodes/comfy_controlnet_preprocessors"
         if controlnet.exists():
