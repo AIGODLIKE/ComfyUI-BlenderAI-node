@@ -745,6 +745,8 @@ def parse_node():
 
             elif proptype == "FLOAT":
                 {'default': 8.0, 'min': 0.0, 'max': 100.0}
+                if "step" in inp[1]:
+                    inp[1]["step"] *= 100
                 prop = bpy.props.FloatProperty(**inp[1])
             elif proptype == "STRING":
                 {'default': 'ComfyUI', 'multiline': True}
