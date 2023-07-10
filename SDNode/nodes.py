@@ -10,6 +10,8 @@ from typing import Any
 from pathlib import Path
 from random import random as rand
 from functools import partial
+from mathutils import Vector
+from bpy.types import Context, Event
 from .utils import gen_mask, SELECTED_COLLECTIONS
 from ..utils import logger, update_screen, Icon, _T
 from ..datas import ENUM_ITEMS_CACHE
@@ -479,13 +481,99 @@ class Ops_Active_Tex(bpy.types.Operator):
     node_name: bpy.props.StringProperty()
 
     def execute(self, context):
-        if not(img := bpy.data.images.get(self.img_name)):
+        if not (img := bpy.data.images.get(self.img_name)):
             return {"FINISHED"}
         tree = bpy.context.space_data.edit_tree
-        if not(node := tree.nodes.get(self.node_name)):
+        if not (node := tree.nodes.get(self.node_name)):
             return {"FINISHED"}
         node.image = None if img == node.image else img
         return {"FINISHED"}
+
+
+class Ops_Link_Mask(bpy.types.Operator):
+    bl_idname = "sdn.link_mask"
+    bl_label = "链接遮照"
+    from_node_name: bpy.props.StringProperty()
+    to_node_name: bpy.props.StringProperty()
+    kmis: list[tuple[bpy.types.KeyMap, bpy.types.KeyMapItem]] = []
+    properties = {}
+    shotcut = {
+        "idname": bl_idname,
+        "type": "RIGHTMOUSE",
+        "value": "PRESS",
+        "shift": False,
+        "ctrl": False,
+        "alt": True,
+    }
+
+    def get_nearest_node(self, context: bpy.types.Context):
+        callPos = context.space_data.cursor_location
+
+        def ui_scale():
+            return bpy.context.preferences.system.dpi / 72
+
+        def get_nearest_nodes(nodes: list[bpy.types.Node], callPos):
+            nodes = []
+            for nd in nodes:
+                if nd.type in {"FRAME", "REROUTE"}:
+                    continue
+                node_size = nd.dimensions / ui_scale()
+                # Для нода позицию в центр нода. Позиция рероута уже в центре визуального рероута.
+                nd_loc = nd.location + node_size / 2 * Vector((1, -1))
+                # Сконструировать поле расстояний (Все field'ы - vec2):
+                field0 = callPos - nd_loc
+                field1 = Vector(((field0.x > 0) * 2 - 1, (field0.y > 0) * 2 - 1))
+                field0 = Vector((abs(field0.x), abs(field0.y))) - node_size / 2
+                field2 = Vector((max(field0.x, 0), max(field0.y, 0)))
+                field3 = Vector((abs(field0.x), abs(field0.y)))
+                field3 = field3 * Vector((field3.x <= field3.y, field3.x > field3.y))
+                field3 = field3 * -((field2.x + field2.y) == 0)
+                field4 = (field2 + field3) * field1
+
+                nodes.append((nd, field4.length))
+            nodes.sort(key=lambda a: a[1])
+            return nodes
+        print(context.space_data.edit_tree.nodes)
+        if nodes := get_nearest_nodes(context.space_data.edit_tree.nodes, callPos):
+            print(nodes[0][0].name)
+
+    @classmethod
+    def poll(cls, context):
+        from .tree import TREE_TYPE
+        return context.space_data.tree_type == TREE_TYPE
+
+    def invoke(self, context: Context, event: Event):
+        logger.info("Link----IVK")
+        bpy.context.window_manager.modal_handler_add(self)
+        return {"RUNNING_MODAL"}
+
+    def modal(self, context: Context, event: Event):
+        context.area.tag_redraw()
+        if event.type == "MOUSEMOVE":
+            if context.space_data.edit_tree:
+                self.get_nearest_node(context)
+        elif event.type == "ESC":
+            return {"FINISHED"}
+
+        return {"RUNNING_MODAL"}
+
+    @classmethod
+    def reg(cls):
+        # km = wm.keyconfigs.addon.keymaps.new(name = '3D View Generic', space_type = 'VIEW_3D')
+        # kmi = km.keymap_items.new(isolate_select.bl_idname, 'Q', 'PRESS')
+        # addon_keymaps.append((km, kmi))
+        wm = bpy.context.window_manager
+        km = wm.keyconfigs.addon.keymaps.new(name="Node Editor", space_type="NODE_EDITOR")
+        kmi = km.keymap_items.new(**cls.shotcut)
+        for k, v in cls.properties.items():
+            setattr(kmi.properties, k, v)
+        cls.kmis.append((km, kmi))
+
+    @classmethod
+    def unreg(cls):
+        for km, kmi in cls.kmis:
+            km.keymap_items.remove(kmi)
+        cls.kmis.clear()
 
 
 class GetSelCol(bpy.types.Operator):
@@ -1310,13 +1398,14 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
     return False
 
 
-clss = [GetSelCol, Ops_Active_Tex]
+clss = [GetSelCol, Ops_Active_Tex, Ops_Link_Mask]
 
 reg, unreg = bpy.utils.register_classes_factory(clss)
 
 
 def nodes_reg():
     reg()
+    Ops_Link_Mask.reg()
 
 
 def nodes_unreg():
@@ -1325,3 +1414,4 @@ def nodes_unreg():
         unreg()
     except BaseException:
         ...
+    Ops_Link_Mask.unreg()
