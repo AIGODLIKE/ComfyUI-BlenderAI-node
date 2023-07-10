@@ -198,14 +198,14 @@ class BaseDrawCall:
         elif event.type == 'RIGHTMOUSE':
             io.mouse_down[1] = event.value == 'PRESS'
 
-        elif event.type == 'MIDDLEMOUSE':
-            io.mouse_down[2] = event.value == 'PRESS'
-
         elif event.type == 'WHEELUPMOUSE':
             io.mouse_wheel = +1
 
         elif event.type == 'WHEELDOWNMOUSE':
             io.mouse_wheel = -1
+        # cause cant input mlt
+        # elif event.type == 'MIDDLEMOUSE':
+        #     io.mouse_down[2] = event.value == 'PRESS'
 
     def poll_events(self, context: bpy.types.Context, event: bpy.types.Event):
         io = imgui.get_io()
