@@ -370,10 +370,10 @@ class NodeBase(bpy.types.Node):
             if not self.outputs[0].is_linked:
                 outputs = [
                     {"name": "*",
-                    "type": "*",
-                    "links": [],
-                    "slot_index": 0
-                    }
+                     "type": "*",
+                     "links": [],
+                     "slot_index": 0
+                     }
                 ]
             else:
                 def find_out_node(node: bpy.types.Node):
@@ -470,7 +470,8 @@ class SocketBase(bpy.types.NodeSocket):
 
     def draw_color(self, context, node):
         return self.color
-    
+
+
 class Ops_Active_Tex(bpy.types.Operator):
     bl_idname = "sdn.act_tex"
     bl_label = "选择纹理"
@@ -482,51 +483,7 @@ class Ops_Active_Tex(bpy.types.Operator):
             tree = bpy.context.space_data.edit_tree
             node = tree.nodes.get(self.node_name)
             node.image = img
-        print(self.node_name)
-        print(self.img_name)
         return {"FINISHED"}
-
-class TEX_UL_DrawSDN(bpy.types.UIList):
-    def find_tex(self, root):
-        for node in root.node_tree.nodes:
-            if node.type in {"TEX_IMAGE", "TEX_ENVIRONMENT"}:
-                if not node.image:
-                    continue
-                self.tex.append(node.image)
-            if node.type == "GROUP":
-                self.find_tex(node)
-
-    def draw_item(self, context, layout, data, item, icon, active_data, active_propname):
-        print(data, item, icon, active_data, active_propname)
-        # <bpy_struct, Object("头发") at 0x149f22c08> <bpy_struct, MaterialSlot("头发") at 0x149f22c08> 1137 <bpy_struct, Object("头发") at 0x149f22c08> active_material_index
-        layout = layout.column()
-        slot = item
-        ma = slot.material
-        if not ma:
-            layout.label(text="空材质", icon_value=icon)
-            return
-        layout.prop(ma, "name", text="", icon_value=icon)
-
-        self.tex = []
-        world = bpy.context.scene.world
-        if world and world.use_nodes:
-            self.find_tex(bpy.context.scene.world)
-        if ma:
-            self.find_tex(ma)
-
-        if not self.tex:
-            return
-
-        row = layout.row().split(factor=0.15)
-
-        row.label(text="")
-        box = row.box()
-        for tex in self.tex:
-            row = box.row(align=True)
-            row.label(text=tex.name)
-            row.prop(tex, "sdn_to_tex_sel", toggle=True, text="")
-            op = row.operator(Ops_Active_Tex.bl_idname)
-            
 
 
 class GetSelCol(bpy.types.Operator):
@@ -898,7 +855,7 @@ def spec_extra_properties(properties, nname, ndesc):
         properties["obj"] = prop
         prop = bpy.props.PointerProperty(type=bpy.types.Image)
         properties["image"] = prop
-        
+
     elif nname == "Mask":
         items = [("Grease Pencil", "Grease Pencil", "", "", 0),
                  ("Object", "Object", "", "", 1),
@@ -1126,7 +1083,7 @@ def spec_functions(fields, nname, ndesc):
                     nt = bpy.context.scene.node_tree
 
                     with set_composite(nt) as cmp:
-                        render_layer : bpy.types.CompositorNodeRLayers = nt.nodes.new("CompositorNodeRLayers")
+                        render_layer: bpy.types.CompositorNodeRLayers = nt.nodes.new("CompositorNodeRLayers")
                         if sel_render_layer := nt.nodes.get(self.render_layer, None):
                             render_layer.scene = sel_render_layer.scene
                             render_layer.layer = sel_render_layer.layer
@@ -1252,7 +1209,7 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
                     update_screen()
                 if Icon.try_mark_image(self.image) or not self.prev:
                     Timer.put((f, self))
-                elif Icon.find_image(self.image) != self.prev: # 修复加载A 后加载B图, 再加载A时 不更新
+                elif Icon.find_image(self.image) != self.prev:  # 修复加载A 后加载B图, 再加载A时 不更新
                     Timer.put((f, self))
             elif self.prev:
                 def f(self):
@@ -1279,26 +1236,23 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
             elif self.mode == "Import":
                 layout.prop(self, "obj", text="")
                 if obj := self.obj:
-                    # box = layout.box()
-                    # box.template_list("TEX_UL_DrawSDN", "", obj, "material_slots", obj, "active_material_index")
-                    tex = []
-                    def find_tex(root):
+                    def find_tex(root, tex=None) -> list[bpy.types.ShaderNodeTexImage]:
+                        tex = tex if tex else []
                         for node in root.node_tree.nodes:
                             if node.type in {"TEX_IMAGE", "TEX_ENVIRONMENT"}:
                                 if not node.image:
                                     continue
                                 tex.append(node.image)
                             if node.type == "GROUP":
-                                find_tex(node)
-                    find_tex(obj.active_material)
-                    if tex:
+                                find_tex(node, tex)
+                        return tex
+                    if textures := find_tex(obj.active_material):
                         row = layout.row().split(factor=0.15)
                         row.label(text="")
                         box = row.box()
-                        for t in tex:
+                        for t in textures:
                             row = box.row(align=True)
                             row.label(text=t.name)
-                            # row.prop(tex, "sdn_to_tex_sel", toggle=True, text="")
                             op = row.operator(Ops_Active_Tex.bl_idname)
                             op.node_name = self.name
                             op.img_name = t.name
@@ -1353,19 +1307,14 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
     return False
 
 
-clss = [GetSelCol, Ops_Active_Tex, TEX_UL_DrawSDN]
+clss = [GetSelCol, Ops_Active_Tex]
 
 reg, unreg = bpy.utils.register_classes_factory(clss)
 
 
 def nodes_reg():
     reg()
-    
-    def update(self, context):
-        for img in bpy.data.images:
-            img['sdn_to_tex_sel'] = False
-        self['sdn_to_tex_sel'] = True
-    bpy.types.Image.sdn_to_tex_sel = bpy.props.BoolProperty(default=False, update=update)
+
 
 def nodes_unreg():
     ENUM_ITEMS_CACHE.clear()
@@ -1373,5 +1322,3 @@ def nodes_unreg():
         unreg()
     except BaseException:
         ...
-    if hasattr(bpy.types.Image, "sdn_to_tex_sel"):
-        del bpy.types.Image.sdn_to_tex_sel
