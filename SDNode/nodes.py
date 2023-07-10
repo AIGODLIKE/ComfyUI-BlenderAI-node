@@ -479,10 +479,12 @@ class Ops_Active_Tex(bpy.types.Operator):
     node_name: bpy.props.StringProperty()
 
     def execute(self, context):
-        if img := bpy.data.images.get(self.img_name):
-            tree = bpy.context.space_data.edit_tree
-            node = tree.nodes.get(self.node_name)
-            node.image = img
+        if not(img := bpy.data.images.get(self.img_name)):
+            return {"FINISHED"}
+        tree = bpy.context.space_data.edit_tree
+        if not(node := tree.nodes.get(self.node_name)):
+            return {"FINISHED"}
+        node.image = None if img == node.image else img
         return {"FINISHED"}
 
 
@@ -1236,7 +1238,7 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
             elif self.mode == "Import":
                 layout.prop(self, "obj", text="")
                 if obj := self.obj:
-                    def find_tex(root, tex=None) -> list[bpy.types.ShaderNodeTexImage]:
+                    def find_tex(root, tex=None) -> list[bpy.types.Image]:
                         tex = tex if tex else []
                         for node in root.node_tree.nodes:
                             if node.type in {"TEX_IMAGE", "TEX_ENVIRONMENT"}:
@@ -1247,13 +1249,14 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
                                 find_tex(node, tex)
                         return tex
                     if textures := find_tex(obj.active_material):
-                        row = layout.row().split(factor=0.15)
-                        row.label(text="")
-                        box = row.box()
+                        box = layout.box()
                         for t in textures:
                             row = box.row(align=True)
                             row.label(text=t.name)
-                            op = row.operator(Ops_Active_Tex.bl_idname)
+                            col = row.column()
+                            if t == self.image:
+                                col.alert = True
+                            op = col.operator(Ops_Active_Tex.bl_idname, text="", icon="REC")
                             op.node_name = self.name
                             op.img_name = t.name
                 if self.image:
