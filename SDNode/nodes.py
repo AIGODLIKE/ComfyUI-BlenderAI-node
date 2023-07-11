@@ -415,7 +415,7 @@ class NodeBase(bpy.types.Node):
                         return find_out_node(to)
                     return to_socket
                 to_socket = find_out_node(self)
-                if out:
+                if out and to_socket:
                     outputs[0]["name"] = to_socket.bl_idname
                     outputs[0]["type"] = to_socket.bl_idname
             # for out in self.outputs:
