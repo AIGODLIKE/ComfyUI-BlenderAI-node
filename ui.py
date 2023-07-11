@@ -91,18 +91,20 @@ class Panel(bpy.types.Panel):
         row.alignment = "CENTER"
         row.label(text="Pending / Running", text_ctxt=ctxt)
         row.label(text=f": {qp_num} / {qr_num}", text_ctxt=ctxt)
-
         prog = TaskManager.progress
         if prog and prog.get("value"):
+            import blf
+            per = prog["value"] / prog["max"]
+            content = f"{per*100:3.0f}% "
             lnum = int(bpy.context.region.width / bpy.context.preferences.view.ui_scale / 7 - 21)
             lnum = int(lnum * 0.3)
-            per = prog["value"] / prog["max"]
+            lnum = int((bpy.context.region.width - blf.dimensions(0, content)[0]) / blf.dimensions(0, "█")[0]) - 10
             v = int(per * lnum)
-            # content = "█" * v + "░" * (lnum - v) + f" {v}/{lnum}" + f" {per*100:3.0f}%"
-            content = f"{per*100:3.0f}% " + "█" * v + "░" * (lnum - v)
+            content = content + "█" * v + "░" * (lnum - v)
             row = layout.row()
             row.alignment = "CENTER"
             row.label(text=content[:134], text_ctxt=ctxt)
+            
 
         for error_msg in TaskManager.error_msg:
             row = layout.row()
