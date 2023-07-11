@@ -520,6 +520,7 @@ class Ops_Active_Tex(bpy.types.Operator):
 class Ops_Link_Mask(bpy.types.Operator):
     bl_idname = "sdn.link_mask"
     bl_label = "链接遮照"
+    bl_options = {"REGISTER", "UNDO"}
     kmi: bpy.types.KeyMapItem = None
     kmis: list[tuple[bpy.types.KeyMap, bpy.types.KeyMapItem]] = []
     properties = {}
