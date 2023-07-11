@@ -695,6 +695,20 @@ class Ops_Link_Mask(bpy.types.Operator):
 
     def focus_cam(self, cam):
         bpy.context.scene.camera = cam
+        for node in bpy.context.space_data.edit_tree.nodes:
+            if node.bl_idname != "Mask":
+                continue
+            if not node.cam:
+                continue
+            gp = node.cam.get("SD_Mask", [])
+            
+            if not isinstance(gp, list):
+                gp.hide_set(cam != node.cam)
+                continue
+            for i in gp:
+                if not i:
+                    continue
+                i.hide_set(cam != node.cam)
         for area in bpy.context.screen.areas:
             if area.type != "VIEW_3D":
                 continue
