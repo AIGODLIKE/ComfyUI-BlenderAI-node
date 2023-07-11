@@ -523,6 +523,7 @@ class Ops_Link_Mask(bpy.types.Operator):
     bl_options = {"REGISTER", "UNDO"}
     action: bpy.props.StringProperty(default="")
     cam_name: bpy.props.StringProperty(default="")
+    node_name: bpy.props.StringProperty(default="")
     kmi: bpy.types.KeyMapItem = None
     kmis: list[tuple[bpy.types.KeyMap, bpy.types.KeyMapItem]] = []
     properties = {}
@@ -551,9 +552,17 @@ class Ops_Link_Mask(bpy.types.Operator):
     def invoke(self, context: Context, event: Event):
         if self.action == "OnlyFocus":
             cam = bpy.data.objects.get(self.cam_name)
-            self.focus_cam(cam)
-            self.action = ""
+            if cam:
+                self.focus_cam(cam)
+                self.action = ""
+                return {"FINISHED"}
+            tree = context.space_data.edit_tree
+            to_node = tree.nodes.get(self.node_name)
+            cam = self.create_cam()
+            to_node.cam = cam
+            bpy.ops.sdn.mask(action="add", node_name=to_node.name)
             return {"FINISHED"}
+
         self.from_node: bpy.types.Node = None
         self.to_node: bpy.types.Node = None
 
@@ -633,14 +642,7 @@ class Ops_Link_Mask(bpy.types.Operator):
             return
         self.to_node.mode = "Focus"
         if not (cam := self.to_node.cam):
-            camdata = bpy.data.cameras.new("SDN_Mask_Focus")
-            cam = bpy.data.objects.new(name=camdata.name, object_data=camdata)
-            cam.matrix_world = Matrix(((0.7071, -0.5, 0.5, 5.0),
-                                       (0.7071, 0.5, -0.5, -5.0),
-                                       (0, 0.7071, 0.7071, 5.0),
-                                       (0.0, 0.0, 0.0, 1.0)))
-            bpy.context.scene.collection.objects.link(cam)
-            camdata.show_background_images = True
+            cam = self.create_cam()
             self.to_node.cam = cam
         camdata = cam.data
         if not camdata.background_images:
@@ -650,9 +652,12 @@ class Ops_Link_Mask(bpy.types.Operator):
         bg.image = img
         bg.show_background_image = True
         self.focus_cam(cam)
+        self.validate_cam_cache(cam)
         if gp := cam.get("SD_Mask"):
             # toggle to draw mask
-            bpy.context.view_layer.objects.active = gp[0]
+            if isinstance(gp, list):
+                gp = gp[0]
+            bpy.context.view_layer.objects.active = gp
             bpy.ops.object.mode_set(mode="PAINT_GPENCIL")
             return
         bpy.ops.sdn.mask(action="add", node_name=self.to_node.name)
@@ -662,6 +667,23 @@ class Ops_Link_Mask(bpy.types.Operator):
             return
         bpy.types.SpaceNodeEditor.draw_handler_remove(self.handle, "WINDOW")
         self.handle = None
+
+    def create_cam(self) -> bpy.types.Object:
+        camdata = bpy.data.cameras.new("SDN_Mask_Focus")
+        cam = bpy.data.objects.new(name=camdata.name, object_data=camdata)
+        cam.matrix_world = Matrix(((0.7071, -0.5, 0.5, 5.0),
+                                   (0.7071, 0.5, -0.5, -5.0),
+                                   (0, 0.7071, 0.7071, 5.0),
+                                   (0.0, 0.0, 0.0, 1.0)))
+        bpy.context.scene.collection.objects.link(cam)
+        camdata.show_background_images = True
+        return cam
+
+    def validate_cam_cache(self, cam):
+        gp = cam.get("SD_Mask")
+        if isinstance(gp, list):
+            gp = [o for o in gp if o is not None]
+            cam["SD_Mask"] = gp
 
     def focus_cam(self, cam):
         bpy.context.scene.camera = cam
@@ -1485,6 +1507,7 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
                 op = row.operator(Ops_Link_Mask.bl_idname, text="", icon="VIEW_CAMERA")
                 op.action = "OnlyFocus"
                 op.cam_name = self.cam.name if self.cam else ""
+                op.node_name = self.name
             return True
         elif prop in {"gp", "obj", "col", "cam"}:
             return True
