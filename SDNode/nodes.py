@@ -548,6 +548,12 @@ class Ops_Link_Mask(bpy.types.Operator):
     def invoke(self, context: Context, event: Event):
         self.from_node: bpy.types.Node = None
         self.to_node: bpy.types.Node = None
+        def prev_filter(n):
+            return hasattr(n, "prev")
+        self.from_node = self.get_nearest_node(context, filter=prev_filter)
+        if not self.from_node:
+            self.report({"ERROR"}, "No ImageNode Found!")
+            return {"FINISHED"}
         bpy.context.window_manager.modal_handler_add(self)
         import gpu
         import gpu_extras
@@ -590,12 +596,7 @@ class Ops_Link_Mask(bpy.types.Operator):
         if not context.space_data.edit_tree:
             self.exit()
             return {"FINISHED"}
-        if event.type == "RIGHTMOUSE":
-            if event.value == "PRESS":
-                def prev_filter(n):
-                    return hasattr(n, "prev")
-                self.from_node = self.get_nearest_node(context, filter=prev_filter)
-        elif event.type == "MOUSEMOVE":
+        if event.type == "MOUSEMOVE":
             def mask_filter(n: bpy.types.Node):
                 return n.bl_idname == "Mask"
             n = self.get_nearest_node(context, filter=mask_filter)
@@ -652,8 +653,10 @@ class Ops_Link_Mask(bpy.types.Operator):
         bpy.ops.sdn.mask(action="add", node_name=self.to_node.name)
 
     def exit(self):
+        if not self.handle:
+            return
         bpy.types.SpaceNodeEditor.draw_handler_remove(self.handle, "WINDOW")
-
+        self.handle = None
     @classmethod
     def reg(cls):
         # km = wm.keyconfigs.addon.keymaps.new(name = '3D View Generic', space_type = 'VIEW_3D')
