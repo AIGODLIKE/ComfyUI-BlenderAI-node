@@ -307,12 +307,7 @@ class Ops(bpy.types.Operator):
             # logger.error(data)
         elif self.action == "PresetFromClipBoard":
             try:
-                from . import pyperclip
-            except BaseException:
-                self.report({"ERROR"}, _T("pyperclip import error"))
-                return {"FINISHED"}
-            try:
-                data = pyperclip.paste()
+                data = bpy.context.window_manager.clipboard
                 tree.load_json(json.loads(data))
             except json.JSONDecodeError:
                 self.report({"ERROR"}, _T("ClipBoard Content Format Error"))

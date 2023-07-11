@@ -4,13 +4,14 @@ import random
 import os
 import re
 import json
+import math
 import textwrap
 from math import ceil
 from typing import Any
 from pathlib import Path
 from random import random as rand
 from functools import partial
-from mathutils import Vector
+from mathutils import Vector, Matrix
 from bpy.types import Context, Event
 from .utils import gen_mask, SELECTED_COLLECTIONS
 from ..utils import logger, update_screen, Icon, _T
@@ -39,6 +40,32 @@ name2path = {
     "UpscaleModelLoader": {"model_name": "upscale_models"},
     "GLIGENLoader": {"gligen_name": "gligen"}
 }
+
+
+def ui_scale():
+    return bpy.context.preferences.system.ui_scale
+
+
+def get_node_center(node: bpy.types.Node) -> Vector:
+    node_size = node.dimensions / ui_scale()
+    node_center = node.location + node_size / 2 * Vector((1, -1))
+    return node_center
+
+
+def get_nearest_nodes(nodes: list[bpy.types.Node], mouse_pos: Vector):
+    find_nodes = []
+    for nd in nodes:
+        if nd.type in {"FRAME", "REROUTE"}:
+            continue
+        v = mouse_pos - get_node_center(nd)
+        find_nodes.append((nd, v.length))
+    find_nodes.sort(key=lambda a: a[1])
+    return find_nodes
+
+
+def loc_to_region2d(vec):
+    vec = vec * ui_scale()
+    return Vector(bpy.context.region.view2d.view_to_region(vec.x, vec.y, clip=False))
 
 
 def try_get_path_cfg():
@@ -493,49 +520,25 @@ class Ops_Active_Tex(bpy.types.Operator):
 class Ops_Link_Mask(bpy.types.Operator):
     bl_idname = "sdn.link_mask"
     bl_label = "链接遮照"
-    from_node_name: bpy.props.StringProperty()
-    to_node_name: bpy.props.StringProperty()
+    kmi: bpy.types.KeyMapItem = None
     kmis: list[tuple[bpy.types.KeyMap, bpy.types.KeyMapItem]] = []
     properties = {}
     shotcut = {
         "idname": bl_idname,
-        "type": "RIGHTMOUSE",
+        "type": "F",
         "value": "PRESS",
         "shift": False,
         "ctrl": False,
-        "alt": True,
+        "alt": False,
     }
 
-    def get_nearest_node(self, context: bpy.types.Context):
-        callPos = context.space_data.cursor_location
-
-        def ui_scale():
-            return bpy.context.preferences.system.dpi / 72
-
-        def get_nearest_nodes(nodes: list[bpy.types.Node], callPos):
-            nodes = []
-            for nd in nodes:
-                if nd.type in {"FRAME", "REROUTE"}:
-                    continue
-                node_size = nd.dimensions / ui_scale()
-                # Для нода позицию в центр нода. Позиция рероута уже в центре визуального рероута.
-                nd_loc = nd.location + node_size / 2 * Vector((1, -1))
-                # Сконструировать поле расстояний (Все field'ы - vec2):
-                field0 = callPos - nd_loc
-                field1 = Vector(((field0.x > 0) * 2 - 1, (field0.y > 0) * 2 - 1))
-                field0 = Vector((abs(field0.x), abs(field0.y))) - node_size / 2
-                field2 = Vector((max(field0.x, 0), max(field0.y, 0)))
-                field3 = Vector((abs(field0.x), abs(field0.y)))
-                field3 = field3 * Vector((field3.x <= field3.y, field3.x > field3.y))
-                field3 = field3 * -((field2.x + field2.y) == 0)
-                field4 = (field2 + field3) * field1
-
-                nodes.append((nd, field4.length))
-            nodes.sort(key=lambda a: a[1])
-            return nodes
-        print(context.space_data.edit_tree.nodes)
-        if nodes := get_nearest_nodes(context.space_data.edit_tree.nodes, callPos):
-            print(nodes[0][0].name)
+    def get_nearest_node(self, context: bpy.types.Context, filter=lambda _: True) -> bpy.types.Node:
+        mouse_pos = context.space_data.cursor_location
+        for node in get_nearest_nodes(context.space_data.edit_tree.nodes, mouse_pos):
+            if not filter(node[0]):
+                continue
+            return node[0]
+        return None
 
     @classmethod
     def poll(cls, context):
@@ -543,19 +546,113 @@ class Ops_Link_Mask(bpy.types.Operator):
         return context.space_data.tree_type == TREE_TYPE
 
     def invoke(self, context: Context, event: Event):
-        logger.info("Link----IVK")
+        self.from_node: bpy.types.Node = None
+        self.to_node: bpy.types.Node = None
         bpy.context.window_manager.modal_handler_add(self)
+        import gpu
+        import gpu_extras
+        shader_color = gpu.shader.from_builtin("2D_UNIFORM_COLOR")
+        shader_line = gpu.shader.from_builtin("POLYLINE_SMOOTH_COLOR")
+        shader_line.uniform_float("viewportSize", gpu.state.viewport_get()[2:4])
+        shader_line.uniform_float("lineSmooth", True)
+
+        def draw_fill_circle(pos, r=15, col=(1.0, 1.0, 1.0, .75), resolution=32):
+            fac = 2.0 * math.pi / resolution  # pre calc
+            vpos = ((pos[0], pos[1]), *((r * math.cos(i * fac) + pos[0], r * math.sin(i * fac) + pos[1]) for i in range(resolution + 1)))
+            gpu.state.blend_set("ALPHA")
+            shader_color.bind()
+            shader_color.uniform_float("color", col)
+            gpu_extras.batch.batch_for_shader(shader_color, "TRI_FAN", {"pos": vpos}).draw(shader_color)
+
+        def draw_line(pos1, pos2, width=10, col1=(1.0, 1.0, 1.0, .75), col2=(1.0, 1.0, 1.0, .75)):
+            gpu.state.blend_set("ALPHA")
+            shader_line.bind()
+            shader_line.uniform_float("lineWidth", width)
+            gpu_extras.batch.batch_for_shader(shader_line, "LINE_STRIP", {"pos": (pos1, pos2), "color": (col1, col2)}).draw(shader_line)
+
+        def draw(self, context):
+            if not self.from_node:
+                return
+            endpos = get_node_center(self.to_node) if self.to_node else context.space_data.cursor_location
+            p1 = loc_to_region2d(get_node_center(self.from_node))
+            p2 = loc_to_region2d(endpos)
+            draw_line(p1, p2)
+            draw_fill_circle(p1)
+            if self.to_node:
+                draw_fill_circle(p2)
+
+        self.handle = bpy.types.SpaceNodeEditor.draw_handler_add(draw, (self, context), 'WINDOW', 'POST_PIXEL')
         return {"RUNNING_MODAL"}
 
     def modal(self, context: Context, event: Event):
         context.area.tag_redraw()
-        if event.type == "MOUSEMOVE":
-            if context.space_data.edit_tree:
-                self.get_nearest_node(context)
-        elif event.type == "ESC":
-            return {"FINISHED"}
 
+        if not context.space_data.edit_tree:
+            self.exit()
+            return {"FINISHED"}
+        if event.type == "RIGHTMOUSE":
+            if event.value == "PRESS":
+                def prev_filter(n):
+                    return hasattr(n, "prev")
+                self.from_node = self.get_nearest_node(context, filter=prev_filter)
+        elif event.type == "MOUSEMOVE":
+            def mask_filter(n: bpy.types.Node):
+                return n.bl_idname == "Mask"
+            n = self.get_nearest_node(context, filter=mask_filter)
+            if n != self.from_node:
+                self.to_node = n
+        elif event.type == Ops_Link_Mask.kmi.type and event.value == "RELEASE":
+            self.exec()
+            self.exit()
+            return {"FINISHED"}
+        else:
+            return {"PASS_THROUGH"}
         return {"RUNNING_MODAL"}
+
+    def exec(self):
+        if not self.from_node:
+            self.report({"ERROR"}, "No ImageNode Found!")
+            return
+        if not self.to_node:
+            self.report({"ERROR"}, "No MaskNode Found!")
+            return
+        print(f"{self.from_node.name} -> {self.to_node.name}")
+        if not (img := self.from_node.prev):
+            self.report({"ERROR"}, "No Image Found!")
+            return
+        self.to_node.mode = "Focus"
+        if not (cam := self.to_node.cam):
+            camdata = bpy.data.cameras.new("SDN_Mask_Focus")
+            cam = bpy.data.objects.new(name=camdata.name, object_data=camdata)
+            cam.matrix_world = Matrix(((0.7071, -0.5, 0.5, 5.0),
+                                       (0.7071, 0.5, -0.5, -5.0),
+                                       (0, 0.7071, 0.7071, 5.0),
+                                       (0.0, 0.0, 0.0, 1.0)))
+            bpy.context.scene.collection.objects.link(cam)
+            camdata.show_background_images = True
+            self.to_node.cam = cam
+        camdata = cam.data
+        if not camdata.background_images:
+            bg = camdata.background_images.new()
+        bg = camdata.background_images[0]
+        bg.alpha = 1
+        bg.image = img
+        bg.show_background_image = True
+        bpy.context.scene.camera = cam
+        for area in bpy.context.screen.areas:
+            if area.type != "VIEW_3D":
+                continue
+            area.spaces[0].region_3d.view_perspective = "CAMERA"
+            area.spaces[0].overlay.show_overlays = True
+        if gp := cam.get("SD_Mask"):
+            # toggle to draw mask
+            bpy.context.view_layer.objects.active = gp[0]
+            bpy.ops.object.mode_set(mode="PAINT_GPENCIL")
+            return
+        bpy.ops.sdn.mask(action="add", node_name=self.to_node.name)
+
+    def exit(self):
+        bpy.types.SpaceNodeEditor.draw_handler_remove(self.handle, "WINDOW")
 
     @classmethod
     def reg(cls):
@@ -564,10 +661,10 @@ class Ops_Link_Mask(bpy.types.Operator):
         # addon_keymaps.append((km, kmi))
         wm = bpy.context.window_manager
         km = wm.keyconfigs.addon.keymaps.new(name="Node Editor", space_type="NODE_EDITOR")
-        kmi = km.keymap_items.new(**cls.shotcut)
+        cls.kmi = km.keymap_items.new(**cls.shotcut)
         for k, v in cls.properties.items():
-            setattr(kmi.properties, k, v)
-        cls.kmis.append((km, kmi))
+            setattr(cls.kmi.properties, k, v)
+        cls.kmis.append((km, cls.kmi))
 
     @classmethod
     def unreg(cls):
@@ -950,13 +1047,16 @@ def spec_extra_properties(properties, nname, ndesc):
         items = [("Grease Pencil", "Grease Pencil", "", "", 0),
                  ("Object", "Object", "", "", 1),
                  ("Collection", "Collection", "", "", 2),
+                 ("Focus", "Focus", "", "", 3),
                  ]
         prop = bpy.props.EnumProperty(items=items)
         properties["mode"] = prop
 
         prop = bpy.props.PointerProperty(type=bpy.types.GreasePencil)
-        prop = bpy.props.PointerProperty(type=bpy.types.Object)
+        prop = bpy.props.PointerProperty(type=bpy.types.Object, poll=lambda s, o: o.type == "GPENCIL")
         properties["gp"] = prop
+        prop = bpy.props.PointerProperty(type=bpy.types.Object, poll=lambda s, o: o.type == "CAMERA")
+        properties["cam"] = prop
         # prop = bpy.props.PointerProperty(type=bpy.types.Object)
         # properties["obj"] = prop
         # prop = bpy.props.PointerProperty(type=bpy.types.Collection)
@@ -1312,7 +1412,7 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
                 Icon.reg_icon_by_pixel(self.prev, self.prev.filepath)
                 icon_id = Icon[self.prev.filepath]
                 layout.template_icon(icon_id, scale=max(self.prev.size[0], self.prev.size[1]) // 20)
-                layout.label(text=f"{self.prev.file_format} : [{self.prev.size[1]} x {self.prev.size[1]}]")
+                layout.label(text=f"{self.prev.file_format} : [{self.prev.size[0]} x {self.prev.size[1]}]")
             return True
         elif prop in {"render_layer", "out_layers", "frames_dir"}:
             return True
@@ -1364,8 +1464,11 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
             if self.mode == "Collection":
                 # layout.prop(self, "col", text="")
                 layout.label(text="  Select mask Collections", text_ctxt=ctxt)
+            if self.mode == "Focus":
+                # layout.prop(self, "col", text="")
+                layout.prop(self, "cam", text="")
             return True
-        elif prop in {"gp", "obj", "col"}:
+        elif prop in {"gp", "obj", "col", "cam"}:
             return True
     elif self.class_type == "预览":
         if self.prev:
@@ -1375,7 +1478,7 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
                 setwidth(self, w)
             icon_id = Icon[self.prev.name]
             layout.template_icon(icon_id, scale=max(self.prev.size[0], self.prev.size[1]) // 20)
-            layout.label(text=f"{self.prev.file_format} : [{self.prev.size[1]} x {self.prev.size[1]}]")
+            layout.label(text=f"{self.prev.file_format} : [{self.prev.size[0]} x {self.prev.size[1]}]")
         # else:
         #     setwidth(self, 200)
         if prop == "prev":

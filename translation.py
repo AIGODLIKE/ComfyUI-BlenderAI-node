@@ -140,7 +140,6 @@ other = {
     "Frame <{}> Add to Task!": "帧任务<{}>添加成功!",
     "Launch": "启动ComfyUI",
     "Restart": "重启ComfyUI",
-    "pyperclip import error": "pyperclip导入错误",
     "ClipBoard Content Format Error": "剪切板内容格式错误",
     "Submit Task and with Clear Cache if Alt Pressed": "执行节点树, 如果按下了Alt执行 则 强制执行",
     # ui.py
