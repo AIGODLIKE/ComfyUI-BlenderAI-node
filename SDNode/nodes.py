@@ -521,6 +521,8 @@ class Ops_Link_Mask(bpy.types.Operator):
     bl_idname = "sdn.link_mask"
     bl_label = "链接遮照"
     bl_options = {"REGISTER", "UNDO"}
+    action: bpy.props.StringProperty(default="")
+    cam_name: bpy.props.StringProperty(default="")
     kmi: bpy.types.KeyMapItem = None
     kmis: list[tuple[bpy.types.KeyMap, bpy.types.KeyMapItem]] = []
     properties = {}
@@ -547,8 +549,14 @@ class Ops_Link_Mask(bpy.types.Operator):
         return context.space_data.tree_type == TREE_TYPE
 
     def invoke(self, context: Context, event: Event):
+        if self.action == "OnlyFocus":
+            cam = bpy.data.objects.get(self.cam_name)
+            self.focus_cam(cam)
+            self.action = ""
+            return {"FINISHED"}
         self.from_node: bpy.types.Node = None
         self.to_node: bpy.types.Node = None
+
         def prev_filter(n):
             return hasattr(n, "prev")
         self.from_node = self.get_nearest_node(context, filter=prev_filter)
@@ -575,7 +583,8 @@ class Ops_Link_Mask(bpy.types.Operator):
             gpu.state.blend_set("ALPHA")
             shader_line.bind()
             shader_line.uniform_float("lineWidth", width)
-            gpu_extras.batch.batch_for_shader(shader_line, "LINE_STRIP", {"pos": (pos1, pos2), "color": (col1, col2)}).draw(shader_line)
+            content = {"pos": (pos1, pos2), "color": (col1, col2)}
+            gpu_extras.batch.batch_for_shader(shader_line, "LINE_STRIP", content).draw(shader_line)
 
         def draw(self, context):
             if not self.from_node:
@@ -640,12 +649,7 @@ class Ops_Link_Mask(bpy.types.Operator):
         bg.alpha = 1
         bg.image = img
         bg.show_background_image = True
-        bpy.context.scene.camera = cam
-        for area in bpy.context.screen.areas:
-            if area.type != "VIEW_3D":
-                continue
-            area.spaces[0].region_3d.view_perspective = "CAMERA"
-            area.spaces[0].overlay.show_overlays = True
+        self.focus_cam(cam)
         if gp := cam.get("SD_Mask"):
             # toggle to draw mask
             bpy.context.view_layer.objects.active = gp[0]
@@ -658,6 +662,15 @@ class Ops_Link_Mask(bpy.types.Operator):
             return
         bpy.types.SpaceNodeEditor.draw_handler_remove(self.handle, "WINDOW")
         self.handle = None
+
+    def focus_cam(self, cam):
+        bpy.context.scene.camera = cam
+        for area in bpy.context.screen.areas:
+            if area.type != "VIEW_3D":
+                continue
+            area.spaces[0].region_3d.view_perspective = "CAMERA"
+            area.spaces[0].overlay.show_overlays = True
+
     @classmethod
     def reg(cls):
         # km = wm.keyconfigs.addon.keymaps.new(name = '3D View Generic', space_type = 'VIEW_3D')
@@ -1463,14 +1476,15 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
                 row.prop(self, "gp", text="", text_ctxt=ctxt)
                 row.operator("sdn.mask", text="", icon="ADD").node_name = self.name
             if self.mode == "Object":
-                # layout.prop(self, "obj", text="")
                 layout.label(text="  Select mask Objects", text_ctxt=ctxt)
             if self.mode == "Collection":
-                # layout.prop(self, "col", text="")
                 layout.label(text="  Select mask Collections", text_ctxt=ctxt)
             if self.mode == "Focus":
-                # layout.prop(self, "col", text="")
-                layout.prop(self, "cam", text="")
+                row = layout.row(align=True)
+                row.prop(self, "cam", text="")
+                op = row.operator(Ops_Link_Mask.bl_idname, text="", icon="VIEW_CAMERA")
+                op.action = "OnlyFocus"
+                op.cam_name = self.cam.name if self.cam else ""
             return True
         elif prop in {"gp", "obj", "col", "cam"}:
             return True

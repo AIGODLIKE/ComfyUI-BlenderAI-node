@@ -108,11 +108,11 @@ def gen_mask(self):
                     logger.error("遮照节点未设置渲染相机")
                     return
                 gp = self.cam.get("SD_Mask")
+            if isinstance(gp, list):
+                gp = gp[0]
             if not gp:
                 logger.error("蜡笔未设置")
                 return
-            if isinstance(gp, list):
-                gp = gp[0]
             if gp.name not in bpy.context.scene.objects:
                 logger.error("蜡笔物体未存在当前场景中")
                 return
