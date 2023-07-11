@@ -1415,8 +1415,8 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
             if self.prev:
                 Icon.reg_icon_by_pixel(self.prev, self.prev.filepath)
                 icon_id = Icon[self.prev.filepath]
-                layout.template_icon(icon_id, scale=max(self.prev.size[0], self.prev.size[1]) // 20)
                 layout.label(text=f"{self.prev.file_format} : [{self.prev.size[0]} x {self.prev.size[1]}]")
+                layout.template_icon(icon_id, scale=max(self.prev.size[0], self.prev.size[1]) // 20)
             return True
         elif prop in {"render_layer", "out_layers", "frames_dir"}:
             return True
@@ -1481,8 +1481,8 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
                 w = max(self.prev.size[0], self.prev.size[1])
                 setwidth(self, w)
             icon_id = Icon[self.prev.name]
-            layout.template_icon(icon_id, scale=max(self.prev.size[0], self.prev.size[1]) // 20)
             layout.label(text=f"{self.prev.file_format} : [{self.prev.size[0]} x {self.prev.size[1]}]")
+            layout.template_icon(icon_id, scale=max(self.prev.size[0], self.prev.size[1]) // 20)
         # else:
         #     setwidth(self, 200)
         if prop == "prev":
