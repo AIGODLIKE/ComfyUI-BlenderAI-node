@@ -341,6 +341,7 @@ class Ops_Mask(bpy.types.Operator):
     bl_description = "Mask Operator"
     action: bpy.props.StringProperty(default="add")
     node_name: bpy.props.StringProperty()
+    cam_name: bpy.props.StringProperty(default="")
 
     def execute(self, context):
         tree = bpy.context.space_data.edit_tree
@@ -352,6 +353,9 @@ class Ops_Mask(bpy.types.Operator):
             self.report({"ERROR"}, _T("Node Not Found: ") + self.node_name)
             return {"FINISHED"}
         cam = bpy.context.scene.camera
+        if self.cam_name:
+            cam = bpy.context.scene.objects.get(self.cam_name)
+            self.cam_name = ""
 
         if self.action == "add":
             if bpy.context.area.type == "IMAGE_EDITOR":

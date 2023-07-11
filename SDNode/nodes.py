@@ -551,16 +551,18 @@ class Ops_Link_Mask(bpy.types.Operator):
 
     def invoke(self, context: Context, event: Event):
         if self.action == "OnlyFocus":
-            cam = bpy.data.objects.get(self.cam_name)
-            if cam:
-                self.focus_cam(cam)
-                self.action = ""
-                return {"FINISHED"}
             tree = context.space_data.edit_tree
             to_node = tree.nodes.get(self.node_name)
-            cam = self.create_cam()
-            to_node.cam = cam
-            bpy.ops.sdn.mask(action="add", node_name=to_node.name)
+            if cam := bpy.data.objects.get(self.cam_name):
+                self.validate_cam_cache(cam, to_node)
+            else:
+                cam = self.create_cam()
+                to_node.cam = cam
+                bpy.ops.sdn.mask(action="add", node_name=to_node.name, cam_name=cam.name)
+            self.focus_cam(cam)
+            self.active_cam_gp(cam)
+            self.action = ""
+            self.node_name = ""
             return {"FINISHED"}
 
         self.from_node: bpy.types.Node = None
@@ -651,16 +653,9 @@ class Ops_Link_Mask(bpy.types.Operator):
         bg.alpha = 1
         bg.image = img
         bg.show_background_image = True
+        self.validate_cam_cache(cam, self.to_node)
         self.focus_cam(cam)
-        self.validate_cam_cache(cam)
-        if gp := cam.get("SD_Mask"):
-            # toggle to draw mask
-            if isinstance(gp, list):
-                gp = gp[0]
-            bpy.context.view_layer.objects.active = gp
-            bpy.ops.object.mode_set(mode="PAINT_GPENCIL")
-            return
-        bpy.ops.sdn.mask(action="add", node_name=self.to_node.name)
+        self.active_cam_gp(cam)
 
     def exit(self):
         if not self.handle:
@@ -679,11 +674,24 @@ class Ops_Link_Mask(bpy.types.Operator):
         camdata.show_background_images = True
         return cam
 
-    def validate_cam_cache(self, cam):
-        gp = cam.get("SD_Mask")
+    def validate_cam_cache(self, cam, node):
+        gp = cam.get("SD_Mask", None)
         if isinstance(gp, list):
             gp = [o for o in gp if o is not None]
             cam["SD_Mask"] = gp
+        if not gp:
+            cam.pop("SD_Mask", None)
+            bpy.ops.sdn.mask(action="add", node_name=node.name, cam_name=cam.name)
+
+    def active_cam_gp(self, cam):
+        gp = cam.get("SD_Mask")
+        if isinstance(gp, list):
+            gp = gp[0]
+        if gp is None:
+            return
+        # toggle to draw mask
+        bpy.context.view_layer.objects.active = gp
+        bpy.ops.object.mode_set(mode="PAINT_GPENCIL")
 
     def focus_cam(self, cam):
         bpy.context.scene.camera = cam
