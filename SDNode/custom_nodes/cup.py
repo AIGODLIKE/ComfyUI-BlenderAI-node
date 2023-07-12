@@ -269,7 +269,12 @@ class Mask:
 
     def load_image(self, image, channel):
         image_path = image
-        i = Image.open(image_path)
+        try:
+             i = Image.open(image_path)
+        except FileNotFoundError:
+            print(f"FileNotFound -> {image_path}")
+            mask = torch.zeros((64, 64), dtype=torch.float32, device="cpu")
+            return (mask,)
         mask = None
         c = channel[0].upper()
         if c in i.getbands():
@@ -283,6 +288,7 @@ class Mask:
 
     @classmethod
     def IS_CHANGED(s, image, channel):
+        image_path = image
         image_path = Path(image_path)
         if not image or not image_path.exists():
             return ""
