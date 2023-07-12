@@ -82,29 +82,19 @@ class Renderer(BaseOpenGLRenderer):
 
     def refresh_font_texture(self):
         # save texture state
-
-        buf = gl.Buffer(gl.GL_INT, 1)
-        gl.glGetIntegerv(gl.GL_TEXTURE_BINDING_2D, buf)
-        last_texture = buf[0]
-
+        import time
+        import numpy
         width, height, pixels = self.io.fonts.get_tex_data_as_rgba32()
-        if self._font_texture is not None:
-            gl.glDeleteTextures([self._font_texture])
-
-        gl.glGenTextures(1, buf)
-        self._font_texture = buf[0]
-
-        gl.glBindTexture(gl.GL_TEXTURE_2D, self._font_texture)
-        gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_LINEAR)
-        gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_LINEAR)
-
-        pixel_buffer = gl.Buffer(gl.GL_BYTE, [4 * width * height])
-        pixel_buffer[:] = pixels  # 非常慢
-        gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGBA, width, height, 0, gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, pixel_buffer)
-        # logger.error(self._font_texture)
+        ts = time.time()
+        img = bpy.data.images.new(".imgui_font", width, height, alpha=True, float_buffer=True)
+        pixels = numpy.frombuffer(pixels, dtype=numpy.uint8) / numpy.float32(256)
+        img.pixels.foreach_set(pixels)
+        img.gl_load()
+        img.use_fake_user = True
+        self._font_texture = img.bindcode
         self.io.fonts.texture_id = self._font_texture
-        gl.glBindTexture(gl.GL_TEXTURE_2D, last_texture)
         self.io.fonts.clear_tex_data()
+        logger.debug(f"Imgui Init -> {time.time() - ts:.2f}s")
 
     def refresh_font_texture1(self):
         # save texture state
@@ -331,6 +321,7 @@ class Renderer(BaseOpenGLRenderer):
             gl.glGetIntegerv(k, buf)
             values.append(buf[0] if n == 1 else buf[:n])
         return values
+
 
 BlenderImguiRenderer = Renderer
 if bpy.app.version < (3, 4):
