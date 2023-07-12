@@ -221,6 +221,9 @@ class LoadImage:
         try:
             image_path = image
             i = Image.open(image_path)
+            if 'P' in i.getbands():
+                i = i.convert("RGBA")
+                image = i.convert("RGB")
             image = i.convert("RGB")
             image = np.array(image).astype(np.float32) / 255.0
             image = torch.from_numpy(image)[None,]
