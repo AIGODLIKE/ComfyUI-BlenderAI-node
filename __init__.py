@@ -27,6 +27,12 @@ reg, unreg = bpy.utils.register_classes_factory(clss)
 
 
 def register():
+    try:
+        from .modules import bqt
+        bqt.register()
+    except Exception:
+        pass
+
     bpy.app.translations.register(__name__, translations_dict)
     reg()
     Icon.set_hq_preview()
@@ -36,6 +42,11 @@ def register():
 
 
 def unregister():
+    import sys
+    if 'PySide2' in sys.modules:
+        from .modules import bqt
+        bqt.unregister()
+
     bpy.app.translations.unregister(__name__)
     unreg()
     rtnode_unreg()
