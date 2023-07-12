@@ -360,11 +360,11 @@ class PkgInstaller:
     def try_install(*packages):
         if not PkgInstaller.prepare_pip():
             return False
+        need = [pkg for pkg in packages if not PkgInstaller.is_installed(pkg)]
         from pip._internal import main
-        url = PkgInstaller.select_pip_source()
-        for pkg in packages:
-            if PkgInstaller.is_installed(pkg):
-                continue
+        if need:
+            url = PkgInstaller.select_pip_source()
+        for pkg in need:
             try:
                 site = urlparse(url)
                 command = ['install', pkg, "-i", url]
