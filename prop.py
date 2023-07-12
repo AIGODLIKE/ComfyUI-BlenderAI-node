@@ -129,3 +129,4 @@ class Prop(bpy.types.PropertyGroup):
                                               ("Batch", "Batch", "Batch", 2),
                                               ])
     batch_dir: bpy.props.StringProperty(name="Batch Directory", default=Path.home().joinpath("Desktop").as_posix(), subtype="DIR_PATH")
+    disable_render_all: bpy.props.BoolProperty(default=False, description="禁用场景树所有渲染行为")

@@ -701,7 +701,7 @@ class Ops_Link_Mask(bpy.types.Operator):
             if not node.cam:
                 continue
             gp = node.cam.get("SD_Mask", [])
-            
+
             if not isinstance(gp, list):
                 gp.hide_set(cam != node.cam)
                 continue
@@ -732,6 +732,22 @@ class Ops_Link_Mask(bpy.types.Operator):
         for km, kmi in cls.kmis:
             km.keymap_items.remove(kmi)
         cls.kmis.clear()
+
+
+class Set_Render_Res(bpy.types.Operator):
+    bl_idname = "sdn.set_render_res"
+    bl_label = ""
+    bl_translation_context = ctxt
+    node_name: bpy.props.StringProperty(default="")
+
+    def execute(self, context):
+        node = bpy.context.space_data.edit_tree.nodes.get(self.node_name)
+        if not node or not node.prev:
+            return {"FINISHED"}
+        bpy.context.scene.render.resolution_x = node.prev.size[0]
+        bpy.context.scene.render.resolution_y = node.prev.size[1]
+        bpy.context.scene.render.resolution_percentage = 100
+        return {'FINISHED'}
 
 
 class GetSelCol(bpy.types.Operator):
@@ -1093,6 +1109,8 @@ def spec_extra_properties(properties, nname, ndesc):
                                         subtype="DIR_PATH",
                                         default=Path.home().joinpath("Desktop").as_posix())
         properties["frames_dir"] = prop
+        prop = bpy.props.BoolProperty(default=False)
+        properties["disable_render"] = prop
     elif nname == "存储":
         items = [("Save", "Save", "", "", 0),
                  ("Import", "Import", "", "", 1),
@@ -1112,12 +1130,12 @@ def spec_extra_properties(properties, nname, ndesc):
                  ]
         prop = bpy.props.EnumProperty(items=items)
         properties["mode"] = prop
-
-        prop = bpy.props.PointerProperty(type=bpy.types.GreasePencil)
         prop = bpy.props.PointerProperty(type=bpy.types.Object, poll=lambda s, o: o.type == "GPENCIL")
         properties["gp"] = prop
         prop = bpy.props.PointerProperty(type=bpy.types.Object, poll=lambda s, o: o.type == "CAMERA")
         properties["cam"] = prop
+        prop = bpy.props.BoolProperty(default=False)
+        properties["disable_render"] = prop
         # prop = bpy.props.PointerProperty(type=bpy.types.Object)
         # properties["obj"] = prop
         # prop = bpy.props.PointerProperty(type=bpy.types.Collection)
@@ -1302,6 +1320,8 @@ def spec_serialize(self, cfg, execute):
         #     ...
     elif self.class_type == "Mask":
         # print(self.channel)
+        if self.disable_render or bpy.context.scene.sdn.disable_render_all:
+            return
         gen_mask(self)
     elif hasattr(self, "seed"):
         cfg["inputs"]["seed"] = int(cfg["inputs"]["seed"])
@@ -1317,6 +1337,8 @@ def spec_functions(fields, nname, ndesc):
     if nname == "输入图像":
         def render(self: NodeBase):
             if self.mode != "渲染":
+                return
+            if self.disable_render or bpy.context.scene.sdn.disable_render_all:
                 return
 
             @Timer.wait_run
@@ -1445,7 +1467,12 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
             if self.mode == "渲染":
                 layout.label(text="Set Image Path of Render Result(.png)", icon="ERROR")
                 if bpy.context.scene.use_nodes:
-                    layout.prop_search(self, "render_layer", bpy.context.scene.node_tree, "nodes")
+                    row = layout.row(align=True)
+                    row.prop_search(self, "render_layer", bpy.context.scene.node_tree, "nodes")
+                    icon = "RESTRICT_RENDER_ON" if self.disable_render else "RESTRICT_RENDER_OFF"
+                    row.prop(self, "disable_render", text="", icon=icon)
+                    icon = "HIDE_ON" if bpy.context.scene.sdn.disable_render_all else "HIDE_OFF"
+                    row.prop(bpy.context.scene.sdn, "disable_render_all", text="", icon=icon)
                     layout.prop(self, "out_layers")
             return True
         elif prop == "image":
@@ -1472,10 +1499,12 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
             if self.prev:
                 Icon.reg_icon_by_pixel(self.prev, self.prev.filepath)
                 icon_id = Icon[self.prev.filepath]
-                layout.label(text=f"{self.prev.file_format} : [{self.prev.size[0]} x {self.prev.size[1]}]")
+                row = layout.row(align=True)
+                row.label(text=f"{self.prev.file_format} : [{self.prev.size[0]} x {self.prev.size[1]}]")
+                row.operator(Set_Render_Res.bl_idname, text="", icon="LOOP_FORWARDS").node_name = self.name
                 layout.template_icon(icon_id, scale=max(self.prev.size[0], self.prev.size[1]) // 20)
             return True
-        elif prop in {"render_layer", "out_layers", "frames_dir"}:
+        elif prop in {"render_layer", "out_layers", "frames_dir", "disable_render"}:
             return True
     elif self.class_type == "存储":
         if prop == "mode":
@@ -1518,20 +1547,38 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
             if self.mode == "Grease Pencil":
                 row = layout.row(align=True)
                 row.prop(self, "gp", text="", text_ctxt=ctxt)
+                icon = "RESTRICT_RENDER_ON" if self.disable_render else "RESTRICT_RENDER_OFF"
+                row.prop(self, "disable_render", text="", icon=icon)
+                icon = "HIDE_ON" if bpy.context.scene.sdn.disable_render_all else "HIDE_OFF"
+                row.prop(bpy.context.scene.sdn, "disable_render_all", text="", icon=icon)
                 row.operator("sdn.mask", text="", icon="ADD").node_name = self.name
             if self.mode == "Object":
-                layout.label(text="  Select mask Objects", text_ctxt=ctxt)
+                row = layout.row(align=True)
+                row.label(text="  Select mask Objects", text_ctxt=ctxt)
+                icon = "RESTRICT_RENDER_ON" if self.disable_render else "RESTRICT_RENDER_OFF"
+                row.prop(self, "disable_render", text="", icon=icon)
+                icon = "HIDE_ON" if bpy.context.scene.sdn.disable_render_all else "HIDE_OFF"
+                row.prop(bpy.context.scene.sdn, "disable_render_all", text="", icon=icon)
             if self.mode == "Collection":
-                layout.label(text="  Select mask Collections", text_ctxt=ctxt)
+                row = layout.row(align=True)
+                row.label(text="  Select mask Collections", text_ctxt=ctxt)
+                icon = "RESTRICT_RENDER_ON" if self.disable_render else "RESTRICT_RENDER_OFF"
+                row.prop(self, "disable_render", text="", icon=icon)
+                icon = "HIDE_ON" if bpy.context.scene.sdn.disable_render_all else "HIDE_OFF"
+                row.prop(bpy.context.scene.sdn, "disable_render_all", text="", icon=icon)
             if self.mode == "Focus":
                 row = layout.row(align=True)
                 row.prop(self, "cam", text="")
+                icon = "RESTRICT_RENDER_ON" if self.disable_render else "RESTRICT_RENDER_OFF"
+                row.prop(self, "disable_render", text="", icon=icon)
+                icon = "HIDE_ON" if bpy.context.scene.sdn.disable_render_all else "HIDE_OFF"
+                row.prop(bpy.context.scene.sdn, "disable_render_all", text="", icon=icon)
                 op = row.operator(Ops_Link_Mask.bl_idname, text="", icon="VIEW_CAMERA")
                 op.action = "OnlyFocus"
                 op.cam_name = self.cam.name if self.cam else ""
                 op.node_name = self.name
             return True
-        elif prop in {"gp", "obj", "col", "cam"}:
+        elif prop in {"gp", "obj", "col", "cam", "disable_render"}:
             return True
     elif self.class_type == "预览":
         if self.prev:
@@ -1564,7 +1611,7 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
     return False
 
 
-clss = [GetSelCol, Ops_Active_Tex, Ops_Link_Mask]
+clss = [Set_Render_Res, GetSelCol, Ops_Active_Tex, Ops_Link_Mask]
 
 reg, unreg = bpy.utils.register_classes_factory(clss)
 
