@@ -280,7 +280,7 @@ class TaskManager:
         # logger.debug(args)
         import bpy
         if bpy.app.version >= (3, 6):
-            p = Popen(args, cwd=model_path)
+            p = Popen(args, stdout=PIPE, cwd=model_path)
         else:
             p = Popen(args, stdout=PIPE, cwd=model_path)
         TaskManager.child = p
