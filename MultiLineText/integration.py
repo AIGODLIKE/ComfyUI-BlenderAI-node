@@ -281,17 +281,17 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
         #     return {'CANCELLED'}
         # print( event.mouse_x, event.mouse_y, context.region.x, context.region.y)
         self.poll_mouse(context, event)
-        if event.type == 'UP_ARROW' and event.value == "PRESS":
-            self.candicates_index -= 1
-            {"PASS_THROUGH"}
-        elif event.type == 'DOWN_ARROW' and event.value == "PRESS":
-            self.candicates_index += 1
-            {"PASS_THROUGH"}
         # print(context.area, self.mpos, self.cover, imgui.is_any_item_focused())
         if not self.cover:
             # import random
             # logger.debug(["Pass Through -- ", random.random()])
             return {"PASS_THROUGH"}
+        if (event.type == "UP_ARROW" and event.value == "PRESS") or event.type == "WHEELUPMOUSE":
+            self.candicates_index -= 1
+            return {"RUNNING_MODAL"}
+        if (event.type == "DOWN_ARROW" and event.value == "PRESS") or event.type == "WHEELDOWNMOUSE":
+            self.candicates_index += 1
+            return {"RUNNING_MODAL"}
         self.poll_events(context, event)
         return {"RUNNING_MODAL"}
 
