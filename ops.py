@@ -129,19 +129,21 @@ class Ops(bpy.types.Operator):
 
     def execute_ex(self, context: bpy.types.Context):
         # logger.debug("EXE")
+        tree = getattr(bpy.context.space_data, "edit_tree", None)
         if self.action == "Launch":
             if TaskManager.pid != -1:
                 self.report({"ERROR"}, "服务已经启动!")
                 return {"FINISHED"}
             TaskManager.restart_server()
+            tree.update()
             return {"FINISHED"}
         elif self.action == "Restart":
             TaskManager.restart_server()
+            tree.update()
             return {"FINISHED"}
         elif self.action == "Cancel":
             TaskManager.interrupt()
             return {"FINISHED"}
-        tree = bpy.context.space_data.edit_tree
         if not tree:
             return {"FINISHED"}
 
@@ -232,8 +234,6 @@ class Ops(bpy.types.Operator):
                 select_node.mode, select_node.image = old_mode, old_image
             else:
                 TaskManager.push_task(get_task(tree))
-        elif self.action == "Restart":
-            TaskManager.restart_server()
         elif self.action == "ClearTask":
             TaskManager.clear_all()
         elif self.action == "Save":
