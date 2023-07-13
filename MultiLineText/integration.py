@@ -9,7 +9,6 @@ from pathlib import Path
 from ..utils import _T, logger
 from ..SDNode.tree import TREE_TYPE
 from .renderer import BlenderImguiRenderer, imgui
-from .trie import Trie
 
 
 class GlobalImgui:
@@ -476,6 +475,7 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
         imgui.end()
 
     def t(self, pos, word, index):
+        from .trie import Trie
         if Trie.TRIE is None:
             return
         word = word.replace("\n", "")

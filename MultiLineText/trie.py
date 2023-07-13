@@ -1,15 +1,13 @@
 # Refeence: https://github.com/DominikDoom/a1111-sd-webui-tagcomplete
 
 from __future__ import annotations
-import pickle
-import atexit
 import time
-from concurrent.futures import ThreadPoolExecutor
+import json
+import pickle
 from pathlib import Path
+from threading import Thread
 from functools import lru_cache
 DEBUG = False
-Pool = ThreadPoolExecutor(max_workers=2)
-atexit.register(Pool.shutdown)
 
 danbooru_type = {"0": "General",
                  "1": "Artist",
@@ -67,24 +65,19 @@ class InvTuple(tuple):
         return not super().__lt__(__value)
 
 
-class TrieNode(dict):
-    __slots__ = ("id",)
+class TrieNodes(dict):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.id = -1
 
     def __repr__(self) -> str:
-        return str(self.id)
+        return str(self["id"])
 
     def __hash__(self) -> int:
-        return self.id
-
-    def get_word(self):
-        return Trie.TRIE.word_list[self.id]
+        return self["id"]
 
     def is_word(self):
-        return self.id != -1
+        return self["id"] != -1
 
     def info(self) -> dict:
         data = {}
@@ -93,20 +86,22 @@ class TrieNode(dict):
         # data["child"] = self.child
         return data
 
-    def eval_color(self, word):
+    def eval_color(self):
         cat = -1
         wtype = "default"
         #  freq,    key,   type,  content,   wtype, node
         # (250, 'exelzior', '1', 'exelzior', 'e621')
-        cat = word[2]
-        wtype = word[-2]
+        try:
+            cat = self[2]
+        except BaseException:
+            print(self)
+        wtype = self[-1]
         return COLOR_MAP.get(wtype).get(cat, [(173, 216, 230), (30, 144, 255)])[0]
 
     def eval_info(self):
         #  freq, key, type, content, wtype
         # [word, 0,   5000,   word, "default"]
-        word = self.get_word()
-        return *word, self.eval_color(word)
+        return *self, TrieNodes.eval_color(self)
 
 
 class Trie:
@@ -114,13 +109,11 @@ class Trie:
     FUZZY_SEARCH = {}
     CMP_SEARCH = {}
     FLAGS = set()
+    CACHE_PATH = Path(__file__).parent / "trie.cache"
 
     def __init__(self):
-        self.root = TrieNode()
+        self.root: dict = {}
         self.word_list: list[tuple] = []
-
-    def __str__(self) -> str:
-        return str(self.root.info())
 
     def insert(self, word: tuple) -> None:
         # print(word)
@@ -129,25 +122,24 @@ class Trie:
             return
         # [freq, key, type, content, wtype]
         assert isinstance(word, tuple), str(word)
-        node: TrieNode = self.root
+        node: dict = self.root
         for char in key:
             if char not in node:
-                node[char] = TrieNode()
+                node[char] = {"id": -1}
             node = node[char]
-        node.id = len(self.word_list)
-        self.word_list.append((*word, node))
+        node["id"] = len(self.word_list)
+        self.word_list.append(word)
 
-    def info_from_words(self, words: list[TrieNode], max_size=100, sort=False, test=False):
+    def info_from_words(self, words: list[dict], max_size=100, sort=False, test=False):
         if test and sort:
             import heapq
-            words = heapq.nlargest(max_size, words, key=lambda x: x.get_word()[0])
-            return [word.eval_info() for word in words]
+            words = heapq.nlargest(max_size, words, key=lambda x: x[0])
+            return [TrieNodes.eval_info(word) for word in words]
         if sort:
-            words = sorted(words, key=lambda x: x.get_word()[0], reverse=True)[:max_size]
-            # words.sort(key=lambda x: x.get_word()[0], reverse=True)
-        info = [word.eval_info() for word in words]
+            words = sorted(words, key=lambda x: x[0], reverse=True)[:max_size]
+        info = [TrieNodes.eval_info(word) for word in words]
         return info
-        info = [word.eval_info() for word in words]
+        info = [TrieNodes.eval_info(word) for word in words]
         if sort:
             info.sort(reverse=True)
         return info[:max_size]
@@ -161,7 +153,7 @@ class Trie:
             node = node.get(chars)
             if not node:
                 return False
-        return node.is_word()
+        return TrieNodes.is_word(node)
 
     def starts_with(self, prefix) -> bool:
         """
@@ -174,7 +166,7 @@ class Trie:
                 return False
         return True
 
-    def search_all(self, prefix, pre_node: TrieNode = None, words: list = None, ) -> list[TrieNode]:
+    def search_all(self, prefix, pre_node: dict = None, words: list = None, ) -> list[tuple]:
         """
             模糊搜索: 前缀符合的所有words
         """
@@ -184,13 +176,15 @@ class Trie:
             pre_node = self.root
             for chars in prefix:
                 pre_node = pre_node.get(chars)
-        if pre_node.is_word():
-            words.append(pre_node)
+        if TrieNodes.is_word(pre_node):
+            words.append(self.word_list[pre_node["id"]])
         for c, node in pre_node.items():
+            if len(c) != 1:
+                continue
             self.search_all(prefix + c, node, words, )
         return words
 
-    def prefix_search(self, prefix) -> list[TrieNode]:
+    def prefix_search(self, prefix) -> list[dict]:
         """
             前缀搜索: 如果前缀存在则搜索所有符合前缀的words
         """
@@ -204,11 +198,11 @@ class Trie:
         return words
 
     @timeit
-    def fuzzy_search(self, substr, max_size=100) -> list[TrieNode]:
+    def fuzzy_search(self, substr, max_size=100) -> list[dict]:
         if substr not in Trie.FUZZY_SEARCH:
-            # self.mark_search(substr, max_size)
             words = [word for word in self.word_list if not (word[1].startswith(substr) or word[3].startswith(substr)) and (substr in word[1] or substr in word[3])]
-            info = [word[-1].eval_info() for word in sorted(words, reverse=True)[:20]]
+
+            info = [TrieNodes.eval_info(word) for word in sorted(words, reverse=True)[:20]]
             Trie.FUZZY_SEARCH[substr] = info
         return Trie.FUZZY_SEARCH.get(substr, [])
 
@@ -230,33 +224,29 @@ class Trie:
             Trie.CMP_SEARCH[prefix] = w1
         return w1
 
-    def mark_search(self, substr, max_size=100):
-        if self.is_marked(substr):
+    @timeit
+    def from_cache(self):
+        if not self.CACHE_PATH.exists():
             return
-        self.mark(substr)
+        data: dict = pickle.load(open(self.CACHE_PATH.as_posix(), "rb+"))
+        # data: dict = json.load(open(self.CACHE_PATH.as_posix(), "r+"))
+        self.root = data.pop("root")
+        self.word_list = data.pop("word_list")
 
-        def fuzzy_search_ex(self: Trie, substr, max_size=100):
-            # info = [word[-1].eval_info() for word in self.word_list if not (word[1].startswith(substr) or word[3].startswith(substr)) and (substr in word[1] or substr in word[3])]
-            # info.sort()
-            # Trie.FUZZY_SEARCH[substr] = info[:max_size]
-            words = [word for word in self.word_list if not (word[1].startswith(substr) or word[3].startswith(substr)) and (substr in word[1] or substr in word[3])]
-            info = [word[-1].eval_info() for word in sorted(words, reverse=True)[:20]]
-            Trie.FUZZY_SEARCH[substr] = info
-            # for i in info:
-            #     print(i[0])
-        fuzzy_search_ex(self, substr, max_size)
-        # Pool.submit(fuzzy_search_ex, self, substr, max_size)
-
-    def is_marked(self, flag):
-        return flag in Trie.FLAGS
-
-    def mark(self, flag):
-        Trie.FLAGS.add(flag)
+    def to_cache(self):
+        data = {"root": self.root, "word_list": self.word_list}
+        pickle.dump(data, open(self.CACHE_PATH.as_posix(), "wb+"))
+        # json.dump(data, open(self.CACHE_PATH.as_posix(), "w+"))
 
 
 @timeit
 def csv_to_trie() -> Trie:
     trie = Trie()
+    ts = time.time()
+    trie.from_cache()
+    print(f"Func read cache: {time.time()-ts:.4f}s")
+    if trie.root:
+        return trie
     words = []
     ts = time.time()
     for file in Path(__file__).parent.joinpath("tags").iterdir():
@@ -322,51 +312,16 @@ def csv_to_trie() -> Trie:
     ]
     for word in extra_word:
         trie.insert((5000, word["name"], 0, word["content"], "default"))
+    trie.to_cache()
     return trie
 
 
 @timeit
-def save_to_file(data, path: Path, with_lzma=False):
-    if with_lzma:
-        import lzma
-        f = lzma.open(path.as_posix(), "wb")
-    else:
-        f = open(path.as_posix(), "wb")
-    try:
-        pickle.dump(data, f)
-    finally:
-        f.close()
-
-
-@timeit
-def load_from_file(data_path: Path, with_lzma=False):
-    trie = None
-    if not data_path.exists():
-        ...
-    if with_lzma:
-        import lzma
-        with lzma.open(data_path.as_posix(), "rb") as f:
-            trie = pickle.load(f)
-    else:
-        with open(data_path.as_posix(), "rb") as f:
-            trie = pickle.load(f)
-    return trie
-
-
-@timeit
-def init_trie(with_lzma=False, fake=False):
+def init_trie(fake=False):
     if fake:
         Trie.TRIE = Trie()
         return
-    if with_lzma:
-        data_path = Path(__file__).parent / "data.xz"
-    else:
-        data_path = Path(__file__).parent / "data.pk"
-
     trie = csv_to_trie()
-    # save_to_file(trie, data_path, with_lzma)
-    # trie = load_from_file(data_path, with_lzma)
-
     Trie.TRIE = trie
 
 
@@ -376,7 +331,10 @@ if __name__ == "__main__":
         inp = input("输入搜索单词: ")
         if inp.lower() == "quit":
             break
-        Trie.TRIE.bl_search(inp)
+        words = Trie.TRIE.bl_search(inp)
+        # print(words[0])
+        for w in words:
+            print(w)
         continue
         ts = time.time()
         words = Trie.TRIE.prefix_search(inp)
@@ -388,7 +346,7 @@ if __name__ == "__main__":
         print("---------CONTENT----------")
         for w in result:
             # print(f"{w}: [{TRIE.content_from_word(w)}]")
-            print(f"\t{w.eval_info()}")
+            print(f"\t{TrieNodes.eval_info(w)}")
         print("--------------------------")
 
         ts = time.time()
@@ -405,4 +363,4 @@ if __name__ == "__main__":
         #     print(i)
         print(info1 == info2)
 else:
-    Pool.submit(init_trie)
+    Thread(target=init_trie).start()
