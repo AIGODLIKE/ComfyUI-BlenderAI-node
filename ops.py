@@ -129,21 +129,27 @@ class Ops(bpy.types.Operator):
 
     def execute_ex(self, context: bpy.types.Context):
         # logger.debug("EXE")
-        tree = getattr(bpy.context.space_data, "edit_tree", None)
         if self.action == "Launch":
             if TaskManager.pid != -1:
                 self.report({"ERROR"}, "服务已经启动!")
                 return {"FINISHED"}
             TaskManager.restart_server()
-            tree.update()
+            # hack fix tree update crash
+            tree = getattr(bpy.context.space_data, "edit_tree", None)
+            from .SDNode.tree import CFNodeTree
+            CFNodeTree.instance = tree
             return {"FINISHED"}
         elif self.action == "Restart":
             TaskManager.restart_server()
-            tree.update()
+            # hack fix tree update crash
+            tree = getattr(bpy.context.space_data, "edit_tree", None)
+            from .SDNode.tree import CFNodeTree
+            CFNodeTree.instance = tree
             return {"FINISHED"}
         elif self.action == "Cancel":
             TaskManager.interrupt()
             return {"FINISHED"}
+        tree = getattr(bpy.context.space_data, "edit_tree", None)
         if not tree:
             return {"FINISHED"}
 
