@@ -62,6 +62,7 @@ class Renderer(BaseOpenGLRenderer):
         Out_Color.rgba = srgb_to_linear(Out_Color.rgba);
     }
     """
+    instance = None
 
     def __init__(self):
         self._shader_handle = None
@@ -77,11 +78,20 @@ class Renderer(BaseOpenGLRenderer):
         self._vbo_handle = None
         self._elements_handle = None
         self._vao_handle = None
+        Renderer.instance = self
 
         super().__init__()
 
     def refresh_font_texture(self):
+        self.refresh_font_texture_ex(self)
+        if self.refresh_font_texture_ex not in bpy.app.handlers.load_post:
+            bpy.app.handlers.load_post.append(self.refresh_font_texture_ex)
+
+    @staticmethod
+    @bpy.app.handlers.persistent
+    def refresh_font_texture_ex(scene):
         # save texture state
+        self = Renderer.instance
         import time
         import numpy
         width, height, pixels = self.io.fonts.get_tex_data_as_rgba32()
@@ -94,7 +104,7 @@ class Renderer(BaseOpenGLRenderer):
         self._font_texture = img.bindcode
         self.io.fonts.texture_id = self._font_texture
         self.io.fonts.clear_tex_data()
-        logger.debug(f"Imgui Init -> {time.time() - ts:.2f}s")
+        logger.debug(f"MLT Init -> {time.time() - ts:.2f}s")
 
     def refresh_font_texture1(self):
         # save texture state
