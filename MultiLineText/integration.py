@@ -283,8 +283,10 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
         self.poll_mouse(context, event)
         if event.type == 'UP_ARROW' and event.value == "PRESS":
             self.candicates_index -= 1
-        if event.type == 'DOWN_ARROW' and event.value == "PRESS":
+            {"PASS_THROUGH"}
+        elif event.type == 'DOWN_ARROW' and event.value == "PRESS":
             self.candicates_index += 1
+            {"PASS_THROUGH"}
         # print(context.area, self.mpos, self.cover, imgui.is_any_item_focused())
         if not self.cover:
             # import random
