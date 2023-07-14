@@ -443,8 +443,8 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
             # 161 12 156 158
             # print(data.buffer_text_length, data.buffer_size, len(data.buffer), data.cursor_pos)
             rect = imgui.get_item_rect_min()
-            curp = imgui.calc_text_size("W" * data.buffer_text_length, wrap_width=w)
-            curpx = imgui.calc_text_size("W" * (data.buffer_text_length % lnum), wrap_width=w)
+            curp = imgui.calc_text_size("W" * data.cursor_pos, wrap_width=w)
+            curpx = imgui.calc_text_size("W" * (data.cursor_pos % lnum), wrap_width=w)
             curp = imgui.Vec2(curpx.x + rect.x, curp.y + rect.y)
             start_pos, end_pos = find_word(data.buffer, data.cursor_pos)
             word = data.buffer[start_pos: end_pos]
