@@ -398,8 +398,8 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
         imgui.begin(_T(" Prompts") + "##" + hex(hash(context.area)), closable=False, flags=flags)
         imgui.set_window_position(50, 20, condition=imgui.ONCE)
         imgui.set_window_size(300, 300, condition=imgui.ONCE)
-
-        w = imgui.core.get_window_size().x
+        window_size = imgui.core.get_window_size()
+        w, h = window_size.x, window_size.y
         lnum = max(1, int(w * 2 // imgui.get_font_size()) - 3)
 
         def find_word(buffer, end_pos):
@@ -442,10 +442,16 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
             # buffer_text_length 是最后一位
             # 161 12 156 158
             # print(data.buffer_text_length, data.buffer_size, len(data.buffer), data.cursor_pos)
-            rect = imgui.get_item_rect_min()
-            curp = imgui.calc_text_size("W" * data.cursor_pos, wrap_width=w)
-            curpx = imgui.calc_text_size("W" * (data.cursor_pos % lnum), wrap_width=w)
-            curp = imgui.Vec2(curpx.x + rect.x, curp.y + rect.y)
+            # cursor_start_pos = imgui.core.get_cursor_start_pos()
+            cursor_screen_pos = imgui.core.get_cursor_screen_pos()
+            rect_min = imgui.get_item_rect_min()
+            bbuffer = data.buffer.encode()[:data.cursor_pos].decode()
+            curpy = imgui.calc_text_size(bbuffer, wrap_width=w).y
+            curpx = imgui.calc_text_size("W" * (len(bbuffer) % (lnum + 1))).x
+            curpx = curpx + rect_min.x
+            curpy = curpy + cursor_screen_pos.y
+            # curpy = min(max(curpy, rect_min.y + h), rect_min.y)
+            curp = imgui.Vec2(curpx, curpy)
             start_pos, end_pos = find_word(data.buffer, data.cursor_pos)
             word = data.buffer[start_pos: end_pos]
             self.t(curp, word, self.candicates_index)
@@ -471,7 +477,7 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
 
         ttt = get_wrap_text(node.text, lnum)
         imgui.input_text_multiline(
-            '',
+            "",
             ttt,
             width=-1,
             height=-1,
