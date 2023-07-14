@@ -83,6 +83,7 @@ class Renderer(BaseOpenGLRenderer):
         super().__init__()
 
     def refresh_font_texture(self):
+        # self.refresh_font_texture_ex2()
         self.refresh_font_texture_ex(self)
         if self.refresh_font_texture_ex not in bpy.app.handlers.load_post:
             bpy.app.handlers.load_post.append(self.refresh_font_texture_ex)
@@ -105,6 +106,30 @@ class Renderer(BaseOpenGLRenderer):
         self.io.fonts.texture_id = self._font_texture
         self.io.fonts.clear_tex_data()
         logger.debug(f"MLT Init -> {time.time() - ts:.2f}s")
+
+    def refresh_font_texture_ex2(self):
+        buf = gl.Buffer(gl.GL_INT, 1)
+        gl.glGetIntegerv(gl.GL_TEXTURE_BINDING_2D, buf)
+        last_texture = buf[0]
+
+        width, height, pixels = self.io.fonts.get_tex_data_as_rgba32()
+        if self._font_texture is not None:
+            gl.glDeleteTextures([self._font_texture])
+
+        gl.glGenTextures(1, buf)
+        self._font_texture = buf[0]
+
+        gl.glBindTexture(gl.GL_TEXTURE_2D, self._font_texture)
+        gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_LINEAR)
+        gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_LINEAR)
+
+        pixel_buffer = gl.Buffer(gl.GL_BYTE, [4 * width * height])
+        pixel_buffer[:] = pixels  # 非常慢
+        gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_RGBA, width, height, 0, gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, pixel_buffer)
+        # logger.error(self._font_texture)
+        self.io.fonts.texture_id = self._font_texture
+        gl.glBindTexture(gl.GL_TEXTURE_2D, last_texture)
+        self.io.fonts.clear_tex_data()
 
     def refresh_font_texture1(self):
         # save texture state

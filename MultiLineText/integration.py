@@ -11,6 +11,27 @@ from ..SDNode.tree import TREE_TYPE
 from .renderer import BlenderImguiRenderer, imgui
 
 
+def addSoftReturnsToText(s, multilineWidth):
+    tmpStr = ""
+    finalStr = ""
+    curChr = 0
+    sw = imgui.calc_text_size("W").x
+    while curChr < len(s):
+        if s[curChr] == "\n":
+            finalStr += tmpStr + "\n"
+            tmpStr = ""
+        tmpStr += s[curChr]
+        curChr += 1
+        if curChr == len(s):
+            finalStr += tmpStr
+            break
+        # 到达换行边界
+        if len(tmpStr) * sw > multilineWidth:
+            finalStr += tmpStr + "\n"
+            tmpStr = ""
+    return finalStr
+
+
 class GlobalImgui:
     _instance = None
     imgui_ctx = None
@@ -382,56 +403,57 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
         lnum = max(1, int(w * 2 // imgui.get_font_size()) - 3)
 
         def find_word(buffer, end_pos):
+            buffer = buffer.encode()[:end_pos].decode()
+            end_pos = len(buffer)
+            # calculate with utf8 char instead bytes
             for i in range(end_pos - 1, -1, -1):
                 c = buffer[i]
                 if i == 0:
-                    return 0
-                if c in "\n0123456789x:_-/()":
-                    continue
-                if c not in string.ascii_letters:
-                    return i + 1
-            return end_pos
+                    return 0, end_pos
+                if c == ",":
+                    return i + 1, end_pos
+            return end_pos, end_pos
+
+        def resize(data):
+            ...
 
         def edit(data):
             backspace = self.io.keys_down[self.key_map['BACK_SPACE']]
             p = data.cursor_pos
+            p = len(get_wrap_text(data.buffer.encode()[:p].decode(), lnum).encode())
             node.text = data.buffer.replace("\n", "")
             text = get_wrap_text(data.buffer, lnum)
-            data.delete_chars(0, len(data.buffer))
+            data.delete_chars(0, data.buffer_text_length)
             data.insert_chars(0, text)
             data.buffer_dirty = True
-            if not backspace and p % (lnum + 1) == 0:
-                p += 1
-            data.cursor_pos = min(max(0, p), data.buffer_size, len(data.buffer))
+            data.cursor_pos = p
 
-        def complection(data):
+        def completion(data):
             if not self.candicates_word:
                 return
-            p = data.cursor_pos
-            start_pos = find_word(data.buffer, p)
-            data.delete_chars(start_pos, p - start_pos)
-            data.insert_chars(start_pos, self.candicates_word)
-            data.cursor_pos = start_pos + len(self.candicates_word)
-            if (data.cursor_pos // (lnum + 1) > p // (lnum + 1)):
-                data.insert_chars((lnum + 1) * (p // (lnum + 1) + 1) - 1, "\n")
-                data.cursor_pos += 1
+            start_pos, end_pos = find_word(data.buffer, data.cursor_pos)
+            cstart_pos = len(data.buffer[:start_pos].encode())
+            data.delete_chars(cstart_pos, data.cursor_pos - cstart_pos)
+            data.insert_chars(cstart_pos, self.candicates_word + ", ")
             self.candicates_word = ""
-            data.buffer_dirty = True
+            edit(data)
 
         def always(data):
+            # buffer_text_length 是最后一位
+            # 161 12 156 158
+            # print(data.buffer_text_length, data.buffer_size, len(data.buffer), data.cursor_pos)
             rect = imgui.get_item_rect_min()
-            curp = imgui.calc_text_size("W" * data.cursor_pos, wrap_width=w)
-            curpx = imgui.calc_text_size("W" * (data.cursor_pos % lnum), wrap_width=w)
+            curp = imgui.calc_text_size("W" * data.buffer_text_length, wrap_width=w)
+            curpx = imgui.calc_text_size("W" * (data.buffer_text_length % lnum), wrap_width=w)
             curp = imgui.Vec2(curpx.x + rect.x, curp.y + rect.y)
-
-            # get_window_content_region_min
-            word = data.buffer[find_word(data.buffer, data.cursor_pos): data.cursor_pos]
-            # print(f"----{word}----")
+            start_pos, end_pos = find_word(data.buffer, data.cursor_pos)
+            word = data.buffer[start_pos: end_pos]
             self.t(curp, word, self.candicates_index)
-            # print("SO", imgui.get_cursor_screen_position())
+
         cb_map = {
+            imgui.INPUT_TEXT_CALLBACK_RESIZE: resize,
             imgui.INPUT_TEXT_CALLBACK_EDIT: edit,
-            imgui.INPUT_TEXT_CALLBACK_COMPLETION: complection,
+            imgui.INPUT_TEXT_CALLBACK_COMPLETION: completion,
             imgui.INPUT_TEXT_CALLBACK_ALWAYS: always,
         }
 
@@ -440,9 +462,9 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
                 try:
                     cb(data)
                 except IndexError as e:
-                    logger.debug(str(e))
+                    logger.debug(f"{cb.__name__}: {e}")
                 except Exception as e:
-                    ...
+                    logger.debug(f"{cb.__name__}: {e}")
             # fix ctrl c/v duplicate
             for k in [imgui.KEY_A, imgui.KEY_C, imgui.KEY_V, imgui.KEY_X, imgui.KEY_Y, imgui.KEY_Z]:
                 self.io.keys_down[k] = False
@@ -453,7 +475,7 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
             ttt,
             width=-1,
             height=-1,
-            flags=imgui.INPUT_TEXT_CALLBACK_EDIT | imgui.INPUT_TEXT_CALLBACK_COMPLETION | imgui.INPUT_TEXT_CALLBACK_ALWAYS,
+            flags=imgui.INPUT_TEXT_CALLBACK_RESIZE | imgui.INPUT_TEXT_CALLBACK_EDIT | imgui.INPUT_TEXT_CALLBACK_COMPLETION | imgui.INPUT_TEXT_CALLBACK_ALWAYS,
             callback=cb
         )
         # x, y = imgui.core.get_window_position()
@@ -478,7 +500,7 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
         from .trie import Trie
         if Trie.TRIE is None:
             return
-        word = word.replace("\n", "")
+        word: str = word.strip().replace("\n", "")
         if not word:
             return
         # (83, 'girly_pred', '0', '', 'e621', {}, (173, 216, 230))
