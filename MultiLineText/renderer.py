@@ -3,6 +3,7 @@ import ctypes
 import numpy as np
 import bgl as gl
 import bpy
+import time
 # from OpenGL import GL as gl
 from gpu_extras.batch import batch_for_shader
 from ..utils import logger
@@ -90,22 +91,23 @@ class Renderer(BaseOpenGLRenderer):
 
     @staticmethod
     @bpy.app.handlers.persistent
-    def refresh_font_texture_ex(scene):
+    def refresh_font_texture_ex(scene=None):
         # save texture state
         self = Renderer.instance
-        import time
-        import numpy
-        width, height, pixels = self.io.fonts.get_tex_data_as_rgba32()
-        ts = time.time()
-        img = bpy.data.images.new(".imgui_font", width, height, alpha=True, float_buffer=True)
-        pixels = numpy.frombuffer(pixels, dtype=numpy.uint8) / numpy.float32(256)
-        img.pixels.foreach_set(pixels)
+        if not (img := bpy.data.images.get(".imgui_font", None)):
+            ts = time.time()
+            width, height, pixels = self.io.fonts.get_tex_data_as_rgba32()
+            img = bpy.data.images.new(".imgui_font", width, height, alpha=True, float_buffer=True)
+            pixels = np.frombuffer(pixels, dtype=np.uint8) / np.float32(256)
+            img.pixels.foreach_set(pixels)
+            img.use_fake_user = True
+            self.io.fonts.clear_tex_data()
+            logger.debug(f"MLT Init -> {time.time() - ts:.2f}s")
         img.gl_load()
-        img.use_fake_user = True
         self._font_texture = img.bindcode
         self.io.fonts.texture_id = self._font_texture
-        self.io.fonts.clear_tex_data()
-        logger.debug(f"MLT Init -> {time.time() - ts:.2f}s")
+        #  a_BlenderAI_Node.MultiLineText.renderer.Renderer.instance._font_texture
+        #  a_BlenderAI_Node.MultiLineText.renderer.Renderer.instance.io.fonts.texture_id
 
     def refresh_font_texture_ex2(self):
         buf = gl.Buffer(gl.GL_INT, 1)
@@ -288,6 +290,7 @@ class Renderer(BaseOpenGLRenderer):
 
                 indices = idx_buffer_np[idx_buffer_offset:idx_buffer_offset + command.elem_count]
                 # logger.error(command.texture_id)
+                self.refresh_font_texture_ex()
                 gl.glBindTexture(gl.GL_TEXTURE_2D, command.texture_id)
                 # print(dir(command))
                 batch = batch_for_shader(shader, 'TRIS', {
