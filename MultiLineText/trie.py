@@ -1,13 +1,11 @@
 # Refeence: https://github.com/DominikDoom/a1111-sd-webui-tagcomplete
-
 from __future__ import annotations
 import time
-import json
 import pickle
 from pathlib import Path
 from threading import Thread
 from functools import lru_cache
-DEBUG = False
+DEBUG = True
 
 danbooru_type = {"0": "General",
                  "1": "Artist",
@@ -57,57 +55,27 @@ COLOR_MAP = {
     },
     "default": {"-1": [(255, 0, 0), (128, 0, 0)], }
 }
-LINES: list[str] = []
 
 
-class InvTuple(tuple):
-    def __lt__(self, __value: tuple) -> bool:
-        return not super().__lt__(__value)
-
-
-class TrieNodes(dict):
-
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-
-    def __repr__(self) -> str:
-        return str(self["id"])
-
-    def __hash__(self) -> int:
-        return self["id"]
-
+class Utils:
     def is_word(self):
-        return self["id"] != -1
-
-    def info(self) -> dict:
-        data = {}
-        for char, word in self.data.items():
-            data[char] = word.info()
-        # data["child"] = self.child
-        return data
+        return self.get("id")
 
     def eval_color(self):
-        cat = -1
-        wtype = "default"
         #  freq,    key,   type,  content,   wtype, node
         # (250, 'exelzior', '1', 'exelzior', 'e621')
-        try:
-            cat = self[2]
-        except BaseException:
-            print(self)
-        wtype = self[-1]
-        return COLOR_MAP.get(wtype).get(cat, [(173, 216, 230), (30, 144, 255)])[0]
+        cat, wtype = self[2], self[-1]
+        return COLOR_MAP.get(wtype).get(cat, [(173, 216, 230)])[0]
 
     def eval_info(self):
         #  freq, key, type, content, wtype
         # [word, 0,   5000,   word, "default"]
-        return *self, TrieNodes.eval_color(self)
+        return *self, Utils.eval_color(self)
 
 
 class Trie:
     TRIE: Trie = None
-    FUZZY_SEARCH = {}
-    CMP_SEARCH = {}
+    SEARCH_CACHE = {}
     FLAGS = set()
     CACHE_PATH = Path(__file__).parent / "trie.cache"
 
@@ -125,7 +93,7 @@ class Trie:
         node: dict = self.root
         for char in key:
             if char not in node:
-                node[char] = {"id": -1}
+                node[char] = {}
             node = node[char]
         node["id"] = len(self.word_list)
         self.word_list.append(word)
@@ -134,12 +102,12 @@ class Trie:
         if test and sort:
             import heapq
             words = heapq.nlargest(max_size, words, key=lambda x: x[0])
-            return [TrieNodes.eval_info(word) for word in words]
+            return [Utils.eval_info(word) for word in words]
         if sort:
             words = sorted(words, key=lambda x: x[0], reverse=True)[:max_size]
-        info = [TrieNodes.eval_info(word) for word in words]
+        info = [Utils.eval_info(word) for word in words]
         return info
-        info = [TrieNodes.eval_info(word) for word in words]
+        info = [Utils.eval_info(word) for word in words]
         if sort:
             info.sort(reverse=True)
         return info[:max_size]
@@ -153,7 +121,7 @@ class Trie:
             node = node.get(chars)
             if not node:
                 return False
-        return TrieNodes.is_word(node)
+        return Utils.is_word(node)
 
     def starts_with(self, prefix) -> bool:
         """
@@ -176,7 +144,7 @@ class Trie:
             pre_node = self.root
             for chars in prefix:
                 pre_node = pre_node.get(chars)
-        if TrieNodes.is_word(pre_node):
+        if Utils.is_word(pre_node):
             words.append(self.word_list[pre_node["id"]])
         for c, node in pre_node.items():
             if len(c) != 1:
@@ -197,14 +165,12 @@ class Trie:
         words = self.search_all(prefix)
         return words
 
-    @timeit
+    @lru_cache
     def fuzzy_search(self, substr, max_size=100) -> list[dict]:
-        if substr not in Trie.FUZZY_SEARCH:
-            words = [word for word in self.word_list if not (word[1].startswith(substr) or word[3].startswith(substr)) and (substr in word[1] or substr in word[3])]
+        words = [word for word in self.word_list if not (word[1].startswith(substr) or word[3].startswith(substr)) and (substr in word[1] or substr in word[3])]
 
-            info = [TrieNodes.eval_info(word) for word in sorted(words, reverse=True)[:20]]
-            Trie.FUZZY_SEARCH[substr] = info
-        return Trie.FUZZY_SEARCH.get(substr, [])
+        info = [Utils.eval_info(word) for word in sorted(words, reverse=True)[:20]]
+        return info
 
     @lru_cache
     def bl_search1(self, prefix, max_size=100):
@@ -214,41 +180,41 @@ class Trie:
 
     @timeit
     def bl_search(self, prefix, max_size=100):
-        if prefix in Trie.CMP_SEARCH:
-            return Trie.CMP_SEARCH[prefix]
+        if prefix in Trie.SEARCH_CACHE:
+            return Trie.SEARCH_CACHE[prefix]
         w1 = self.bl_search1(prefix, max_size)
         w2 = self.fuzzy_search(prefix, max_size)
         if w2:
             w1.extend(w2)
             w1.sort(reverse=True)
-            Trie.CMP_SEARCH[prefix] = w1
+            Trie.SEARCH_CACHE[prefix] = w1
         return w1
 
     @timeit
     def from_cache(self):
         if not self.CACHE_PATH.exists():
             return
+        # ts = time.time()
         data: dict = pickle.load(open(self.CACHE_PATH.as_posix(), "rb+"))
-        # data: dict = json.load(open(self.CACHE_PATH.as_posix(), "r+"))
-        self.root = data.pop("root")
-        self.word_list = data.pop("word_list")
+        # print(time.time()- ts)
+        self.root = data.pop("root", None)
+        self.word_list = data.pop("word_list", None)
 
+    @timeit
     def to_cache(self):
         data = {"root": self.root, "word_list": self.word_list}
+        # ts = time.time()
         pickle.dump(data, open(self.CACHE_PATH.as_posix(), "wb+"))
-        # json.dump(data, open(self.CACHE_PATH.as_posix(), "w+"))
+        # print(time.time()- ts)
 
 
 @timeit
 def csv_to_trie() -> Trie:
     trie = Trie()
-    ts = time.time()
     trie.from_cache()
-    print(f"Func read cache: {time.time()-ts:.4f}s")
     if trie.root:
         return trie
     words = []
-    ts = time.time()
     for file in Path(__file__).parent.joinpath("tags").iterdir():
         if file.is_dir():
             continue
@@ -263,11 +229,8 @@ def csv_to_trie() -> Trie:
                 row = (int(row[2]), row[0], row[1], *row[3:])
                 # trie.insert(tuple(row))
                 words.append(tuple(row))
-    print(f"Func read_csv: {time.time()-ts:.4f}s")
-    ts = time.time()
     for w in words:
         trie.insert(w)
-    print(f"Func insert_words: {time.time()-ts:.4f}s")
     # extra1
     extra_word = ["masterpiece",
                   "best_quality",
@@ -317,12 +280,11 @@ def csv_to_trie() -> Trie:
 
 
 @timeit
-def init_trie(fake=False):
-    if fake:
-        Trie.TRIE = Trie()
-        return
+def init_trie(debug=False):
     trie = csv_to_trie()
     Trie.TRIE = trie
+    global DEBUG
+    DEBUG = debug
 
 
 if __name__ == "__main__":
@@ -346,7 +308,7 @@ if __name__ == "__main__":
         print("---------CONTENT----------")
         for w in result:
             # print(f"{w}: [{TRIE.content_from_word(w)}]")
-            print(f"\t{TrieNodes.eval_info(w)}")
+            print(f"\t{Utils.eval_info(w)}")
         print("--------------------------")
 
         ts = time.time()
@@ -363,4 +325,4 @@ if __name__ == "__main__":
         #     print(i)
         print(info1 == info2)
 else:
-    Thread(target=init_trie).start()
+    Thread(target=init_trie, args=(False,)).start()

@@ -265,7 +265,7 @@ class Renderer(BaseOpenGLRenderer):
         shader.bind()
         shader.uniform_float("ProjMtx", ortho_projection)
         shader.uniform_int("Texture", 0)
-
+        self.refresh_font_texture_ex()
         for commands in draw_data.commands_lists:
             size = commands.idx_buffer_size * imgui.INDEX_SIZE // 4
             address = commands.idx_buffer_data
@@ -290,7 +290,6 @@ class Renderer(BaseOpenGLRenderer):
 
                 indices = idx_buffer_np[idx_buffer_offset:idx_buffer_offset + command.elem_count]
                 # logger.error(command.texture_id)
-                self.refresh_font_texture_ex()
                 gl.glBindTexture(gl.GL_TEXTURE_2D, command.texture_id)
                 # print(dir(command))
                 batch = batch_for_shader(shader, 'TRIS', {
