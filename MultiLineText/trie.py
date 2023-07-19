@@ -199,20 +199,24 @@ class Trie:
         # print(time.time()- ts)
         self.root = data.pop("root", None)
         self.word_list = data.pop("word_list", None)
+        return self.is_loaded()
 
     @timeit
     def to_cache(self):
+        """快速序列化 root 和 word_list到缓存文件"""
         data = {"root": self.root, "word_list": self.word_list}
         # ts = time.time()
         pickle.dump(data, open(self.CACHE_PATH.as_posix(), "wb+"))
         # print(time.time()- ts)
 
+    def is_loaded(self):
+        return self.root and self.word_list
+
 
 @timeit
 def csv_to_trie() -> Trie:
     trie = Trie()
-    trie.from_cache()
-    if trie.root:
+    if trie.from_cache():
         return trie
     words = []
     for file in Path(__file__).parent.joinpath("tags").iterdir():

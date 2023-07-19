@@ -243,3 +243,4 @@ while True:
         if inp in line:
             l.append(l)
     print(f"Line Search Time: {time.time() - ts:.4f} s")
+    print(f"Line Search Result: {len(l)}")

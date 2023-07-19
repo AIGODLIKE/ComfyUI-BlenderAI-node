@@ -275,6 +275,8 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
         self.cover = False
         self.candicates_index = 0
         self.candicates_word = ""
+        self.candicates_words = []
+        self.try_search = False
         self.io = imgui.get_io()
         self._timer = context.window_manager.event_timer_add(1 / 60, window=context.window)
         context.window_manager.modal_handler_add(self)
@@ -290,30 +292,35 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
         w, h = context.region.width, context.region.height
         if 0 > self.mpos[0] or self.mpos[0] > w or 0 > self.mpos[1] or self.mpos[1] > h:
             return {"PASS_THROUGH"}
-        # logger.debug(["Modal", self.cover, id(self)])
-        # in_area = 0 < self.mpos[0] < w and 0 < self.mpos[1] < h
-        # if not in_area:  # multi windows cause event miss
-        #     return {"PASS_THROUGH"}
+
         context.area.tag_redraw()
 
         # if event.type in {'RIGHTMOUSE', 'ESC'}:
-        #     self.shutdown()
         #     return {'CANCELLED'}
-        # print( event.mouse_x, event.mouse_y, context.region.x, context.region.y)
         self.poll_mouse(context, event)
         # print(context.area, self.mpos, self.cover, imgui.is_any_item_focused())
         if not self.cover:
-            # import random
-            # logger.debug(["Pass Through -- ", random.random()])
             return {"PASS_THROUGH"}
-        if (event.type == "UP_ARROW" and event.value == "PRESS") or event.type == "WHEELUPMOUSE":
-            self.candicates_index -= 1
-            return {"RUNNING_MODAL"}
-        if (event.type == "DOWN_ARROW" and event.value == "PRESS") or event.type == "WHEELDOWNMOUSE":
-            self.candicates_index += 1
-            return {"RUNNING_MODAL"}
+        if self.candicates_words:
+            if (event.type == "UP_ARROW" and event.value == "PRESS") or event.type == "WHEELUPMOUSE":
+                self.candicates_index -= 1
+                return {"RUNNING_MODAL"}
+            if (event.type == "DOWN_ARROW" and event.value == "PRESS") or event.type == "WHEELDOWNMOUSE":
+                self.candicates_index += 1
+                return {"RUNNING_MODAL"}
         self.poll_events(context, event)
         return {"RUNNING_MODAL"}
+
+    def poll_mouse(self, context, event):
+        io = imgui.get_io()
+        io.mouse_pos = (self.mpos[0], context.region.height - 1 - self.mpos[1])
+        if event.type == 'LEFTMOUSE':
+            io.mouse_down[0] = event.value == 'PRESS'
+
+    def poll_events(self, context, event):
+        super().poll_events(context, event)
+        if event.unicode and 0 < ord(event.unicode) < 0x10000:
+            self.try_search = True
 
     def clear(self):
         super().clear()
@@ -436,6 +443,8 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
             data.delete_chars(cstart_pos, data.cursor_pos - cstart_pos)
             data.insert_chars(cstart_pos, self.candicates_word + ", ")
             self.candicates_word = ""
+            self.candicates_words = []
+            self.try_search = False
             edit(data)
 
         def always(data):
@@ -443,6 +452,8 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
             # 161 12 156 158
             # print(data.buffer_text_length, data.buffer_size, len(data.buffer), data.cursor_pos)
             # cursor_start_pos = imgui.core.get_cursor_start_pos()
+            if not self.try_search:
+                return
             cursor_screen_pos = imgui.core.get_cursor_screen_pos()
             rect_min = imgui.get_item_rect_min()
             bbuffer = data.buffer.encode()[:data.cursor_pos].decode()
@@ -454,7 +465,7 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
             curp = imgui.Vec2(curpx, curpy)
             start_pos, end_pos = find_word(data.buffer, data.cursor_pos)
             word = data.buffer[start_pos: end_pos]
-            self.t(curp, word, self.candicates_index)
+            self.t(curp, word)
 
         cb_map = {
             imgui.INPUT_TEXT_CALLBACK_RESIZE: resize,
@@ -502,17 +513,20 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
         # self.io.keys_down[self.key_map["ESC"]] = not self.cover
         imgui.end()
 
-    def t(self, pos, word, index):
+    def t(self, pos, word: str):
         from .trie import Trie
         if Trie.TRIE is None:
             return
-        word: str = word.strip().replace("\n", "")
+        word = word.strip().replace("\n", "")
         if not word:
+            self.candicates_words = []
+            self.try_search = False
             return
         # (83, 'girly_pred', '0', '', 'e621', {}, (173, 216, 230))
-        candicates_list = Trie.TRIE.bl_search(word, max_size=20)
-        index = max(0, min(index, len(candicates_list) - 1))
-        self.candicates_index = index
+        self.candicates_words = Trie.TRIE.bl_search(word, max_size=20)
+        candicates_list = self.candicates_words
+        self.candicates_index = max(0, min(self.candicates_index, len(candicates_list) - 1))
+        index = self.candicates_index
         imgui.set_next_window_position(pos.x, pos.y)
         imgui.set_next_window_size(-1, -1)
 
