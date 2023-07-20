@@ -317,7 +317,10 @@ class Ops(bpy.types.Operator):
         elif self.action == "PresetFromClipBoard":
             try:
                 data = bpy.context.window_manager.clipboard
-                tree.load_json(json.loads(data))
+                data = json.loads(data)
+                if "workflow" in data:
+                    data = data["workflow"]
+                tree.load_json(data)
             except json.JSONDecodeError:
                 self.report({"ERROR"}, _T("ClipBoard Content Format Error"))
                 return {"FINISHED"}
