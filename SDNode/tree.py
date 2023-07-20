@@ -11,6 +11,7 @@ from .nodes import nodes_reg, nodes_unreg, parse_node
 from ..utils import logger, Icon, rgb2hex, hex2rgb, _T
 from ..datas import EnumCache
 from ..timer import Timer
+from ..translation import ctxt
 
 TREE_NAME = "CFNODES_SYS"
 TREE_TYPE = "CFNodeTree"
@@ -580,10 +581,10 @@ def rtnode_reg():
 
     def draw_intern(self):
         layout: bpy.types.UILayout = self.layout
-        props = layout.operator("node.add_node", text="NodeFrame")
+        props = layout.operator("node.add_node", text="NodeFrame", text_ctxt=ctxt)
         props.type = "NodeFrame"
         props.use_transform = True
-        props = layout.operator("node.add_node", text="NodeReroute")
+        props = layout.operator("node.add_node", text="NodeReroute", text_ctxt=ctxt)
         props.type = "NodeReroute"
         props.use_transform = True
 
