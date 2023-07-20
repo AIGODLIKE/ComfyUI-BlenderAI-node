@@ -57,7 +57,10 @@ class Ops(bpy.types.Operator):
         tree = bpy.context.space_data.edit_tree
         if not tree:
             return
-        tree.load_json(json.loads(data))
+        data = json.loads(data)
+        if "workflow" in data:
+            data = data["workflow"]
+        tree.load_json(data)
 
     import_bookmark: bpy.props.StringProperty(name="Preset Bookmark", default=str(Path.cwd()), subtype="FILE_PATH", set=import_bookmark_set)
 
