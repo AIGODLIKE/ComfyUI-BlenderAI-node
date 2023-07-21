@@ -59,7 +59,7 @@ COLOR_MAP = {
 
 class Utils:
     def is_word(self):
-        return self.get("id")
+        return "id" in self
 
     def eval_color(self):
         #  freq,    key,   type,  content,   wtype, node
@@ -117,8 +117,8 @@ class Trie:
             单个搜索: 搜索word是否存在
         """
         node = self.root
-        for chars in word:
-            node = node.get(chars)
+        for char in word:
+            node = node.get(char)
             if not node:
                 return False
         return Utils.is_word(node)
@@ -128,8 +128,8 @@ class Trie:
             前缀判断: 判断前缀是否存在
         """
         node = self.root
-        for chars in prefix:
-            node = node.get(chars)
+        for char in prefix:
+            node = node.get(char)
             if not node:
                 return False
         return True
@@ -142,8 +142,8 @@ class Trie:
             words = []
         if not pre_node:
             pre_node = self.root
-            for chars in prefix:
-                pre_node = pre_node.get(chars)
+            for char in prefix:
+                pre_node = pre_node.get(char)
         if Utils.is_word(pre_node):
             words.append(self.word_list[pre_node["id"]])
         for c, node in pre_node.items():
@@ -158,10 +158,6 @@ class Trie:
         """
         if not self.starts_with(prefix):
             return []
-        # pre_node = self.root
-        # for chars in prefix:
-        #     pre_node = pre_node.data.get(chars)
-        # return pre_node.child
         words = self.search_all(prefix)
         return words
 
