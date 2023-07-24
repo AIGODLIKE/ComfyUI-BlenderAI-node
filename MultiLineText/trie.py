@@ -261,7 +261,7 @@ def insert_internal(trie: Trie):
                   "low_quality",
                   "worst_quality",]
     for word in extra_word:
-        trie.insert((5000, word, 0, word, "default"))
+        trie.insert((5000, word, 0, "", "default"))
     return
     # extra2
     extra_word = [
@@ -297,7 +297,7 @@ def insert_internal(trie: Trie):
         }
     ]
     for word in extra_word:
-        trie.insert((5000, word["name"], 0, word["content"], "default"))
+        trie.insert((5000, word["content"], 0, word["name"], "default"))
 
 @timeit
 def csv_to_trie() -> Trie:

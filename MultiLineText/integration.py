@@ -441,7 +441,8 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
             start_pos, end_pos = find_word(data.buffer, data.cursor_pos)
             cstart_pos = len(data.buffer[:start_pos].encode())
             data.delete_chars(cstart_pos, data.cursor_pos - cstart_pos)
-            data.insert_chars(cstart_pos, self.candicates_word + ", ")
+            candicates_word = self.candicates_word.replace("(", "\\(").replace(")", "\\)")
+            data.insert_chars(cstart_pos, candicates_word + ",")
             self.candicates_word = ""
             self.candicates_words = []
             self.try_search = False
@@ -520,7 +521,7 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
         from .trie import Trie
         if Trie.TRIE is None:
             return
-        word = word.strip().replace("\n", "")
+        word = word.strip().replace("\n", "").replace(" ", "_").replace("\\(", "(").replace("\\)", ")")
         if not word:
             self.candicates_words = []
             self.try_search = False
