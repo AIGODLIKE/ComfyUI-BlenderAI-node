@@ -6,7 +6,7 @@ from pathlib import Path
 from threading import Thread
 from functools import lru_cache
 DEBUG = True
-
+CACHE_VERSION = (0, 0, 1)
 danbooru_type = {"0": "General",
                  "1": "Artist",
                  "3": "Copyright",
@@ -192,6 +192,9 @@ class Trie:
             return
         # ts = time.time()
         data: dict = pickle.load(open(self.CACHE_PATH.as_posix(), "rb+"))
+        if data.get("version") != CACHE_VERSION:
+            self.CACHE_PATH.unlink()
+            return
         # print(time.time()- ts)
         self.root = data.pop("root", None)
         self.word_list = data.pop("word_list", None)
@@ -200,7 +203,7 @@ class Trie:
     @timeit
     def to_cache(self):
         """快速序列化 root 和 word_list到缓存文件"""
-        data = {"root": self.root, "word_list": self.word_list}
+        data = {"root": self.root, "word_list": self.word_list, "version": CACHE_VERSION}
         # ts = time.time()
         pickle.dump(data, open(self.CACHE_PATH.as_posix(), "wb+"))
         # print(time.time()- ts)
@@ -208,12 +211,7 @@ class Trie:
     def is_loaded(self):
         return self.root and self.word_list
 
-
-@timeit
-def csv_to_trie() -> Trie:
-    trie = Trie()
-    if trie.from_cache():
-        return trie
+def insert_internal(trie: Trie):
     words = []
     for file in Path(__file__).parent.joinpath("tags").iterdir():
         if file.is_dir():
@@ -224,11 +222,35 @@ def csv_to_trie() -> Trie:
             import csv
             data = csv.reader(f)
             for row in data:
+                # key,   type, freq,    content
+                # 1girl, 0,    4114588, "1girls,sole_female"
+                content = row[3]
+                row[3] = ""
                 row.append(Path(file).stem)
                 # 变更为 freq, key, type, content, wtype
                 row = (int(row[2]), row[0], row[1], *row[3:])
-                # trie.insert(tuple(row))
-                words.append(tuple(row))
+                words.append(row)
+                # content 包含多个词(有的词包含括号, 括号中也有逗号), 每个词按逗号分隔
+                # \(.*?,+.*?\)  \(.*?(?!\)),+.*?\)
+                split_words = []
+                if "(" in content and ")" in content:
+                    left_bracket = 0
+                    split_word = ""
+                    for c in content:
+                        if c == "," and left_bracket == 0:
+                            split_words.append(split_word.strip())
+                            split_word = ""
+                        split_word += c
+                        if c == "(":
+                            left_bracket += 1
+                        elif c == ")":
+                            left_bracket -= 1
+                else:
+                    split_words = content.split(",")
+                # 处理 to -> replace
+                for split_word in split_words:
+                    rrow = (row[0], split_word, row[2], row[1], row[4])
+                    words.append(rrow)
     for w in words:
         trie.insert(w)
     # extra1
@@ -240,6 +262,7 @@ def csv_to_trie() -> Trie:
                   "worst_quality",]
     for word in extra_word:
         trie.insert((5000, word, 0, word, "default"))
+    return
     # extra2
     extra_word = [
         {
@@ -275,6 +298,13 @@ def csv_to_trie() -> Trie:
     ]
     for word in extra_word:
         trie.insert((5000, word["name"], 0, word["content"], "default"))
+
+@timeit
+def csv_to_trie() -> Trie:
+    trie = Trie()
+    if trie.from_cache():
+        return trie
+    insert_internal(trie)
     trie.to_cache()
     return trie
 

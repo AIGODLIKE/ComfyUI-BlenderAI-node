@@ -1,17 +1,21 @@
 import struct
 from pathlib import Path
+from functools import lru_cache
 from urllib.parse import urlparse
 from .kclogger import logger
 from .translation import lang_text
 from .timer import Timer
 translation = {}
 
+
 def get_version():
     from . import bl_info
     return ".".join([str(i) for i in bl_info['version']])
 
+
 def get_addon_name():
-    return _T("无限圣杯 Node" ) + get_version()
+    return _T("无限圣杯 Node") + get_version()
+
 
 def _T(word):
     import bpy
@@ -62,15 +66,18 @@ def hex2rgb(hex_val):
     return r, g, b
 
 
+@lru_cache(maxsize=1024)
 def to_str(path: Path):
-    if isinstance(path, Path):
-        return path.resolve().as_posix()
-    return Path(path).resolve().as_posix()
+    p = Path(path)
+    network_prefixes = ('\\', '//')
+    res_str = p.resolve().as_posix()
+    if res_str.startswith(tuple(network_prefixes)):
+        return p.as_posix()
+    return res_str
 
 
+@lru_cache(maxsize=1024)
 def to_path(path: Path):
-    if isinstance(path, Path):
-        return path
     return Path(path)
 
 

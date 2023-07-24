@@ -543,12 +543,11 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
                 # with imgui.begin_group():
                 col = t[-1]
                 imgui.push_style_color(imgui.COLOR_TEXT, col[0] / 256, col[1] / 256, col[2] / 256)
-                imgui.selectable(t[1], i == index)
+                show_txt = t[1] + "\t==>\t" + t[3] if t[3] else t[1]
+                imgui.selectable(show_txt, i == index)
                 imgui.same_line(position=300)
-                # imgui.text(t[3] if t[3] else t[1])
-                # print(freq_to_str(t[0]), t[3] if t[3] else t[1])
-                imgui.label_text(freq_to_str(t[0]), t[3] if t[3] else t[1])
-                # imgui.same_line(position=900)
+                # imgui.text(freq_to_str(t[0]))
+                imgui.label_text(freq_to_str(t[0]), "")
                 imgui.pop_style_color(1)
         if candicates_list:
             c = candicates_list[index]
