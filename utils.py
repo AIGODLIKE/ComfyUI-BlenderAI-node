@@ -1,5 +1,7 @@
 import struct
+import queue
 from pathlib import Path
+from threading import Thread
 from functools import lru_cache
 from urllib.parse import urlparse
 from .kclogger import logger
@@ -66,21 +68,6 @@ def hex2rgb(hex_val):
     return r, g, b
 
 
-@lru_cache(maxsize=1024)
-def to_str(path: Path):
-    p = Path(path)
-    network_prefixes = ('\\', '//')
-    res_str = p.resolve().as_posix()
-    if res_str.startswith(tuple(network_prefixes)):
-        return p.as_posix()
-    return res_str
-
-
-@lru_cache(maxsize=1024)
-def to_path(path: Path):
-    return Path(path)
-
-
 class MetaIn(type):
     def __contains__(self, name):
         return name in Icon.PREV_DICT
@@ -98,7 +85,7 @@ class Icon(metaclass=MetaIn):
 
     def __init__(self) -> None:
         if Icon.NONE_IMAGE and Icon.NONE_IMAGE not in Icon:
-            Icon.NONE_IMAGE = to_str(Icon.NONE_IMAGE)
+            Icon.NONE_IMAGE = FSWatcher.to_str(Icon.NONE_IMAGE)
             self.reg_icon(Icon.NONE_IMAGE)
 
     def __new__(cls, *args, **kwargs):
@@ -110,7 +97,7 @@ class Icon(metaclass=MetaIn):
         import bpy
         Icon.PATH2BPY.clear()
         for i in bpy.data.images:
-            Icon.PATH2BPY[to_str(i.filepath)] = i
+            Icon.PATH2BPY[FSWatcher.to_str(i.filepath)] = i
 
     @staticmethod
     def clear():
@@ -127,8 +114,8 @@ class Icon(metaclass=MetaIn):
 
     @staticmethod
     def try_mark_image(path) -> bool:
-        p = to_path(path)
-        path = to_str(path)
+        p = FSWatcher.to_path(path)
+        path = FSWatcher.to_str(path)
         if not p.exists():
             return False
         if Icon.IMG_STATUS.get(path, -1) == p.stat().st_mtime_ns:
@@ -137,8 +124,8 @@ class Icon(metaclass=MetaIn):
 
     @staticmethod
     def can_mark_image(path) -> bool:
-        p = to_path(path)
-        path = to_str(path)
+        p = FSWatcher.to_path(path)
+        path = FSWatcher.to_str(path)
         if not Icon.try_mark_image(p):
             return False
         Icon.IMG_STATUS[path] = p.stat().st_mtime_ns
@@ -146,7 +133,7 @@ class Icon(metaclass=MetaIn):
 
     @staticmethod
     def can_mark_pixel(prev, name) -> bool:
-        name = to_str(name)
+        name = FSWatcher.to_str(name)
         if Icon.PIX_STATUS.get(name) == hash(prev.pixels):
             return False
         Icon.PIX_STATUS[name] = hash(prev.pixels)
@@ -154,7 +141,7 @@ class Icon(metaclass=MetaIn):
 
     @staticmethod
     def remove_mark(name) -> bool:
-        name = to_str(name)
+        name = FSWatcher.to_str(name)
         Icon.IMG_STATUS.pop(name)
         Icon.PIX_STATUS.pop(name)
         Icon.PREV_DICT.pop(name)
@@ -162,7 +149,7 @@ class Icon(metaclass=MetaIn):
 
     @staticmethod
     def reg_none(none: Path):
-        none = to_str(none)
+        none = FSWatcher.to_str(none)
         if none in Icon:
             return
         Icon.NONE_IMAGE = none
@@ -170,7 +157,7 @@ class Icon(metaclass=MetaIn):
 
     @staticmethod
     def reg_icon(path):
-        path = to_str(path)
+        path = FSWatcher.to_str(path)
         if not Icon.can_mark_image(path):
             return Icon[path]
         if Icon.ENABLE_HQ_PREVIEW:
@@ -187,8 +174,8 @@ class Icon(metaclass=MetaIn):
     @staticmethod
     def reg_icon_hq(path):
         import bpy
-        p = to_path(path)
-        path = to_str(path)
+        p = FSWatcher.to_path(path)
+        path = FSWatcher.to_str(path)
         if path in Icon:
             return
         if p.exists() and p.suffix in {".png", ".jpg", ".jpeg"}:
@@ -197,7 +184,7 @@ class Icon(metaclass=MetaIn):
             bpy.data.images.remove(img)
 
     def find_image(path):
-        img = Icon.PATH2BPY.get(to_str(path), None)
+        img = Icon.PATH2BPY.get(FSWatcher.to_str(path), None)
         if not img:
             return None
         try:
@@ -210,8 +197,8 @@ class Icon(metaclass=MetaIn):
     @staticmethod
     def load_icon(path):
         import bpy
-        p = to_path(path)
-        path = to_str(path)
+        p = FSWatcher.to_path(path)
+        path = FSWatcher.to_str(path)
 
         if not Icon.can_mark_image(path):
             return
@@ -231,7 +218,7 @@ class Icon(metaclass=MetaIn):
 
     @staticmethod
     def reg_icon_by_pixel(prev, name):
-        name = to_str(name)
+        name = FSWatcher.to_str(name)
         if not Icon.can_mark_pixel(prev, name):
             return
         if name in Icon:
@@ -243,9 +230,9 @@ class Icon(metaclass=MetaIn):
 
     @staticmethod
     def get_icon_id(name: Path):
-        p = Icon.PREV_DICT.get(to_str(name), None)
+        p = Icon.PREV_DICT.get(FSWatcher.to_str(name), None)
         if not p:
-            p = Icon.PREV_DICT.get(to_str(Icon.NONE_IMAGE), None)
+            p = Icon.PREV_DICT.get(FSWatcher.to_str(Icon.NONE_IMAGE), None)
         return p.icon_id if p else 0
 
     @staticmethod
@@ -269,10 +256,10 @@ class Icon(metaclass=MetaIn):
         return Icon.get_icon_id(name)
 
     def __contains__(self, name):
-        return to_str(name) in Icon.PREV_DICT
+        return FSWatcher.to_str(name) in Icon.PREV_DICT
 
     def __class_contains__(cls, name):
-        return to_str(name) in Icon.PREV_DICT
+        return FSWatcher.to_str(name) in Icon.PREV_DICT
 
 
 class PngParse:
@@ -381,3 +368,97 @@ class PkgInstaller:
             except Exception:
                 return False
         return True
+
+
+class FSWatcher:
+    """
+    监听文件/文件夹变化的工具类
+        register: 注册监听, 传入路径和回调函数(可空)
+        unregister: 注销监听
+        run: 监听循环, 使用单例,只在第一次初始化时调用
+        stop: 停止监听, 释放资源
+        consume_change: 消费变化, 当监听对象发生变化时记录为changed, 主动消费后置False, 用于自定义回调函数
+    """
+    _watcher_path: dict[Path, bool] = {}
+    _watcher_stat = {}
+    _watcher_callback = {}
+    _watcher_queue = queue.Queue()
+    _running = False
+
+    def init() -> None:
+        FSWatcher._run()
+
+    def register(path, callback=None):
+        path = FSWatcher.to_path(path)
+        if path in FSWatcher._watcher_path:
+            return
+        FSWatcher._watcher_path[path] = False
+        FSWatcher._watcher_callback[path] = callback
+
+    def unregister(path):
+        path = FSWatcher.to_path(path)
+        FSWatcher._watcher_path.pop(path)
+        FSWatcher._watcher_callback.pop(path)
+
+    def _run():
+        if FSWatcher._running:
+            return
+        FSWatcher._running = True
+        Thread(target=FSWatcher._loop, daemon=True).start()
+        Thread(target=FSWatcher._run_ex, daemon=True).start()
+
+    def _run_ex():
+        while FSWatcher._running:
+            try:
+                path = FSWatcher._watcher_queue.get(timeout=0.1)
+                if path not in FSWatcher._watcher_path:
+                    continue
+                if callback := FSWatcher._watcher_callback[path]:
+                    callback(path)
+            except queue.Empty:
+                pass
+
+    def _loop():
+        """
+            监听所有注册的路径, 有变化时记录为changed
+        """
+        import time
+        while FSWatcher._running:
+            for path, changed in FSWatcher._watcher_path.items():
+                if changed:
+                    continue
+                mtime = path.stat().st_mtime_ns
+                if FSWatcher._watcher_stat.get(path, None) == mtime:
+                    continue
+                FSWatcher._watcher_stat[path] = mtime
+                FSWatcher._watcher_path[path] = True
+                FSWatcher._watcher_queue.put(path)
+            time.sleep(0.5)
+
+    def stop():
+        FSWatcher._watcher_queue.put(None)
+        FSWatcher._running = False
+
+    def consume_change(path) -> bool:
+        path = FSWatcher.to_path(path)
+        if path in FSWatcher._watcher_path and FSWatcher._watcher_path[path]:
+            FSWatcher._watcher_path[path] = False
+            return True
+        return False
+    
+    @lru_cache(maxsize=1024)
+    @staticmethod
+    def to_str(path: Path):
+        p = Path(path)
+        res_str = p.resolve().as_posix()
+        if res_str.startswith(('\\\\', '//')):
+            return p.as_posix()
+        return res_str
+
+    @lru_cache(maxsize=1024)
+    @staticmethod
+    def to_path(path: Path):
+        return Path(path)
+
+
+FSWatcher.init()
