@@ -510,6 +510,9 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
         # self.cover = imgui.is_any_item_focused() or imgui.is_any_item_hovered() or imgui.is_any_item_active()
         if imgui.is_item_hovered():
             imgui.core.set_keyboard_focus_here(-1)
+        else:
+            for code in self.io.key_map:
+                self.io.keys_down[code] = False
         # self.io.keys_down[self.key_map["ESC"]] = not self.cover
         imgui.end()
 
