@@ -854,7 +854,7 @@ def parse_node():
     for nname, ndesc in nodes_desc.items():
         opt_types = ndesc["input"].get("optional", {})
         inp_types = {}
-        for key, value in ndesc["input"]["required"].items():
+        for key, value in ndesc["input"].get("required", {}).items():
             inp_types[key] = value
             if key == "seed" or (nname == "KSamplerAdvanced" and key == "noise_seed"):
                 inp_types["control_after_generate"] = [["fixed", "increment", "decrement", "randomize"]]
