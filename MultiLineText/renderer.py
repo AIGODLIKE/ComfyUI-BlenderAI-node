@@ -94,13 +94,14 @@ class Renderer(BaseOpenGLRenderer):
     def refresh_font_texture_ex(scene=None):
         # save texture state
         self = Renderer.instance
-        if not (img := bpy.data.images.get(".imgui_font", None)):
+        if not (img := bpy.data.images.get(".imgui_font", None)) or img.bindcode != self._font_texture:
             ts = time.time()
             width, height, pixels = self.io.fonts.get_tex_data_as_rgba32()
+            if img:
+                bpy.data.images.remove(img)
             img = bpy.data.images.new(".imgui_font", width, height, alpha=True, float_buffer=True)
             pixels = np.frombuffer(pixels, dtype=np.uint8) / np.float32(256)
             img.pixels.foreach_set(pixels)
-            img.use_fake_user = True
             self.io.fonts.clear_tex_data()
             logger.debug(f"MLT Init -> {time.time() - ts:.2f}s")
         img.gl_load()
