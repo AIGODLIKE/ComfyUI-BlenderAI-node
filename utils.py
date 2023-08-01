@@ -1,5 +1,6 @@
 import struct
 import queue
+import platform
 from pathlib import Path
 from threading import Thread
 from functools import lru_cache
@@ -448,6 +449,8 @@ class FSWatcher:
 
     @lru_cache
     def get_nas_mapping():
+        if platform.system() != "Windows":
+            return {}
         import subprocess
         result = subprocess.run("net use", capture_output=True, text=True, encoding="gbk")
         if result.returncode != 0 or result.stdout is None:

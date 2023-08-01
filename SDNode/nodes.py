@@ -122,6 +122,12 @@ def get_reg_name(inp_name):
     return inp_name
 
 
+def get_ori_name(inp_name):
+    if inp_name.startswith(PROP_NAME_HEAD):
+        return inp_name.replace(PROP_NAME_HEAD, "")
+    return inp_name
+
+
 def get_fixed_seed():
     return int(random.randrange(4294967294))
 
@@ -131,13 +137,14 @@ class NodeBase(bpy.types.Node):
     bl_width_max = 2000.0
     order: bpy.props.IntProperty(default=-1)
     id: bpy.props.StringProperty(default="-1")
-    builtin__stat__: bpy.props.StringProperty(subtype="BYTE_STRING")
+    builtin__stat__: bpy.props.StringProperty(subtype="BYTE_STRING") # ori name: True/False
     pool = set()
 
     def query_stat(self, name):
         if not self.builtin__stat__:
             return None
         stat = pickle.loads(self.builtin__stat__)
+        name = get_ori_name(name)
         return stat.get(name, None)
 
     def is_base_type(self, name):
@@ -289,6 +296,9 @@ class NodeBase(bpy.types.Node):
         spec_serialize_pre(self)
 
     def serialize(self, execute=True):
+        """
+        gen prompt
+        """
         inputs = {}
         for inp_name in self.inp_types:
             # inp = self.inp_types[inp_name]
@@ -298,7 +308,11 @@ class NodeBase(bpy.types.Node):
                 if not link:
                     continue
                 # inputs[inp_name] = [link.from_node.id, link.from_socket.slot_index]
-                inputs[inp_name] = [link.from_node.id, link.from_node.outputs.index(link.from_socket)]
+                from_node = link.from_node
+                if from_node.bl_idname == "PrimitiveNode":
+                    inputs[inp_name] = getattr(self, reg_name)
+                else:
+                    inputs[inp_name] = [link.from_node.id, link.from_node.outputs[:].index(link.from_socket)]
             else:
                 # 添加 非socket
                 inputs[inp_name] = getattr(self, reg_name)
@@ -571,13 +585,14 @@ class Ops_Swith_Socket(bpy.types.Operator):
     def execute(self, context):
         tree = bpy.context.space_data.edit_tree
         node: NodeBase = None
+        socket_name = get_ori_name(self.socket_name)
         if not (node := tree.nodes.get(self.node_name)):
             return {"FINISHED"}
         match self.action:
             case "ToSocket":
-                node.switch_socket(self.socket_name, True)
+                node.switch_socket(socket_name, True)
             case "ToProp":
-                node.switch_socket(self.socket_name, False)
+                node.switch_socket(socket_name, False)
         self.action = ""
         return {"FINISHED"}
 
@@ -1005,14 +1020,14 @@ def parse_node():
                 out.index = index
             self.calc_slot_index()
 
-        def draw_buttons(self, context, layout: bpy.types.UILayout):
+        def draw_buttons(self: NodeBase, context, layout: bpy.types.UILayout):
             for prop in self.__annotations__:
                 if self.query_stat(prop):
                     continue
                 if prop == "control_after_generate":
                     continue
                 l = layout
-                if prop in self.inp_types:
+                if self.is_base_type(prop) and get_ori_name(prop) in self.inp_types:
                     l = l.row(align=True)
                     op = l.operator(Ops_Swith_Socket.bl_idname, text="", icon="LINKED")
                     op.node_name = self.name
@@ -1137,16 +1152,17 @@ def parse_node():
             continue
 
         def draw(self, context, layout, node, text):
-            if self.is_output or not hasattr(node, self.name):
-                layout.label(text=self.name, text_ctxt=ctxt)
+            prop = get_reg_name(self.name)
+            if self.is_output or not hasattr(node, prop):
+                layout.label(text=prop, text_ctxt=ctxt)
                 return
             row = layout.row(align=True)
-            row.label(text=self.name, text_ctxt=ctxt)
+            row.label(text=prop, text_ctxt=ctxt)
             op = row.operator(Ops_Swith_Socket.bl_idname, text="", icon="UNLINKED")
             op.node_name = node.name
             op.socket_name = self.name
             op.action = "ToProp"
-            row.prop(node, self.name, text="", text_ctxt=ctxt)
+            row.prop(node, prop, text="", text_ctxt=ctxt)
         color = bpy.props.FloatVectorProperty(size=4, default=(rand()**0.5, rand()**0.5, rand()**0.5, 1))
         fields = {"draw": draw, "bl_label": stype, "__annotations__": {"color": color,
                                                                        "index": bpy.props.IntProperty(default=-1),
@@ -1430,6 +1446,12 @@ def spec_serialize_pre(self):
         if not self.exe_rand and not bpy.context.scene.sdn.rand_all_seed:
             return
         self.noise_seed = str(get_fixed_seed())
+    elif self.class_type == "PrimitiveNode":
+        if not self.outputs[0].is_linked:
+            return
+        prop = getattr(self.outputs[0].links[0].to_node, self.prop)
+        for link in self.outputs[0].links[1:]:
+            setattr(link.to_node, self.prop, prop)
 
 
 def spec_serialize(self, cfg, execute):
@@ -1539,7 +1561,9 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
     if self.bl_idname == "PrimitiveNode":
         if self.outputs[0].is_linked and self.outputs[0].links:
             node = self.outputs[0].links[0].to_node
-            layout.prop(node, self.prop)
+            if spec_draw(node, context, layout, self.prop):
+                return True
+            layout.prop(node, get_reg_name(self.prop))
         return True
     if prop == "control_after_generate":
         return True

@@ -7,7 +7,7 @@ from functools import partial
 from collections import OrderedDict
 from bpy.types import NodeTree
 from nodeitems_utils import NodeCategory, NodeItem, register_node_categories, unregister_node_categories, _node_categories
-from .nodes import nodes_reg, nodes_unreg, parse_node
+from .nodes import nodes_reg, nodes_unreg, parse_node, NodeBase
 from ..utils import logger, Icon, rgb2hex, hex2rgb, _T
 from ..datas import EnumCache
 from ..timer import Timer
@@ -37,9 +37,12 @@ class CFNodeTree(NodeTree):
             node.serialize_pre()
 
     def serialize(self):
+        """
+        get prompts
+        """
         self.validation()
         self.serialize_pre()
-        return {node.id: (node.serialize(), node.pre_fn, node.post_fn) for node in self.get_nodes() if node.class_type != "Reroute"}
+        return {node.id: (node.serialize(), node.pre_fn, node.post_fn) for node in self.get_nodes() if node.class_type not in {"Reroute", "PrimitiveNode"}}
 
     def validation(self, nodes=None):
 
@@ -173,6 +176,9 @@ class CFNodeTree(NodeTree):
         return data
 
     def save_json(self):
+        """
+        get workflow
+        """
         dump_nodes = self.get_nodes()
 
         return self.save_json_ex(dump_nodes)
@@ -313,7 +319,7 @@ class CFNodeTree(NodeTree):
             node.update()
         return load_nodes
 
-    def get_nodes(self, cmf=True):
+    def get_nodes(self, cmf=True) -> list[NodeBase]:
         if cmf:
             return [n for n in self.nodes if n.bl_idname not in {"NodeFrame", } and n.is_registered_node_type()]
         return [n for n in self.nodes if n.is_registered_node_type()]
