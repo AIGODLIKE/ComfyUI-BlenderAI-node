@@ -6,6 +6,9 @@ import re
 import json
 import math
 import textwrap
+import pickle
+from copy import deepcopy
+from hashlib import md5
 from math import ceil
 from typing import Any
 from pathlib import Path
@@ -25,6 +28,13 @@ NODES_POLL = {}
 Icon.reg_none(Path(__file__).parent / "NONE.png")
 PREVICONPATH = {}
 PATH_CFG = Path(__file__).parent / "PATH_CFG.json"
+
+SOCKET_TYPE = {}  # NodeType: {PropName: SocketType}
+SOCKET_HASH_MAP = {  # {HASH: METATYPE}
+    "INT": "INT",
+    "FLOAT": "FLOAT",
+    "STRING": "STRING",
+}
 PROP_NAME_HEAD = "sdn_"
 name2path = {
     "CheckpointLoader": {"ckpt_name": "checkpoints"},
@@ -121,7 +131,46 @@ class NodeBase(bpy.types.Node):
     bl_width_max = 2000.0
     order: bpy.props.IntProperty(default=-1)
     id: bpy.props.StringProperty(default="-1")
+    builtin__stat__: bpy.props.StringProperty(subtype="BYTE_STRING")
     pool = set()
+
+    def query_stat(self, name):
+        if not self.builtin__stat__:
+            return None
+        stat = pickle.loads(self.builtin__stat__)
+        return stat.get(name, None)
+
+    def is_base_type(self, name):
+        reg_name = get_reg_name(name)
+        return hasattr(self, reg_name)
+
+    def set_stat(self, name, value):
+        if not self.builtin__stat__:
+            self.builtin__stat__ = pickle.dumps({})
+        stat = pickle.loads(self.builtin__stat__)
+        stat[name] = value
+        self.builtin__stat__ = pickle.dumps(stat)
+
+    def switch_socket(self, name, value):
+        self.set_stat(name, value)
+        if value:
+            socket_type = SOCKET_TYPE[self.class_type].get(name, "NONE")
+            inp = self.inputs.new(socket_type, name)
+            inp.slot_index = len(self.inputs) - 1
+            return inp
+        elif inp := self.inputs.get(name):
+            self.inputs.remove(inp)
+
+    def get_meta(self, inp_name) -> list:
+        if not hasattr(self, "__metadata__"):
+            logger.warn(f"node {self.name} has no metadata")
+            return []
+        inputs = self.__metadata__.get("input", {})
+        if inp_name in (r := inputs.get("required", {})):
+            return r[inp_name]
+        if inp_name in (o := inputs.get("optional", {})):
+            return o[inp_name]
+        return []
 
     def calc_slot_index(self):
         for i, inp in enumerate(self.inputs):
@@ -168,6 +217,7 @@ class NodeBase(bpy.types.Node):
     def update(self):
         self.remove_multi_link()
         self.remove_invalid_link()
+        self.primitive_check()
 
     def remove_multi_link(self):
         for inp in self.inputs:
@@ -188,14 +238,41 @@ class NodeBase(bpy.types.Node):
                 if lfrom:
                     fs = lfrom.from_socket
                 ts = l.to_socket
+                if fs.bl_idname == "*" and SOCKET_HASH_MAP.get(ts.bl_idname) in {"ENUM", "STRING", "INT", "FLOAT"}:
+                    continue
                 if fs.bl_idname == ts.bl_idname:
                     continue
+
                 if not hasattr(bpy.context.space_data, "edit_tree"):
                     continue
                 bpy.context.space_data.edit_tree.links.remove(l)
 
+    def primitive_check(self):
+        # 对PrimitiveNode类型的输出进行限制
+        if self.class_type != "PrimitiveNode":
+            return
+        out = self.outputs[0]
+        for l in out.links:
+            if l.to_node.bl_idname != "NodeReroute":
+                continue
+            bpy.context.space_data.edit_tree.links.remove(l)
+
+        if not out.is_linked:
+            return
+        if not out.links:
+            return
+        to_prop = out.links[-1].to_socket.name
+        to_node = out.links[-1].to_node.bl_idname
+        self.prop = to_prop
+        for l in out.links[:-1]:
+            if l.to_socket.name == to_prop and l.to_node.bl_idname == to_node:
+                continue
+            bpy.context.space_data.edit_tree.links.remove(l)
+
     def get_from_link(self, socket: bpy.types.NodeSocket):
         if not socket.is_linked:
+            return
+        if not socket.links:
             return
         link = socket.links[0]
         while True:
@@ -220,7 +297,8 @@ class NodeBase(bpy.types.Node):
                 link = self.get_from_link(inp)
                 if not link:
                     continue
-                inputs[inp_name] = [link.from_node.id, link.from_socket.slot_index]
+                # inputs[inp_name] = [link.from_node.id, link.from_socket.slot_index]
+                inputs[inp_name] = [link.from_node.id, link.from_node.outputs.index(link.from_socket)]
             else:
                 # 添加 非socket
                 inputs[inp_name] = getattr(self, reg_name)
@@ -249,6 +327,21 @@ class NodeBase(bpy.types.Node):
                 self.pool.add(self.id)
             except BaseException:
                 self.apply_unique_id()
+        # 处理 inputs
+        for inp in data.get("inputs", []):
+            name = inp.get("name", "")
+            if not self.is_base_type(name):
+                continue
+            new_socket = self.switch_socket(name, True)
+            if si := inp.get("slot_index"):
+                new_socket.slot_index = si
+            md = self.get_meta(name)
+            if isinstance(md, list):
+                continue
+            if not (default := inp.get("widget", {}).get("config", {}).get("default")):
+                continue
+            reg_name = get_reg_name(name)
+            setattr(self, reg_name, default)
         # if self.class_type == "KSamplerAdvanced":
         #     data["widgets_values"].pop(2)
         if self.class_type == "KSampler":
@@ -277,9 +370,9 @@ class NodeBase(bpy.types.Node):
             self["resolutionY"] = data["properties"]["height"]
 
         for inp_name in self.inp_types:
-            reg_name = get_reg_name(inp_name)
-            if reg_name in self.inputs:
+            if not self.is_base_type(inp_name):
                 continue
+            reg_name = get_reg_name(inp_name)
             try:
                 v = data["widgets_values"].pop(0)
                 v = type(getattr(self, reg_name))(v)
@@ -304,35 +397,36 @@ class NodeBase(bpy.types.Node):
         inputs = []
         outputs = []
         widgets_values = []
+        # 单独处理 widgets_values
         for inp_name in self.inp_types:
-            # inp = self.inp_types[inp_name]
+            if not self.is_base_type(inp_name):
+                continue
+            widgets_values.append(getattr(self, get_reg_name(inp_name)))
+        for inp in self.inputs:
+            inp_name = inp.name
             reg_name = get_reg_name(inp_name)
-            if inp := self.inputs.get(reg_name):
-                link = self.get_from_link(inp)
-                if not link:
+            md = self.get_meta(reg_name)
+            inp_info = {"name": inp_name,
+                        "type": inp.bl_idname,
+                        "link": None}
+            link = self.get_from_link(inp)
+            is_base_type = self.is_base_type(inp_name)
+            if link:
+                inp_info["link"] = all_links.index(inp.links[0])
+            if is_base_type:
+                if not self.query_stat(inp.name) or not md:
                     continue
-
-                inp_info = {"name": inp_name,
-                            "type": link.from_socket.bl_idname,
-                            "link": all_links.index(inp.links[0]),
-                            "slot_index": inp.slot_index}
-                inputs.append(inp_info)
-            else:
-                # 添加 非socket
-                widgets_values.append(getattr(self, reg_name))
-        # if self.class_type == "KSamplerAdvanced":
-        #     widgets_values.insert(2, False)
-        # if self.class_type == "KSampler":
-        #     widgets_values.insert(1, False)
-        for out in self.outputs:
+                inp_info["widget"] = {"name": reg_name,
+                                      "config": md
+                                      }
+                inp_info["type"] = ",".join(md[0]) if isinstance(md[0], list) else md[0]
+            inputs.append(inp_info)
+        for i, out in enumerate(self.outputs):
             out_info = {"name": out.name,
                         "type": out.name,
                         "links": [all_links.index(link) for link in out.links],
                         }
-            if self.class_type == "Reroute":
-                out_info["slot_index"] = 0
-            else:
-                out_info["slot_index"] = out.index
+            out_info["slot_index"] = i
             outputs.append(out_info)
         properties = {}
         if self.class_type == "MultiAreaConditioning":
@@ -357,37 +451,6 @@ class NodeBase(bpy.types.Node):
                               *properties["values"][self.index]
                               ]
         if self.class_type == "Reroute":
-            {
-                "id": 76,
-                "type": "Reroute",
-                "pos": [],
-                "size": [],
-                "flags": {},
-                "order": 5,
-                "mode": 0,
-                "inputs": [
-                    {
-                        "name": "",
-                        "type": "*",
-                        "link": 174,
-                        "pos": [
-                            62,
-                            0
-                        ]
-                    }
-                ],
-                "outputs": [
-                    {
-                        "name": "BBOX_MODEL",
-                        "type": "BBOX_MODEL",
-                        "links": [
-                            175,
-                            176
-                        ],
-                        "slot_index": 0
-                    }
-                ]
-            }
             inputs = [
                 {"name": "",
                  "type": "*",
@@ -397,13 +460,7 @@ class NodeBase(bpy.types.Node):
             if self.inputs[0].is_linked:
                 inputs[0]["link"] = all_links.index(self.inputs[0].links[0])
             if not self.outputs[0].is_linked:
-                outputs = [
-                    {"name": "*",
-                     "type": "*",
-                     "links": [],
-                     "slot_index": 0
-                     }
-                ]
+                outputs[0]["name"] = outputs[0]["type"] = "*"
             else:
                 def find_out_node(node: bpy.types.Node):
                     output = node.outputs[0]
@@ -418,20 +475,22 @@ class NodeBase(bpy.types.Node):
                 if out and to_socket:
                     outputs[0]["name"] = to_socket.bl_idname
                     outputs[0]["type"] = to_socket.bl_idname
-            # for out in self.outputs:
-            {
-                "name": "BBOX_MODEL",
-                "type": "BBOX_MODEL",
-                "links": [
-                    175,
-                    176
-                ],
-                "slot_index": 0
-            }
             properties = {
                 "showOutputText": True,
                 "horizontal": False
             }
+        if self.class_type == "PrimitiveNode" and self.outputs[0].is_linked and self.outputs[0].links:
+            node = self.outputs[0].links[0].to_node
+            meta_data = deepcopy(node.get_meta(self.prop))
+            output = outputs[0]
+            output["name"] = "COMBO" if isinstance(meta_data[0], list) else meta_data[0]
+            output["type"] = ",".join(meta_data[0]) if isinstance(meta_data[0], list) else meta_data[0]
+            if output["name"] != "COMBO":
+                meta_data[1]["default"] = getattr(node, self.prop)
+            output["widget"] = {"name": self.prop,
+                                "config": meta_data
+                                }
+            widgets_values = [getattr(node, self.prop), "fixed"]
         cfg = {
             "id": int(self.id),
             "type": self.class_type,
@@ -485,20 +544,42 @@ class NodeBase(bpy.types.Node):
 
 
 class SocketBase(bpy.types.NodeSocket):
-    allowLink = set()
+    allowLink = {"*", }
 
     def linkLimitCheck(self, context):
         self.allowLink.add(self.bl_label)
         # 连接限制
         for link in list(self.links):
-            if link.from_node.bl_label not in self.allowLink:
-                logger.warn(f"{_T('Remove Link')}:{link.from_node.bl_label}",)
-                context.space_data.edit_tree.links.remove(link)
+            if link.from_node.bl_label in self.allowLink:
+                continue
+            logger.warn(f"{_T('Remove Link')}:{link.from_node.bl_label}",)
+            context.space_data.edit_tree.links.remove(link)
 
     color: bpy.props.FloatVectorProperty(size=4, default=(1, 0, 0, 1))
 
     def draw_color(self, context, node):
         return self.color
+
+
+class Ops_Swith_Socket(bpy.types.Operator):
+    bl_idname = "sdn.switch_socket"
+    bl_label = "切换Socket/属性"
+    socket_name: bpy.props.StringProperty()
+    node_name: bpy.props.StringProperty()
+    action: bpy.props.StringProperty(default="")
+
+    def execute(self, context):
+        tree = bpy.context.space_data.edit_tree
+        node: NodeBase = None
+        if not (node := tree.nodes.get(self.node_name)):
+            return {"FINISHED"}
+        match self.action:
+            case "ToSocket":
+                node.switch_socket(self.socket_name, True)
+            case "ToProp":
+                node.switch_socket(self.socket_name, False)
+        self.action = ""
+        return {"FINISHED"}
 
 
 class Ops_Active_Tex(bpy.types.Operator):
@@ -788,27 +869,54 @@ def parse_node():
 
     nodetree_desc = {}
     nodes_desc = {}
-    sockets = set()  # Enum/Int/Float/String/Bool 不需要socket
+    sockets = {"*", }  # Enum/Int/Float/String/Bool 不需要socket
     # node input type -> {'required', 'optional', 'hidden'}
     # node_inp_type = set()
     # for node in object_info.values():
     #     node_inp_type.update(set(node["input"].keys()))
     # logger.info(f"Node Input Type -> {node_inp_type}")
+    SOCKET_TYPE.clear()
+    object_info["PrimitiveNode"] = {
+        "input": {"required": {}},
+        "output": ["*"],
+        "output_is_list": [False],
+        "output_name": [
+            "Output"
+        ],
+        "name": "PrimitiveNode",
+        "display_name": "Primitive",
+        "description": "",
+        "category": "Utils",
+        "output_node": False
+    }
 
     for name, desc in object_info.items():
+        SOCKET_TYPE[name] = {}
         cat = desc["category"]
         for inp, inp_desc in desc["input"].get("required", {}).items():
+
             stype = inp_desc[0]
             if isinstance(stype, list):
                 sockets.add("ENUM")
+                # 太长 不能注册为 socket type(<64)
+                hash_type = md5(",".join(stype).encode()).hexdigest()
+                sockets.add(hash_type)
+                SOCKET_HASH_MAP[hash_type] = "ENUM"
+                SOCKET_TYPE[name][inp] = hash_type
             else:
                 sockets.add(inp_desc[0])
+                SOCKET_TYPE[name][inp] = inp_desc[0]
         for inp, inp_desc in desc["input"].get("optional", {}).items():
             stype = inp_desc[0]
             if isinstance(stype, list):
                 sockets.add("ENUM")
+                hash_type = md5(",".join(stype).encode()).hexdigest()
+                sockets.add(hash_type)
+                SOCKET_HASH_MAP[hash_type] = "ENUM"
+                SOCKET_TYPE[name][inp] = hash_type
             else:
                 sockets.add(inp_desc[0])
+                SOCKET_TYPE[name][inp] = inp_desc[0]
         for index, out_type in enumerate(desc.get("output", [])):
             desc["output"][index] = [out_type, out_type]
         for index, out_name in enumerate(desc.get("output_name", [])):
@@ -878,7 +986,8 @@ def parse_node():
                     continue
                 socket = inp[0]
                 if isinstance(inp[0], list):
-                    socket = "ENUM"
+                    # socket = "ENUM"
+                    socket = md5(",".join(inp[0]).encode()).hexdigest()
                     continue
                 if socket in {"ENUM", "INT", "FLOAT", "STRING"}:
                     continue
@@ -888,7 +997,7 @@ def parse_node():
                 # in1.link_limit = 0
                 in1.index = index
             for index, [out_type, out_name] in enumerate(self.out_types):
-                if out_type in {"ENUM", "INT", "FLOAT"}:
+                if out_type in {"ENUM", }:
                     continue
                 out = self.outputs.new(out_type, out_name)
                 out.display_shape = "DIAMOND_DOT"
@@ -898,9 +1007,21 @@ def parse_node():
 
         def draw_buttons(self, context, layout: bpy.types.UILayout):
             for prop in self.__annotations__:
-                if spec_draw(self, context, layout, prop):
+                if self.query_stat(prop):
                     continue
-                layout.column().prop(self, prop, text=prop, text_ctxt=ctxt)
+                if prop == "control_after_generate":
+                    continue
+                l = layout
+                if prop in self.inp_types:
+                    l = l.row(align=True)
+                    op = l.operator(Ops_Swith_Socket.bl_idname, text="", icon="LINKED")
+                    op.node_name = self.name
+                    op.socket_name = prop
+                    op.action = "ToSocket"
+                    l = l.column(align=True)
+                if spec_draw(self, context, l, prop):
+                    continue
+                l.prop(self, prop, text=prop, text_ctxt=ctxt)
 
         def find_icon(nname, inp_name, item):
             prev_path_list = get_icon_path(nname).get(inp_name)
@@ -933,7 +1054,7 @@ def parse_node():
             proptype = inp[0]
             if isinstance(inp[0], list):
                 proptype = "ENUM"
-            if proptype not in {"ENUM", "INT", "FLOAT", "STRING"}:
+            if proptype not in {"ENUM", "INT", "FLOAT", "STRING", }:
                 continue
             if proptype == "ENUM":
 
@@ -995,7 +1116,6 @@ def parse_node():
                                                 update=update)
             prop = spec_gen_properties(nname, inp_name, prop)
             properties[reg_name] = prop
-
         spec_extra_properties(properties, nname, ndesc)
         fields = {"init": init,
                   "inp_types": inp_types,
@@ -1003,7 +1123,8 @@ def parse_node():
                   "class_type": nname,
                   "bl_label": nname,
                   "draw_buttons": draw_buttons,
-                  "__annotations__": properties
+                  "__annotations__": properties,
+                  "__metadata__": ndesc
                   }
         spec_functions(fields, nname, ndesc)
         NodeDesc = type(nname, (NodeBase,), fields)
@@ -1012,11 +1133,20 @@ def parse_node():
     socket_clss = []
     for stype in sockets:
         {'STYLE_MODEL', 'VAE', 'CLIP_VISION', 'MASK', 'UPSCALE_MODEL', 'FLOAT', 'CLIP_VISION_OUTPUT', 'STRING', 'INT', 'IMAGE', 'MODEL', 'CONDITIONING', 'ENUM', 'CONTROL_NET', 'LATENT', 'CLIP'}
-        if stype in {"ENUM", "INT", "FLOAT"}:
+        if stype in {"ENUM", }:
             continue
 
         def draw(self, context, layout, node, text):
-            layout.label(text=self.name, text_ctxt=ctxt)
+            if self.is_output or not hasattr(node, self.name):
+                layout.label(text=self.name, text_ctxt=ctxt)
+                return
+            row = layout.row(align=True)
+            row.label(text=self.name, text_ctxt=ctxt)
+            op = row.operator(Ops_Swith_Socket.bl_idname, text="", icon="UNLINKED")
+            op.node_name = node.name
+            op.socket_name = self.name
+            op.action = "ToProp"
+            row.prop(node, self.name, text="", text_ctxt=ctxt)
         color = bpy.props.FloatVectorProperty(size=4, default=(rand()**0.5, rand()**0.5, rand()**0.5, 1))
         fields = {"draw": draw, "bl_label": stype, "__annotations__": {"color": color,
                                                                        "index": bpy.props.IntProperty(default=-1),
@@ -1272,6 +1402,9 @@ def spec_extra_properties(properties, nname, ndesc):
             update(self)
         prop = bpy.props.FloatProperty(default=1.0, min=0, max=10, update=update_strength)
         properties["strength"] = prop
+    elif nname == "PrimitiveNode":
+        prop = bpy.props.StringProperty()
+        properties["prop"] = prop
 
 
 def spec_serialize_pre(self):
@@ -1403,6 +1536,11 @@ def spec_functions(fields, nname, ndesc):
 
 
 def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILayout, prop: str):
+    if self.bl_idname == "PrimitiveNode":
+        if self.outputs[0].is_linked and self.outputs[0].links:
+            node = self.outputs[0].links[0].to_node
+            layout.prop(node, self.prop)
+        return True
     if prop == "control_after_generate":
         return True
 
@@ -1461,7 +1599,7 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
                 layout.prop(self, "frames_dir", text="")
             else:
                 layout.prop(self, "image", text="", text_ctxt=ctxt)
-            layout.prop(self, prop, expand=True, text_ctxt=ctxt)
+            layout.row().prop(self, prop, expand=True, text_ctxt=ctxt)
             if self.mode == "序列图":
                 layout.label(text="Frames Directory", text_ctxt=ctxt)
             if self.mode == "渲染":
@@ -1611,7 +1749,7 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
     return False
 
 
-clss = [Set_Render_Res, GetSelCol, Ops_Active_Tex, Ops_Link_Mask]
+clss = [Ops_Swith_Socket, Set_Render_Res, GetSelCol, Ops_Active_Tex, Ops_Link_Mask]
 
 reg, unreg = bpy.utils.register_classes_factory(clss)
 

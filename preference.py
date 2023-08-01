@@ -6,13 +6,14 @@ from pathlib import Path
 from .utils import Icon, _T
 from .translation import ctxt
 
+
 class AddonPreference(bpy.types.AddonPreferences):
     bl_idname = __package__
     bl_translation_context = ctxt
-    
+
     popup_scale: bpy.props.IntProperty(default=5, min=1, max=100, name="预览图尺寸")
     enable_hq_preview: bpy.props.BoolProperty(default=True, name="启用高清预览图")
-    
+
     model_path: bpy.props.StringProperty(subtype="DIR_PATH", name="ComfyUI路径",
                                          default=str(Path(__file__).parent / "ComfyUI"))
     page: bpy.props.EnumProperty(items=[("通用", "通用", "", "COLLAPSEMENU", 0),
@@ -31,6 +32,7 @@ class AddonPreference(bpy.types.AddonPreferences):
                                       default="--lowvram")
     with_webui_model: bpy.props.StringProperty(default="", name="With WEBUI Model", description="webui位置", subtype="DIR_PATH")
     with_comfyui_model: bpy.props.StringProperty(default="", name="With ComfyUI Model", description="ComfyUI位置", subtype="DIR_PATH")
+    install_deps: bpy.props.BoolProperty(default=False, name="启动服务时检查依赖", description="启动服务时进行ComfyUI插件(部分)依赖安装检查")
 
     def update_open_dir1(self, context):
         if self.open_dir1:
@@ -69,7 +71,9 @@ class AddonPreference(bpy.types.AddonPreferences):
         row.prop(self, "enable_hq_preview", text="", icon="IMAGE_BACKGROUND", text_ctxt=ctxt)
         layout.prop(self, "with_webui_model")
         layout.prop(self, "with_comfyui_model")
+        layout.prop(self, "install_deps", toggle=True, text_ctxt=ctxt)
         
+
     def draw_website(self, layout: bpy.types.UILayout):
 
         layout.label(text="-AIGODLIKE冒险社区", text_ctxt=ctxt)

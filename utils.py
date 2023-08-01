@@ -445,14 +445,37 @@ class FSWatcher:
             FSWatcher._watcher_path[path] = False
             return True
         return False
-    
+
+    @lru_cache
+    def get_nas_mapping():
+        import subprocess
+        result = subprocess.run("net use", capture_output=True, text=True, encoding="gbk")
+        if result.returncode != 0 or result.stdout is None:
+            return {}
+        nas_mapping = {}
+        try:
+            lines = result.stdout.strip().split("\n")[4:]
+            for line in lines:
+                columns = line.split()
+                if len(columns) < 3:
+                    continue
+                local_drive = columns[1] + "/"
+                nas_path = Path(columns[2]).resolve().as_posix()
+                nas_mapping[local_drive] = nas_path
+        except Exception:
+            ...
+        return nas_mapping
+
     @lru_cache(maxsize=1024)
     @staticmethod
     def to_str(path: Path):
         p = Path(path)
         res_str = p.resolve().as_posix()
-        if res_str.startswith(('\\\\', '//')):
-            return p.as_posix()
+        # 处理nas路径
+        for local_drive, nas_path in FSWatcher.get_nas_mapping().items():
+            if not res_str.startswith(nas_path):
+                continue
+            return res_str.replace(nas_path, local_drive)
         return res_str
 
     @lru_cache(maxsize=1024)

@@ -223,7 +223,8 @@ class TaskManager:
         python = Path("python3")
         if sys.platform == "win32":
             python = Path(model_path) / "../python_embeded/python.exe"
-        TaskManager.run_server_pre(model_path)
+        if pref.install_deps:
+            TaskManager.run_server_pre(model_path)
 
         logger.warn(_T("Server Launching"))
         if sys.platform == "win32" and not python.exists():
