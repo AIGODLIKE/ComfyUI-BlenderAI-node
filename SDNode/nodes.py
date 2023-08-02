@@ -598,12 +598,14 @@ class Ops_Swith_Socket(bpy.types.Operator):
         self.action = ""
         return {"FINISHED"}
 
-    def draw_prop(layout, node, prop, row=True) -> bpy.types.UILayout:
-        l = layout.row(align=True)
-        op = l.operator(Ops_Swith_Socket.bl_idname, text="", icon="LINKED")
-        op.node_name = node.name
-        op.socket_name = prop
-        op.action = "ToSocket"
+    def draw_prop(layout, node, prop, row=True, swlink=True) -> bpy.types.UILayout:
+        l = layout
+        if swlink:
+            l = layout.row(align=True)
+            op = l.operator(Ops_Swith_Socket.bl_idname, text="", icon="LINKED")
+            op.node_name = node.name
+            op.socket_name = prop
+            op.action = "ToSocket"
         if row:
             l = l.row(align=True)
         else:
@@ -1587,9 +1589,9 @@ def spec_functions(fields, nname, ndesc):
         fields["post_fn"] = post_fn
 
 
-def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILayout, prop: str):
+def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILayout, prop: str, swlink=True):
     def draw_prop_with_link(layout, self, prop, row=True, pre=None, post=None, **kwargs):
-        layout = Ops_Swith_Socket.draw_prop(layout, self, prop, row)
+        layout = Ops_Swith_Socket.draw_prop(layout, self, prop, row, swlink)
         if pre:
             pre(layout)
         layout.prop(self, prop, **kwargs)
@@ -1599,7 +1601,7 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
     if self.bl_idname == "PrimitiveNode":
         if self.outputs[0].is_linked and self.outputs[0].links:
             node = self.outputs[0].links[0].to_node
-            if spec_draw(node, context, layout, self.prop):
+            if spec_draw(node, context, layout, self.prop, swlink=False):
                 return True
             layout.prop(node, get_reg_name(self.prop))
         return True
