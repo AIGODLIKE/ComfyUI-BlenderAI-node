@@ -562,8 +562,16 @@ def reg_node_reroute():
     bpy.types.NodeReroute.apply_unique_id = NodeBase.apply_unique_id
     bpy.types.NodeReroute.unique_id = NodeBase.unique_id
     bpy.types.NodeReroute.calc_slot_index = NodeBase.calc_slot_index
-
+    bpy.types.NodeReroute.is_base_type = NodeBase.is_base_type
+    bpy.types.NodeReroute.get_meta = NodeBase.get_meta
+    bpy.types.NodeReroute.query_stat = NodeBase.query_stat
+    bpy.types.NodeReroute.set_stat = NodeBase.set_stat
+    bpy.types.NodeReroute.switch_socket = NodeBase.switch_socket
+    bpy.types.NodeReroute.get_from_link = NodeBase.get_from_link
+    
+ 
     bpy.types.NodeReroute.class_type = "Reroute"
+    bpy.types.NodeReroute.__metadata__ = {}
     bpy.types.NodeReroute.inp_types = []
     bpy.types.NodeReroute.out_types = []
 
