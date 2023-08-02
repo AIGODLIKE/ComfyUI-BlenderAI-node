@@ -66,6 +66,8 @@ class Ops(bpy.types.Operator):
 
     def draw(self, context):
         layout = self.layout
+        if self.action == "Submit" and TaskManager.pid == -1:
+            layout.label(text=_T("ComfyUI not Run,To Run?"), icon="INFO", text_ctxt=ctxt)
         if self.action == "Save":
             if (Path(bpy.context.scene.sdn.presets_dir) / f"{self.save_name}.json").exists():
                 layout.alert = True
@@ -92,10 +94,12 @@ class Ops(bpy.types.Operator):
             layout.prop(self, "import_bookmark", text_ctxt=ctxt)
 
     def invoke(self, context, event: bpy.types.Event):
+        wm = bpy.context.window_manager
         self.alt = event.alt
-        # logger.error("INVOKE")
         self.select_nodes = []
         self.init_pos = context.space_data.cursor_location.copy()
+        if self.action == "Submit" and TaskManager.pid == -1:
+            return wm.invoke_props_dialog(self, width=200)
         if self.action in {"Load", "Del"}:
             if not bpy.context.scene.sdn.presets:
                 self.report({"ERROR"}, _T("Preset Not Selected!"))
@@ -106,7 +110,7 @@ class Ops(bpy.types.Operator):
                 self.report({"ERROR"}, _T("Preset Not Selected!"))
                 return {"FINISHED"}
 
-        wm = bpy.context.window_manager
+        
         if self.action in {"Save", "SaveGroup", "Del", "DelGroup", "PresetFromBookmark"}:
             return wm.invoke_props_dialog(self, width=200)
         return self.execute(context)
@@ -127,12 +131,12 @@ class Ops(bpy.types.Operator):
             return res
         except InvalidNodeType as e:
             self.report({"ERROR"}, str(e.args))
+        finally:
             return {"FINISHED"}
-        return {"FINISHED"}
 
     def execute_ex(self, context: bpy.types.Context):
         # logger.debug("EXE")
-        if self.action == "Launch":
+        if self.action == "Launch" or (self.action == "Submit" and TaskManager.pid == -1):
             if TaskManager.pid != -1:
                 self.report({"ERROR"}, "服务已经启动!")
                 return {"FINISHED"}
@@ -141,7 +145,8 @@ class Ops(bpy.types.Operator):
             tree = getattr(bpy.context.space_data, "edit_tree", None)
             from .SDNode.tree import CFNodeTree
             CFNodeTree.instance = tree
-            return {"FINISHED"}
+            if self.action == "Launch":
+                return {"FINISHED"}
         elif self.action == "Restart":
             TaskManager.restart_server()
             # hack fix tree update crash
