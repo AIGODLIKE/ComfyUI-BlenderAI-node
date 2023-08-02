@@ -1070,7 +1070,7 @@ def parse_node():
             for file in file_list:
                 if item not in file.stem:
                     continue
-                if file.suffix not in {".png", ".jpg", ".jpeg"}:
+                if file.suffix.lower() not in {".png", ".jpg", ".jpeg"}:
                     continue
                 # logger.info(f"🌟 Found Icon -> {file.name}")
                 return Icon.reg_icon(file.absolute())

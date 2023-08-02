@@ -179,7 +179,7 @@ class Icon(metaclass=MetaIn):
         path = FSWatcher.to_str(path)
         if path in Icon:
             return
-        if p.exists() and p.suffix in {".png", ".jpg", ".jpeg"}:
+        if p.exists() and p.suffix.lower() in {".png", ".jpg", ".jpeg"}:
             img = bpy.data.images.load(path)
             Icon.reg_icon_by_pixel(img, path)
             bpy.data.images.remove(img)
@@ -210,7 +210,7 @@ class Icon(metaclass=MetaIn):
         if img := Icon.find_image(path):
             Icon.update_icon_pixel(path, img)
             return img
-        elif p.suffix in {".png", ".jpg", ".jpeg"}:
+        elif p.suffix.lower() in {".png", ".jpg", ".jpeg"}:
             img = bpy.data.images.load(path)
             img.filepath = path
             Icon.update_path2bpy()
