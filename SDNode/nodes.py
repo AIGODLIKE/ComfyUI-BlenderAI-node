@@ -258,6 +258,8 @@ class NodeBase(bpy.types.Node):
         # 对PrimitiveNode类型的输出进行限制
         if self.class_type != "PrimitiveNode":
             return
+        if not self.outputs:
+            return
         out = self.outputs[0]
         for l in out.links:
             if l.to_node.bl_idname != "NodeReroute":

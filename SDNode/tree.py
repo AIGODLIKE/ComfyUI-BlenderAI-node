@@ -575,6 +575,27 @@ def update_tree_handler():
         return 1
 
 
+def draw_intern(self, context):
+    layout: bpy.types.UILayout = self.layout
+    props = layout.operator("node.add_node", text="NodeFrame", text_ctxt=ctxt)
+    props.type = "NodeFrame"
+    props.use_transform = True
+    props = layout.operator("node.add_node", text="NodeReroute", text_ctxt=ctxt)
+    props.type = "NodeReroute"
+    props.use_transform = True
+
+
+def set_draw_intern(reg):
+    NODE_MT_category_Utils = getattr(bpy.types, "NODE_MT_category_Utils", None)
+    if not NODE_MT_category_Utils:
+        return
+    # bpy.types.NODE_MT_category_Utils.draw._draw_funcs
+    if reg:
+        NODE_MT_category_Utils.append(draw_intern)
+    else:
+        NODE_MT_category_Utils.remove(draw_intern)
+
+
 def rtnode_reg():
     reg_node_reroute()
 
@@ -584,24 +605,12 @@ def rtnode_reg():
     t2 = time.time()
     logger.info(f"ParseNode Time: {t2-t1:.2f}s")
     node_cat = load_node(node_desc=node_desc)
-
-    def draw_intern(self):
-        layout: bpy.types.UILayout = self.layout
-        props = layout.operator("node.add_node", text="NodeFrame", text_ctxt=ctxt)
-        props.type = "NodeFrame"
-        props.use_transform = True
-        props = layout.operator("node.add_node", text="NodeReroute", text_ctxt=ctxt)
-        props.type = "NodeReroute"
-        props.use_transform = True
-
-    cfn_cat = CFNodeCategory(f"sdn_Internal", "Internal", draw_fns=[draw_intern])
-    node_cat.append(cfn_cat)
-
     clss.extend(node_clss)
     clss.extend(socket)
     nodes_reg()
     reg()
     reg_nodetree(TREE_NAME, node_cat)  # register_node_categories(TREE_NAME, node_cat)
+    set_draw_intern(reg=True)
     if CFNodeTree.reinit not in bpy.app.handlers.load_post:
         bpy.app.handlers.load_post.append(CFNodeTree.reinit)
     if not bpy.app.timers.is_registered(update_tree_handler):
@@ -612,6 +621,7 @@ def rtnode_unreg():
     # bpy.app.timers.unregister(update_tree_handler)
     if CFNodeTree.reinit in bpy.app.handlers.load_post:
         bpy.app.handlers.load_post.remove(CFNodeTree.reinit)
+    set_draw_intern(reg=False)
     if TREE_NAME in _node_categories:
         unregister_node_categories(TREE_NAME)
     unreg()
