@@ -596,6 +596,24 @@ class Ops_Swith_Socket(bpy.types.Operator):
         self.action = ""
         return {"FINISHED"}
 
+class Ops_Add_SaveImage(bpy.types.Operator):
+    bl_idname = "sdn.add_saveimage"
+    bl_label = "添加保存图片节点"
+    node_name: bpy.props.StringProperty()
+
+    def execute(self, context):
+        tree = bpy.context.space_data.edit_tree
+        node: NodeBase = None
+        if not (node := tree.nodes.get(self.node_name)):
+            return {"FINISHED"}
+        inp = node.inputs[0]
+        if not inp.is_linked:
+            return {"FINISHED"}
+        save_image_node = tree.nodes.new("存储")
+        save_image_node.location = node.location
+        save_image_node.location.y += 200
+        tree.links.new(inp.links[0].from_socket, save_image_node.inputs[0])
+        return {"FINISHED"}
 
 class Ops_Active_Tex(bpy.types.Operator):
     bl_idname = "sdn.act_tex"
@@ -1753,6 +1771,12 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
             layout.template_icon(icon_id, scale=max(self.prev.size[0], self.prev.size[1]) // 20)
         # else:
         #     setwidth(self, 200)
+        if self.inputs[0].is_linked:
+            for link in self.inputs[0].links[0].from_socket.links:
+                if link.to_node.bl_idname == "存储":
+                    break
+            else:
+                layout.operator(Ops_Add_SaveImage.bl_idname, text="", icon="FILE_TICK").node_name = self.name
         if prop == "prev":
             return True
     elif self.class_type == "CLIPTextEncode":
@@ -1773,7 +1797,7 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
     return False
 
 
-clss = [Ops_Swith_Socket, Set_Render_Res, GetSelCol, Ops_Active_Tex, Ops_Link_Mask]
+clss = [Ops_Swith_Socket, Ops_Add_SaveImage, Set_Render_Res, GetSelCol, Ops_Active_Tex, Ops_Link_Mask]
 
 reg, unreg = bpy.utils.register_classes_factory(clss)
 
