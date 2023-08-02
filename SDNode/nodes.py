@@ -137,7 +137,7 @@ class NodeBase(bpy.types.Node):
     bl_width_max = 2000.0
     order: bpy.props.IntProperty(default=-1)
     id: bpy.props.StringProperty(default="-1")
-    builtin__stat__: bpy.props.StringProperty(subtype="BYTE_STRING") # ori name: True/False
+    builtin__stat__: bpy.props.StringProperty(subtype="BYTE_STRING")  # ori name: True/False
     pool = set()
 
     def query_stat(self, name):
@@ -598,6 +598,19 @@ class Ops_Swith_Socket(bpy.types.Operator):
         self.action = ""
         return {"FINISHED"}
 
+    def draw_prop(layout, node, prop, row=True) -> bpy.types.UILayout:
+        l = layout.row(align=True)
+        op = l.operator(Ops_Swith_Socket.bl_idname, text="", icon="LINKED")
+        op.node_name = node.name
+        op.socket_name = prop
+        op.action = "ToSocket"
+        if row:
+            l = l.row(align=True)
+        else:
+            l = l.column(align=True)
+        return l
+
+
 class Ops_Add_SaveImage(bpy.types.Operator):
     bl_idname = "sdn.add_saveimage"
     bl_label = "添加保存图片节点"
@@ -616,6 +629,7 @@ class Ops_Add_SaveImage(bpy.types.Operator):
         save_image_node.location.y += 200
         tree.links.new(inp.links[0].from_socket, save_image_node.inputs[0])
         return {"FINISHED"}
+
 
 class Ops_Active_Tex(bpy.types.Operator):
     bl_idname = "sdn.act_tex"
@@ -1047,15 +1061,11 @@ def parse_node():
                 if prop == "control_after_generate":
                     continue
                 l = layout
-                if self.is_base_type(prop) and get_ori_name(prop) in self.inp_types:
-                    l = l.row(align=True)
-                    op = l.operator(Ops_Swith_Socket.bl_idname, text="", icon="LINKED")
-                    op.node_name = self.name
-                    op.socket_name = prop
-                    op.action = "ToSocket"
-                    l = l.column(align=True)
+                # 返回True 则不绘制
                 if spec_draw(self, context, l, prop):
                     continue
+                if self.is_base_type(prop) and get_ori_name(prop) in self.inp_types:
+                    l = Ops_Swith_Socket.draw_prop(l, self, prop)
                 l.prop(self, prop, text=prop, text_ctxt=ctxt)
 
         def find_icon(nname, inp_name, item):
@@ -1578,6 +1588,14 @@ def spec_functions(fields, nname, ndesc):
 
 
 def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILayout, prop: str):
+    def draw_prop_with_link(layout, self, prop, row=True, pre=None, post=None, **kwargs):
+        layout = Ops_Swith_Socket.draw_prop(layout, self, prop, row)
+        if pre:
+            pre(layout)
+        layout.prop(self, prop, **kwargs)
+        if post:
+            post(layout)
+        return layout
     if self.bl_idname == "PrimitiveNode":
         if self.outputs[0].is_linked and self.outputs[0].links:
             node = self.outputs[0].links[0].to_node
@@ -1590,10 +1608,12 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
 
     def show_model_preview(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILayout, prop: str):
         if self.class_type not in name2path:
-            return
-        row = layout.row()
-        if prop in get_icon_path(self.class_type):
-            row.template_icon_view(self, prop, show_labels=True, scale_popup=popup_scale, scale=popup_scale)
+            return False
+        if prop not in get_icon_path(self.class_type):
+            return False
+        col = draw_prop_with_link(layout, self, prop, text="", row=False)
+        col.template_icon_view(self, prop, show_labels=True, scale_popup=popup_scale, scale=popup_scale)
+        return True
 
     def setwidth(self: NodeBase, w):
         w = max(self.bl_width_min, w)
@@ -1610,11 +1630,11 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
         popup_scale = get_pref().popup_scale
     except BaseException:
         ...
-    show_model_preview(self, context, layout, prop)
+    if show_model_preview(self, context, layout, prop):
+        return True
     if hasattr(self, "seed"):
         if prop == "seed":
-            row = layout.row(align=True)
-            row.prop(self, "seed", text_ctxt=ctxt)
+            row = draw_prop_with_link(layout, self, prop, text_ctxt=ctxt)
             row.prop(self, "exe_rand", text="", icon="FILE_REFRESH", text_ctxt=ctxt)
             row.prop(bpy.context.scene.sdn, "rand_all_seed", text="", icon="HAND", text_ctxt=ctxt)
             row.prop(self, "sync_rand", text="", icon="MOD_WAVE", text_ctxt=ctxt)
@@ -1623,16 +1643,15 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
             return True
     elif self.class_type == "KSamplerAdvanced":
         if prop in {"add_noise", "return_with_leftover_noise"}:
-            row = layout.row()
-            row.label(text=prop, text_ctxt=ctxt)
-            row.prop(self, prop, expand=True, text_ctxt=ctxt)
+            def dpre(layout): layout.label(text=prop, text_ctxt=ctxt)
+            draw_prop_with_link(layout, self, prop, expand=True, pre=dpre, text_ctxt=ctxt)
             return True
         if prop == "noise_seed":
-            row = layout.row(align=True)
-            row.prop(self, "noise_seed", text_ctxt=ctxt)
-            row.prop(self, "exe_rand", text="", icon="FILE_REFRESH", text_ctxt=ctxt)
-            row.prop(bpy.context.scene.sdn, "rand_all_seed", text="", icon="HAND", text_ctxt=ctxt)
-            row.prop(self, "sync_rand", text="", icon="MOD_WAVE", text_ctxt=ctxt)
+            def dpost(layout):
+                layout.prop(self, "exe_rand", text="", icon="FILE_REFRESH", text_ctxt=ctxt)
+                layout.prop(bpy.context.scene.sdn, "rand_all_seed", text="", icon="HAND", text_ctxt=ctxt)
+                layout.prop(self, "sync_rand", text="", icon="MOD_WAVE", text_ctxt=ctxt)
+            draw_prop_with_link(layout, self, prop, post=dpost, text_ctxt=ctxt)
             return True
         if prop in {"exe_rand", "sync_rand"}:
             return True
@@ -1640,9 +1659,12 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
     elif self.class_type == "输入图像":
         if prop == "mode":
             if self.mode == "序列图":
+                # draw_prop_with_link(layout, self, "frames_dir", text="", text_ctxt=ctxt)
                 layout.prop(self, "frames_dir", text="")
             else:
+                # draw_prop_with_link(layout, self, "image", text="", text_ctxt=ctxt)
                 layout.prop(self, "image", text="", text_ctxt=ctxt)
+            # draw_prop_with_link(layout.row(), self, prop, expand=True, text_ctxt=ctxt)
             layout.row().prop(self, prop, expand=True, text_ctxt=ctxt)
             if self.mode == "序列图":
                 layout.label(text="Frames Directory", text_ctxt=ctxt)
@@ -1787,8 +1809,7 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
             lines = textwrap.wrap(text=str(self.text), width=width)
             for line in lines:
                 layout.label(text=line, text_ctxt=ctxt)
-            row = layout.row(align=True)
-            row.prop(self, prop)
+            row = draw_prop_with_link(layout, self, prop)
             row.operator("sdn.enable_mlt", text="", icon="TEXT")
             return True
     elif self.class_type in {"OpenPoseFull", "OpenPoseHand", "OpenPoseMediaPipeFace", "OpenPoseDepth", "OpenPose", "OpenPoseFace", "OpenPoseLineart", "OpenPoseFullExtraLimb", "OpenPoseKeyPose", "OpenPoseCanny", }:
