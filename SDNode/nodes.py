@@ -270,11 +270,11 @@ class NodeBase(bpy.types.Node):
             return
         if not out.links:
             return
-        to_prop = out.links[-1].to_socket.name
-        to_node = out.links[-1].to_node.bl_idname
+        to_prop = out.links[0].to_socket.name
         self.prop = to_prop
-        for l in out.links[:-1]:
-            if l.to_socket.name == to_prop and l.to_node.bl_idname == to_node:
+        to_meta = out.links[0].to_node.get_meta(to_prop)
+        for l in out.links[1:]:
+            if l.to_node.get_meta(l.to_socket.name) == to_meta:
                 continue
             bpy.context.space_data.edit_tree.links.remove(l)
 
@@ -1481,9 +1481,9 @@ def spec_serialize_pre(self):
     elif self.class_type == "PrimitiveNode":
         if not self.outputs[0].is_linked:
             return
-        prop = getattr(self.outputs[0].links[0].to_node, self.prop)
+        prop = getattr(self.outputs[0].links[0].to_node, get_reg_name(self.prop))
         for link in self.outputs[0].links[1:]:
-            setattr(link.to_node, self.prop, prop)
+            setattr(link.to_node, get_reg_name(link.to_socket.name), prop)
 
 
 def spec_serialize(self, cfg, execute):
