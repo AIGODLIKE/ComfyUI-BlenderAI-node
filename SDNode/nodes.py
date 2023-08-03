@@ -273,8 +273,18 @@ class NodeBase(bpy.types.Node):
         to_prop = out.links[0].to_socket.name
         self.prop = to_prop
         to_meta = out.links[0].to_node.get_meta(to_prop)
+
+        def meta_equal(meta1, meta2):
+            if isinstance(meta1[0], list) or isinstance(meta2[0], list):
+                return meta1 == meta2
+            for k in meta1[1]:
+                if k == "default":
+                    continue
+                if meta1[1][k] != meta2[1][k]:
+                    return False
+            return True
         for l in out.links[1:]:
-            if l.to_node.get_meta(l.to_socket.name) == to_meta:
+            if meta_equal(to_meta, l.to_node.get_meta(l.to_socket.name)):
                 continue
             bpy.context.space_data.edit_tree.links.remove(l)
 
