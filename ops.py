@@ -131,8 +131,7 @@ class Ops(bpy.types.Operator):
             return res
         except InvalidNodeType as e:
             self.report({"ERROR"}, str(e.args))
-        finally:
-            return {"FINISHED"}
+        return {"FINISHED"}
 
     def execute_ex(self, context: bpy.types.Context):
         # logger.debug("EXE")
