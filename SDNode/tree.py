@@ -2,6 +2,7 @@ import bpy
 import typing
 import time
 import sys
+import traceback
 from threading import Thread
 from functools import partial
 from collections import OrderedDict
@@ -393,11 +394,18 @@ class CFNodeTree(NodeTree):
             from .nodes import get_reg_name
             if node.bl_idname != "PrimitiveNode":
                 return
-            if not node.outputs[0].is_linked:
+            # 未连接或link为空则不需要后续操作
+            if not node.outputs[0].is_linked or not node.outputs[0].links:
                 return
-            prop = getattr(node.outputs[0].links[0].to_node, get_reg_name(node.prop))
+            prop = getattr(node.outputs[0].links[0].to_node, get_reg_name(node.prop), None)
+            if prop is None:
+                return
             for link in node.outputs[0].links[1:]:
-                setattr(link.to_node, get_reg_name(link.to_socket.name), prop)
+                if not link.to_node.is_registered_node_type():
+                    continue
+                n = get_reg_name(link.to_socket.name)
+                old_prop = getattr(link.to_node, n)
+                setattr(link.to_node, n, type(old_prop)(prop))
         for node in self.nodes:
             primitive_node_update(node)
             
@@ -599,7 +607,9 @@ def update_tree_handler():
             CFNodeTree.instance.update_tick()
             CFNodeTree.instance.calc_unique_id()
     except Exception as e:
-        logger.warn(str(e))
+        # logger.warn(str(e))
+        traceback.print_exc()
+        logger.error(f"{type(e).__name__}: {e}")
     finally:
         return 1
 

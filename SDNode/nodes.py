@@ -13,7 +13,7 @@ from math import ceil
 from typing import Any
 from pathlib import Path
 from random import random as rand
-from functools import partial
+from functools import partial, lru_cache
 from mathutils import Vector, Matrix
 from bpy.types import Context, Event
 from .utils import gen_mask, SELECTED_COLLECTIONS
@@ -117,7 +117,7 @@ def get_icon_path(nname):
 
 
 def get_reg_name(inp_name):
-    if inp_name in {"width", "height"}:
+    if inp_name in {"width", "height", "inputs", "outputs", "name"}:
         return PROP_NAME_HEAD + inp_name
     return inp_name
 
@@ -168,6 +168,7 @@ class NodeBase(bpy.types.Node):
         elif inp := self.inputs.get(name):
             self.inputs.remove(inp)
 
+    @lru_cache
     def get_meta(self, inp_name) -> list:
         if not hasattr(self, "__metadata__"):
             logger.warn(f"node {self.name} has no metadata")
@@ -276,7 +277,7 @@ class NodeBase(bpy.types.Node):
 
         def meta_equal(meta1, meta2):
             if isinstance(meta1[0], list) or isinstance(meta2[0], list):
-                return meta1 == meta2
+                return meta1[0] == meta2[0]
             for k in meta1[1]:
                 if k == "default":
                     continue
@@ -1193,10 +1194,10 @@ def parse_node():
         if stype in {"ENUM", }:
             continue
 
-        def draw(self, context, layout, node, text):
+        def draw(self, context, layout, node: NodeBase, text):
             prop = get_reg_name(self.name)
             if self.is_output or not hasattr(node, prop):
-                layout.label(text=prop, text_ctxt=ctxt)
+                layout.label(text=self.name, text_ctxt=ctxt)
                 return
             row = layout.row(align=True)
             row.label(text=prop, text_ctxt=ctxt)
@@ -1611,6 +1612,9 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
     if self.bl_idname == "PrimitiveNode":
         if self.outputs[0].is_linked and self.outputs[0].links:
             node = self.outputs[0].links[0].to_node
+            # 可能会导致prop在node中找不到的情况(断开连接的时候)
+            if not hasattr(node, self.prop):
+                return True
             if spec_draw(node, context, layout, self.prop, swlink=False):
                 return True
             layout.prop(node, get_reg_name(self.prop))
