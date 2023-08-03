@@ -385,6 +385,23 @@ class CFNodeTree(NodeTree):
                 if nn.id == n.id:
                     n.apply_unique_id()
 
+    def update_tick(self):
+        """
+        force update
+        """
+        def primitive_node_update(node: bpy.types.Node):
+            from .nodes import get_reg_name
+            if node.bl_idname != "PrimitiveNode":
+                return
+            if not node.outputs[0].is_linked:
+                return
+            prop = getattr(node.outputs[0].links[0].to_node, get_reg_name(node.prop))
+            for link in node.outputs[0].links[1:]:
+                setattr(link.to_node, get_reg_name(link.to_socket.name), prop)
+        for node in self.nodes:
+            primitive_node_update(node)
+            
+                    
     def compute_execution_order(self):
         """
         Reference from ComfyUI
@@ -578,7 +595,11 @@ def reg_node_reroute():
 
 def update_tree_handler():
     try:
-        CFNodeTree.instance.calc_unique_id()
+        if CFNodeTree.instance:
+            CFNodeTree.instance.update_tick()
+            CFNodeTree.instance.calc_unique_id()
+    except Exception as e:
+        logger.warn(str(e))
     finally:
         return 1
 
