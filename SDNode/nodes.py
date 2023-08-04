@@ -223,6 +223,8 @@ class NodeBase(bpy.types.Node):
         return self.name
 
     def update(self):
+        if not self.is_registered_node_type():
+            return
         self.remove_multi_link()
         self.remove_invalid_link()
         self.primitive_check()
@@ -256,6 +258,11 @@ class NodeBase(bpy.types.Node):
                 bpy.context.space_data.edit_tree.links.remove(l)
 
     def primitive_check(self):
+        if bpy.context.space_data.type != "NODE_EDITOR":
+            return
+        tree = bpy.context.space_data.edit_tree
+        if tree.bl_idname != "CFNodeTree":
+            return
         # 对PrimitiveNode类型的输出进行限制
         if self.class_type != "PrimitiveNode":
             return
@@ -265,17 +272,23 @@ class NodeBase(bpy.types.Node):
         for l in out.links:
             if l.to_node.bl_idname != "NodeReroute":
                 continue
-            bpy.context.space_data.edit_tree.links.remove(l)
+            tree.links.remove(l)
 
         if not out.is_linked:
             return
         if not out.links:
             return
-        to_prop = out.links[0].to_socket.name
-        self.prop = to_prop
-        to_meta = out.links[0].to_node.get_meta(to_prop)
+        self.prop = out.links[0].to_socket.name
+        to_meta = [None]
+        for link in out.links:
+            if not link.to_node.is_registered_node_type():
+                continue
+            to_meta = link.to_node.get_meta(self.prop)
+            break
 
         def meta_equal(meta1, meta2):
+            if not meta1 or not meta2:
+                return False
             if isinstance(meta1[0], list) or isinstance(meta2[0], list):
                 return meta1[0] == meta2[0]
             for k in meta1[1]:
@@ -284,10 +297,10 @@ class NodeBase(bpy.types.Node):
                 if meta1[1][k] != meta2[1][k]:
                     return False
             return True
-        for l in out.links[1:]:
-            if meta_equal(to_meta, l.to_node.get_meta(l.to_socket.name)):
+        for l in out.links:
+            if l.to_node.is_registered_node_type() and meta_equal(to_meta, l.to_node.get_meta(l.to_socket.name)):
                 continue
-            bpy.context.space_data.edit_tree.links.remove(l)
+            tree.links.remove(l)
 
     def get_from_link(self, socket: bpy.types.NodeSocket):
         if not socket.is_linked:

@@ -11,27 +11,6 @@ from ..SDNode.tree import TREE_TYPE
 from .renderer import BlenderImguiRenderer, imgui
 
 
-def addSoftReturnsToText(s, multilineWidth):
-    tmpStr = ""
-    finalStr = ""
-    curChr = 0
-    sw = imgui.calc_text_size("W").x
-    while curChr < len(s):
-        if s[curChr] == "\n":
-            finalStr += tmpStr + "\n"
-            tmpStr = ""
-        tmpStr += s[curChr]
-        curChr += 1
-        if curChr == len(s):
-            finalStr += tmpStr
-            break
-        # 到达换行边界
-        if len(tmpStr) * sw > multilineWidth:
-            finalStr += tmpStr + "\n"
-            tmpStr = ""
-    return finalStr
-
-
 class GlobalImgui:
     _instance = None
     imgui_ctx = None
@@ -50,7 +29,8 @@ class GlobalImgui:
         fonts.add_font_default()
         fp = Path(__file__).parent / "bmonofont-i18n.ttf"
         fonts.clear()
-        fonts.add_font_from_file_ttf(fp.as_posix(), bpy.context.preferences.view.ui_scale * 20, glyph_ranges=fonts.get_glyph_ranges_chinese_full())
+        fonts.add_font_from_file_ttf(fp.as_posix(), bpy.context.preferences.view.ui_scale * 20,
+                                     glyph_ranges=fonts.get_glyph_ranges_chinese_full())
 
     def init_imgui(self):
         if self.imgui_ctx:
@@ -163,7 +143,6 @@ def inbox(x, y, w, h, mpos):
 
 
 class BaseDrawCall:
-
     key_map = {
         'TAB': imgui.KEY_TAB,
         'LEFT_ARROW': imgui.KEY_LEFT_ARROW,
@@ -237,18 +216,18 @@ class BaseDrawCall:
                 io.keys_down[self.key_map[event.type]] = False
 
         io.key_ctrl = (
-            io.keys_down[self.key_map['LEFT_CTRL']] or
-            io.keys_down[self.key_map['RIGHT_CTRL']]
+                io.keys_down[self.key_map['LEFT_CTRL']] or
+                io.keys_down[self.key_map['RIGHT_CTRL']]
         )
 
         io.key_alt = (
-            io.keys_down[self.key_map['LEFT_ALT']] or
-            io.keys_down[self.key_map['RIGHT_ALT']]
+                io.keys_down[self.key_map['LEFT_ALT']] or
+                io.keys_down[self.key_map['RIGHT_ALT']]
         )
 
         io.key_shift = (
-            io.keys_down[self.key_map['LEFT_SHIFT']] or
-            io.keys_down[self.key_map['RIGHT_SHIFT']]
+                io.keys_down[self.key_map['LEFT_SHIFT']] or
+                io.keys_down[self.key_map['RIGHT_SHIFT']]
         )
 
         io.key_super = io.keys_down[self.key_map['OSKEY']]
