@@ -291,6 +291,8 @@ class NodeBase(bpy.types.Node):
                 return False
             if isinstance(meta1[0], list) or isinstance(meta2[0], list):
                 return meta1[0] == meta2[0]
+            if meta1[0] != meta2[0]:
+                return False
             for k in meta1[1]:
                 if k == "default":
                     continue
@@ -1634,7 +1636,16 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
         return True
     if prop == "control_after_generate":
         return True
-
+    # 多行文本处理
+    md = self.get_meta(prop)
+    if md and md[0] == "STRING" and len(md) > 1 and isinstance(md[1], dict) and md[1].get("multiline",):
+        width = int(self.width) // 7
+        lines = textwrap.wrap(text=str(getattr(self, prop)), width=width)
+        for line in lines:
+            layout.label(text=line, text_ctxt=ctxt)
+        row = draw_prop_with_link(layout, self, prop)
+        row.operator("sdn.enable_mlt", text="", icon="TEXT")
+        return True
     def show_model_preview(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILayout, prop: str):
         if self.class_type not in name2path:
             return False
@@ -1831,15 +1842,6 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
             else:
                 layout.operator(Ops_Add_SaveImage.bl_idname, text="", icon="FILE_TICK").node_name = self.name
         if prop == "prev":
-            return True
-    elif self.class_type == "CLIPTextEncode":
-        if prop == "text":
-            width = int(self.width) // 7
-            lines = textwrap.wrap(text=str(self.text), width=width)
-            for line in lines:
-                layout.label(text=line, text_ctxt=ctxt)
-            row = draw_prop_with_link(layout, self, prop)
-            row.operator("sdn.enable_mlt", text="", icon="TEXT")
             return True
     elif self.class_type in {"OpenPoseFull", "OpenPoseHand", "OpenPoseMediaPipeFace", "OpenPoseDepth", "OpenPose", "OpenPoseFace", "OpenPoseLineart", "OpenPoseFullExtraLimb", "OpenPoseKeyPose", "OpenPoseCanny", }:
         return True

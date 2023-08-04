@@ -1,13 +1,13 @@
 # Reference from: https://github.com/eliemichel/BlenderImgui
+from typing import Any
 
 import bpy
-import string
 import json
 from functools import lru_cache
 from math import ceil
 from pathlib import Path
 from ..utils import _T, logger
-from ..SDNode.tree import TREE_TYPE
+from ..SDNode.tree import TREE_TYPE, NodeBase
 from .renderer import BlenderImguiRenderer, imgui
 
 
@@ -23,7 +23,8 @@ class GlobalImgui:
             cls._instance = super().__new__(cls)
         return cls._instance
 
-    def init_font(self):
+    @staticmethod
+    def init_font():
         io = imgui.get_io()
         fonts = io.fonts
         fonts.add_font_default()
@@ -175,6 +176,9 @@ class BaseDrawCall:
     }
     REG_AREA = set()
 
+    def __init__(self):
+        self.mpos = (0, 0)
+
     def try_reg(self, area: bpy.types.Area):
         if area in self.__class__.REG_AREA:
             return
@@ -314,14 +318,13 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
         # hover 不一定 focus,  focus也不一定hover
         self.cover |= imgui.is_any_item_hovered() or imgui.is_window_hovered()
 
-    def can_draw(self):
+    @staticmethod
+    def can_draw() -> Any | None:
         tree = bpy.context.space_data.edit_tree
         if not tree or bpy.context.space_data.tree_type != TREE_TYPE:
             return
         node = tree.nodes.active
         if not node:
-            return
-        if node.bl_idname not in {"CLIPTextEncode", "MultiAreaConditioning"}:
             return
         return node
 
@@ -332,7 +335,7 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
         self.draw_mlt(context, node)
         self.draw_rect(context, node)
 
-    def draw_rect(self, context: bpy.types.Context, node):
+    def draw_rect(self, context: bpy.types.Context, node: NodeBase):
         if node.bl_idname != "MultiAreaConditioning":
             return
         rx = node.resolutionX
@@ -377,12 +380,31 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
 
         imgui.end()
 
-    def draw_mlt(self, context: bpy.types.Context, node):
-        if node.bl_idname != "CLIPTextEncode":
-            return
-        flags = imgui.WINDOW_NO_COLLAPSE | imgui.WINDOW_NO_BRING_TO_FRONT_ON_FOCUS | imgui.WINDOW_NO_SAVED_SETTINGS | imgui.WINDOW_NO_FOCUS_ON_APPEARING
-        imgui.begin(_T(" Prompts") + "##" + hex(hash(context.area)), closable=False, flags=flags)
-        imgui.set_window_position(50, 20, condition=imgui.ONCE)
+    def draw_mlt(self, context: bpy.types.Context, node: NodeBase):
+        draw_list: list[tuple[NodeBase, str]] = []
+
+        def try_add(node: NodeBase, prop: str):
+            md = node.get_meta(prop)
+            if not md or md[0] != "STRING":
+                return
+            if len(md) <= 1 or not isinstance(md[1], dict) or not md[1].get("multiline", ):
+                return
+            draw_list.append((node, prop))
+
+        for prop in node.inp_types:
+            if node.query_stat(prop):
+                continue
+            try_add(node, prop)
+        if node.bl_idname == "PrimitiveNode" and node.outputs[0].is_linked and node.outputs[0].links:
+            try_add(node.outputs[0].links[0].to_node, node.prop)
+
+        for count, (node, prop) in enumerate(draw_list):
+            self.draw_mlt_ex(context, node, count, prop)
+
+    def draw_mlt_ex(self, context, node: NodeBase, count: int, prop: str):
+        flags = imgui.WINDOW_NO_BRING_TO_FRONT_ON_FOCUS | imgui.WINDOW_NO_SAVED_SETTINGS | imgui.WINDOW_NO_FOCUS_ON_APPEARING
+        imgui.begin(f"{_T(' Prompts')}: {_T(prop)} ##" + hex(hash(context.area)), closable=False, flags=flags)
+        imgui.set_window_position(50, 20 + count * 300, condition=imgui.ONCE)
         imgui.set_window_size(300, 300, condition=imgui.ONCE)
         window_size = imgui.core.get_window_size()
         w, h = window_size.x, window_size.y
@@ -404,10 +426,10 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
             ...
 
         def edit(data):
-            backspace = self.io.keys_down[self.key_map['BACK_SPACE']]
+            # backspace = self.io.keys_down[self.key_map['BACK_SPACE']]
             p = data.cursor_pos
             p = len(get_wrap_text(data.buffer.encode()[:p].decode(), lnum).encode())
-            node.text = data.buffer.replace("\n", "")
+            setattr(node, data.user_data, data.buffer.replace("\n", ""))  # node.text = data.buffer.replace("\n", "")
             text = get_wrap_text(data.buffer, lnum)
             data.delete_chars(0, data.buffer_text_length)
             data.insert_chars(0, text)
@@ -466,14 +488,15 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
             for k in [imgui.KEY_A, imgui.KEY_C, imgui.KEY_V, imgui.KEY_X, imgui.KEY_Y, imgui.KEY_Z]:
                 self.io.keys_down[k] = False
 
-        ttt = get_wrap_text(node.text, lnum)
+        ttt = get_wrap_text(getattr(node, prop), lnum)
         imgui.input_text_multiline(
             "",
             ttt,
             width=-1,
             height=-1,
             flags=imgui.INPUT_TEXT_CALLBACK_RESIZE | imgui.INPUT_TEXT_CALLBACK_EDIT | imgui.INPUT_TEXT_CALLBACK_COMPLETION | imgui.INPUT_TEXT_CALLBACK_ALWAYS,
-            callback=cb
+            callback=cb,
+            user_data=prop
         )
         # x, y = imgui.core.get_window_position()
         # y = context.region.height - 1 - y
