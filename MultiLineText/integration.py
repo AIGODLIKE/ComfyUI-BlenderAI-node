@@ -277,7 +277,9 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
             return {"PASS_THROUGH"}
 
         context.area.tag_redraw()
-
+        if event.type == "ESC":
+            self.stop_search()
+            return {"RUNNING_MODAL"}
         # if event.type in {'RIGHTMOUSE', 'ESC'}:
         #     return {'CANCELLED'}
         self.poll_mouse(context, event)
@@ -299,7 +301,11 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
         io.mouse_pos = (self.mpos[0], context.region.height - 1 - self.mpos[1])
         if event.type == 'LEFTMOUSE':
             io.mouse_down[0] = event.value == 'PRESS'
-
+        if not self.candicates_words:
+            if event.type == 'WHEELUPMOUSE':
+                io.mouse_wheel = +1
+            elif event.type == 'WHEELDOWNMOUSE':
+                io.mouse_wheel = -1
     def poll_events(self, context, event):
         super().poll_events(context, event)
         if event.unicode and 0 < ord(event.unicode) < 0x10000:
@@ -308,6 +314,10 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
     def clear(self):
         super().clear()
         self.__class__.REG_AREA.discard(self.area)
+
+    def stop_search(self):
+        self.candicates_words = []
+        self.try_search = False
 
     def track_any_cover(self):
         # is_window_hovered 鼠标选中当前窗口的标题栏时触发
@@ -445,8 +455,7 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
             candicates_word = self.candicates_word.replace("(", "\\(").replace(")", "\\)")
             data.insert_chars(cstart_pos, candicates_word + ",")
             self.candicates_word = ""
-            self.candicates_words = []
-            self.try_search = False
+            self.stop_search()
             edit(data)
 
         def always(data):
@@ -525,8 +534,7 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
             return
         word = word.strip().replace("\n", "").replace(" ", "_").replace("\\(", "(").replace("\\)", ")")
         if not word:
-            self.candicates_words = []
-            self.try_search = False
+            self.stop_search()
             return
         # (83, 'girly_pred', '0', '', 'e621', {}, (173, 216, 230))
         self.candicates_words = Trie.TRIE.bl_search(word, max_size=20)
