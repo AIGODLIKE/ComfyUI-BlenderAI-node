@@ -333,14 +333,15 @@ class NodeBase(bpy.types.Node):
             reg_name = get_reg_name(inp_name)
             if inp := self.inputs.get(reg_name):
                 link = self.get_from_link(inp)
-                if not link:
-                    continue
-                # inputs[inp_name] = [link.from_node.id, link.from_socket.slot_index]
-                from_node = link.from_node
-                if from_node.bl_idname == "PrimitiveNode":
+                if link:
+                    from_node = link.from_node
+                    if from_node.bl_idname == "PrimitiveNode":
+                        inputs[inp_name] = getattr(self, reg_name)
+                    else:
+                        inputs[inp_name] = [link.from_node.id, link.from_node.outputs[:].index(link.from_socket)]
+                elif self.get_meta(inp_name):
+                    # 没连接但是 注册类型
                     inputs[inp_name] = getattr(self, reg_name)
-                else:
-                    inputs[inp_name] = [link.from_node.id, link.from_node.outputs[:].index(link.from_socket)]
             else:
                 # 添加 非socket
                 inputs[inp_name] = getattr(self, reg_name)
@@ -1345,8 +1346,9 @@ def spec_extra_properties(properties, nname, ndesc):
         # prop = bpy.props.PointerProperty(type=bpy.types.Collection)
         # properties["col"] = prop
     elif nname == "预览":
-        prop = bpy.props.PointerProperty(type=bpy.types.Image)
+        prop = bpy.props.CollectionProperty(type=Images)
         properties["prev"] = prop
+        properties["lnum"] = bpy.props.IntProperty(default=3, min=1, max=10, name="Image num per line")
     elif nname == "KSamplerAdvanced" or "seed" in properties:
         prop = bpy.props.BoolProperty(default=False)
         properties["exe_rand"] = prop
@@ -1510,7 +1512,8 @@ def spec_serialize_pre(self):
         prop = getattr(self.outputs[0].links[0].to_node, get_reg_name(self.prop))
         for link in self.outputs[0].links[1:]:
             setattr(link.to_node, get_reg_name(link.to_socket.name), prop)
-
+    elif self.class_type == "预览":
+        self.prev.clear()
 
 def spec_serialize(self, cfg, execute):
     def hide_gp():
@@ -1607,10 +1610,13 @@ def spec_functions(fields, nname, ndesc):
             img_paths = result.get("output", {}).get("images", [])
             if not img_paths:
                 return
-            img = img_paths[0]
-            logger.warn(f"{_T('Load Preview Image')}: {img}")
-            def f(img): return setattr(self, "prev", bpy.data.images.load(img))
-            Timer.put((f, img))
+            logger.warn(f"{_T('Load Preview Image')}: {img_paths}")
+            def f(self, img_paths: list[str]):
+                self.prev.clear()
+                for img_path in img_paths:
+                    p = self.prev.add()
+                    p.image = bpy.data.images.load(img_path)
+            Timer.put((f, self, img_paths))
 
         fields["post_fn"] = post_fn
 
@@ -1825,16 +1831,8 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
         elif prop in {"gp", "obj", "col", "cam", "disable_render"}:
             return True
     elif self.class_type == "预览":
-        if self.prev:
-            if self.prev.name not in Icon:
-                Icon.reg_icon_by_pixel(self.prev, self.prev.name)
-                w = max(self.prev.size[0], self.prev.size[1])
-                setwidth(self, w)
-            icon_id = Icon[self.prev.name]
-            layout.label(text=f"{self.prev.file_format} : [{self.prev.size[0]} x {self.prev.size[1]}]")
-            layout.template_icon(icon_id, scale=max(self.prev.size[0], self.prev.size[1]) // 20)
-        # else:
-        #     setwidth(self, 200)
+        if prop == "lnum":
+            return True
         if self.inputs[0].is_linked:
             for link in self.inputs[0].links[0].from_socket.links:
                 if link.to_node.bl_idname == "存储":
@@ -1842,6 +1840,24 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
             else:
                 layout.operator(Ops_Add_SaveImage.bl_idname, text="", icon="FILE_TICK").node_name = self.name
         if prop == "prev":
+            layout.prop(self, "lnum")
+            pnum = len(self.prev)
+            if pnum == 0:
+                return True
+            p0 = self.prev[0].image
+            w = max(p0.size[0], p0.size[1])
+            setwidth(self, w * min(self.lnum, pnum))
+            layout.label(text=f"{p0.file_format} : [{p0.size[0]} x {p0.size[1]}]")
+            col = layout.column(align=True)
+            for i, p in enumerate(self.prev):
+                if i % self.lnum == 0:
+                    row = col.row(align=True)
+                    row.alignment = "LEFT"
+                prev = p.image
+                if prev.name not in Icon:
+                    Icon.reg_icon_by_pixel(prev, prev.name)
+                icon_id = Icon[prev.name]
+                row.template_icon(icon_id, scale=max(prev.size[0], prev.size[1]) // 20)
             return True
     elif self.class_type in {"OpenPoseFull", "OpenPoseHand", "OpenPoseMediaPipeFace", "OpenPoseDepth", "OpenPose", "OpenPoseFace", "OpenPoseLineart", "OpenPoseFullExtraLimb", "OpenPoseKeyPose", "OpenPoseCanny", }:
         return True
@@ -1851,7 +1867,10 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
     return False
 
 
-clss = [Ops_Swith_Socket, Ops_Add_SaveImage, Set_Render_Res, GetSelCol, Ops_Active_Tex, Ops_Link_Mask]
+class Images(bpy.types.PropertyGroup):
+    image: bpy.props.PointerProperty(type=bpy.types.Image)
+
+clss = [Ops_Swith_Socket, Ops_Add_SaveImage, Set_Render_Res, GetSelCol, Ops_Active_Tex, Ops_Link_Mask, Images]
 
 reg, unreg = bpy.utils.register_classes_factory(clss)
 

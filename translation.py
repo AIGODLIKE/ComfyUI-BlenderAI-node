@@ -85,6 +85,7 @@ other = {
     "Output Layer": "输出层",
     "out_layers": "输出层",
     "Frames Directory": "序列图文件夹",
+    "Image num per line": "每行图片数",
     # SDNode/tree.py
     "Invalid Node Type: {}": "检查到无效的节点: {}",
     # SDNode/utils.py
