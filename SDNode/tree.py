@@ -82,7 +82,7 @@ class CFNodeTree(NodeTree):
         ox, oy = self.get_node_frame_offset(node)
         return node.location.x + ox, node.location.y + oy
 
-    def save_json_ex(self, dump_nodes: list[bpy.types.Node], dump_frames=None):
+    def save_json_ex(self, dump_nodes: list[bpy.types.Node], dump_frames=None, selected_only=False):
         self.validation(dump_nodes)
         self.calc_unique_id()
         self.compute_execution_order()
@@ -91,7 +91,7 @@ class CFNodeTree(NodeTree):
             p = node.parent
             node.parent = None
             node.update()
-            info = node.dump()
+            info = node.dump(selected_only=selected_only)
             node.parent = p
             nodes_info.append(info)
             {"id": 7,
@@ -144,7 +144,10 @@ class CFNodeTree(NodeTree):
             ]
             if to_node.class_type == "Reroute":
                 link_info[-1] = "*"
-            links.append(link_info)
+            if not selected_only:
+                links.append(link_info)
+            elif to_node.select and to_node.select:
+                links.append(link_info)
         if not dump_frames:
             dump_frames = [f for f in self.nodes if f.bl_idname == "NodeFrame"]
         groups = []
@@ -187,7 +190,7 @@ class CFNodeTree(NodeTree):
     def save_json_group(self):
         dump_nodes = [n for n in self.get_nodes() if n.select]
         dump_frames = [f for f in self.nodes if f.bl_idname == "NodeFrame" and f.select]
-        return self.save_json_ex(dump_nodes, dump_frames)
+        return self.save_json_ex(dump_nodes, dump_frames, selected_only=True)
 
     def load_json(self, data):
         self.clear_nodes()

@@ -435,7 +435,7 @@ class NodeBase(bpy.types.Node):
                 logger.error(f"{_T('Params Loading Error')} {self.class_type} -> {self.class_type}.{inp_name}")
                 logger.error(f" -> {e}")
 
-    def dump(self):
+    def dump(self, selected_only=False):
         tree = bpy.context.space_data.edit_tree
         all_links: bpy.types.NodeLinks = tree.links[:]
 
@@ -457,7 +457,10 @@ class NodeBase(bpy.types.Node):
             link = self.get_from_link(inp)
             is_base_type = self.is_base_type(inp_name)
             if link:
-                inp_info["link"] = all_links.index(inp.links[0])
+                if not selected_only:
+                    inp_info["link"] = all_links.index(inp.links[0])
+                elif inp.links[0].from_node.select:
+                    inp_info["link"] = all_links.index(inp.links[0])
             if is_base_type:
                 if not self.query_stat(inp.name) or not md:
                     continue
@@ -469,8 +472,11 @@ class NodeBase(bpy.types.Node):
         for i, out in enumerate(self.outputs):
             out_info = {"name": out.name,
                         "type": out.name,
-                        "links": [all_links.index(link) for link in out.links],
                         }
+            if not selected_only:
+                out_info["links"] = [all_links.index(link) for link in out.links]
+            elif out.links:
+                out_info["links"] = [all_links.index(link) for link in out.links if link.to_node.select]
             out_info["slot_index"] = i
             outputs.append(out_info)
         properties = {}
@@ -503,7 +509,10 @@ class NodeBase(bpy.types.Node):
                  }
             ]
             if self.inputs[0].is_linked:
-                inputs[0]["link"] = all_links.index(self.inputs[0].links[0])
+                if not selected_only:
+                    inputs[0]["link"] = all_links.index(self.inputs[0].links[0])
+                elif self.inputs[0].links[0].from_node.select:
+                    inputs[0]["link"] = all_links.index(self.inputs[0].links[0])
             if not self.outputs[0].is_linked:
                 outputs[0]["name"] = outputs[0]["type"] = "*"
             else:
