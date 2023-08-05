@@ -191,89 +191,36 @@ class CFNodeTree(NodeTree):
 
     def load_json(self, data):
         self.clear_nodes()
-
-        def delegate(self: CFNodeTree, data):
-            for node_info in data["nodes"]:
-                t = node_info["type"]
-                if t == "Reroute":
-                    node = self.nodes.new(type="NodeReroute")
-                else:
-                    node = self.nodes.new(type=t)
-                node.load(node_info)
-
-            for link in data["links"]:
-                # logger.debug(link)
-                from_node = self.get_node_by_id(str(link[1]))
-                to_node = self.get_node_by_id(str(link[3]))
-                if not from_node or not to_node:
-                    logger.warn(f"Not Found Link:{link}")
-                    continue
-                from_slot = link[2]
-                to_slot = link[4]
-                find_out = None
-                for out in from_node.outputs:
-                    if from_node.class_type == "Reroute":
-                        find_out = out
-                        break
-                    if out.slot_index == from_slot:
-                        find_out = out
-                        break
-                find_in = None
-                for inp in to_node.inputs:
-                    if to_node.class_type == "Reroute":
-                        find_in = inp
-                        break
-                    if inp.slot_index == to_slot:
-                        find_in = inp
-                        break
-                if find_in and find_out:
-                    self.links.new(find_out, find_in)
-                else:
-                    logger.error(link)
-
-            for group in data.get("groups", []):
-                label = group.get("title")
-                bounding = group.get("bounding")
-                color = group.get("color")
-                node = self.nodes.new(type="NodeFrame")
-                node.shrink = False
-                if label:
-                    node.label = label
-                if color:
-                    node.use_custom_color = True
-                    try:
-                        node.color = hex2rgb(color)
-                    except BaseException:
-                        logger.warn(f"Color: {color} Set Failed!")
-                node.location.x = bounding[0]
-                node.location.y = -bounding[1]
-                node.width = bounding[2]
-                node.height = bounding[3]
-                node.update()
-                # finalx = locx - (w - wd)*0.5
-                # locx = finalx + (w - wd)*0.5
-                # node.location.x = bounding[0] + (bounding[2] - node.bl_width_default)*0.5
-                # node.location.y = -bounding[1] - (bounding[3] + node.bl_height_default)*0.5
-                # fx = locx - (w - dw)*0.5
-                # fy = locy + (h + dh)*0.5
-        Timer.put((delegate, self, data))
+        Timer.put((self.load_json_ex, data))
 
     def load_json_group(self, data) -> list[bpy.types.Node]:
+        return self.load_json_ex(data, is_group=True)
+
+    def load_json_ex(self, data, is_group=False):
         for node in self.get_nodes(False):
             node.select = False
         load_nodes = []
         id_map = {}
         for node_info in data.get("nodes", []):
-            node = self.nodes.new(type=node_info["type"])
-            load_nodes.append(node)
-            node.load(node_info, with_id=False)
+            t = node_info["type"]
+            if t == "Reroute":
+                node = self.nodes.new(type="NodeReroute")
+            else:
+                node = self.nodes.new(type=t)
+            if is_group:
+                node.load(node_info, with_id=False)
+            else:
+                node.load(node_info)
             old_id = str(node_info["id"])
             id_map[old_id] = old_id
-            if old_id in node.pool:
-                id_map[old_id] = node.apply_unique_id()
-            else:
-                node.pool.add(old_id)
-                node.id = old_id
+            load_nodes.append(node)
+            if is_group:
+                if old_id in node.pool:
+                    id_map[old_id] = node.apply_unique_id()
+                else:
+                    node.pool.add(old_id)
+                    node.id = old_id
+                
 
         for link in data.get("links", []):
             # logger.debug(link)
@@ -286,11 +233,17 @@ class CFNodeTree(NodeTree):
             to_slot = link[4]
             find_out = None
             for out in from_node.outputs:
+                if from_node.class_type == "Reroute":
+                    find_out = out
+                    break
                 if out.slot_index == from_slot:
                     find_out = out
                     break
             find_in = None
             for inp in to_node.inputs:
+                if to_node.class_type == "Reroute":
+                    find_in = inp
+                    break
                 if inp.slot_index == to_slot:
                     find_in = inp
                     break

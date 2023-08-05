@@ -258,6 +258,8 @@ class NodeBase(bpy.types.Node):
                 bpy.context.space_data.edit_tree.links.remove(l)
 
     def primitive_check(self):
+        if not bpy.context.space_data:
+            return
         if bpy.context.space_data.type != "NODE_EDITOR":
             return
         tree = bpy.context.space_data.edit_tree

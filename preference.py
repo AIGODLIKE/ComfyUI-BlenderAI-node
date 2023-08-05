@@ -23,7 +23,8 @@ class AddonPreference(bpy.types.AddonPreferences):
     cpu_only: bpy.props.BoolProperty(default=False)  # --cpu
 
     mem_level: bpy.props.EnumProperty(name="显存模式",
-                                      items=[("--highvram", "高显存", "模型常驻显存, 减少加载时间", 1),
+                                      items=[("--gpu-only", "极高显存", "所有数据存储到显存", 0),    
+                                             ("--highvram", "高显存", "模型常驻显存, 减少加载时间", 1),
                                              ("--normalvram", "中显存", "自动启用 低显存 模式时强制使用normal vram", 2),
                                              ("--lowvram", "低显存", "拆分UNet来降低显存开销", 3),
                                              ("--novram", "超低显存", "如果低显存依然不够", 4),
