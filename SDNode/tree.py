@@ -131,6 +131,7 @@ class CFNodeTree(NodeTree):
             #     to_socket.slot_index,
             #     from_socket.node.class_type
             # ]
+            from_node = link.from_node
             from_socket = link.from_socket
             to_node = link.to_node
             to_socket = link.to_socket
@@ -146,7 +147,7 @@ class CFNodeTree(NodeTree):
                 link_info[-1] = "*"
             if not selected_only:
                 links.append(link_info)
-            elif to_node.select and to_node.select:
+            elif to_node.select and link.from_node.select:
                 links.append(link_info)
         if not dump_frames:
             dump_frames = [f for f in self.nodes if f.bl_idname == "NodeFrame"]
@@ -204,6 +205,7 @@ class CFNodeTree(NodeTree):
             node.select = False
         load_nodes = []
         id_map = {}
+        id_node_map = {}
         for node_info in data.get("nodes", []):
             t = node_info["type"]
             if t == "Reroute":
@@ -216,6 +218,7 @@ class CFNodeTree(NodeTree):
                 node.load(node_info)
             old_id = str(node_info["id"])
             id_map[old_id] = old_id
+            id_node_map[old_id] = node
             load_nodes.append(node)
             if is_group:
                 if old_id in node.pool:
@@ -227,8 +230,8 @@ class CFNodeTree(NodeTree):
 
         for link in data.get("links", []):
             # logger.debug(link)
-            from_node = self.get_node_by_id(id_map[str(link[1])])
-            to_node = self.get_node_by_id(id_map[str(link[3])])
+            from_node = id_node_map[str(link[1])]
+            to_node = id_node_map[str(link[3])]
             if not from_node or not to_node:
                 logger.warn(f"Not Found Link:{link}")
                 continue
@@ -346,8 +349,20 @@ class CFNodeTree(NodeTree):
         """
         force update
         """
-        def primitive_node_update(node: bpy.types.Node):
-            from .nodes import get_reg_name
+        self.id_clear_update()
+        self.primitive_node_update()
+    
+    def id_clear_update(self):
+        ids = set()
+        nodes = self.get_nodes(cmf=True)
+        for node in nodes:
+            ids.add(node.id)
+        NodeBase.pool.clear()
+        NodeBase.pool.update(ids)
+
+    def primitive_node_update(self):
+        from .nodes import get_reg_name
+        for node in self.nodes:
             if node.bl_idname != "PrimitiveNode":
                 return
             # 未连接或link为空则不需要后续操作
@@ -362,8 +377,7 @@ class CFNodeTree(NodeTree):
                 n = get_reg_name(link.to_socket.name)
                 old_prop = getattr(link.to_node, n)
                 setattr(link.to_node, n, type(old_prop)(prop))
-        for node in self.nodes:
-            primitive_node_update(node)
+
             
                     
     def compute_execution_order(self):
@@ -536,6 +550,7 @@ def reg_node_reroute():
     bpy.types.NodeReroute.pool = NodeBase.pool
     bpy.types.NodeReroute.load = NodeBase.load
     bpy.types.NodeReroute.dump = NodeBase.dump
+    bpy.types.NodeReroute.update = NodeBase.update
     bpy.types.NodeReroute.serialize_pre = NodeBase.serialize_pre
     bpy.types.NodeReroute.serialize = NodeBase.serialize
     bpy.types.NodeReroute.post_fn = NodeBase.post_fn

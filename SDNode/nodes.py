@@ -252,9 +252,11 @@ class NodeBase(bpy.types.Node):
                     continue
                 if fs.bl_idname == ts.bl_idname:
                     continue
-
+                if l.from_node.bl_idname == "NodeReroute":
+                    continue
                 if not hasattr(bpy.context.space_data, "edit_tree"):
                     continue
+
                 bpy.context.space_data.edit_tree.links.remove(l)
 
     def primitive_check(self):
