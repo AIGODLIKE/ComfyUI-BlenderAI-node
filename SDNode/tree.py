@@ -425,7 +425,7 @@ class CFNodeTree(NodeTree):
             L.append(M[i])
 
         for i, n in enumerate(L):
-            n.order = i
+            n.sdn_order = i
         return L
 
     def get_node_by_id(self, id):
@@ -546,7 +546,7 @@ def reg_node_reroute():
     bpy.types.NodeSocketColor.index = bpy.props.IntProperty(default=-1)
 
     bpy.types.NodeReroute.id = bpy.props.StringProperty(default="-1")
-    bpy.types.NodeReroute.order = bpy.props.IntProperty(default=-1)
+    bpy.types.NodeReroute.sdn_order = bpy.props.IntProperty(default=-1)
     bpy.types.NodeReroute.pool = NodeBase.pool
     bpy.types.NodeReroute.load = NodeBase.load
     bpy.types.NodeReroute.dump = NodeBase.dump

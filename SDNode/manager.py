@@ -24,6 +24,8 @@ port = 8189
 ip = "127.0.0.1"
 url = f"http://{ip}:{port}"
 
+# wmpp 指定到WebUI路径
+# wmp 指定到 WebUI/models 路径
 a111_yaml = """
 a111:
     base_path: {wmpp}
@@ -38,6 +40,8 @@ a111:
     embeddings: {wmpp}/embeddings
     controlnet: {wmp}/ControlNet
             """
+# cmpp 指定到ComfyUI路径
+# cmp 指定到 ComfyUI/models 路径
 custom_comfyui = """
 mycomfyui:
     base_path: {cmpp}
