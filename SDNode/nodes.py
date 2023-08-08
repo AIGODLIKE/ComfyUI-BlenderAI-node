@@ -135,7 +135,7 @@ def get_fixed_seed():
 class NodeBase(bpy.types.Node):
     bl_width_min = 200.0
     bl_width_max = 2000.0
-    order: bpy.props.IntProperty(default=-1)
+    sdn_order: bpy.props.IntProperty(default=-1)
     id: bpy.props.StringProperty(default="-1")
     builtin__stat__: bpy.props.StringProperty(subtype="BYTE_STRING")  # ori name: True/False
     pool = set()
@@ -553,7 +553,7 @@ class NodeBase(bpy.types.Node):
             "pos": [self.location.x, -self.location.y],
             "size": {"0": self.width, "1": self.height},
             "flags": {},
-            "order": self.order,
+            "order": self.sdn_order,
             "mode": 0,
             "inputs": inputs,
             "outputs": outputs,
