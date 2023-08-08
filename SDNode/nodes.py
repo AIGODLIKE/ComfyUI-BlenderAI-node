@@ -1674,14 +1674,17 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
         col.template_icon_view(self, prop, show_labels=True, scale_popup=popup_scale, scale=popup_scale)
         return True
 
-    def setwidth(self: NodeBase, w):
+    def setwidth(self: NodeBase, w, with_max=False):
         w = max(self.bl_width_min, w)
-        w = min(self.bl_width_max, w)
+        if not with_max:
+            w = min(self.bl_width_max, w)
         if self.width == w:
             return
 
         def delegate(self, w):
             self.width = w
+            if with_max and self.bl_width_max < w:
+                self.bl_width_max = w
 
         Timer.put((delegate, self, w))
     popup_scale = 5
@@ -1859,7 +1862,7 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
                 return True
             p0 = self.prev[0].image
             w = max(p0.size[0], p0.size[1])
-            setwidth(self, w * min(self.lnum, pnum))
+            setwidth(self, w * min(self.lnum, pnum), with_max=True)
             layout.label(text=f"{p0.file_format} : [{p0.size[0]} x {p0.size[1]}]")
             col = layout.column(align=True)
             for i, p in enumerate(self.prev):
