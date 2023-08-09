@@ -25,6 +25,14 @@ from .prop import Prop
 clss = [Panel, Ops, Prop, Ops_Mask, AddonPreference, EnableMLT]
 reg, unreg = bpy.utils.register_classes_factory(clss)
 
+def dump_info():
+    import sys
+    import json
+    from .preference import get_pref
+    if "--get-blender-ai-node-info" in sys.argv:
+        info = {"Version": bl_info["version"], "ComfyUIPath": get_pref()['model_path']}
+        sys.stderr.write(f"BlenderComfyUIInfo:{json.dumps(info)}+BlenderComfyUIend")
+        sys.stderr.flush()
 
 def register():
     bpy.app.translations.register(__name__, translations_dict)
@@ -33,7 +41,7 @@ def register():
     TaskManager.run_server(fake=True)
     timer_reg()
     bpy.types.Scene.sdn = bpy.props.PointerProperty(type=Prop)
-
+    dump_info()
 
 def unregister():
     bpy.app.translations.unregister(__name__)
