@@ -85,13 +85,13 @@ class Panel(bpy.types.Panel):
     def show_progress(self, layout: bpy.types.UILayout):
         layout = layout.box()
         qr_num = len(TaskManager.query_server_task().get('queue_running', []))
-        qp_num = TaskManager.task_queue.qsize()
+        qp_num = TaskManager.get_task_num()
         row = layout.row(align=True)
         row.alert = True
         row.alignment = "CENTER"
         row.label(text="Pending / Running", text_ctxt=ctxt)
         row.label(text=f": {qp_num} / {qr_num}", text_ctxt=ctxt)
-        prog = TaskManager.progress
+        prog = TaskManager.get_progress()
         if prog and prog.get("value"):
             import blf
             per = prog["value"] / prog["max"]
@@ -106,11 +106,11 @@ class Panel(bpy.types.Panel):
             row.label(text=content[:134], text_ctxt=ctxt)
             
 
-        for error_msg in TaskManager.error_msg:
+        for error_msg in TaskManager.get_error_msg():
             row = layout.row()
             row.alert = True
             row.label(text=error_msg, icon="ERROR", text_ctxt=ctxt)
-        if TaskManager.error_msg:
+        if TaskManager.get_error_msg():
             row = layout.box().row()
             row.alignment = "CENTER"
             row.alert = True

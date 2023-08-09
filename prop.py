@@ -124,8 +124,8 @@ class Prop(bpy.types.PropertyGroup):
     def open_webui_update(self, context):
         if self["open_webui"]:
             self["open_webui"] = False
-            from .SDNode.manager import url
-            bpy.ops.wm.url_open(url=url)
+            from .SDNode.manager import get_url
+            bpy.ops.wm.url_open(url=get_url())
     open_webui: bpy.props.BoolProperty(default=False, update=open_webui_update, name="Launch ComfyUI")
 
     rand_all_seed: bpy.props.BoolProperty(default=False, name="Random All")

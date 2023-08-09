@@ -1,3 +1,4 @@
+from functools import lru_cache
 import os
 import re
 import shutil
@@ -19,10 +20,19 @@ from pathlib import Path
 from queue import Queue
 from ..utils import logger, _T, PkgInstaller
 from ..timer import Timer
+from ..preference import get_pref
 
-port = 8189
-ip = "127.0.0.1"
-url = f"http://{ip}:{port}"
+def get_ip():
+    ip = get_pref().ip
+    return ip
+
+def get_port():
+    port = get_pref().port
+    return port
+
+def get_url():
+    return f"http://{get_ip()}:{get_port()}"
+
 
 # wmpp 指定到WebUI路径
 # wmp 指定到 WebUI/models 路径
@@ -84,7 +94,7 @@ class TaskManager:
     _instance = None
     pid = -1
     child: Popen = None
-
+    process_exited = False
     task_queue = Queue()
     res_queue = Queue()
     SessionId = {"SessionId": "无限圣杯"}
@@ -108,6 +118,20 @@ class TaskManager:
 
     def clear_error_msg():
         TaskManager.error_msg.clear()
+
+    def get_error_msg(copy=False):
+        if copy:
+            return deepcopy(TaskManager.error_msg)
+        return TaskManager.error_msg
+
+    def get_progress():
+        return TaskManager.progress
+
+    def get_task_num():
+        return TaskManager.task_queue.qsize()
+
+    def is_launched() -> bool:
+        return TaskManager.pid != -1
 
     def force_kill(pid):
         if not pid:
@@ -179,7 +203,7 @@ class TaskManager:
         #         command.append(site.netloc)
         #     proc = Popen(command, cwd=model_path)
         #     proc.wait()
-            
+
         controlnet = Path(model_path) / "custom_nodes/comfy_controlnet_preprocessors"
         if controlnet.exists():
             fvcore = Path(model_path) / "../python_embeded/Lib/site-packages/fvcore"
@@ -217,7 +241,6 @@ class TaskManager:
         if pidpath.exists():
             TaskManager.force_kill(pidpath.read_text())
 
-        from ..preference import get_pref
         pref = get_pref()
         model_path = pref.model_path
         if not model_path or not Path(model_path).exists():
@@ -257,9 +280,10 @@ class TaskManager:
         args.append("-s")
         args.append(f"{str(model_path)}/main.py")
 
-        # arg += f" --port {port}"
+        args.append("--listen")
+        args.append(get_ip())
         args.append("--port")
-        args.append(f"{port}")
+        args.append(f"{get_port()}")
         if pref.cpu_only:
             # arg += " --cpu"
             args.append("--cpu")
@@ -291,22 +315,30 @@ class TaskManager:
         TaskManager.child = p
         TaskManager.pid = p.pid
         pidpath.write_text(str(p.pid))
-
+        TaskManager.process_exited = False
         Thread(target=TaskManager.stdout_listen, daemon=True).start()
 
         while True:
             import requests
             try:
-                if requests.get(f"{url}/object_info", proxies={"http": None, "https": None}).status_code == 200:
+                if requests.get(f"{get_url()}/object_info", proxies={"http": None, "https": None}, timeout=0.1).status_code == 200:
                     break
             except requests.exceptions.ConnectionError:
                 ...
+            except Exception as e:
+                logger.error(e)
+            if TaskManager.process_exited:
+                break
             time.sleep(0.5)
-        logger.warn(_T("Server Launched"))
-        atexit.register(p.kill)
-        Thread(target=TaskManager.poll_res, daemon=True).start()
-        Thread(target=TaskManager.poll_task, daemon=True).start()
-        Thread(target=TaskManager.proc_res, daemon=True).start()
+        if not TaskManager.process_exited:
+            logger.warn(_T("Server Launched"))
+            atexit.register(p.kill)
+            Thread(target=TaskManager.poll_res, daemon=True).start()
+            Thread(target=TaskManager.poll_task, daemon=True).start()
+            Thread(target=TaskManager.proc_res, daemon=True).start()
+        else:
+            logger.error(_T("Server Launch Failed"))
+            TaskManager.close_server()
 
     def stdout_listen():
         p = TaskManager.child
@@ -328,6 +360,7 @@ class TaskManager:
                     ...
             if not proc:
                 logger.info(line)
+        TaskManager.process_exited = True
         logger.debug("STDOUT Listen Thread Exit")
 
     def close_server():
@@ -364,14 +397,14 @@ class TaskManager:
         ...
 
     def clear_cache():
-        req = request.Request(f"{url}/cup/clear_cache", method="POST")
+        req = request.Request(f"{get_url()}/cup/clear_cache", method="POST")
         try:
             request.urlopen(req)
         except URLError:
             ...
 
     def interrupt():
-        req = request.Request(f"{url}/interrupt", method="POST")
+        req = request.Request(f"{get_url()}/interrupt", method="POST")
         try:
             request.urlopen(req)
         except URLError:
@@ -402,7 +435,8 @@ class TaskManager:
         if TaskManager.pid == -1:
             return {"queue_pending": [], "queue_running": []}
         try:
-            req = request.Request(f"{url}/queue")
+            req = request.Request(f"{get_url()}/queue")
+            req.set_proxy(None, None)
             res = request.urlopen(req)
             res = json.loads(res.read().decode())
         except BaseException:
@@ -433,7 +467,7 @@ class TaskManager:
                                "client_id": cid,
                            }}
                 data = json.dumps(content).encode()
-                req = request.Request(f"{url}/{api}", data=data)
+                req = request.Request(f"{get_url()}/{api}", data=data)
                 try:
                     request.urlopen(req)
                 except request.HTTPError:
@@ -544,7 +578,7 @@ class TaskManager:
             else:
                 logger.error(message)
 
-        ws = WebSocketApp(f"ws://{ip}:{port}/ws?clientId={SessionId['SessionId']}", on_message=on_message)
+        ws = WebSocketApp(f"ws://{get_ip()}:{get_port()}/ws?clientId={SessionId['SessionId']}", on_message=on_message)
         ws.run_forever()
         logger.debug("Poll Result Thread Exit")
 

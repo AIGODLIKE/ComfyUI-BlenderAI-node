@@ -66,7 +66,7 @@ class Ops(bpy.types.Operator):
 
     def draw(self, context):
         layout = self.layout
-        if self.action == "Submit" and TaskManager.pid == -1:
+        if self.action == "Submit" and not TaskManager.is_launched():
             layout.label(text=_T("ComfyUI not Run,To Run?"), icon="INFO", text_ctxt=ctxt)
         if self.action == "Save":
             if (Path(bpy.context.scene.sdn.presets_dir) / f"{self.save_name}.json").exists():
@@ -98,7 +98,7 @@ class Ops(bpy.types.Operator):
         self.alt = event.alt
         self.select_nodes = []
         self.init_pos = context.space_data.cursor_location.copy()
-        if self.action == "Submit" and TaskManager.pid == -1:
+        if self.action == "Submit" and not TaskManager.is_launched():
             return wm.invoke_props_dialog(self, width=200)
         if self.action in {"Load", "Del"}:
             if not bpy.context.scene.sdn.presets:
@@ -135,8 +135,8 @@ class Ops(bpy.types.Operator):
 
     def execute_ex(self, context: bpy.types.Context):
         # logger.debug("EXE")
-        if self.action == "Launch" or (self.action == "Submit" and TaskManager.pid == -1):
-            if TaskManager.pid != -1:
+        if self.action == "Launch" or (self.action == "Submit" and not TaskManager.is_launched()):
+            if TaskManager.is_launched():
                 self.report({"ERROR"}, "服务已经启动!")
                 return {"FINISHED"}
             TaskManager.restart_server()

@@ -11333,21 +11333,21 @@
         "latent_suffix": [
           "STRING",
           {
-            "default": "15449764_cache",
+            "default": "71172115_cache",
             "multiline": false
           }
         ],
         "image_suffix": [
           "STRING",
           {
-            "default": "35875477_cache",
+            "default": "95456521_cache",
             "multiline": false
           }
         ],
         "conditioning_suffix": [
           "STRING",
           {
-            "default": "36260241_cache",
+            "default": "96157570_cache",
             "multiline": false
           }
         ]

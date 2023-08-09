@@ -22,7 +22,7 @@ from ..datas import ENUM_ITEMS_CACHE
 from ..preference import get_pref
 from ..timer import Timer
 from ..translation import ctxt
-from .manager import url, Task
+from .manager import get_url, Task
 
 NODES_POLL = {}
 Icon.reg_none(Path(__file__).parent / "NONE.png")
@@ -949,7 +949,7 @@ def parse_node():
             from ..utils import PkgInstaller
             PkgInstaller.try_install("requests")
         import requests
-        req = requests.get(f"{url}/object_info")
+        req = requests.get(f"{get_url()}/object_info")
         if req.status_code == 200:
             cur_object_info = req.json()
             object_info.update(cur_object_info)

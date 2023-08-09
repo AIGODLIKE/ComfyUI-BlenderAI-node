@@ -23,7 +23,7 @@ class AddonPreference(bpy.types.AddonPreferences):
     cpu_only: bpy.props.BoolProperty(default=False)  # --cpu
 
     mem_level: bpy.props.EnumProperty(name="显存模式",
-                                      items=[("--gpu-only", "极高显存", "所有数据存储到显存", 0),    
+                                      items=[("--gpu-only", "极高显存", "所有数据存储到显存", 0),
                                              ("--highvram", "高显存", "模型常驻显存, 减少加载时间", 1),
                                              ("--normalvram", "中显存", "自动启用 低显存 模式时强制使用normal vram", 2),
                                              ("--lowvram", "低显存", "拆分UNet来降低显存开销", 3),
@@ -34,6 +34,23 @@ class AddonPreference(bpy.types.AddonPreferences):
     with_webui_model: bpy.props.StringProperty(default="", name="With WEBUI Model", description="webui位置", subtype="DIR_PATH")
     with_comfyui_model: bpy.props.StringProperty(default="", name="With ComfyUI Model", description="ComfyUI位置", subtype="DIR_PATH")
     install_deps: bpy.props.BoolProperty(default=False, name="启动服务时检查依赖", description="启动服务时进行ComfyUI插件(部分)依赖安装检查")
+
+    def ip_check(self, context):
+        """检查IP地址是否合法"""
+        ip = self.ip.split(".")
+        if len(ip) < 4:
+            ip.extend(["0"] * (4 - len(ip)))
+        ip = ip[:4]
+        for i in range(4):
+            if not ip[i].isdigit():
+                ip[i] = "0"
+            v = int(ip[i])
+            ip[i] = str(min(255, max(0, v)))
+        self["ip"] = ".".join(ip)
+
+    ip: bpy.props.StringProperty(default="127.0.0.1", name="IP", description="服务IP地址",
+                                 update=ip_check)
+    port: bpy.props.IntProperty(default=5000, min=1000, max=65535, name="端口", description="服务端口号")
 
     def update_open_dir1(self, context):
         if self.open_dir1:
@@ -72,8 +89,10 @@ class AddonPreference(bpy.types.AddonPreferences):
         row.prop(self, "enable_hq_preview", text="", icon="IMAGE_BACKGROUND", text_ctxt=ctxt)
         layout.prop(self, "with_webui_model")
         layout.prop(self, "with_comfyui_model")
+        row = layout.row(align=True)
+        row.prop(self, "ip")
+        row.prop(self, "port")
         layout.prop(self, "install_deps", toggle=True, text_ctxt=ctxt)
-        
 
     def draw_website(self, layout: bpy.types.UILayout):
 
