@@ -23,17 +23,17 @@ from ..timer import Timer
 from ..preference import get_pref
 
 def get_ip():
-    ip = get_pref().ip
-    return ip
+    return TaskManager.get_ip()
 
 def get_port():
-    port = get_pref().port
-    return port
+    return TaskManager.get_port()
 
 def get_url():
-    return f"http://{get_ip()}:{get_port()}"
+    return TaskManager.get_url()
 
-
+WITH_PROXY = False
+if not WITH_PROXY:
+    request.install_opener(request.build_opener(request.ProxyHandler({})))
 # wmpp 指定到WebUI路径
 # wmp 指定到 WebUI/models 路径
 a111_yaml = """
@@ -105,7 +105,9 @@ class TaskManager:
     execute_status_record = []
     error_msg = []
     progress_bar = 0
-
+    launch_ip = "127.0.0.1"
+    launch_port = 8188
+    launch_url = "http://127.0.0.1:8188"
     executer = ThreadPoolExecutor(max_workers=1)
 
     def __new__(cls, *args, **kw):
@@ -132,7 +134,24 @@ class TaskManager:
 
     def is_launched() -> bool:
         return TaskManager.pid != -1
+    
+    def get_ip():
+        if TaskManager.is_launched():
+            return TaskManager.launch_ip
+        ip = get_pref().ip
+        return ip
 
+    def get_port():
+        if TaskManager.is_launched():
+            return TaskManager.launch_port
+        port = get_pref().port
+        return port
+    
+    def get_url():
+        if TaskManager.is_launched():
+            return TaskManager.launch_url
+        return f"http://{get_ip()}:{get_port()}"
+        
     def force_kill(pid):
         if not pid:
             return
@@ -284,6 +303,9 @@ class TaskManager:
         args.append(get_ip())
         args.append("--port")
         args.append(f"{get_port()}")
+        if pref.cuda.isdigit():
+            args.append("--cuda-device")
+            args.append(pref.cuda)
         if pref.cpu_only:
             # arg += " --cpu"
             args.append("--cpu")
@@ -304,9 +326,17 @@ class TaskManager:
             extra_model_paths.write_text(yaml)
             args.append("--extra-model-paths-config")
             args.append(extra_model_paths.as_posix())
+            
+        if get_ip() == "0.0.0.0":
+            TaskManager.launch_ip = "127.0.0.1"
+        else:
+            TaskManager.launch_ip = get_ip()
+        TaskManager.launch_port = get_port()
+        TaskManager.launch_url = f"http://{TaskManager.launch_ip}:{TaskManager.launch_port}"
+        
         # cmd = " ".join([str(python), arg])
         # 加了 stderr后 无法获取 进度?
-        # logger.debug(args)
+        # logger.debug(" ".join(args))
         import bpy
         if bpy.app.version >= (3, 6):
             p = Popen(args, stdout=PIPE, cwd=Path(model_path).joinpath("..").resolve().as_posix())
@@ -317,11 +347,11 @@ class TaskManager:
         pidpath.write_text(str(p.pid))
         TaskManager.process_exited = False
         Thread(target=TaskManager.stdout_listen, daemon=True).start()
-
+            
         while True:
             import requests
             try:
-                if requests.get(f"{get_url()}/object_info", proxies={"http": None, "https": None}, timeout=0.1).status_code == 200:
+                if requests.get(f"{TaskManager.get_url()}/object_info", proxies={"http": None, "https": None}, timeout=0.1).status_code == 200:
                     break
             except requests.exceptions.ConnectionError:
                 ...
@@ -329,7 +359,7 @@ class TaskManager:
                 logger.error(e)
             if TaskManager.process_exited:
                 break
-            time.sleep(0.5)
+            time.sleep(0.1)
         if not TaskManager.process_exited:
             logger.warn(_T("Server Launched"))
             atexit.register(p.kill)
@@ -397,14 +427,14 @@ class TaskManager:
         ...
 
     def clear_cache():
-        req = request.Request(f"{get_url()}/cup/clear_cache", method="POST")
+        req = request.Request(f"{TaskManager.get_url()}/cup/clear_cache", method="POST")
         try:
             request.urlopen(req)
         except URLError:
             ...
 
     def interrupt():
-        req = request.Request(f"{get_url()}/interrupt", method="POST")
+        req = request.Request(f"{TaskManager.get_url()}/interrupt", method="POST")
         try:
             request.urlopen(req)
         except URLError:
@@ -435,8 +465,7 @@ class TaskManager:
         if TaskManager.pid == -1:
             return {"queue_pending": [], "queue_running": []}
         try:
-            req = request.Request(f"{get_url()}/queue")
-            req.set_proxy(None, None)
+            req = request.Request(f"{TaskManager.get_url()}/queue")
             res = request.urlopen(req)
             res = json.loads(res.read().decode())
         except BaseException:
@@ -467,7 +496,7 @@ class TaskManager:
                                "client_id": cid,
                            }}
                 data = json.dumps(content).encode()
-                req = request.Request(f"{get_url()}/{api}", data=data)
+                req = request.Request(f"{TaskManager.get_url()}/{api}", data=data)
                 try:
                     request.urlopen(req)
                 except request.HTTPError:
@@ -475,6 +504,10 @@ class TaskManager:
                     TaskManager.mark_finished()
                 except URLError:
                     TaskManager.put_error_msg(_T("Server Not Launched"))
+                    TaskManager.mark_finished(with_noexe=False)
+                except Exception as e:
+                    logger.error(e)
+                    TaskManager.put_error_msg(str(e))
                     TaskManager.mark_finished(with_noexe=False)
             else:
                 ...

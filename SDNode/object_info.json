@@ -99,14 +99,7 @@
       "required": {
         "ckpt_name": [
           [
-            "AIGODLIKE华丽_4000.ckpt",
-            "GuoFeng3.2_f16.safetensors",
-            "Shyaku_Tonades.ckpt",
-            "Shyaku_qofo.ckpt",
-            "wd-1-5-beta2-aesthetic-unclip-h-fp16.safetensors",
-            "wd-1-5-beta2-aesthetic-unclip-l-fp16.safetensors",
-            "wd-1-5-beta2-unclip-h-fp16.safetensors",
-            "苍玄.safetensors"
+            "AIGODLIKE华丽_4000.ckpt"
           ]
         ]
       }
@@ -1693,14 +1686,7 @@
       "required": {
         "ckpt_name": [
           [
-            "AIGODLIKE华丽_4000.ckpt",
-            "GuoFeng3.2_f16.safetensors",
-            "Shyaku_Tonades.ckpt",
-            "Shyaku_qofo.ckpt",
-            "wd-1-5-beta2-aesthetic-unclip-h-fp16.safetensors",
-            "wd-1-5-beta2-aesthetic-unclip-l-fp16.safetensors",
-            "wd-1-5-beta2-unclip-h-fp16.safetensors",
-            "苍玄.safetensors"
+            "AIGODLIKE华丽_4000.ckpt"
           ]
         ]
       }
@@ -1843,14 +1829,7 @@
         ],
         "ckpt_name": [
           [
-            "AIGODLIKE华丽_4000.ckpt",
-            "GuoFeng3.2_f16.safetensors",
-            "Shyaku_Tonades.ckpt",
-            "Shyaku_qofo.ckpt",
-            "wd-1-5-beta2-aesthetic-unclip-h-fp16.safetensors",
-            "wd-1-5-beta2-aesthetic-unclip-l-fp16.safetensors",
-            "wd-1-5-beta2-unclip-h-fp16.safetensors",
-            "苍玄.safetensors"
+            "AIGODLIKE华丽_4000.ckpt"
           ]
         ]
       }
@@ -8634,7 +8613,7 @@
         "output_dir": [
           "STRING",
           {
-            "default": "/Users/karrycharon/Desktop"
+            "default": "C:\\Users\\win\\Desktop"
           }
         ]
       },
@@ -11333,21 +11312,21 @@
         "latent_suffix": [
           "STRING",
           {
-            "default": "71172115_cache",
+            "default": "28708994_cache",
             "multiline": false
           }
         ],
         "image_suffix": [
           "STRING",
           {
-            "default": "95456521_cache",
+            "default": "42258307_cache",
             "multiline": false
           }
         ],
         "conditioning_suffix": [
           "STRING",
           {
-            "default": "96157570_cache",
+            "default": "7617541_cache",
             "multiline": false
           }
         ]
@@ -19949,6 +19928,159 @@
     "display_name": "Video Dump Frames",
     "description": "",
     "category": "WAS Suite/Animation",
+    "output_node": false
+  },
+  "T2IAdapterLoader": {
+    "input": {
+      "required": {
+        "t2i_adapter_name": [
+          []
+        ]
+      }
+    },
+    "output": [
+      "CONTROL_NET"
+    ],
+    "name": "T2IAdapterLoader",
+    "description": "",
+    "category": "loaders"
+  },
+  "LatentBlend": {
+    "input": {
+      "required": {
+        "samples1": [
+          "LATENT"
+        ],
+        "samples2": [
+          "LATENT"
+        ],
+        "blend_factor": [
+          "FLOAT",
+          {
+            "default": 0.5,
+            "min": 0,
+            "max": 1,
+            "step": 0.01
+          }
+        ]
+      }
+    },
+    "output": [
+      "LATENT"
+    ],
+    "output_is_list": [
+      false
+    ],
+    "output_name": [
+      "LATENT"
+    ],
+    "name": "LatentBlend",
+    "display_name": "Latent Blend",
+    "description": "",
+    "category": "_for_testing",
+    "output_node": false
+  },
+  "ControlNetApplyAdvanced": {
+    "input": {
+      "required": {
+        "positive": [
+          "CONDITIONING"
+        ],
+        "negative": [
+          "CONDITIONING"
+        ],
+        "control_net": [
+          "CONTROL_NET"
+        ],
+        "image": [
+          "IMAGE"
+        ],
+        "strength": [
+          "FLOAT",
+          {
+            "default": 1.0,
+            "min": 0.0,
+            "max": 10.0,
+            "step": 0.01
+          }
+        ],
+        "start_percent": [
+          "FLOAT",
+          {
+            "default": 0.0,
+            "min": 0.0,
+            "max": 1.0,
+            "step": 0.001
+          }
+        ],
+        "end_percent": [
+          "FLOAT",
+          {
+            "default": 1.0,
+            "min": 0.0,
+            "max": 1.0,
+            "step": 0.001
+          }
+        ]
+      }
+    },
+    "output": [
+      "CONDITIONING",
+      "CONDITIONING"
+    ],
+    "output_is_list": [
+      false,
+      false
+    ],
+    "output_name": [
+      "positive",
+      "negative"
+    ],
+    "name": "ControlNetApplyAdvanced",
+    "display_name": "Apply ControlNet (Advanced)",
+    "description": "",
+    "category": "conditioning",
+    "output_node": false
+  },
+  "ConditioningSetTimestepRange": {
+    "input": {
+      "required": {
+        "conditioning": [
+          "CONDITIONING"
+        ],
+        "start": [
+          "FLOAT",
+          {
+            "default": 0.0,
+            "min": 0.0,
+            "max": 1.0,
+            "step": 0.001
+          }
+        ],
+        "end": [
+          "FLOAT",
+          {
+            "default": 1.0,
+            "min": 0.0,
+            "max": 1.0,
+            "step": 0.001
+          }
+        ]
+      }
+    },
+    "output": [
+      "CONDITIONING"
+    ],
+    "output_is_list": [
+      false
+    ],
+    "output_name": [
+      "CONDITIONING"
+    ],
+    "name": "ConditioningSetTimestepRange",
+    "display_name": "ConditioningSetTimestepRange",
+    "description": "",
+    "category": "advanced/conditioning",
     "output_node": false
   }
 }

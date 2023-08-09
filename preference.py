@@ -34,7 +34,26 @@ class AddonPreference(bpy.types.AddonPreferences):
     with_webui_model: bpy.props.StringProperty(default="", name="With WEBUI Model", description="webui位置", subtype="DIR_PATH")
     with_comfyui_model: bpy.props.StringProperty(default="", name="With ComfyUI Model", description="ComfyUI位置", subtype="DIR_PATH")
     install_deps: bpy.props.BoolProperty(default=False, name="启动服务时检查依赖", description="启动服务时进行ComfyUI插件(部分)依赖安装检查")
-
+    def get_cuda_list():
+        """
+        借助nvidia-smi获取CUDA版本列表
+        """
+        import subprocess
+        import re
+        try:
+            res = subprocess.check_output("nvidia-smi -L", shell=True).decode("utf-8")
+            # GPU 0: NVIDIA GeForce GTX 1060 5GB (UUID: xxxx)
+            items = []
+            for line in res.split("\n"):
+                m = re.search(r"GPU (\d+): NVIDIA GeForce (.*) \(UUID: GPU-.*\)", line)
+                if not line.startswith("GPU") or not m:
+                    continue
+                items.append((m.group(1), m.group(2), "", len(items),))
+            return items
+        except:
+            return []
+        
+    cuda: bpy.props.EnumProperty(name="cuda", items=get_cuda_list())
     def ip_check(self, context):
         """检查IP地址是否合法"""
         ip = self.ip.split(".")
@@ -92,6 +111,7 @@ class AddonPreference(bpy.types.AddonPreferences):
         row = layout.row(align=True)
         row.prop(self, "ip")
         row.prop(self, "port")
+        layout.prop(self, "cuda")
         layout.prop(self, "install_deps", toggle=True, text_ctxt=ctxt)
 
     def draw_website(self, layout: bpy.types.UILayout):
