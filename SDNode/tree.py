@@ -364,13 +364,13 @@ class CFNodeTree(NodeTree):
         from .nodes import get_reg_name
         for node in self.nodes:
             if node.bl_idname != "PrimitiveNode":
-                return
+                continue
             # 未连接或link为空则不需要后续操作
             if not node.outputs[0].is_linked or not node.outputs[0].links:
-                return
+                continue
             prop = getattr(node.outputs[0].links[0].to_node, get_reg_name(node.prop), None)
             if prop is None:
-                return
+                continue
             for link in node.outputs[0].links[1:]:
                 if not link.to_node.is_registered_node_type():
                     continue
