@@ -148,6 +148,9 @@ class NodeBase(bpy.types.Node):
         return stat.get(name, None)
 
     def is_base_type(self, name):
+        """
+        判断是不是基本类型, 目前通过 拥有注册属性名判断
+        """
         reg_name = get_reg_name(name)
         return hasattr(self, reg_name)
 
@@ -170,6 +173,9 @@ class NodeBase(bpy.types.Node):
 
     @lru_cache
     def get_meta(self, inp_name) -> list:
+        """
+        判断`属性名`是否存在于`元数据`中(可能是socket也可能是widgets)
+        """
         if not hasattr(self, "__metadata__"):
             logger.warn(f"node {self.name} has no metadata")
             return []
@@ -340,14 +346,20 @@ class NodeBase(bpy.types.Node):
                 if link:
                     from_node = link.from_node
                     if from_node.bl_idname == "PrimitiveNode":
+                        # 添加 widget
                         inputs[inp_name] = getattr(self, reg_name)
                     else:
+                        # 添加 socket
                         inputs[inp_name] = [link.from_node.id, link.from_node.outputs[:].index(link.from_socket)]
                 elif self.get_meta(inp_name):
-                    # 没连接但是 注册类型
-                    inputs[inp_name] = getattr(self, reg_name)
+                    if hasattr(self, reg_name):
+                        # 添加 widget
+                        inputs[inp_name] = getattr(self, reg_name)
+                    else:
+                        # 添加 socket
+                        inputs[inp_name] = [None]
             else:
-                # 添加 非socket
+                # 添加 widget
                 inputs[inp_name] = getattr(self, reg_name)
         cfg = {
             "inputs": inputs,
