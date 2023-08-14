@@ -30,7 +30,7 @@ def dump_info():
     from .preference import get_pref
     if "--get-blender-ai-node-info" in sys.argv:
         model_path = getattr(get_pref(), 'model_path')
-        info = {"Version": bl_info["version"], "ComfyUIPath": model_path}
+        info = {"Version": ".".join([str(i) for i in bl_info["version"]]), "ComfyUIPath": model_path}
         sys.stderr.write(f"BlenderComfyUIInfo: {json.dumps(info)} BlenderComfyUIend")
         sys.stderr.flush()
 
