@@ -9,7 +9,7 @@ bl_info = {
 }
 
 import bpy
-
+import sys
 from .SDNode import rtnode_unreg, TaskManager
 from .MultiLineText import EnableMLT
 
@@ -22,11 +22,10 @@ from .ui import Panel
 from .prop import Prop
 
 
-clss = [Panel, Ops, Prop, Ops_Mask, AddonPreference, EnableMLT]
+clss = [Panel, Ops, Prop, Ops_Mask, EnableMLT]
 reg, unreg = bpy.utils.register_classes_factory(clss)
 
 def dump_info():
-    import sys
     import json
     from .preference import get_pref
     if "--get-blender-ai-node-info" in sys.argv:
@@ -35,15 +34,21 @@ def dump_info():
         sys.stderr.flush()
 
 def register():
+    bpy.utils.register_class(AddonPreference)
+    if "-b" in sys.argv or "--background" in sys.argv:
+        dump_info()
+        return
     bpy.app.translations.register(__name__, translations_dict)
     reg()
     Icon.set_hq_preview()
     TaskManager.run_server(fake=True)
     timer_reg()
     bpy.types.Scene.sdn = bpy.props.PointerProperty(type=Prop)
-    dump_info()
 
 def unregister():
+    bpy.utils.unregister_class(AddonPreference)
+    if "-b" in sys.argv or "--background" in sys.argv:
+        return
     bpy.app.translations.unregister(__name__)
     unreg()
     rtnode_unreg()
