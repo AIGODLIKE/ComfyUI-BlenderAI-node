@@ -1538,6 +1538,8 @@ def spec_serialize_pre(self):
         for link in self.outputs[0].links[1:]:
             setattr(link.to_node, get_reg_name(link.to_socket.name), prop)
     elif self.class_type == "预览":
+        if self.inputs[0].is_linked:
+            return
         self.prev.clear()
 
 def spec_serialize(self, cfg, execute):
@@ -1861,7 +1863,7 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
     elif self.class_type == "预览":
         if prop == "lnum":
             return True
-        if self.inputs[0].is_linked:
+        if self.inputs[0].is_linked and self.inputs[0].links:
             for link in self.inputs[0].links[0].from_socket.links:
                 if link.to_node.bl_idname == "存储":
                     break
