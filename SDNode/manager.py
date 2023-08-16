@@ -18,7 +18,7 @@ from threading import Thread
 from subprocess import Popen, PIPE
 from pathlib import Path
 from queue import Queue
-from ..utils import logger, _T, PkgInstaller
+from ..utils import rmtree as rt, logger, _T, PkgInstaller
 from ..timer import Timer
 from ..preference import get_pref
 
@@ -286,12 +286,18 @@ class TaskManager:
 
         # custom_nodes
         for file in (Path(__file__).parent / "custom_nodes").iterdir():
+            if file.is_dir():
+                dst = Path(model_path) / "custom_nodes" / file.name
+                if dst.exists():
+                    rt(dst)
+                shutil.copytree(file, Path(model_path) / "custom_nodes" / file.name,dirs_exist_ok=True)
+                continue
             if not file.suffix == ".py":
                 continue
             if file.name == "cup.py":
-                t = file.read_text()
+                t = file.read_text(encoding="utf-8")
                 t = t.replace("XXXMODEL-CFGXXX", str(Path(__file__).parent / "PATH_CFG.json"))
-                (Path(model_path) / "custom_nodes" / file.name).write_text(t)
+                (Path(model_path) / "custom_nodes" / file.name).write_text(t, encoding="utf-8")
                 continue
             shutil.copyfile(file, Path(model_path) / "custom_nodes" / file.name)
         args = [python.as_posix()]

@@ -10,6 +10,16 @@ from .translation import lang_text
 from .timer import Timer
 translation = {}
 
+def rmtree(path: Path):
+    if path.is_file():
+        path.unlink()
+    elif path.is_dir():
+        for child in path.iterdir():
+            rmtree(child)
+        try:
+            path.rmdir() # nas 的共享盘可能会有残留
+        except:
+            ...
 
 def get_version():
     from . import bl_info

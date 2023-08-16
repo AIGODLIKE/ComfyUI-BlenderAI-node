@@ -34,7 +34,69 @@ SOCKET_HASH_MAP = {  # {HASH: METATYPE}
     "INT": "INT",
     "FLOAT": "FLOAT",
     "STRING": "STRING",
+    "BOOLEAN": "BOOLEAN"
 }
+INTERNAL_NAMES = {
+    "bl_description",
+    "bl_height_default",
+    "bl_height_max",
+    "bl_height_min",
+    "bl_icon",
+    "bl_idname",
+    "bl_label",
+    "bl_rna",
+    "bl_static_type",
+    "bl_width_default",
+    "bl_width_max",
+    "bl_width_min",
+    "calc_slot_index",
+    "class_type",
+    "color",
+    "dimensions",
+    "draw_buttons",
+    "draw_buttons_ext",
+    "dump",
+    "get_from_link",
+    "get_meta",
+    "height",
+    "hide",
+    "id",
+    "inp_types",
+    "input_template",
+    "inputs",
+    "internal_links",
+    "is_base_type",
+    "is_registered_node_type",
+    "label",
+    "load",
+    "location",
+    "mute",
+    "name",
+    "out_types",
+    "output_template",
+    "outputs",
+    "parent",
+    "poll",
+    "poll_instance",
+    "pool",
+    "query_stat",
+    "rna_type",
+    "select",
+    "serialize",
+    "set_stat",
+    "show_options",
+    "show_preview",
+    "show_texture",
+    "socket_value_update",
+    "switch_socket",
+    "type",
+    "unique_id",
+    "update",
+    "use_custom_color",
+    "width",
+    "width_hidden"
+}
+
 PROP_NAME_HEAD = "sdn_"
 name2path = {
     "CheckpointLoader": {"ckpt_name": "checkpoints"},
@@ -117,7 +179,7 @@ def get_icon_path(nname):
 
 
 def get_reg_name(inp_name):
-    if inp_name in {"width", "height", "inputs", "outputs", "name"}:
+    if inp_name in INTERNAL_NAMES:
         return PROP_NAME_HEAD + inp_name
     return inp_name
 
@@ -254,7 +316,7 @@ class NodeBase(bpy.types.Node):
                 if lfrom:
                     fs = lfrom.from_socket
                 ts = l.to_socket
-                if fs.bl_idname == "*" and SOCKET_HASH_MAP.get(ts.bl_idname) in {"ENUM", "STRING", "INT", "FLOAT"}:
+                if fs.bl_idname == "*" and SOCKET_HASH_MAP.get(ts.bl_idname) in {"ENUM", "INT", "FLOAT", "STRING", "BOOLEAN"}:
                     continue
                 if fs.bl_idname == ts.bl_idname:
                     continue
@@ -1092,7 +1154,7 @@ def parse_node():
                     # socket = "ENUM"
                     socket = md5(",".join(inp[0]).encode()).hexdigest()
                     continue
-                if socket in {"ENUM", "INT", "FLOAT", "STRING"}:
+                if socket in {"ENUM", "INT", "FLOAT", "STRING", "BOOLEAN"}:
                     continue
                 # logger.warn(inp)
                 in1 = self.inputs.new(socket, inp_name)
@@ -1143,6 +1205,20 @@ def parse_node():
             # logger.info(f"🌚 No Icon <- {file.name}")
             return Icon["NONE"]
 
+        def validate_inp(inp):
+            if not isinstance(inp, list):
+                return
+            if len(inp) <= 1:
+                return
+            if not isinstance(inp[1], dict):
+                return
+            PARAMS = {"default", "min", "max", "step", "soft_min", "soft_max", "description", "subtype", "update", "options"}
+            # 排除掉不需要的属性
+            for key in list(inp[1].keys()):
+                if key in PARAMS:
+                    continue
+                inp[1].pop(key)
+
         properties = {}
         for inp_name in inp_types:
             reg_name = get_reg_name(inp_name)
@@ -1153,7 +1229,8 @@ def parse_node():
             proptype = inp[0]
             if isinstance(inp[0], list):
                 proptype = "ENUM"
-            if proptype not in {"ENUM", "INT", "FLOAT", "STRING", }:
+            validate_inp(inp)
+            if proptype not in {"ENUM", "INT", "FLOAT", "STRING", "BOOLEAN"}:
                 continue
             if proptype == "ENUM":
 
@@ -1189,6 +1266,8 @@ def parse_node():
                 if "step" in inp[1]:
                     inp[1]["step"] *= 100
                 prop = bpy.props.FloatProperty(**inp[1])
+            elif proptype == "BOOLEAN":
+                prop = bpy.props.BoolProperty(**inp[1])
             elif proptype == "STRING":
                 {'default': 'ComfyUI', 'multiline': True}
                 subtype = "NONE"
@@ -1542,6 +1621,7 @@ def spec_serialize_pre(self):
             return
         self.prev.clear()
 
+
 def spec_serialize(self, cfg, execute):
     def hide_gp():
         if (cam := bpy.context.scene.camera) and (gpos := cam.get("SD_Mask", [])):
@@ -1638,6 +1718,7 @@ def spec_functions(fields, nname, ndesc):
             if not img_paths:
                 return
             logger.warn(f"{_T('Load Preview Image')}: {img_paths}")
+
             def f(self, img_paths: list[str]):
                 self.prev.clear()
                 for img_path in img_paths:
@@ -1679,6 +1760,7 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
         row = draw_prop_with_link(layout, self, prop)
         row.operator("sdn.enable_mlt", text="", icon="TEXT")
         return True
+
     def show_model_preview(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILayout, prop: str):
         if self.class_type not in name2path:
             return False
@@ -1899,6 +1981,7 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
 
 class Images(bpy.types.PropertyGroup):
     image: bpy.props.PointerProperty(type=bpy.types.Image)
+
 
 clss = [Ops_Swith_Socket, Ops_Add_SaveImage, Set_Render_Res, GetSelCol, Ops_Active_Tex, Ops_Link_Mask, Images]
 
