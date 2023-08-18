@@ -34,6 +34,7 @@ class AddonPreference(bpy.types.AddonPreferences):
     with_webui_model: bpy.props.StringProperty(default="", name="With WEBUI Model", description="webui位置", subtype="DIR_PATH")
     with_comfyui_model: bpy.props.StringProperty(default="", name="With ComfyUI Model", description="ComfyUI位置", subtype="DIR_PATH")
     install_deps: bpy.props.BoolProperty(default=False, name="启动服务时检查依赖", description="启动服务时进行ComfyUI插件(部分)依赖安装检查")
+    force_log: bpy.props.BoolProperty(default=False, name="强制日志", description="强制输出日志, 一般不需要开启")
     def get_cuda_list():
         """
         借助nvidia-smi获取CUDA版本列表
@@ -112,7 +113,9 @@ class AddonPreference(bpy.types.AddonPreferences):
         row.prop(self, "ip")
         row.prop(self, "port")
         layout.prop(self, "cuda")
-        layout.prop(self, "install_deps", toggle=True, text_ctxt=ctxt)
+        row = layout.row(align=True)
+        row.prop(self, "install_deps", toggle=True, text_ctxt=ctxt)
+        row.prop(self, "force_log", toggle=True, text_ctxt=ctxt)
 
     def draw_website(self, layout: bpy.types.UILayout):
 

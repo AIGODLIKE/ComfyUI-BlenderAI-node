@@ -15,7 +15,7 @@ from pathlib import Path
 from PIL import Image
 from PIL.PngImagePlugin import PngInfo
 
-
+FORCE_LOG = False
 CATEGORY_ = "Blender"
 TEMPDIR = Path(__file__).parent.parent / "SDNodeTemp"
 
@@ -44,12 +44,13 @@ def hk(func):
     return __print_wrap__
 
 
-__print_wrap__ = hk(print)
-globals()["__print_wrap__"] = __print_wrap__
-builtins.print = __print_wrap__
+if FORCE_LOG:
+    __print_wrap__ = hk(print)
+    globals()["__print_wrap__"] = __print_wrap__
+    builtins.print = __print_wrap__
 
-sys.stdout.write = hk(sys.stdout.write)
-sys.stderr.write = builtins.print
+    sys.stdout.write = hk(sys.stdout.write)
+    sys.stderr.write = builtins.print
 
 
 def try_write_config():
@@ -71,6 +72,7 @@ except Exception as e:
     sys.stdout.flush()
 
 CACHED_EXECUTOR = []
+
 
 @server.PromptServer.instance.routes.post("/cup/clear_cache")
 async def clear_cache(request):
@@ -270,7 +272,7 @@ class Mask:
     def load_image(self, image, channel):
         image_path = image
         try:
-             i = Image.open(image_path)
+            i = Image.open(image_path)
         except FileNotFoundError:
             print(f"FileNotFound -> {image_path}")
             mask = torch.zeros((64, 64), dtype=torch.float32, device="cpu")

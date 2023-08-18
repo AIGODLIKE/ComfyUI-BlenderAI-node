@@ -68,7 +68,7 @@ mycomfyui:
     gligen: {cmp}/gligen
     upscale_models: {cmp}/upscale_models
     hypernetworks: {cmp}/hypernetworks
-    custom_nodes: {cmpp}/custom_nodes
+    #custom_nodes: {cmpp}/custom_nodes
             """
 
 
@@ -297,6 +297,7 @@ class TaskManager:
             if file.name == "cup.py":
                 t = file.read_text(encoding="utf-8")
                 t = t.replace("XXXMODEL-CFGXXX", str(Path(__file__).parent / "PATH_CFG.json"))
+                t = t.replace("FORCE_LOG = False", f"FORCE_LOG = {get_pref().force_log}")
                 (Path(model_path) / "custom_nodes" / file.name).write_text(t, encoding="utf-8")
                 continue
             shutil.copyfile(file, Path(model_path) / "custom_nodes" / file.name)
