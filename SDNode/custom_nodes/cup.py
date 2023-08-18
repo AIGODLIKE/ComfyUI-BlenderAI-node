@@ -7,11 +7,15 @@ import torch
 import shutil
 import hashlib
 import atexit
+import server
+import gc
+import execution
+from aiohttp import web
 from pathlib import Path
 from PIL import Image
 from PIL.PngImagePlugin import PngInfo
 
-
+FORCE_LOG = False
 CATEGORY_ = "Blender"
 TEMPDIR = Path(__file__).parent.parent / "SDNodeTemp"
 
@@ -30,20 +34,23 @@ atexit.register(removetemp)
 
 
 def hk(func):
-    def wrap(*args, **kwargs):
+    def __print_wrap__(*args, **kwargs):
         try:
             func(*args, **kwargs)
-        except:
+        except BaseException:
             ...
         sys.stdout.flush()
         # sys.stderr.flush()
-    return wrap
+    return __print_wrap__
 
 
-builtins.print = hk(print)
+if FORCE_LOG:
+    __print_wrap__ = hk(print)
+    globals()["__print_wrap__"] = __print_wrap__
+    builtins.print = __print_wrap__
 
-sys.stdout.write = hk(sys.stdout.write)
-sys.stderr.write = builtins.print
+    sys.stdout.write = hk(sys.stdout.write)
+    sys.stderr.write = builtins.print
 
 
 def try_write_config():
@@ -63,6 +70,23 @@ except Exception as e:
     sys.stdout.write("Config Export Error")
     sys.stdout.write(str(e))
     sys.stdout.flush()
+
+CACHED_EXECUTOR = []
+
+
+@server.PromptServer.instance.routes.post("/cup/clear_cache")
+async def clear_cache(request):
+    inst = server.PromptServer.instance
+    if inst.prompt_queue:
+        inst.prompt_queue.history.clear()
+    if not CACHED_EXECUTOR:
+        CACHED_EXECUTOR.extend([ob for ob in gc.get_objects() if isinstance(ob, execution.PromptExecutor)])
+    for ob in CACHED_EXECUTOR:
+        print("Clear Node Tree Cache", ob)
+        ob.outputs.clear()
+        ob.outputs_ui.clear()
+        ob.old_prompt.clear()
+    return web.Response(status=200)
 
 
 class ToBlender:
@@ -186,7 +210,7 @@ class LoadImage:
         return {
             "required": {
                 "image": ("STRING", {"default": ""}),
-                "mode": (["输入", "渲染"], ),
+                "mode": (["输入", "渲染", "序列图"], ),
             },
         }
 
@@ -199,6 +223,9 @@ class LoadImage:
         try:
             image_path = image
             i = Image.open(image_path)
+            if 'P' in i.getbands():
+                i = i.convert("RGBA")
+                image = i.convert("RGB")
             image = i.convert("RGB")
             image = np.array(image).astype(np.float32) / 255.0
             image = torch.from_numpy(image)[None,]
@@ -244,7 +271,12 @@ class Mask:
 
     def load_image(self, image, channel):
         image_path = image
-        i = Image.open(image_path)
+        try:
+            i = Image.open(image_path)
+        except FileNotFoundError:
+            print(f"FileNotFound -> {image_path}")
+            mask = torch.zeros((64, 64), dtype=torch.float32, device="cpu")
+            return (mask,)
         mask = None
         c = channel[0].upper()
         if c in i.getbands():
@@ -255,13 +287,135 @@ class Mask:
         else:
             mask = torch.zeros((64, 64), dtype=torch.float32, device="cpu")
         return (mask,)
-    
+
     @classmethod
     def IS_CHANGED(s, image, channel):
+        image_path = image
         image_path = Path(image_path)
         if not image or not image_path.exists():
             return ""
         return Path(image_path).stat().st_mtime_ns
+
+
+class OpenPoseBase:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "image": ("STRING", {"default": ""}),
+                "frame": ("INT", {
+                    "default": 0,
+                    "min": -2**31,  # Minimum value
+                    "max": 2**31,  # Maximum value
+                    "step": 1  # Slider's step
+                }),
+            },
+        }
+
+    CATEGORY = "OpenPose"
+
+    RETURN_TYPES = ("IMAGE", "MASK")
+    FUNCTION = "load_image"
+
+    posetype = ""
+
+    def load_image(self, image, frame):
+        try:
+            img_dir = Path(image) / self.posetype
+            find_img = ""
+            for file in img_dir.iterdir():
+                if not file.name.startswith("Image"):
+                    continue
+
+                f = int(file.name[len("Image"): -len(file.suffix)])
+                if f == frame:
+                    find_img = file.as_posix()
+            if not find_img:
+                sys.stderr.write(f"|错误| Frame Not Found -> Image{frame:04}.png")
+                sys.stderr.flush()
+            image_path = find_img
+
+            i = Image.open(image_path)
+            image = i.convert("RGB")
+            image = np.array(image).astype(np.float32) / 255.0
+            image = torch.from_numpy(image)[None,]
+        except Exception as e:
+            sys.stderr.write(f"|已忽略| Load Image Error -> {e}")
+            sys.stderr.flush()
+            image = np.zeros(shape=(64, 64, 3)).astype(np.float32)
+            image = torch.from_numpy(image)[None,]
+            mask = torch.zeros((64, 64), dtype=torch.float32, device="cpu")
+            return (image, mask)
+        if 'A' in i.getbands():
+            mask = np.array(i.getchannel('A')).astype(np.float32) / 255.0
+            mask = 1. - torch.from_numpy(mask)
+        else:
+            mask = torch.zeros((64, 64), dtype=torch.float32, device="cpu")
+        return (image, mask)
+
+    @classmethod
+    def IS_CHANGED(s, image, frame):
+        image_path = image
+        if not os.path.exists(image_path):
+            return ""
+        m = hashlib.sha256()
+        with open(image_path, 'rb') as f:
+            m.update(f.read())
+        return m.digest().hex()
+
+
+class OpenPoseFull(OpenPoseBase):
+    posetype = "openpose_full"
+
+
+class OpenPoseHand(OpenPoseBase):
+    posetype = "openpose_hand"
+
+
+class OpenPoseMediaPipeFace(OpenPoseBase):
+    posetype = "MediaPipe_face"
+
+
+class OpenPoseDepth(OpenPoseBase):
+    posetype = "depth"
+
+
+class OpenPose(OpenPoseBase):
+    posetype = "openpose"
+
+
+class OpenPoseFace(OpenPoseBase):
+    posetype = "openpose_face"
+
+
+class OpenPoseLineart(OpenPoseBase):
+    posetype = "Lineart"
+
+
+class OpenPoseFullExtraLimb(OpenPoseBase):
+    posetype = "openpose_full_Extra_Limb"
+
+
+class OpenPoseKeyPose(OpenPoseBase):
+    posetype = "keypose"
+
+
+class OpenPoseCanny(OpenPoseBase):
+    posetype = "canny"
+
+
+[
+    'openpose_full',
+    'openpose_hand',
+    'MediaPipe_face',
+    'depth',
+    'openpose',
+    'openpose_face',
+    'Lineart',
+    'openpose_full_Extra_Limb',
+    'keypose',
+    'canny'
+]
 
 # A dictionary that contains all nodes you want to export with their names
 # NOTE: names should be globally unique
@@ -271,4 +425,14 @@ NODE_CLASS_MAPPINGS = {
     "存储": SaveImage,
     # "导入": ToBlender,
     "预览": PreviewImage,
+    'OpenPoseFull': OpenPoseFull,
+    'OpenPoseHand': OpenPoseHand,
+    'OpenPoseMediaPipeFace': OpenPoseMediaPipeFace,
+    'OpenPoseDepth': OpenPoseDepth,
+    'OpenPose': OpenPose,
+    'OpenPoseFace': OpenPoseFace,
+    'OpenPoseLineart': OpenPoseLineart,
+    'OpenPoseFullExtraLimb': OpenPoseFullExtraLimb,
+    'OpenPoseKeyPose': OpenPoseKeyPose,
+    'OpenPoseCanny': OpenPoseCanny,
 }

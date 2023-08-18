@@ -1,8 +1,8 @@
+from functools import lru_cache
 import os
 import re
 import shutil
 import sys
-import requests
 import json
 import time
 import atexit
@@ -18,13 +18,24 @@ from threading import Thread
 from subprocess import Popen, PIPE
 from pathlib import Path
 from queue import Queue
-from ..utils import logger, _T, PkgInstaller
+from ..utils import rmtree as rt, logger, _T, PkgInstaller
 from ..timer import Timer
+from ..preference import get_pref
 
-port = 8189
-ip = "127.0.0.1"
-url = f"http://{ip}:{port}"
+def get_ip():
+    return TaskManager.get_ip()
 
+def get_port():
+    return TaskManager.get_port()
+
+def get_url():
+    return TaskManager.get_url()
+
+WITH_PROXY = False
+if not WITH_PROXY:
+    request.install_opener(request.build_opener(request.ProxyHandler({})))
+# wmpp 指定到WebUI路径
+# wmp 指定到 WebUI/models 路径
 a111_yaml = """
 a111:
     base_path: {wmpp}
@@ -39,6 +50,8 @@ a111:
     embeddings: {wmpp}/embeddings
     controlnet: {wmp}/ControlNet
             """
+# cmpp 指定到ComfyUI路径
+# cmp 指定到 ComfyUI/models 路径
 custom_comfyui = """
 mycomfyui:
     base_path: {cmpp}
@@ -55,7 +68,7 @@ mycomfyui:
     gligen: {cmp}/gligen
     upscale_models: {cmp}/upscale_models
     hypernetworks: {cmp}/hypernetworks
-    # custom_nodes: {cmpp}/custom_nodes
+    #custom_nodes: {cmpp}/custom_nodes
             """
 
 
@@ -80,8 +93,8 @@ class Task:
 class TaskManager:
     _instance = None
     pid = -1
-    child = None
-
+    child: Popen = None
+    process_exited = False
     task_queue = Queue()
     res_queue = Queue()
     SessionId = {"SessionId": "无限圣杯"}
@@ -92,7 +105,9 @@ class TaskManager:
     execute_status_record = []
     error_msg = []
     progress_bar = 0
-
+    launch_ip = "127.0.0.1"
+    launch_port = 8188
+    launch_url = "http://127.0.0.1:8188"
     executer = ThreadPoolExecutor(max_workers=1)
 
     def __new__(cls, *args, **kw):
@@ -106,6 +121,37 @@ class TaskManager:
     def clear_error_msg():
         TaskManager.error_msg.clear()
 
+    def get_error_msg(copy=False):
+        if copy:
+            return deepcopy(TaskManager.error_msg)
+        return TaskManager.error_msg
+
+    def get_progress():
+        return TaskManager.progress
+
+    def get_task_num():
+        return TaskManager.task_queue.qsize()
+
+    def is_launched() -> bool:
+        return TaskManager.pid != -1
+    
+    def get_ip():
+        if TaskManager.is_launched():
+            return TaskManager.launch_ip
+        ip = get_pref().ip
+        return ip
+
+    def get_port():
+        if TaskManager.is_launched():
+            return TaskManager.launch_port
+        port = get_pref().port
+        return port
+    
+    def get_url():
+        if TaskManager.is_launched():
+            return TaskManager.launch_url
+        return f"http://{get_ip()}:{get_port()}"
+        
     def force_kill(pid):
         if not pid:
             return
@@ -126,18 +172,35 @@ class TaskManager:
                 os.system(f'taskkill /F /IM {process.name()}')
             except psutil.NoSuchProcess:
                 return
+        elif sys.platform == "darwin":
+            try:
+                process = psutil.Process(pid)
+                if "python" in process.name().lower():
+                    # process.kill()
+                    os.system(f"kill -9 {pid}")
+            except psutil.NoSuchProcess:
+                return
         else:
             ...
             # os.kill(pid, signal.SIGKILL)
         logger.error(f"{_T('Kill Last ComfyUI Process')} id -> {pid}")
 
-    def run_server():
+    def run_server(fake=False):
+        import time
+
         from .tree import rtnode_reg, rtnode_unreg
+        t1 = time.time()
         rtnode_unreg()
-
-        TaskManager.run_server_ex()
-
+        t2 = time.time()
+        logger.info(f"UnregNode Time: {t2-t1:.2f}s")
+        if not fake:
+            TaskManager.run_server_ex()
+            t3 = time.time()
+            logger.info(f"Launch Time: {t3-t2:.2f}s")
+        t3 = time.time()
         rtnode_reg()
+        t4 = time.time()
+        logger.info(f"RegNode Time: {t4-t3:.2f}s")
 
     def run_server_pre(model_path):
         """
@@ -145,7 +208,21 @@ class TaskManager:
         """
         # controlnet check
         logger.warn(_T("ControlNet Init...."))
-        python = Path(model_path) / "../python_embeded/python.exe"
+        python = Path("python3")
+        if sys.platform == "win32":
+            python = Path(model_path) / "../python_embeded/python.exe"
+        # elif sys.platform == "darwin":
+        #     requirements = Path(model_path) / "requirements.txt"
+        #     command = [python.as_posix(), "-m", "pip", "install", "-r", requirements.as_posix()]
+        #     if fast_url := PkgInstaller.select_pip_source():
+        #         site = urlparse(fast_url)
+        #         command.append("-i")
+        #         command.append(fast_url)
+        #         command.append("--trusted-host")
+        #         command.append(site.netloc)
+        #     proc = Popen(command, cwd=model_path)
+        #     proc.wait()
+
         controlnet = Path(model_path) / "custom_nodes/comfy_controlnet_preprocessors"
         if controlnet.exists():
             fvcore = Path(model_path) / "../python_embeded/Lib/site-packages/fvcore"
@@ -183,18 +260,20 @@ class TaskManager:
         if pidpath.exists():
             TaskManager.force_kill(pidpath.read_text())
 
-        from ..preference import get_pref
         pref = get_pref()
         model_path = pref.model_path
         if not model_path or not Path(model_path).exists():
             logger.error(_T("ComfyUI Path Not Found"))
             return
         logger.debug(f"{_T('Model Path')}: {model_path}")
-        python = Path(model_path) / "../python_embeded/python.exe"
-        TaskManager.run_server_pre(model_path)
+        python = Path("python3")
+        if sys.platform == "win32":
+            python = Path(model_path) / "../python_embeded/python.exe"
+        if pref.install_deps:
+            TaskManager.run_server_pre(model_path)
 
         logger.warn(_T("Server Launching"))
-        if not python.exists():
+        if sys.platform == "win32" and not python.exists():
             logger.error(f"{_T('python interpreter not found')}:")
             logger.error(f"   ↳{_T('Ensure that the python_embeded located in the same level as ComfyUI dir')}:")
             logger.error("      SomeDirectory")
@@ -207,22 +286,33 @@ class TaskManager:
 
         # custom_nodes
         for file in (Path(__file__).parent / "custom_nodes").iterdir():
+            if file.is_dir():
+                dst = Path(model_path) / "custom_nodes" / file.name
+                if dst.exists():
+                    rt(dst)
+                shutil.copytree(file, Path(model_path) / "custom_nodes" / file.name,dirs_exist_ok=True)
+                continue
             if not file.suffix == ".py":
                 continue
             if file.name == "cup.py":
-                t = file.read_text()
+                t = file.read_text(encoding="utf-8")
                 t = t.replace("XXXMODEL-CFGXXX", str(Path(__file__).parent / "PATH_CFG.json"))
-                (Path(model_path) / "custom_nodes" / file.name).write_text(t)
+                t = t.replace("FORCE_LOG = False", f"FORCE_LOG = {get_pref().force_log}")
+                (Path(model_path) / "custom_nodes" / file.name).write_text(t, encoding="utf-8")
                 continue
             shutil.copyfile(file, Path(model_path) / "custom_nodes" / file.name)
-        args = [str(python)]
+        args = [python.as_posix()]
         # arg = f"-s {str(model_path)}/main.py"
         args.append("-s")
         args.append(f"{str(model_path)}/main.py")
 
-        # arg += f" --port {port}"
+        args.append("--listen")
+        args.append(get_ip())
         args.append("--port")
-        args.append(f"{port}")
+        args.append(f"{get_port()}")
+        if pref.cuda.isdigit():
+            args.append("--cuda-device")
+            args.append(pref.cuda)
         if pref.cpu_only:
             # arg += " --cpu"
             args.append("--cpu")
@@ -243,28 +333,49 @@ class TaskManager:
             extra_model_paths.write_text(yaml)
             args.append("--extra-model-paths-config")
             args.append(extra_model_paths.as_posix())
+            
+        if get_ip() == "0.0.0.0":
+            TaskManager.launch_ip = "127.0.0.1"
+        else:
+            TaskManager.launch_ip = get_ip()
+        TaskManager.launch_port = get_port()
+        TaskManager.launch_url = f"http://{TaskManager.launch_ip}:{TaskManager.launch_port}"
+        
         # cmd = " ".join([str(python), arg])
         # 加了 stderr后 无法获取 进度?
-        # logger.debug(args)
-        p = Popen(args, stdout=PIPE, cwd=model_path)
+        # logger.debug(" ".join(args))
+        import bpy
+        if bpy.app.version >= (3, 6):
+            p = Popen(args, stdout=PIPE, cwd=Path(model_path).joinpath("..").resolve().as_posix())
+        else:
+            p = Popen(args, stdout=PIPE, cwd=Path(model_path).joinpath("..").resolve().as_posix())
         TaskManager.child = p
         TaskManager.pid = p.pid
         pidpath.write_text(str(p.pid))
-
+        TaskManager.process_exited = False
         Thread(target=TaskManager.stdout_listen, daemon=True).start()
-        
+            
         while True:
+            import requests
             try:
-                if requests.get(f"{url}/object_info").status_code == 200:
+                if requests.get(f"{TaskManager.get_url()}/object_info", proxies={"http": None, "https": None}, timeout=0.1).status_code == 200:
                     break
             except requests.exceptions.ConnectionError:
                 ...
-            time.sleep(0.5)
-        logger.warn(_T("Server Launched"))
-        atexit.register(p.kill)
-        Thread(target=TaskManager.poll_res, daemon=True).start()
-        Thread(target=TaskManager.poll_task, daemon=True).start()
-        Thread(target=TaskManager.proc_res, daemon=True).start()
+            except Exception as e:
+                logger.error(e)
+            if TaskManager.process_exited:
+                break
+            time.sleep(0.1)
+        if not TaskManager.process_exited:
+            logger.warn(_T("Server Launched"))
+            atexit.register(p.kill)
+            Thread(target=TaskManager.poll_res, daemon=True).start()
+            Thread(target=TaskManager.poll_task, daemon=True).start()
+            Thread(target=TaskManager.proc_res, daemon=True).start()
+        else:
+            logger.error(_T("Server Launch Failed"))
+            TaskManager.close_server()
 
     def stdout_listen():
         p = TaskManager.child
@@ -276,11 +387,19 @@ class TaskManager:
             # print(re.findall("\|(.*?)[", line.decode("gbk")))
             if b"CUDA out of memory" in line or b"not enough memory" in line:
                 TaskManager.put_error_msg(f"{_T('Error: Out of VRam, try restart blender')}")
-            proc = re.findall("[█ ]\\| (.*?) \\[", line.decode("gbk"))
+            proc = ""
+            for coding in ["gbk", "utf8"]:
+                try:
+                    line = line.decode(coding)
+                    proc = re.findall("[█ ]\\| (.*?) \\[", line)
+                    break
+                except UnicodeDecodeError:
+                    ...
             if not proc:
-                logger.info(line.decode("gbk"))
+                logger.info(line)
+        TaskManager.process_exited = True
         logger.debug("STDOUT Listen Thread Exit")
-        
+
     def close_server():
         if TaskManager.child:
             TaskManager.child.kill()
@@ -314,8 +433,19 @@ class TaskManager:
     def query_process():
         ...
 
+    def clear_cache():
+        req = request.Request(f"{TaskManager.get_url()}/cup/clear_cache", method="POST")
+        try:
+            request.urlopen(req)
+        except URLError:
+            ...
+
     def interrupt():
-        ...
+        req = request.Request(f"{TaskManager.get_url()}/interrupt", method="POST")
+        try:
+            request.urlopen(req)
+        except URLError:
+            ...
 
     def clear_all():
         TaskManager.interrupt()
@@ -342,7 +472,7 @@ class TaskManager:
         if TaskManager.pid == -1:
             return {"queue_pending": [], "queue_running": []}
         try:
-            req = request.Request(f"{url}/queue")
+            req = request.Request(f"{TaskManager.get_url()}/queue")
             res = request.urlopen(req)
             res = json.loads(res.read().decode())
         except BaseException:
@@ -373,7 +503,7 @@ class TaskManager:
                                "client_id": cid,
                            }}
                 data = json.dumps(content).encode()
-                req = request.Request(f"{url}/{api}", data=data)
+                req = request.Request(f"{TaskManager.get_url()}/{api}", data=data)
                 try:
                     request.urlopen(req)
                 except request.HTTPError:
@@ -381,6 +511,10 @@ class TaskManager:
                     TaskManager.mark_finished()
                 except URLError:
                     TaskManager.put_error_msg(_T("Server Not Launched"))
+                    TaskManager.mark_finished(with_noexe=False)
+                except Exception as e:
+                    logger.error(e)
+                    TaskManager.put_error_msg(str(e))
                     TaskManager.mark_finished(with_noexe=False)
             else:
                 ...
@@ -466,6 +600,17 @@ class TaskManager:
                 logger.warn(f"{_T('Ran Node')}: {data['node']}", )
             elif mtype == "execution_error":
                 logger.error(data.get("message"))
+            elif mtype == "execution_start":
+                ...
+            elif mtype == "execution_interrupted":
+                {"type": "execution_interrupted",
+                 "data": {"prompt_id": "e1f3cbf9-4b83-47cf-95c3-9f9a76ab5508",
+                          "node_id": "3",
+                          "node_type": "KSampler",
+                          "executed": ["4", "7", "6", "5"]}
+                 }
+                TaskManager.put_error_msg(_T("Execute Node Cancelled!"))
+                # tm.mark_finished(with_noexe=False)
             elif mtype == "execution_cached":
                 # {"type": "execution_cached", "data": {"nodes": ["12", "7", "10"], "prompt_id": "ddd"}}
                 # logger.warn(message)
@@ -473,7 +618,7 @@ class TaskManager:
             else:
                 logger.error(message)
 
-        ws = WebSocketApp(f"ws://{ip}:{port}/ws?clientId={SessionId['SessionId']}", on_message=on_message)
+        ws = WebSocketApp(f"ws://{get_ip()}:{get_port()}/ws?clientId={SessionId['SessionId']}", on_message=on_message)
         ws.run_forever()
         logger.debug("Poll Result Thread Exit")
 

@@ -6,20 +6,16 @@ from pathlib import Path
 from .utils import Icon, _T
 from .translation import ctxt
 
+
 class AddonPreference(bpy.types.AddonPreferences):
     bl_idname = __package__
     bl_translation_context = ctxt
-    
+
     popup_scale: bpy.props.IntProperty(default=5, min=1, max=100, name="预览图尺寸")
     enable_hq_preview: bpy.props.BoolProperty(default=True, name="启用高清预览图")
-    
-    def update_model(self, context):
-        from .SDNode import TaskManager
-        TaskManager.restart_server()
 
     model_path: bpy.props.StringProperty(subtype="DIR_PATH", name="ComfyUI路径",
-                                         default=str(Path(__file__).parent / "ComfyUI"),
-                                         update=update_model)
+                                         default=str(Path(__file__).parent / "ComfyUI"))
     page: bpy.props.EnumProperty(items=[("通用", "通用", "", "COLLAPSEMENU", 0),
                                         ("常用路径", "常用路径", "", "URL", 1),
                                         ("友情链接", "友情链接", "", "URL", 2),
@@ -27,7 +23,8 @@ class AddonPreference(bpy.types.AddonPreferences):
     cpu_only: bpy.props.BoolProperty(default=False)  # --cpu
 
     mem_level: bpy.props.EnumProperty(name="显存模式",
-                                      items=[("--highvram", "高显存", "模型常驻显存, 减少加载时间", 1),
+                                      items=[("--gpu-only", "极高显存", "所有数据存储到显存", 0),
+                                             ("--highvram", "高显存", "模型常驻显存, 减少加载时间", 1),
                                              ("--normalvram", "中显存", "自动启用 低显存 模式时强制使用normal vram", 2),
                                              ("--lowvram", "低显存", "拆分UNet来降低显存开销", 3),
                                              ("--novram", "超低显存", "如果低显存依然不够", 4),
@@ -36,6 +33,44 @@ class AddonPreference(bpy.types.AddonPreferences):
                                       default="--lowvram")
     with_webui_model: bpy.props.StringProperty(default="", name="With WEBUI Model", description="webui位置", subtype="DIR_PATH")
     with_comfyui_model: bpy.props.StringProperty(default="", name="With ComfyUI Model", description="ComfyUI位置", subtype="DIR_PATH")
+    install_deps: bpy.props.BoolProperty(default=False, name="启动服务时检查依赖", description="启动服务时进行ComfyUI插件(部分)依赖安装检查")
+    force_log: bpy.props.BoolProperty(default=False, name="强制日志", description="强制输出日志, 一般不需要开启")
+    def get_cuda_list():
+        """
+        借助nvidia-smi获取CUDA版本列表
+        """
+        import subprocess
+        import re
+        try:
+            res = subprocess.check_output("nvidia-smi -L", shell=True).decode("utf-8")
+            # GPU 0: NVIDIA GeForce GTX 1060 5GB (UUID: xxxx)
+            items = []
+            for line in res.split("\n"):
+                m = re.search(r"GPU (\d+): NVIDIA GeForce (.*) \(UUID: GPU-.*\)", line)
+                if not line.startswith("GPU") or not m:
+                    continue
+                items.append((m.group(1), m.group(2), "", len(items),))
+            return items
+        except:
+            return []
+        
+    cuda: bpy.props.EnumProperty(name="cuda", items=get_cuda_list())
+    def ip_check(self, context):
+        """检查IP地址是否合法"""
+        ip = self.ip.split(".")
+        if len(ip) < 4:
+            ip.extend(["0"] * (4 - len(ip)))
+        ip = ip[:4]
+        for i in range(4):
+            if not ip[i].isdigit():
+                ip[i] = "0"
+            v = int(ip[i])
+            ip[i] = str(min(255, max(0, v)))
+        self["ip"] = ".".join(ip)
+
+    ip: bpy.props.StringProperty(default="127.0.0.1", name="IP", description="服务IP地址",
+                                 update=ip_check)
+    port: bpy.props.IntProperty(default=5000, min=1000, max=65535, name="端口", description="服务端口号")
 
     def update_open_dir1(self, context):
         if self.open_dir1:
@@ -74,7 +109,14 @@ class AddonPreference(bpy.types.AddonPreferences):
         row.prop(self, "enable_hq_preview", text="", icon="IMAGE_BACKGROUND", text_ctxt=ctxt)
         layout.prop(self, "with_webui_model")
         layout.prop(self, "with_comfyui_model")
-        
+        row = layout.row(align=True)
+        row.prop(self, "ip")
+        row.prop(self, "port")
+        layout.prop(self, "cuda")
+        row = layout.row(align=True)
+        row.prop(self, "install_deps", toggle=True, text_ctxt=ctxt)
+        row.prop(self, "force_log", toggle=True, text_ctxt=ctxt)
+
     def draw_website(self, layout: bpy.types.UILayout):
 
         layout.label(text="-AIGODLIKE冒险社区", text_ctxt=ctxt)

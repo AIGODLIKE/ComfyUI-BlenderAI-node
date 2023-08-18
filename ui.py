@@ -1,11 +1,13 @@
 import bpy
-import blf
+import platform
 from .ops import Ops
 from .translation import ctxt
 from .SDNode import TaskManager
 from .SDNode.tree import TREE_TYPE
 from .preference import get_pref
-from .utils import get_addon_name
+from .utils import get_addon_name, _T
+
+
 class Panel(bpy.types.Panel):
     bl_idname = "SDN_PT_UI"
     bl_translation_context = ctxt
@@ -23,19 +25,33 @@ class Panel(bpy.types.Panel):
         sdn = bpy.context.scene.sdn
         row = self.layout.row(align=True)
         row.prop(sdn, 'open_pref', text="", icon="PREFERENCES", text_ctxt=ctxt)
-        row.operator("wm.console_toggle", text="", icon="CONSOLE", text_ctxt=ctxt)
+        if platform.system() != "Darwin":
+            row.operator("wm.console_toggle", text="", icon="CONSOLE", text_ctxt=ctxt)
         # row.prop(sdn, "restart_webui", text="", icon="RECOVER_LAST")
+        row.operator(Ops.bl_idname, text="", icon="QUIT", text_ctxt=ctxt).action = "Launch"
         row.operator(Ops.bl_idname, text="", icon="RECOVER_LAST", text_ctxt=ctxt).action = "Restart"
         row.prop(sdn, "open_webui", text="", icon="URL", text_ctxt=ctxt)
 
     def draw(self, context: bpy.types.Context):
         scale_popup = get_pref().popup_scale
         layout = self.layout
-        row = layout.row(align=True)
-        row.operator(Ops.bl_idname, text="Execute Node Tree").action = "Submit"
-        row.operator(Ops.bl_idname, text="ClearTask").action = "ClearTask"
+        col = layout.column()
+        col1 = col.column()
+        col1.alert = True
+        col1.scale_y = 2
+        col1.operator(Ops.bl_idname, text="Execute Node Tree", icon="PLAY").action = "Submit"
+        row = col.row(align=True)
+        row.scale_y = 1.3
+        row.operator(Ops.bl_idname, text="Cancel", icon="CANCEL").action = "Cancel"
+        row.operator(Ops.bl_idname, text="ClearTask", icon="TRASH").action = "ClearTask"
+        
         layout.prop(bpy.context.scene.sdn, "frame_mode", text="")
-
+        if bpy.context.scene.sdn.frame_mode == "Batch":
+            box = layout.box()
+            tree = bpy.context.space_data.edit_tree
+            box.prop(bpy.context.scene.sdn, "batch_dir", text="")
+            if tree and (select_node := tree.nodes.active):
+                box.label(text=_T("Selected Node: ") + select_node.name)
         self.show_progress(layout)
         box = layout.box()
         row = box.row()
@@ -50,7 +66,8 @@ class Panel(bpy.types.Panel):
         row.operator(Ops.bl_idname, text="Delete", text_ctxt=ctxt).action = "Del"
         rrow = col.row(align=True)
         rrow.operator(Ops.bl_idname, text="Replace Node Tree", text_ctxt=ctxt).action = "Load"
-        rrow.operator(Ops.bl_idname, text="", icon="TEXTURE", text_ctxt=ctxt).action = "Preset_from_Image"
+        rrow.operator(Ops.bl_idname, text="", icon="TEXTURE", text_ctxt=ctxt).action = "PresetFromBookmark"
+        rrow.operator(Ops.bl_idname, text="", icon="PASTEDOWN", text_ctxt=ctxt).action = "PresetFromClipBoard"
 
         box = layout.box()
         row = box.row()
@@ -68,31 +85,32 @@ class Panel(bpy.types.Panel):
     def show_progress(self, layout: bpy.types.UILayout):
         layout = layout.box()
         qr_num = len(TaskManager.query_server_task().get('queue_running', []))
-        qp_num = TaskManager.task_queue.qsize()
+        qp_num = TaskManager.get_task_num()
         row = layout.row(align=True)
         row.alert = True
         row.alignment = "CENTER"
         row.label(text="Pending / Running", text_ctxt=ctxt)
         row.label(text=f": {qp_num} / {qr_num}", text_ctxt=ctxt)
-
-        prog = TaskManager.progress
+        prog = TaskManager.get_progress()
         if prog and prog.get("value"):
-            lnum = int(bpy.context.region.width / bpy.context.preferences.view.ui_scale / 7 - 21) 
-            lnum = int(lnum * 0.8)
+            import blf
             per = prog["value"] / prog["max"]
+            content = f"{per*100:3.0f}% "
+            lnum = int(bpy.context.region.width / bpy.context.preferences.view.ui_scale / 7 - 21)
+            lnum = int(lnum * 0.3)
+            lnum = int((bpy.context.region.width - blf.dimensions(0, content)[0]) / blf.dimensions(0, "█")[0]) - 10
             v = int(per * lnum)
-            m = lnum
-            # content = "█" * v + "░" * (m - v) + f" {v}/{m}" + f" {per*100:3.0f}%"
-            content = f"{per*100:3.0f}% " + "█" * v + "░" * (m - v)
+            content = content + "█" * v + "░" * (lnum - v)
             row = layout.row()
             row.alignment = "CENTER"
             row.label(text=content[:134], text_ctxt=ctxt)
+            
 
-        for error_msg in TaskManager.error_msg:
+        for error_msg in TaskManager.get_error_msg():
             row = layout.row()
             row.alert = True
             row.label(text=error_msg, icon="ERROR", text_ctxt=ctxt)
-        if TaskManager.error_msg:
+        if TaskManager.get_error_msg():
             row = layout.box().row()
             row.alignment = "CENTER"
             row.alert = True

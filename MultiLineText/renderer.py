@@ -3,6 +3,7 @@ import ctypes
 import numpy as np
 import bgl as gl
 import bpy
+import time
 # from OpenGL import GL as gl
 from gpu_extras.batch import batch_for_shader
 from ..utils import logger
@@ -62,6 +63,7 @@ class Renderer(BaseOpenGLRenderer):
         Out_Color.rgba = srgb_to_linear(Out_Color.rgba);
     }
     """
+    instance = None
 
     def __init__(self):
         self._shader_handle = None
@@ -77,12 +79,37 @@ class Renderer(BaseOpenGLRenderer):
         self._vbo_handle = None
         self._elements_handle = None
         self._vao_handle = None
+        Renderer.instance = self
 
         super().__init__()
 
     def refresh_font_texture(self):
-        # save texture state
+        # self.refresh_font_texture_ex2()
+        self.refresh_font_texture_ex(self)
+        if self.refresh_font_texture_ex not in bpy.app.handlers.load_post:
+            bpy.app.handlers.load_post.append(self.refresh_font_texture_ex)
 
+    @staticmethod
+    @bpy.app.handlers.persistent
+    def refresh_font_texture_ex(scene=None):
+        # save texture state
+        self = Renderer.instance
+        if not (img := bpy.data.images.get(".imgui_font", None)) or img.bindcode == 0:
+            ts = time.time()
+            width, height, pixels = self.io.fonts.get_tex_data_as_rgba32()
+            if not img:
+                img = bpy.data.images.new(".imgui_font", width, height, alpha=True, float_buffer=True)
+            pixels = np.frombuffer(pixels, dtype=np.uint8) / np.float32(256)
+            img.pixels.foreach_set(pixels)
+            self.io.fonts.clear_tex_data()
+            logger.debug(f"MLT Init -> {time.time() - ts:.2f}s")
+        img.gl_load()
+        self._font_texture = img.bindcode
+        self.io.fonts.texture_id = self._font_texture
+        #  a_BlenderAI_Node.MultiLineText.renderer.Renderer.instance._font_texture
+        #  a_BlenderAI_Node.MultiLineText.renderer.Renderer.instance.io.fonts.texture_id
+
+    def refresh_font_texture_ex2(self):
         buf = gl.Buffer(gl.GL_INT, 1)
         gl.glGetIntegerv(gl.GL_TEXTURE_BINDING_2D, buf)
         last_texture = buf[0]
@@ -238,7 +265,7 @@ class Renderer(BaseOpenGLRenderer):
         shader.bind()
         shader.uniform_float("ProjMtx", ortho_projection)
         shader.uniform_int("Texture", 0)
-
+        self.refresh_font_texture_ex()
         for commands in draw_data.commands_lists:
             size = commands.idx_buffer_size * imgui.INDEX_SIZE // 4
             address = commands.idx_buffer_data
@@ -331,6 +358,7 @@ class Renderer(BaseOpenGLRenderer):
             gl.glGetIntegerv(k, buf)
             values.append(buf[0] if n == 1 else buf[:n])
         return values
+
 
 BlenderImguiRenderer = Renderer
 if bpy.app.version < (3, 4):

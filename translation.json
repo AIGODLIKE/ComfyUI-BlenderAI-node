@@ -1,0 +1,78 @@
+{
+    "KSampler": {
+        "title": "K采样器",
+        "inputs": {
+            "latent_image": "潜空间",
+            "model": "模型"
+        },
+        "widgets": {
+            "seed": "随机种",
+            "steps": "步数"
+        },
+        "outputs": {
+            "LATENT": "潜空间"
+        }
+    },
+    "CLIPTextEncode": {
+        "title": "提示词编码",
+        "inputs": {
+            "clip": "clip编码器"
+        },
+        "widgets": {
+        },
+        "outputs": {
+            "CONDITIONING": "条件"
+        }
+    },
+    "SeargeSDXLSampler": {
+        "title": "SearSDXL采样器",
+        "inputs": {
+            "base_model": "基础模型",
+            "base_positive": "基础正面提示词",
+            "base_negative": "基础负面提示词",
+            "refiner_model": "优化模型",
+            "refiner_positive": "优化正面提示词",
+            "refiner_negative": "优化负面提示词",
+            "latent_image": "Latent图像"
+        },
+        "widgets": {
+            "noise_seed": "随机钟",
+            "steps": "步数",
+            "cfg": "CFG",
+            "sampler_name": "采样器",
+            "scheduler": "调度器",
+            "base_ratio": "基础占比",
+            "denoise": "降噪"
+        },
+        "outputs": {
+            "LATENT": "LATENT"
+        }
+    },
+    "SeargeSDXLSampler2": {
+        "title": "SearSDXL采样器v2",
+        "inputs": {
+            "base_model": "基础模型",
+            "base_positive": "基础正面提示词",
+            "base_negative": "基础负面提示词",
+            "refiner_model": "优化模型",
+            "refiner_positive": "优化正面提示词",
+            "refiner_negative": "优化负面提示词",
+            "latent_image": "Latent图像",
+            "sampler_name": "采样器",
+            "scheduler": "调度器"
+        },
+        "widgets": {
+            "noise_seed": "随机钟",
+            "steps": "步数",
+            "cfg": "CFG",
+            "base_ratio": "基础占比",
+            "denoise": "降噪",
+            "refiner_prep_steps": "预优化步数",
+            "noise_offset": "噪波偏移",
+            "refiner_strength": "优化力度"
+        },
+        "outputs": {
+            "LATENT": "LATENT"
+        }
+    }
+}

@@ -12,12 +12,12 @@ class MetaIn(type):
             return
         EnumCache.CACHE[name] = value
 
-    def __getitem__(cls, name):
+    def __getitem__(cls, name) -> dict:
         return EnumCache.CACHE.setdefault(name, {})
 
 
 class EnumCache(metaclass=MetaIn):
-    CACHE = {}
+    CACHE:dict[str, dict] = {}
 
     def reg_cache(name):
         EnumCache.CACHE[name] = {}

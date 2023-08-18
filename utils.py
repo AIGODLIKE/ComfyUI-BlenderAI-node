@@ -1,17 +1,34 @@
 import struct
+import queue
+import platform
 from pathlib import Path
+from threading import Thread
+from functools import lru_cache
 from urllib.parse import urlparse
 from .kclogger import logger
 from .translation import lang_text
 from .timer import Timer
 translation = {}
 
+def rmtree(path: Path):
+    if path.is_file():
+        path.unlink()
+    elif path.is_dir():
+        for child in path.iterdir():
+            rmtree(child)
+        try:
+            path.rmdir() # nas 的共享盘可能会有残留
+        except:
+            ...
+
 def get_version():
     from . import bl_info
     return ".".join([str(i) for i in bl_info['version']])
 
+
 def get_addon_name():
-    return _T("无限圣杯 Node" ) + get_version()
+    return _T("无限圣杯 Node") + get_version()
+
 
 def _T(word):
     import bpy
@@ -62,18 +79,6 @@ def hex2rgb(hex_val):
     return r, g, b
 
 
-def to_str(path: Path):
-    if isinstance(path, Path):
-        return path.as_posix()
-    return Path(path).as_posix()
-
-
-def to_path(path: Path):
-    if isinstance(path, Path):
-        return path
-    return Path(path)
-
-
 class MetaIn(type):
     def __contains__(self, name):
         return name in Icon.PREV_DICT
@@ -91,7 +96,7 @@ class Icon(metaclass=MetaIn):
 
     def __init__(self) -> None:
         if Icon.NONE_IMAGE and Icon.NONE_IMAGE not in Icon:
-            Icon.NONE_IMAGE = to_str(Icon.NONE_IMAGE)
+            Icon.NONE_IMAGE = FSWatcher.to_str(Icon.NONE_IMAGE)
             self.reg_icon(Icon.NONE_IMAGE)
 
     def __new__(cls, *args, **kwargs):
@@ -103,7 +108,7 @@ class Icon(metaclass=MetaIn):
         import bpy
         Icon.PATH2BPY.clear()
         for i in bpy.data.images:
-            Icon.PATH2BPY[to_str(i.filepath)] = i
+            Icon.PATH2BPY[FSWatcher.to_str(i.filepath)] = i
 
     @staticmethod
     def clear():
@@ -120,8 +125,8 @@ class Icon(metaclass=MetaIn):
 
     @staticmethod
     def try_mark_image(path) -> bool:
-        p = to_path(path)
-        path = to_str(path)
+        p = FSWatcher.to_path(path)
+        path = FSWatcher.to_str(path)
         if not p.exists():
             return False
         if Icon.IMG_STATUS.get(path, -1) == p.stat().st_mtime_ns:
@@ -130,8 +135,8 @@ class Icon(metaclass=MetaIn):
 
     @staticmethod
     def can_mark_image(path) -> bool:
-        p = to_path(path)
-        path = to_str(path)
+        p = FSWatcher.to_path(path)
+        path = FSWatcher.to_str(path)
         if not Icon.try_mark_image(p):
             return False
         Icon.IMG_STATUS[path] = p.stat().st_mtime_ns
@@ -139,7 +144,7 @@ class Icon(metaclass=MetaIn):
 
     @staticmethod
     def can_mark_pixel(prev, name) -> bool:
-        name = to_str(name)
+        name = FSWatcher.to_str(name)
         if Icon.PIX_STATUS.get(name) == hash(prev.pixels):
             return False
         Icon.PIX_STATUS[name] = hash(prev.pixels)
@@ -147,7 +152,7 @@ class Icon(metaclass=MetaIn):
 
     @staticmethod
     def remove_mark(name) -> bool:
-        name = to_str(name)
+        name = FSWatcher.to_str(name)
         Icon.IMG_STATUS.pop(name)
         Icon.PIX_STATUS.pop(name)
         Icon.PREV_DICT.pop(name)
@@ -155,7 +160,7 @@ class Icon(metaclass=MetaIn):
 
     @staticmethod
     def reg_none(none: Path):
-        none = to_str(none)
+        none = FSWatcher.to_str(none)
         if none in Icon:
             return
         Icon.NONE_IMAGE = none
@@ -163,7 +168,7 @@ class Icon(metaclass=MetaIn):
 
     @staticmethod
     def reg_icon(path):
-        path = to_str(path)
+        path = FSWatcher.to_str(path)
         if not Icon.can_mark_image(path):
             return Icon[path]
         if Icon.ENABLE_HQ_PREVIEW:
@@ -180,17 +185,17 @@ class Icon(metaclass=MetaIn):
     @staticmethod
     def reg_icon_hq(path):
         import bpy
-        p = to_path(path)
-        path = to_str(path)
+        p = FSWatcher.to_path(path)
+        path = FSWatcher.to_str(path)
         if path in Icon:
             return
-        if p.exists() and p.suffix in {".png", ".jpg", ".jpeg"}:
+        if p.exists() and p.suffix.lower() in {".png", ".jpg", ".jpeg"}:
             img = bpy.data.images.load(path)
             Icon.reg_icon_by_pixel(img, path)
             bpy.data.images.remove(img)
 
     def find_image(path):
-        img = Icon.PATH2BPY.get(to_str(path), None)
+        img = Icon.PATH2BPY.get(FSWatcher.to_str(path), None)
         if not img:
             return None
         try:
@@ -203,8 +208,8 @@ class Icon(metaclass=MetaIn):
     @staticmethod
     def load_icon(path):
         import bpy
-        p = to_path(path)
-        path = to_str(path)
+        p = FSWatcher.to_path(path)
+        path = FSWatcher.to_str(path)
 
         if not Icon.can_mark_image(path):
             return
@@ -215,15 +220,16 @@ class Icon(metaclass=MetaIn):
         if img := Icon.find_image(path):
             Icon.update_icon_pixel(path, img)
             return img
-        elif p.suffix in {".png", ".jpg", ".jpeg"}:
+        elif p.suffix.lower() in {".png", ".jpg", ".jpeg"}:
             img = bpy.data.images.load(path)
+            img.filepath = path
             Icon.update_path2bpy()
             # img.name = path
             return img
 
     @staticmethod
     def reg_icon_by_pixel(prev, name):
-        name = to_str(name)
+        name = FSWatcher.to_str(name)
         if not Icon.can_mark_pixel(prev, name):
             return
         if name in Icon:
@@ -235,9 +241,9 @@ class Icon(metaclass=MetaIn):
 
     @staticmethod
     def get_icon_id(name: Path):
-        p = Icon.PREV_DICT.get(to_str(name), None)
+        p = Icon.PREV_DICT.get(FSWatcher.to_str(name), None)
         if not p:
-            p = Icon.PREV_DICT.get(to_str(Icon.NONE_IMAGE), None)
+            p = Icon.PREV_DICT.get(FSWatcher.to_str(Icon.NONE_IMAGE), None)
         return p.icon_id if p else 0
 
     @staticmethod
@@ -261,10 +267,10 @@ class Icon(metaclass=MetaIn):
         return Icon.get_icon_id(name)
 
     def __contains__(self, name):
-        return to_str(name) in Icon.PREV_DICT
+        return FSWatcher.to_str(name) in Icon.PREV_DICT
 
     def __class_contains__(cls, name):
-        return to_str(name) in Icon.PREV_DICT
+        return FSWatcher.to_str(name) in Icon.PREV_DICT
 
 
 class PngParse:
@@ -313,7 +319,7 @@ class PngParse:
 
 class PkgInstaller:
     source = [
-        "http://mirrors.aliyun.com/pypi/simple/",
+        "https://mirrors.aliyun.com/pypi/simple/",
         "https://pypi.tuna.tsinghua.edu.cn/simple/",
         "https://pypi.mirrors.ustc.edu.cn/simple/",
         "https://pypi.python.org/simple/",
@@ -359,11 +365,11 @@ class PkgInstaller:
     def try_install(*packages):
         if not PkgInstaller.prepare_pip():
             return False
+        need = [pkg for pkg in packages if not PkgInstaller.is_installed(pkg)]
         from pip._internal import main
-        url = PkgInstaller.select_pip_source()
-        for pkg in packages:
-            if PkgInstaller.is_installed(pkg):
-                continue
+        if need:
+            url = PkgInstaller.select_pip_source()
+        for pkg in need:
             try:
                 site = urlparse(url)
                 command = ['install', pkg, "-i", url]
@@ -373,3 +379,122 @@ class PkgInstaller:
             except Exception:
                 return False
         return True
+
+
+class FSWatcher:
+    """
+    监听文件/文件夹变化的工具类
+        register: 注册监听, 传入路径和回调函数(可空)
+        unregister: 注销监听
+        run: 监听循环, 使用单例,只在第一次初始化时调用
+        stop: 停止监听, 释放资源
+        consume_change: 消费变化, 当监听对象发生变化时记录为changed, 主动消费后置False, 用于自定义回调函数
+    """
+    _watcher_path: dict[Path, bool] = {}
+    _watcher_stat = {}
+    _watcher_callback = {}
+    _watcher_queue = queue.Queue()
+    _running = False
+
+    def init() -> None:
+        FSWatcher._run()
+
+    def register(path, callback=None):
+        path = FSWatcher.to_path(path)
+        if path in FSWatcher._watcher_path:
+            return
+        FSWatcher._watcher_path[path] = False
+        FSWatcher._watcher_callback[path] = callback
+
+    def unregister(path):
+        path = FSWatcher.to_path(path)
+        FSWatcher._watcher_path.pop(path)
+        FSWatcher._watcher_callback.pop(path)
+
+    def _run():
+        if FSWatcher._running:
+            return
+        FSWatcher._running = True
+        Thread(target=FSWatcher._loop, daemon=True).start()
+        Thread(target=FSWatcher._run_ex, daemon=True).start()
+
+    def _run_ex():
+        while FSWatcher._running:
+            try:
+                path = FSWatcher._watcher_queue.get(timeout=0.1)
+                if path not in FSWatcher._watcher_path:
+                    continue
+                if callback := FSWatcher._watcher_callback[path]:
+                    callback(path)
+            except queue.Empty:
+                pass
+
+    def _loop():
+        """
+            监听所有注册的路径, 有变化时记录为changed
+        """
+        import time
+        while FSWatcher._running:
+            for path, changed in FSWatcher._watcher_path.items():
+                if changed:
+                    continue
+                mtime = path.stat().st_mtime_ns
+                if FSWatcher._watcher_stat.get(path, None) == mtime:
+                    continue
+                FSWatcher._watcher_stat[path] = mtime
+                FSWatcher._watcher_path[path] = True
+                FSWatcher._watcher_queue.put(path)
+            time.sleep(0.5)
+
+    def stop():
+        FSWatcher._watcher_queue.put(None)
+        FSWatcher._running = False
+
+    def consume_change(path) -> bool:
+        path = FSWatcher.to_path(path)
+        if path in FSWatcher._watcher_path and FSWatcher._watcher_path[path]:
+            FSWatcher._watcher_path[path] = False
+            return True
+        return False
+
+    @lru_cache
+    def get_nas_mapping():
+        if platform.system() != "Windows":
+            return {}
+        import subprocess
+        result = subprocess.run("net use", capture_output=True, text=True, encoding="gbk")
+        if result.returncode != 0 or result.stdout is None:
+            return {}
+        nas_mapping = {}
+        try:
+            lines = result.stdout.strip().split("\n")[4:]
+            for line in lines:
+                columns = line.split()
+                if len(columns) < 3:
+                    continue
+                local_drive = columns[1] + "/"
+                nas_path = Path(columns[2]).resolve().as_posix()
+                nas_mapping[local_drive] = nas_path
+        except Exception:
+            ...
+        return nas_mapping
+
+    @lru_cache(maxsize=1024)
+    @staticmethod
+    def to_str(path: Path):
+        p = Path(path)
+        res_str = p.resolve().as_posix()
+        # 处理nas路径
+        for local_drive, nas_path in FSWatcher.get_nas_mapping().items():
+            if not res_str.startswith(nas_path):
+                continue
+            return res_str.replace(nas_path, local_drive)
+        return res_str
+
+    @lru_cache(maxsize=1024)
+    @staticmethod
+    def to_path(path: Path):
+        return Path(path)
+
+
+FSWatcher.init()

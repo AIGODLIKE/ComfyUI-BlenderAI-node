@@ -5,34 +5,34 @@ from ..utils import logger, _T
 SELECTED_COLLECTIONS = []
 
 
-def get_cmpt(nt):
+def get_cmpt(nt: bpy.types.NodeTree):
     for node in nt.nodes:
-        if node.type != 'COMPOSITE':
+        if node.type != "COMPOSITE":
             continue
         return node
-    return nt.nodes.new("CompositorNodeRLayers")
+    return nt.nodes.new("CompositorNodeComposite")
 
 
-def get_renderlayer(nt):
+def get_renderlayer(nt: bpy.types.NodeTree):
     for node in nt.nodes:
-        if node.type != 'R_LAYERS':
+        if node.type != "R_LAYERS":
             continue
         return node
     return nt.nodes.new("CompositorNodeRLayers")
 
 
 @contextmanager
-def set_composite(nt):
+def set_composite(nt: bpy.types.NodeTree):
     cmp = get_cmpt(nt)
     old_socket = None
     try:
-        old_socket = cmp.inputs['Image'].links[0].from_socket
+        old_socket = cmp.inputs["Image"].links[0].from_socket
     except BaseException:
         ...
     yield cmp
 
     if old_socket:
-        nt.links.new(old_socket, cmp.inputs['Image'])
+        nt.links.new(old_socket, cmp.inputs["Image"])
 
 
 @contextmanager
@@ -83,12 +83,12 @@ def gen_mask(self):
                 inv = nt.nodes.new("CompositorNodeInvert")
                 inv.invert_rgb = True
                 inv.inputs["Fac"].default_value = 0
-                nt.links.new(crypt.outputs['Matte'], inv.inputs['Color'])
+                nt.links.new(crypt.outputs["Matte"], inv.inputs["Color"])
 
                 cmb = nt.nodes.new("CompositorNodeCombineColor")
-                nt.links.new(inv.outputs['Color'], cmb.inputs[channel])
+                nt.links.new(inv.outputs["Color"], cmb.inputs[channel])
 
-                nt.links.new(cmb.outputs['Image'], cmp.inputs['Image'])
+                nt.links.new(cmb.outputs["Image"], cmp.inputs["Image"])
                 # 渲染遮罩
                 r.filepath = mask_path
 
@@ -99,14 +99,24 @@ def gen_mask(self):
                 nt.nodes.remove(inv)
                 nt.nodes.remove(cmb)
 
-        elif mode == "Grease Pencil":
-            if not self.gp:
+        elif mode in {"Grease Pencil", "Focus"}:
+            gp: bpy.types.Object = None
+            if mode == "Grease Pencil":
+                gp = self.gp
+            elif mode == "Focus":
+                if not self.cam:
+                    logger.error("遮照节点未设置渲染相机")
+                    return
+                gp = self.cam.get("SD_Mask")
+            if isinstance(gp, list):
+                gp = gp[0]
+            if not gp:
                 logger.error("蜡笔未设置")
                 return
-            if self.gp.name not in bpy.context.scene.objects:
+            if gp.name not in bpy.context.scene.objects:
                 logger.error("蜡笔物体未存在当前场景中")
                 return
-            self.gp.hide_render = False
+            gp.hide_render = False
             hide_map = {}
             for o in bpy.context.scene.objects:
                 hide_map[o.name] = o.hide_render
@@ -118,11 +128,11 @@ def gen_mask(self):
             r.image_settings.color_mode = "RGBA"
             r.image_settings.compression = 100
             try:
-                bpy.context.scene.view_settings.view_transform = 'Standard'
+                bpy.context.scene.view_settings.view_transform = "Standard"
             except BaseException:
                 pass
 
-            for gpo in [self.gp]:
+            for gpo in [gp]:
                 gpo.hide_render = hide_map[gpo.name]
                 for l in gpo.data.layers:
                     l.use_lights = False
@@ -136,17 +146,20 @@ def gen_mask(self):
                     return
                 cmp.use_alpha = True
                 cmb = nt.nodes.new("CompositorNodeCombineColor")
-                nt.links.new(rly.outputs['Alpha'], cmb.inputs[channel])
+                nt.links.new(rly.outputs["Alpha"], cmb.inputs[channel])
 
-                nt.links.new(cmb.outputs['Image'], cmp.inputs['Image'])
+                nt.links.new(cmb.outputs["Image"], cmp.inputs["Image"])
                 # 渲染遮罩
                 r.filepath = mask_path
 
+                old_cam = bpy.context.scene.camera
+                bpy.context.scene.camera = self.cam
                 bpy.ops.render.render(write_still=True)
-
+                if mode == "Focus":
+                    bpy.context.scene.camera = old_cam
                 # 移除新建节点
                 nt.nodes.remove(cmb)
 
             for o in bpy.context.scene.objects:
                 o.hide_render = hide_map.get(o.name, o.hide_render)
-            self.gp.hide_render = True
+            gp.hide_render = True
