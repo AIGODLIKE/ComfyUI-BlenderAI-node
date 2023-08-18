@@ -1199,9 +1199,10 @@ def parse_node():
                     continue
                 for file in Path(prev_path).iterdir():
                     file_list.append(file)
+            item_prefix = Path(item).stem
             # file_list = [file for prev_path in prev_path_list for file in Path(prev_path).iterdir()]
             for file in file_list:
-                if item not in file.stem:
+                if (item not in file.stem) and (item_prefix not in file.stem):
                     continue
                 if file.suffix.lower() not in {".png", ".jpg", ".jpeg"}:
                     continue

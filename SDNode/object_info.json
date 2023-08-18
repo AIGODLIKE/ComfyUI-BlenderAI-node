@@ -3807,5 +3807,417 @@
     "description": "",
     "category": "OpenPose",
     "output_node": false
+  },
+  "LoraLoader|pysssss": {
+    "input": {
+      "required": {
+        "model": [
+          "MODEL"
+        ],
+        "clip": [
+          "CLIP"
+        ],
+        "lora_name": [
+          []
+        ],
+        "strength_model": [
+          "FLOAT",
+          {
+            "default": 1.0,
+            "min": -10.0,
+            "max": 10.0,
+            "step": 0.01
+          }
+        ],
+        "strength_clip": [
+          "FLOAT",
+          {
+            "default": 1.0,
+            "min": -10.0,
+            "max": 10.0,
+            "step": 0.01
+          }
+        ]
+      }
+    },
+    "output": [
+      "MODEL",
+      "CLIP"
+    ],
+    "output_is_list": [
+      false,
+      false
+    ],
+    "output_name": [
+      "MODEL",
+      "CLIP"
+    ],
+    "name": "LoraLoader|pysssss",
+    "display_name": "Lora Loader 🐍",
+    "description": "",
+    "category": "loaders",
+    "output_node": false
+  },
+  "CheckpointLoader|pysssss": {
+    "input": {
+      "required": {
+        "ckpt_name": [
+          [
+            {
+              "content": "AIGODLIKE华丽_4000.ckpt",
+              "image": null
+            },
+            {
+              "content": "GuoFeng3.2_f16.safetensors",
+              "image": null
+            },
+            {
+              "content": "Shyaku_qofo.ckpt",
+              "image": null
+            },
+            {
+              "content": "Shyaku_Tonades.ckpt",
+              "image": null
+            },
+            {
+              "content": "wd-1-5-beta2-aesthetic-unclip-h-fp16.safetensors",
+              "image": null
+            },
+            {
+              "content": "wd-1-5-beta2-aesthetic-unclip-l-fp16.safetensors",
+              "image": null
+            },
+            {
+              "content": "wd-1-5-beta2-unclip-h-fp16.safetensors",
+              "image": null
+            },
+            {
+              "content": "苍玄.safetensors",
+              "image": null
+            }
+          ]
+        ]
+      }
+    },
+    "output": [
+      "MODEL",
+      "CLIP",
+      "VAE"
+    ],
+    "output_is_list": [
+      false,
+      false,
+      false
+    ],
+    "output_name": [
+      "MODEL",
+      "CLIP",
+      "VAE"
+    ],
+    "name": "CheckpointLoader|pysssss",
+    "display_name": "Checkpoint Loader 🐍",
+    "description": "",
+    "category": "loaders",
+    "output_node": false
+  },
+  "ConstrainImage|pysssss": {
+    "input": {
+      "required": {
+        "images": [
+          "IMAGE"
+        ],
+        "max_width": [
+          "INT",
+          {
+            "default": 1024,
+            "min": 0
+          }
+        ],
+        "max_height": [
+          "INT",
+          {
+            "default": 1024,
+            "min": 0
+          }
+        ],
+        "min_width": [
+          "INT",
+          {
+            "default": 0,
+            "min": 0
+          }
+        ],
+        "min_height": [
+          "INT",
+          {
+            "default": 0,
+            "min": 0
+          }
+        ],
+        "crop_if_required": [
+          [
+            "yes",
+            "no"
+          ],
+          {
+            "default": "no"
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE"
+    ],
+    "output_is_list": [
+      true
+    ],
+    "output_name": [
+      "IMAGE"
+    ],
+    "name": "ConstrainImage|pysssss",
+    "display_name": "Constrain Image 🐍",
+    "description": "",
+    "category": "image",
+    "output_node": false
+  },
+  "MathExpression|pysssss": {
+    "input": {
+      "required": {
+        "expression": [
+          "STRING",
+          {
+            "multiline": true,
+            "dynamicPrompts": false
+          }
+        ]
+      },
+      "optional": {
+        "a": [
+          "FLOAT",
+          {
+            "forceInput": true
+          }
+        ],
+        "b": [
+          "FLOAT",
+          {
+            "forceInput": true
+          }
+        ],
+        "c": [
+          "FLOAT",
+          {
+            "forceInput": true
+          }
+        ]
+      },
+      "hidden": {
+        "extra_pnginfo": "EXTRA_PNGINFO",
+        "prompt": "PROMPT"
+      }
+    },
+    "output": [
+      "INT",
+      "FLOAT",
+      "STRING"
+    ],
+    "output_is_list": [
+      false,
+      false,
+      false
+    ],
+    "output_name": [
+      "INT",
+      "FLOAT",
+      "STRING"
+    ],
+    "name": "MathExpression|pysssss",
+    "display_name": "Math Expression 🐍",
+    "description": "",
+    "category": "utils",
+    "output_node": false
+  },
+  "PlaySound|pysssss": {
+    "input": {
+      "required": {
+        "any": [
+          "*",
+          {}
+        ],
+        "mode": [
+          [
+            "always",
+            "on empty queue"
+          ],
+          {}
+        ],
+        "volume": [
+          "FLOAT",
+          {
+            "min": 0,
+            "max": 1,
+            "step": 0.1,
+            "default": 0.5
+          }
+        ]
+      }
+    },
+    "output": [],
+    "output_is_list": [],
+    "output_name": [],
+    "name": "PlaySound|pysssss",
+    "display_name": "PlaySound 🐍",
+    "description": "",
+    "category": "utils",
+    "output_node": true
+  },
+  "Repeater|pysssss": {
+    "input": {
+      "required": {
+        "source": [
+          "*",
+          {}
+        ],
+        "repeats": [
+          "INT",
+          {
+            "min": 0,
+            "max": 5000,
+            "default": 2
+          }
+        ],
+        "output": [
+          [
+            "single",
+            "multi"
+          ],
+          {}
+        ],
+        "node_mode": [
+          [
+            "reuse",
+            "create"
+          ],
+          {}
+        ]
+      }
+    },
+    "output": [
+      "*"
+    ],
+    "output_is_list": [
+      true
+    ],
+    "output_name": [
+      "*"
+    ],
+    "name": "Repeater|pysssss",
+    "display_name": "Repeater 🐍",
+    "description": "",
+    "category": "utils",
+    "output_node": false
+  },
+  "ReroutePrimitive|pysssss": {
+    "input": {
+      "required": {
+        "value": [
+          "*"
+        ]
+      }
+    },
+    "output": [
+      "*"
+    ],
+    "output_is_list": [
+      false
+    ],
+    "output_name": [
+      "*"
+    ],
+    "name": "ReroutePrimitive|pysssss",
+    "display_name": "Reroute Primitive 🐍",
+    "description": "",
+    "category": "utils",
+    "output_node": false
+  },
+  "ShowText|pysssss": {
+    "input": {
+      "required": {
+        "text": [
+          "STRING",
+          {
+            "forceInput": true
+          }
+        ]
+      }
+    },
+    "output": [
+      "STRING"
+    ],
+    "output_is_list": [
+      true
+    ],
+    "output_name": [
+      "STRING"
+    ],
+    "name": "ShowText|pysssss",
+    "display_name": "Show Text 🐍",
+    "description": "",
+    "category": "utils",
+    "output_node": true
+  },
+  "StringFunction|pysssss": {
+    "input": {
+      "required": {
+        "action": [
+          [
+            "append",
+            "replace"
+          ],
+          {}
+        ],
+        "tidy_tags": [
+          [
+            "yes",
+            "no"
+          ],
+          {}
+        ],
+        "text_a": [
+          "STRING",
+          {
+            "multiline": true
+          }
+        ],
+        "text_b": [
+          "STRING",
+          {
+            "multiline": true
+          }
+        ]
+      },
+      "optional": {
+        "text_c": [
+          "STRING",
+          {
+            "multiline": true
+          }
+        ]
+      }
+    },
+    "output": [
+      "STRING"
+    ],
+    "output_is_list": [
+      false
+    ],
+    "output_name": [
+      "STRING"
+    ],
+    "name": "StringFunction|pysssss",
+    "display_name": "String Function 🐍",
+    "description": "",
+    "category": "utils",
+    "output_node": true
   }
 }
