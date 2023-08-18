@@ -68,7 +68,7 @@ mycomfyui:
     gligen: {cmp}/gligen
     upscale_models: {cmp}/upscale_models
     hypernetworks: {cmp}/hypernetworks
-    # custom_nodes: {cmpp}/custom_nodes
+    custom_nodes: {cmpp}/custom_nodes
             """
 
 

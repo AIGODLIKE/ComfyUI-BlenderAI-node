@@ -1056,6 +1056,8 @@ def parse_node():
     }
 
     for name, desc in object_info.items():
+        if "|pysssss" in name:
+            continue
         SOCKET_TYPE[name] = {}
         cat = desc["category"]
         for inp, inp_desc in desc["input"].get("required", {}).items():
@@ -1212,7 +1214,7 @@ def parse_node():
                 return
             if not isinstance(inp[1], dict):
                 return
-            PARAMS = {"default", "min", "max", "step", "soft_min", "soft_max", "description", "subtype", "update", "options"}
+            PARAMS = {"default", "min", "max", "step", "soft_min", "soft_max", "description", "subtype", "update", "options", "multiline"}
             # 排除掉不需要的属性
             for key in list(inp[1].keys()):
                 if key in PARAMS:
