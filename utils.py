@@ -6,7 +6,7 @@ from threading import Thread
 from functools import lru_cache
 from urllib.parse import urlparse
 from .kclogger import logger
-from .translation import lang_text
+from .translations import lang_text
 from .timer import Timer
 translation = {}
 

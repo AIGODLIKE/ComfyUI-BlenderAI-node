@@ -1,7 +1,7 @@
 import bpy
 import platform
 from .ops import Ops
-from .translation import ctxt
+from .translations import ctxt
 from .SDNode import TaskManager
 from .SDNode.tree import TREE_TYPE
 from .preference import get_pref

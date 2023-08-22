@@ -21,7 +21,7 @@ from ..utils import logger, update_screen, Icon, _T
 from ..datas import ENUM_ITEMS_CACHE
 from ..preference import get_pref
 from ..timer import Timer
-from ..translation import ctxt
+from ..translations import ctxt
 from .manager import get_url, Task, WITH_PROXY
 
 NODES_POLL = {}

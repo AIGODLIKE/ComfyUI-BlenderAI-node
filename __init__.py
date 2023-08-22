@@ -13,7 +13,7 @@ import sys
 from .SDNode import rtnode_unreg, TaskManager
 from .MultiLineText import EnableMLT
 
-from .translation import translations_dict
+from .translations import translations_dict
 from .utils import Icon
 from .timer import timer_reg, timer_unreg
 from .preference import AddonPreference

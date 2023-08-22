@@ -12,7 +12,7 @@ from .nodes import nodes_reg, nodes_unreg, parse_node, NodeBase
 from ..utils import logger, Icon, rgb2hex, hex2rgb, _T
 from ..datas import EnumCache
 from ..timer import Timer
-from ..translation import ctxt
+from ..translations import ctxt
 
 TREE_NAME = "CFNODES_SYS"
 TREE_TYPE = "CFNodeTree"

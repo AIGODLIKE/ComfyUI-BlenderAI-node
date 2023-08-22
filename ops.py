@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 from mathutils import Vector
 from functools import partial
-from .translation import ctxt
+from .translations import ctxt
 from .prop import Prop
 from .utils import _T, logger, PngParse
 from .timer import Timer

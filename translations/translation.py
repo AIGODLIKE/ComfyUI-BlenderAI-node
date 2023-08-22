@@ -1,0 +1,531 @@
+"""
+translations_tuple = (
+    (
+        ("*", ""),  # (msgctxt, msgid)
+        ((), ()),   # (sources, gen_comments)
+        ("fr_FR", "Project-Id-Version: ", (False, ("D.", "D.", "D.", "D."))),  # (lang, translation, (is_fuzzy, comments))
+    ),
+    (
+        ("Operator", "Render: Copy Settings"),
+        (("bpy.types.SCENE_OT_render_copy_settings",), ()),
+        ("fr_FR", "Rendu : copier réglages", (False, ())),
+    ),
+    (
+        ("*", "Copy render settings from current scene to others"),
+        (("bpy.types.SCENE_OT_render_copy_settings",), ()),
+        ("fr_FR", "Some translation text", (False, ())),
+    ),
+)
+
+translations_dict = {}
+for msg in translations_tuple:
+    key = msg[0]  # (msgctxt, msgid)
+    for lang, trans, (is_fuzzy, comments) in msg[2:]:  # (lang, translation, (is_fuzzy, comments))
+        if trans and not is_fuzzy:
+            translations_dict.setdefault(lang, {})[key] = trans
+td = {'fr_FR': {
+    ('*', ''): 'Project-Id-Version: ',
+    ('Operator', 'Render: Copy Settings'): 'Rendu : copier réglages',
+    ('*', 'Copy render settings from current scene to others'): 'Some translation text'
+}
+}
+"""
+
+ctxt = "SDN"
+
+other = {
+    # SDNode/manager.py
+    "Kill Last ComfyUI Process": "关闭上次打开的ComfyUI",
+    "ComfyUI Path Not Found": "ComfyUI路径不存在",
+    "Server Launching": "服务启动中...",
+    "python interpreter not found": "未找到 python解释器",
+    "Ensure that the python_embeded located in the same level as ComfyUI dir": "请确保python_embeded文件夹存放于ComfyUI路径同级目录",
+    "Model Path": "当前ComfyUI路径",
+    "Error: Out of VRam, try restart blender": "错误:显存不足, 请重启blender",
+    "Server Launched": "服务启动成功!",
+    "Add Task": "添加任务",
+    "Server Not Launched, Add Task Failed": "服务未启动, 任务添加失败",
+    "Please Check ComfyUI Directory": "请检查ComfyUI路径",
+    "Server Not Launched": "服务未启动",
+    "Add Result": "获取结果",
+    "Submit Task": "提交任务",
+    "Invalid Node Connection": "无效节点连接",
+    "Node Connection Error": "节点连接错误",
+    "Input Image Error": "输入图像错误",
+    "Params Not Changed": "参数未变更",
+    "Node Tree Not Executed, May Caused by:": "节点树未被执行, 可能原因:",
+    "Proc Resutl": "处理结果",
+    "Ran Node": "运行节点",
+    "ControlNet Init....": "ControlNet 初始化...",
+    "ControlNet Init Finished.": "ControlNet 初始化完毕.",
+    "If controlnet still not worked, install manually by double clicked {}": "若ControlNet依然无法正常使用, 请手动双击 {} 安装",
+    "Execute Node Cancelled!": "执行被跳过!",
+    # SDNode/nodes.py
+    "icon path load error": "预览图配置解析失败",
+    "|IGNORED|": "|已忽略|",
+    "Not Found Item": "未找到项",
+    "Load": "载入",
+    "Params not matching with current node": "参数与当前节点不匹配",
+    "Params Loading Error": "参数载入错误",
+    "Remove Link": "移除连接",
+    "Parsing Node Start": "解析节点中...",
+    "Server Launch Failed": "服务启动失败, 使用缓存节点信息数据",
+    "None Input": "节点输入",
+    "Parsing Node Finished!": "解析节点完成!",
+    "Render": "渲染",
+    "Post Function": "后处理",
+    "Load Preview Image": "加载预览图",
+    "  Select mask Objects": "  选中mask物体(可多选)",
+    "  Select mask Collections": "  选中mask集合(可多选)",
+    "Set Image Path of Render Result(.png)": "设置摄像机渲染图像的保存位置及文件名(.png)，如已设置请忽略",
+    "Saved Title Name -> ": "存储名称",
+    "Sync Rand": "统一随机",
+    "Render Layer": "渲染层",
+    "render_layer": "渲染层",
+    "Output Layer": "输出层",
+    "out_layers": "输出层",
+    "Frames Directory": "序列图文件夹",
+    "Image num per line": "每行图片数",
+    # SDNode/tree.py
+    "Invalid Node Type: {}": "检查到无效的节点: {}",
+    # SDNode/utils.py
+    "Gen Mask": "遮罩生成",
+    # __init__.py
+    "Image not found or format error(png/json)": "魔法图鉴不存在或格式不正确(仅png/json)",
+    "Execute Node Tree": "运行节点树",
+    "Node Tree": "节点树",
+    "Save": "保存",
+    "Delete": "删除",
+    "Replace Node Tree": "替换节点树",
+    "Node Group": "节点",
+    "Append Node Group": "追加节点",
+    "Pending / Running": "排队 / 运行",
+    "Adjust node tree and try again": "请调整后重新执行节点树",
+    "Preset Bookmark": "魔法图鉴",
+    "Load from Bookmark": "加载魔法图鉴",
+    "Load from ClipBoard": "加载剪切板",
+    "Preset": "法典",
+    "exists, Click Ok to Overwrite!": "已存在, 确认将覆盖!",
+    "Click Outside to Cancel!": "单击空白处取消!",
+    "will be removed?": "即将消亡?",
+    "Click Folder Icon to Select Bookmark:": "点击文件夹图标选择魔法图鉴:",
+    "Preset Not Selected!": "没有选择法典!",
+    "Invalid Preset Name!": "无效的法典名!",
+    "Removed": "移除成功",
+    "Presets": "预设",
+    "Open NodeGroup Presets Folder": "打开节点预设文件夹",
+    "Open NodeTree Presets Folder": "打开节点树预设文件夹",
+    "Groups Directory": "节点文件夹",
+    "Presets Directory": "预设文件夹",
+    "Open Addon Preference": "打开插件设置",
+    "Restart ComfyUI": "重启ComfyUI",
+    "Launch ComfyUI": "打开ComfyUI",
+    "Random All": "随机所有",
+    "Preset Name": "法典烙印",
+    "Load Preset from Image Error -> MetaData Not Found in": "从图鉴加载失败, 元数据为",
+    # prop.py
+    "Frame Mode": "渲染模式",
+    "SingleFrame": "单帧",
+    "MultiFrame": "多帧",
+    "Batch": "批量",
+    "Batch Directory": "批量处理文件夹",
+    # ops.py
+    "No NodeTree Found": "节点树为空",
+    "Node Not Found: ": "节点未找到",
+    "Input Image Node Not Selected!": "未选择输入节点",
+    "Batch Directory Not Set!": "批量处理文件夹 不正确",
+    "Selected Node: ": "所选节点: ",
+    "Node<{}>Directory is Empty!": "节点<{}>的文件夹路径为空!",
+    "Node<{}>Directory Not Exists!": "节点<{}>的文件夹路径不存在!",
+    "Frame <{}> Not Found in <{}> Node Path!": "帧<{}> 在节点<{}>路径中未找到对应!",
+    "Frame <{}> Add to Task!": "帧任务<{}>添加成功!",
+    "Launch": "启动ComfyUI",
+    "Restart": "重启ComfyUI",
+    "ClipBoard Content Format Error": "剪切板内容格式错误",
+    "Submit Task and with Clear Cache if Alt Pressed": "执行节点树, 如果按下了Alt执行 则 强制执行",
+    "ComfyUI not Run,To Run?": "ComfyUI未启动,确定启动?",
+    # ui.py
+    "ClearTask": "清理任务",
+    "Cancel": "取消任务",
+    # preference.py
+    "With WEBUI Model": "兼容WEBUI模型",
+    "With ComfyUI Model": "兼容ComfyUI模型",
+    # MLT
+    " Prompts": "提示词",
+    "MLT": "多行文本",
+    "Enable MLT": "开启多行文本",
+    # oooo
+    "enable": "开",
+    "disable": "关",
+    "samples": "采样",
+    "sdn_width": "宽",
+    "sdn_height": "高",
+    "batch_size": "批次大小",
+    "images": "图像",
+    "IMAGE": "图像",
+    # Internal
+    "NodeReroute": "转接点",
+    "NodeFrame": "框"
+}
+
+lang_text = {
+    "zh_CN": {
+        **other,
+        # 分类
+        # "vae": "变分数据",
+        # "VAE": "变分模型",
+        # "nt": "潜空间数据模型",
+        # "LATENT": "潜空间数据模型",
+        "pixels": "像素",
+        # Other
+        "Add Node": "添加节点",
+        "Add Group": "添加组",
+        "utils": "实用工具",
+        "Reroute": "连线改道",
+        "OK": "确认",
+        # Cat / Node name
+        "sampling": "采样",
+        "KSampler": "K采样器",
+        "seed": "随机种",
+                    "exe_rand": "每次运行节点随机",
+                    "Random All": "随机所有",
+                    "Sync Rand": "统一随机",
+                "steps": "步数",
+                "cfg": "CFG",
+                "sampler_name": "采样器",
+                "scheduler": "调度器",
+                "denoise": "降噪",
+                "model": "模型",
+                "positive": "正向条件",
+                "negative": "反向条件",
+                "latent_image": "latent图像",
+        "KSamplerAdvanced": "高级K采样器",
+                "add_noise": "添加噪波",
+                "noise_seed": "噪波随机种",
+                "start_at_step": "开始步数",
+                "end_at_step": "结束步数",
+                "return_with_leftover_noise": "返回残余噪波",
+        "loaders": "加载器",
+        "CheckpointLoaderSimple": "Checkpoint简易加载器",
+                "ckpt_name": "ckpt名称",
+        "VAELoader": "VAE加载器",
+                "vae_name": "vae名称",
+                "vae": "VAE",
+        "LoraLoader": "Lora加载器",
+                "lora_name": "lora名称",
+                "strength_model": "模型强度",
+                "strength_clip": "CLIP强度",
+        "ControlNetLoader": "ControlNet加载器",
+                "control_net_name": "controlnet名称",
+                "CONTROL_NET": "CONTROLNET",
+                "control_net": "CONTROLNET",
+        "DiffControlNetLoader": "另一种ControlNet加载器",
+        "StyleModelLoader": "风格模型加载器",
+                "STYLE_MODEL": "风格模型",
+                "style_model": "风格模型",
+                "style_model_name": "风格模型名称",
+        "CLIPVisionLoader": "CLIP视觉加载器",
+        "unCLIPCheckpointLoader": "逆CLIPCheckpoint加载器",
+                "CLIP_VISION": "视觉CLIP",
+        "GLIGENLoader": "GLIGEN加载器",
+                "gligen_name": "GLIGEN名称",
+                "gligen_textbox_model": "GLIGEN文本框模型",
+        "UpscaleModelLoader": "放大模型加载器",
+        "HypernetworkLoader": "超网络加载器",
+                "hypernetwork_name": "超网络名称",
+        "conditioning": "条件",
+        # StyleModel
+                "StyleModelApply": "风格模型应用",
+        # Gligen
+                "GLIGENTextBoxApply": "GLIGEN文本框应用",
+        "CLIPTextEncode": "CLIP文本编码器",
+                "text": "文本",
+        "CLIPSetLastLayer": "CLIP设置最后一层",
+                "stop_at_clip_layer": "停止在CLIP层",
+        "ConditioningAverage ": "条件平均",
+                "conditioning_to_strength": "强度",
+                "conditioning_to": "条件到",
+                "conditioning_from": "条件源",
+                "CONDITIONING": "条件",
+        "ConditioningCombine": "条件合并",
+                "conditioning_1": "条件1",
+                "conditioning_2": "条件2",
+        "ConditioningConcat": "条件联结",
+        "ConditioningSetArea": "条件区域",
+                "sdn_width": "宽",
+                "sdn_height": "高",
+                "strength": "强度",
+        "ConditioningSetMask": "条件设置遮罩",
+                "set_cond_area": "设置条件区域",
+                "mask bounds": "遮罩边界",
+        "CLIPVisionEncode": "CLIP视觉编码",
+                "clip_vision": "视觉CLIP",
+                "CLIP_VISION_OUTPUT": "视觉CLIP输出",
+                "clip_vision_output": "视觉CLIP输出",
+        "unCLIPConditioning": "逆CLIP条件",
+                "noise_augmentation": "噪波增强",
+        "ControlNetApply": "ControlNet应用",
+        "ControlNetApplyAdvanced": "高级ControlNet应用",
+                "start_percent": "开始位置",
+                "end_percent": "结束位置",
+        "latent": "潜空间",
+        "inpaint": "内补绘制",
+                "VAEEncodeForInpaint": "VAE内补编码器",
+                    "grow_mask_by": "遮罩延展",
+                    "pixels": "像素",
+                "SetLatentNoiseMask": "设置Latent噪波遮罩",
+                    "samples": "采样",
+        "batch": "批次",
+                "LatentFromBatch": "从批次获取Latent",
+                    "batch_index": "批次索引",
+                    "length": "长度",
+                "RepeatLatentBatch": "复制批次",
+                    "amount": "次数",
+                "RebatchLatents": "重设批次",
+                    "batch_size": "批次大小",
+        "transform": "变换",
+                "LatentRotate": "Latent旋转",
+                    "rotation": "旋转",
+                        "none": "无",
+                        "90 degrees": "90度",
+                        "180 degrees": "180度",
+                        "270 degrees": "270度",
+                "LatentFlip": "Latent翻转",
+                    "flip_method": "翻转方法",
+                        "x-axis: vertically": "X轴:垂直",
+                        "y-axis: horizontally": "Y轴:水平",
+                "LatentCrop": "Latent修剪",
+                    "crop": "裁剪",
+        "VAEDecode": "VAE解码",
+        "VAEEncode": "VAE编码",
+        "EmptyLatentImage": "空Latent图像",
+        "LatentUpscale": "Latent缩放",
+                "upscale_method": "缩放方法",
+                        "nearest-exact": "邻近-精确",
+                        "bilinear": "双线性插值",
+                        "area": "区域",
+                        "bislerp": "球面线性",
+                        "bicubic": "双三次插值",
+                    "enabled": "开启",
+                    "disabled": "关闭",
+        "LatentUpscaleBy": "Latent按系数缩放",
+                "scale_by": "缩放系数",
+        "LatentComposite": "Latent复合",
+                "feather": "羽化",
+                "samples_to": "采样到",
+                "samples_from": "采样自",
+        "LatentCompositeMasked": "Latent遮罩复合",
+                "destination": "目标",
+                "source": "源",
+        "image": "图像",
+        "upscaling": "缩放",
+                "ImageScale": "图像缩放",
+                    "images": "图像",
+                    "IMAGE": "图像",
+                "ImageScaleBy": "图像按系数缩放",
+                "ImageUpscaleWithModel": "图像通过模型放大",
+                    "upscale_model": "放大模型",
+                    "UPSCALE_MODEL": "放大模型",
+                    "model_name": "模型名称",
+        "postprocessing": "后处理",
+                "ImageBlend": "图像混合",
+                    "blend_factor": "混合系数",
+                    "blend_mode": "混合模式",
+                        "multiply": "相乘",
+                        "soft_light": "柔光",
+                        "overlay": "覆盖",
+                    "image1": "图像1",
+                    "image2": "图像2",
+                "ImageBlur": "图像模糊",
+                    "blur_radius": "模糊半径",
+                    "sigma": "sigma系数",
+                "ImageQuantize": "图像量化",
+                    "colors": "颜色数",
+                    "dither": "抖动",
+                        "floyd-steinberg": "弗洛伊德-斯坦伯格抖动算法",
+                "ImageSharpen": "图像锐化",
+                    "sharpen_radius": "锐化半径",
+        "SaveImage": "保存图像",
+                "filename_prefix": "前缀",
+                "output_dir": "输出路径",
+        "PreviewImage": "预览图像",
+        "LoadImage": "加载图像",
+        "ImageInvert": "图像反转",
+        "ImagePadForOutpaint": "外补画板",
+                "left": "左",
+                "top": "上",
+                "right": "右",
+                "bottom": "下",
+                "feathering": "羽化",
+        "mask": "遮罩",
+        "LoadImageMask": "加载图像遮罩",
+                "channel": "通道",
+        "MaskToImage": "遮罩转图像",
+        "ImageToMask": "图像转遮罩",
+        "SolidMask": "纯块遮罩",
+        "value": "明度",
+        "InvertMask": "反转遮罩",
+        "CropMask": "遮罩裁剪",
+        "MaskComposite": "遮罩混合",
+                "operation": "混合方法",
+                    "and": "和",
+                    "or": "或",
+                    "xor": "异或",
+        "FeatherMask": "羽化遮罩",
+        "_for_testing": "测试",
+        "VAEDecodeTiled": "VAE分块解码",
+        "VAEEncodeTiled": "VAE分块编码",
+        "TomePatchModel": "Tome合并模型Token",
+                "ratio": "比率",
+        "SaveLatent": "保存Latent",
+        "LoadLatent": "读取Latent",
+        "advanced": "高级",
+        # Loader
+                "deprecated": "弃用",
+                    "DiffusersLoader": "Diffusers(扩散)载入器",
+                        "model_path": "模型路径",
+                "CheckpointLoader": "Checkpoint加载器",
+                    "config_name": "配置名称",
+                "CLIPLoader": "CLIP加载器",
+                    "CLIP": "CLIP",
+                    "clip": "CLIP",
+                    "clip_name": "CLIP名称",
+                "UNETLoader": "UNET加载器",
+                    "unet_name": "UNET名称",
+                "DualCLIPLoader": "双CLIP加载器",
+                    "clip_name1": "CLIP1",
+                    "clip_name2": "CLIP2",
+        # Conditioning
+                "ConditioningZeroOut": "条件零化",
+                "ConditioningSetTimestepRange": "设置条件时间",
+                    "start": "开始",
+                    "end": "结束",
+                "CLIPTextEncodeSDXL": "CLIP文本编码SDXL",
+                    "crop_w": "裁剪宽度",
+                    "crop_h": "裁剪高度",
+                    "target_width": "目标宽度",
+                    "target_height": "目标高度",
+                    "text_g": "ViT-bigG文本",
+                    "text_l": "ViT-L文本",
+                "CLIPTextEncodeSDXLRefiner": "CLIP文本编码SDXL优化",
+                    "ascore": "美学分数",
+        "model_merging": "模型融合",
+                "ModelMergeSimple": "融合模型",
+                "ModelMergeBlocks": "分层融合模型",
+                "CheckpointSave": "保存模型",
+                "CLIPMergeSimple": "融合CLIP",
+                    "clip1": "CLIP1",
+                    "clip2": "CLIP2",
+                "ModelMergeBlockNumber": "分层数融合模型",
+                "ModelMergeSDXL": "融合SDXL模型",
+                "ModelMergeSDXLTransformers": "融合SDXL模型Transformers",
+                "ModelMergeSDXLDetailedTransformers": "高级融合SDXL模型Transformers",
+        "T2IAdapterLoader": "文生图适配加载器",
+        "gligen": "GLIGEN基于语言的图像生成",
+        "undefined": "未定义",
+        "t2i_adapter_name": "文生图适配器名称",
+        "Utils": "实用工具",
+        "PrimitiveNode": "Primitive元节点",
+                "Output": "输出",
+    }
+}
+
+
+def read_local(local):
+    import json
+    from pathlib import Path
+    p = Path(__file__).parent.joinpath(local)
+    if not p.exists():
+        p = Path(__file__).parent.joinpath(local.replace("_", "-"))
+    if not p.exists():
+        return {}
+
+    def search_recursive(p: Path):
+        if p.is_dir():
+            for i in p.iterdir():
+                yield from search_recursive(i)
+        else:
+            yield p
+    json_files = [i for i in search_recursive(p) if i.suffix == ".json"]
+    json_data = {}
+    for file in json_files:
+        for coding in ("utf-8", "gbk"):
+            try:
+                json_data.update(json.loads(file.read_text(encoding=coding)))
+                break
+            except UnicodeDecodeError:
+                pass
+    data = {}
+    for key, value in json_data.items():
+        if isinstance(value, str):
+            data[key] = value
+        elif isinstance(value, dict):
+            if "title" in value:
+                data[key] = value.pop("title")
+            for sk, sv in value.items():
+                if isinstance(sv, str):
+                    data[sk] = sv
+                elif isinstance(sv, dict):
+                    data.update(sv)
+    return data
+
+
+for locale in lang_text:
+    lang_text[locale].update(read_local(locale))
+
+
+cat = {'default_real': None,
+       'default': '*',
+       'operator_default': 'Operator',
+       'ui_events_keymaps': 'UI_Events_KeyMaps',
+       'plural': 'Plural',
+       'id_action': 'Action',
+       'id_armature': 'Armature',
+       'id_brush': 'Brush',
+       'id_camera': 'Camera',
+       'id_cachefile': 'CacheFile',
+       'id_collection': 'Collection',
+       'id_curve': 'Curve',
+       'id_fs_linestyle': 'FreestyleLineStyle',
+       'id_gpencil': 'GPencil',
+       'id_curves': 'Curves',
+       'id_id': 'ID',
+       'id_image': 'Image',
+       'id_shapekey': 'Key',
+       'id_light': 'Light',
+       'id_library': 'Library',
+       'id_lattice': 'Lattice',
+       'id_mask': 'Mask',
+       'id_material': 'Material',
+       'id_metaball': 'Metaball',
+       'id_mesh': 'Mesh',
+       'id_movieclip': 'MovieClip',
+       'id_nodetree': 'NodeTree',
+       'id_object': 'Object',
+       'id_paintcurve': 'PaintCurve',
+       'id_palette': 'Palette',
+       'id_particlesettings': 'ParticleSettings',
+       'id_pointcloud': 'PointCloud',
+       'id_lightprobe': 'LightProbe',
+       'id_scene': 'Scene',
+       'id_screen': 'Screen',
+       'id_sequence': 'Sequence',
+       'id_simulation': 'Simulation',
+       'id_speaker': 'Speaker',
+       'id_sound': 'Sound',
+       'id_texture': 'Texture',
+       'id_text': 'Text',
+       'id_vfont': 'VFont',
+       'id_volume': 'Volume',
+       'id_world': 'World',
+       'id_workspace': 'WorkSpace',
+       'id_windowmanager': 'WindowManager',
+       'editor_view3d': 'View3D'
+       }
+
+translations_dict = {}
+for cultral, translations in lang_text.items():
+    translations_dict[cultral] = {}
+    for word, translation in translations.items():
+        translations_dict[cultral][(ctxt, word)] = translation
+        translations_dict[cultral][(None, word)] = translation

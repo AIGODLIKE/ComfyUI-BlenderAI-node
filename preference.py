@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 
 from .utils import Icon, _T
-from .translation import ctxt
+from .translations import ctxt
 
 
 class AddonPreference(bpy.types.AddonPreferences):
