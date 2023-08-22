@@ -376,6 +376,8 @@ class PkgInstaller:
                 command.append("--trusted-host")
                 command.append(site.netloc)
                 main(command)
+                if not PkgInstaller.is_installed(pkg):
+                    return False
             except Exception:
                 return False
         return True
