@@ -22,14 +22,18 @@ from ..utils import rmtree as rt, logger, _T, PkgInstaller
 from ..timer import Timer
 from ..preference import get_pref
 
+
 def get_ip():
     return TaskManager.get_ip()
+
 
 def get_port():
     return TaskManager.get_port()
 
+
 def get_url():
     return TaskManager.get_url()
+
 
 WITH_PROXY = False
 if not WITH_PROXY:
@@ -134,7 +138,7 @@ class TaskManager:
 
     def is_launched() -> bool:
         return TaskManager.pid != -1
-    
+
     def get_ip():
         if TaskManager.is_launched():
             return TaskManager.launch_ip
@@ -146,12 +150,12 @@ class TaskManager:
             return TaskManager.launch_port
         port = get_pref().port
         return port
-    
+
     def get_url():
         if TaskManager.is_launched():
             return TaskManager.launch_url
         return f"http://{get_ip()}:{get_port()}"
-        
+
     def force_kill(pid):
         if not pid:
             return
@@ -255,6 +259,62 @@ class TaskManager:
         logger.warn(_T("ControlNet Init Finished."))
         logger.warn(_T("If controlnet still not worked, install manually by double clicked {}").format((controlnet / "install.bat").as_posix()))
 
+    def create_args(python:Path, model_path:Path):
+        pref = get_pref()
+        args = [python.resolve().as_posix()]
+        # arg = f"-s {str(model_path)}/main.py"
+        args.append("-s")
+        args.append(f"{model_path.joinpath('main.py').resolve().as_posix()}")
+        def parse_comfyUIStart():
+            config = []
+            try:
+                path = Path(sys.argv[sys.argv.index("comfyUIStart") + 1])
+                if not path.exists():
+                    logger.error(_T("Invalid Config File Path"))
+                    return []
+                config = json.loads(path.read_text(encoding="utf-8"))
+                if not isinstance(config, list):
+                    return []
+                config = " ".join(config).split(" ") # resplit
+                logger.info(f"{_T('Find Config')}: {config}")
+            except IndexError:
+                logger.error(_T("No Config File Found"))
+            except Exception as e:
+                logger.error(_T("Parse Config Error: {e}").format(e))
+            return config
+        # [ 'comfyUIStart', 'startConfigureFile.json']
+        if "comfyUIStart" in sys.argv:
+            args.extend(parse_comfyUIStart())
+        else:
+            args.append("--listen")
+            args.append(get_ip())
+            args.append("--port")
+            args.append(f"{get_port()}")
+            if pref.cuda.isdigit():
+                args.append("--cuda-device")
+                args.append(pref.cuda)
+            if pref.cpu_only:
+                # arg += " --cpu"
+                args.append("--cpu")
+            else:
+                # arg += f" {pref.mem_level}"
+                args.append(f"{pref.mem_level}")
+            yaml = ""
+            if pref.with_webui_model and Path(pref.with_webui_model).exists():
+                wmp = Path(pref.with_webui_model).as_posix()
+                wmpp = Path(pref.with_webui_model).parent.as_posix()
+                yaml += a111_yaml.format(wmp=wmp, wmpp=wmpp)
+            if pref.with_comfyui_model and Path(pref.with_comfyui_model).exists():
+                cmp = Path(pref.with_comfyui_model).as_posix()  # 指定到 models
+                cmpp = Path(pref.with_comfyui_model).parent.as_posix()
+                yaml += custom_comfyui.format(cmp=cmp, cmpp=cmpp)
+            if yaml:
+                extra_model_paths = Path(__file__).parent / "config.yaml"
+                extra_model_paths.write_text(yaml)
+                args.append("--extra-model-paths-config")
+                args.append(extra_model_paths.as_posix())
+        return args
+
     def run_server_ex():
         pidpath = Path(__file__).parent / "pid"
         if pidpath.exists():
@@ -290,7 +350,7 @@ class TaskManager:
                 dst = Path(model_path) / "custom_nodes" / file.name
                 if dst.exists():
                     rt(dst)
-                shutil.copytree(file, Path(model_path) / "custom_nodes" / file.name,dirs_exist_ok=True)
+                shutil.copytree(file, Path(model_path) / "custom_nodes" / file.name, dirs_exist_ok=True)
                 continue
             if not file.suffix == ".py":
                 continue
@@ -301,46 +361,14 @@ class TaskManager:
                 (Path(model_path) / "custom_nodes" / file.name).write_text(t, encoding="utf-8")
                 continue
             shutil.copyfile(file, Path(model_path) / "custom_nodes" / file.name)
-        args = [python.as_posix()]
-        # arg = f"-s {str(model_path)}/main.py"
-        args.append("-s")
-        args.append(f"{str(model_path)}/main.py")
-
-        args.append("--listen")
-        args.append(get_ip())
-        args.append("--port")
-        args.append(f"{get_port()}")
-        if pref.cuda.isdigit():
-            args.append("--cuda-device")
-            args.append(pref.cuda)
-        if pref.cpu_only:
-            # arg += " --cpu"
-            args.append("--cpu")
-        else:
-            # arg += f" {pref.mem_level}"
-            args.append(f"{pref.mem_level}")
-        yaml = ""
-        if pref.with_webui_model and Path(pref.with_webui_model).exists():
-            wmp = Path(pref.with_webui_model).as_posix()
-            wmpp = Path(pref.with_webui_model).parent.as_posix()
-            yaml += a111_yaml.format(wmp=wmp, wmpp=wmpp)
-        if pref.with_comfyui_model and Path(pref.with_comfyui_model).exists():
-            cmp = Path(pref.with_comfyui_model).as_posix()  # 指定到 models
-            cmpp = Path(pref.with_comfyui_model).parent.as_posix()
-            yaml += custom_comfyui.format(cmp=cmp, cmpp=cmpp)
-        if yaml:
-            extra_model_paths = Path(__file__).parent / "config.yaml"
-            extra_model_paths.write_text(yaml)
-            args.append("--extra-model-paths-config")
-            args.append(extra_model_paths.as_posix())
-            
+        args = TaskManager.create_args(python, Path(model_path))
         if get_ip() == "0.0.0.0":
             TaskManager.launch_ip = "127.0.0.1"
         else:
             TaskManager.launch_ip = get_ip()
         TaskManager.launch_port = get_port()
         TaskManager.launch_url = f"http://{TaskManager.launch_ip}:{TaskManager.launch_port}"
-        
+
         # cmd = " ".join([str(python), arg])
         # 加了 stderr后 无法获取 进度?
         # logger.debug(" ".join(args))
@@ -354,7 +382,7 @@ class TaskManager:
         pidpath.write_text(str(p.pid))
         TaskManager.process_exited = False
         Thread(target=TaskManager.stdout_listen, daemon=True).start()
-            
+
         while True:
             import requests
             try:
