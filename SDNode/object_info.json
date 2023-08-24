@@ -101,7 +101,16 @@
     "input": {
       "required": {
         "ckpt_name": [
-          []
+          [
+            "AIGODLIKE华丽_4000.ckpt",
+            "GuoFeng3.2_f16.safetensors",
+            "Shyaku_Tonades.ckpt",
+            "Shyaku_qofo.ckpt",
+            "wd-1-5-beta2-aesthetic-unclip-h-fp16.safetensors",
+            "wd-1-5-beta2-aesthetic-unclip-l-fp16.safetensors",
+            "wd-1-5-beta2-unclip-h-fp16.safetensors",
+            "苍玄.safetensors"
+          ]
         ]
       }
     },
@@ -1911,7 +1920,16 @@
     "input": {
       "required": {
         "ckpt_name": [
-          []
+          [
+            "AIGODLIKE华丽_4000.ckpt",
+            "GuoFeng3.2_f16.safetensors",
+            "Shyaku_Tonades.ckpt",
+            "Shyaku_qofo.ckpt",
+            "wd-1-5-beta2-aesthetic-unclip-h-fp16.safetensors",
+            "wd-1-5-beta2-aesthetic-unclip-l-fp16.safetensors",
+            "wd-1-5-beta2-unclip-h-fp16.safetensors",
+            "苍玄.safetensors"
+          ]
         ]
       }
     },
@@ -2052,7 +2070,16 @@
           ]
         ],
         "ckpt_name": [
-          []
+          [
+            "AIGODLIKE华丽_4000.ckpt",
+            "GuoFeng3.2_f16.safetensors",
+            "Shyaku_Tonades.ckpt",
+            "Shyaku_qofo.ckpt",
+            "wd-1-5-beta2-aesthetic-unclip-h-fp16.safetensors",
+            "wd-1-5-beta2-aesthetic-unclip-l-fp16.safetensors",
+            "wd-1-5-beta2-unclip-h-fp16.safetensors",
+            "苍玄.safetensors"
+          ]
         ]
       }
     },
@@ -3366,7 +3393,7 @@
         "output_dir": [
           "STRING",
           {
-            "default": "C:\\Users\\KC\\Desktop"
+            "default": "/Users/karrycharon/Desktop"
           }
         ]
       },
@@ -3835,7 +3862,40 @@
     "input": {
       "required": {
         "ckpt_name": [
-          []
+          [
+            {
+              "content": "AIGODLIKE华丽_4000.ckpt",
+              "image": null
+            },
+            {
+              "content": "GuoFeng3.2_f16.safetensors",
+              "image": "checkpoints/GuoFeng3.2_f16.jpg"
+            },
+            {
+              "content": "Shyaku_qofo.ckpt",
+              "image": null
+            },
+            {
+              "content": "Shyaku_Tonades.ckpt",
+              "image": null
+            },
+            {
+              "content": "wd-1-5-beta2-aesthetic-unclip-h-fp16.safetensors",
+              "image": null
+            },
+            {
+              "content": "wd-1-5-beta2-aesthetic-unclip-l-fp16.safetensors",
+              "image": null
+            },
+            {
+              "content": "wd-1-5-beta2-unclip-h-fp16.safetensors",
+              "image": null
+            },
+            {
+              "content": "苍玄.safetensors",
+              "image": null
+            }
+          ]
         ]
       }
     },
@@ -4243,21 +4303,21 @@
         "latent_suffix": [
           "STRING",
           {
-            "default": "68082035_cache",
+            "default": "78883085_cache",
             "multiline": false
           }
         ],
         "image_suffix": [
           "STRING",
           {
-            "default": "71392409_cache",
+            "default": "26974248_cache",
             "multiline": false
           }
         ],
         "conditioning_suffix": [
           "STRING",
           {
-            "default": "95786785_cache",
+            "default": "54038291_cache",
             "multiline": false
           }
         ]

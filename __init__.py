@@ -17,12 +17,13 @@ from .translations import translations_dict
 from .utils import Icon
 from .timer import timer_reg, timer_unreg
 from .preference import AddonPreference
-from .ops import Ops, Ops_Mask
-from .ui import Panel
+from .ops import Ops, Ops_Mask, Load_History
+from .ui import Panel, HISTORY_UI_UIList, HistoryItem
+from .SDNode.history import History
 from .prop import Prop
 
 
-clss = [Panel, Ops, Prop, Ops_Mask, EnableMLT]
+clss = [Panel, Ops, Prop, HISTORY_UI_UIList, HistoryItem, Ops_Mask, Load_History, EnableMLT]
 reg, unreg = bpy.utils.register_classes_factory(clss)
 
 def dump_info():
@@ -45,7 +46,10 @@ def register():
     TaskManager.run_server(fake=True)
     timer_reg()
     bpy.types.Scene.sdn = bpy.props.PointerProperty(type=Prop)
-
+    bpy.types.Scene.sdn_history_item = bpy.props.CollectionProperty(type=HistoryItem)
+    bpy.types.Scene.sdn_history_item_index = bpy.props.IntProperty(default=0)
+    History.register_timer()
+    
 def unregister():
     bpy.utils.unregister_class(AddonPreference)
     if "-b" in sys.argv or "--background" in sys.argv:
@@ -55,6 +59,8 @@ def unregister():
     rtnode_unreg()
     timer_unreg()
     del bpy.types.Scene.sdn
+    del bpy.types.Scene.sdn_history_item
+    del bpy.types.Scene.sdn_history_item_index
     modules_update()
 
 def modules_update():

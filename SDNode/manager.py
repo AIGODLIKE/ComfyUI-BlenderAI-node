@@ -21,6 +21,7 @@ from queue import Queue
 from ..utils import rmtree as rt, logger, _T, PkgInstaller
 from ..timer import Timer
 from ..preference import get_pref
+from ..SDNode.history import History
 
 
 def get_ip():
@@ -261,7 +262,7 @@ class TaskManager:
 
     def create_args(python:Path, model_path:Path):
         pref = get_pref()
-        args = [python.resolve().as_posix()]
+        args = [python.as_posix()]
         # arg = f"-s {str(model_path)}/main.py"
         args.append("-s")
         args.append(f"{model_path.joinpath('main.py').resolve().as_posix()}")
@@ -532,6 +533,7 @@ class TaskManager:
                            }}
                 data = json.dumps(content).encode()
                 req = request.Request(f"{TaskManager.get_url()}/{api}", data=data)
+                History.put_history(task.get("workflow"))
                 try:
                     request.urlopen(req)
                 except request.HTTPError:

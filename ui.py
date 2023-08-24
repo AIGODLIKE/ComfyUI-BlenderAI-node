@@ -1,6 +1,6 @@
 import bpy
 import platform
-from .ops import Ops
+from .ops import Ops, Load_History
 from .translations import ctxt
 from .SDNode import TaskManager
 from .SDNode.tree import TREE_TYPE
@@ -81,6 +81,10 @@ class Panel(bpy.types.Panel):
         row.operator(Ops.bl_idname, text="Save", text_ctxt=ctxt).action = "SaveGroup"
         row.operator(Ops.bl_idname, text="Delete", text_ctxt=ctxt).action = "DelGroup"
         col.operator(Ops.bl_idname, text="Append Node Group", text_ctxt=ctxt).action = "LoadGroup"
+        sce = bpy.context.scene
+        if len(sce.sdn_history_item) == 0:
+            return
+        layout.template_list("HISTORY_UI_UIList", "", sce, "sdn_history_item", sce, "sdn_history_item_index")
 
     def show_progress(self, layout: bpy.types.UILayout):
         layout = layout.box()
@@ -115,3 +119,17 @@ class Panel(bpy.types.Panel):
             row.alignment = "CENTER"
             row.alert = True
             row.label(text="Adjust node tree and try again", text_ctxt=ctxt)
+
+class HistoryItem(bpy.types.PropertyGroup):
+    name: bpy.props.StringProperty(default="")
+
+class HISTORY_UI_UIList(bpy.types.UIList):
+
+    def draw_item(self,
+                  context: bpy.types.Context,
+                  layout: bpy.types.UILayout,
+                  data, item, icon, active_data, active_property, index, flt_flag):
+        row = layout.row(align=True)
+        row.label(text="  " + item.name)
+        row.operator(Load_History.bl_idname, text="", icon="TIME").name = item.name
+        

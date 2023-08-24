@@ -1,6 +1,7 @@
 import bpy
 import json
 from pathlib import Path
+from bpy.types import Context
 from mathutils import Vector
 from functools import partial
 from .translations import ctxt
@@ -8,6 +9,7 @@ from .prop import Prop
 from .utils import _T, logger, PngParse
 from .timer import Timer
 from .SDNode import TaskManager
+from .SDNode.history import History
 from .SDNode.tree import InvalidNodeType
 
 
@@ -415,4 +417,25 @@ class Ops_Mask(bpy.types.Operator):
                     mask.remove(None)
                 mask.append(gpo)
                 cam["SD_Mask"] = mask
+        return {"FINISHED"}
+
+class Load_History(bpy.types.Operator):
+    bl_idname = "sdn.load_history"
+    bl_label = "加载历史记录"
+    bl_description = "Load History"
+    name: bpy.props.StringProperty()
+
+    @classmethod
+    def poll(cls, context: Context):
+        return bpy.context.space_data.edit_tree
+    
+    def execute(self, context):
+        tree = bpy.context.space_data.edit_tree
+        data = History.get_history_by_name(self.name)
+        if not data:
+            self.report({"ERROR"}, _T("History Not Found: ") + self.name)
+            return {"FINISHED"}
+        if "workflow" in data:
+            data = data["workflow"]
+        tree.load_json(data)
         return {"FINISHED"}
