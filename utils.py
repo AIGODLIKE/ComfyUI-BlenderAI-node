@@ -6,7 +6,7 @@ from threading import Thread
 from functools import lru_cache
 from urllib.parse import urlparse
 from .kclogger import logger
-from .translations import lang_text
+from .translations import LANG_TEXT
 from .timer import Timer
 translation = {}
 
@@ -41,7 +41,7 @@ def _T(word):
     def f(word):
         culture[word] = pgettext(word)
     Timer.put((f, word))
-    return lang_text.get(locale, {}).get(word, word)
+    return LANG_TEXT.get(locale, {}).get(word, word)
 
 
 def update_screen():

@@ -610,6 +610,7 @@ def reg_node_reroute():
     bpy.types.NodeReroute.set_stat = NodeBase.set_stat
     bpy.types.NodeReroute.switch_socket = NodeBase.switch_socket
     bpy.types.NodeReroute.get_from_link = NodeBase.get_from_link
+    bpy.types.NodeReroute.get_ctxt = NodeBase.get_ctxt
 
     bpy.types.NodeReroute.class_type = "Reroute"
     bpy.types.NodeReroute.__metadata__ = {}

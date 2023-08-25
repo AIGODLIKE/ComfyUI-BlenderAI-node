@@ -1,37 +1,84 @@
-"""
-translations_tuple = (
-    (
-        ("*", ""),  # (msgctxt, msgid)
-        ((), ()),   # (sources, gen_comments)
-        ("fr_FR", "Project-Id-Version: ", (False, ("D.", "D.", "D.", "D."))),  # (lang, translation, (is_fuzzy, comments))
-    ),
-    (
-        ("Operator", "Render: Copy Settings"),
-        (("bpy.types.SCENE_OT_render_copy_settings",), ()),
-        ("fr_FR", "Rendu : copier réglages", (False, ())),
-    ),
-    (
-        ("*", "Copy render settings from current scene to others"),
-        (("bpy.types.SCENE_OT_render_copy_settings",), ()),
-        ("fr_FR", "Some translation text", (False, ())),
-    ),
-)
-
-translations_dict = {}
-for msg in translations_tuple:
-    key = msg[0]  # (msgctxt, msgid)
-    for lang, trans, (is_fuzzy, comments) in msg[2:]:  # (lang, translation, (is_fuzzy, comments))
-        if trans and not is_fuzzy:
-            translations_dict.setdefault(lang, {})[key] = trans
-td = {'fr_FR': {
-    ('*', ''): 'Project-Id-Version: ',
-    ('Operator', 'Render: Copy Settings'): 'Rendu : copier réglages',
-    ('*', 'Copy render settings from current scene to others'): 'Some translation text'
-}
-}
-"""
+import json
+from pathlib import Path
 
 ctxt = "SDN"
+
+REG_CTXT = {ctxt, }
+
+PROP_NAME_HEAD = "sdn_"
+INTERNAL_NAMES = {
+    "bl_description",
+    "bl_height_default",
+    "bl_height_max",
+    "bl_height_min",
+    "bl_icon",
+    "bl_idname",
+    "bl_label",
+    "bl_rna",
+    "bl_static_type",
+    "bl_width_default",
+    "bl_width_max",
+    "bl_width_min",
+    "calc_slot_index",
+    "class_type",
+    "color",
+    "dimensions",
+    "draw_buttons",
+    "draw_buttons_ext",
+    "dump",
+    "get_from_link",
+    "get_meta",
+    "height",
+    "hide",
+    "id",
+    "inp_types",
+    "input_template",
+    "inputs",
+    "internal_links",
+    "is_base_type",
+    "is_registered_node_type",
+    "label",
+    "load",
+    "location",
+    "mute",
+    "name",
+    "out_types",
+    "output_template",
+    "outputs",
+    "parent",
+    "poll",
+    "poll_instance",
+    "pool",
+    "query_stat",
+    "rna_type",
+    "select",
+    "serialize",
+    "set_stat",
+    "show_options",
+    "show_preview",
+    "show_texture",
+    "socket_value_update",
+    "switch_socket",
+    "type",
+    "unique_id",
+    "update",
+    "use_custom_color",
+    "width",
+    "width_hidden"
+}
+
+
+def get_reg_name(inp_name):
+    if inp_name in INTERNAL_NAMES:
+        return PROP_NAME_HEAD + inp_name
+    return inp_name
+
+
+def get_ori_name(inp_name):
+    if inp_name.startswith(PROP_NAME_HEAD):
+        return inp_name.replace(PROP_NAME_HEAD, "")
+    return inp_name
+
 
 other = {
     # SDNode/manager.py
@@ -168,7 +215,7 @@ other = {
     "NodeFrame": "框"
 }
 
-lang_text = {
+LANG_TEXT = {
     "zh_CN": {
         **other,
         # 分类
@@ -430,22 +477,26 @@ lang_text = {
     }
 }
 
+def search_recursive(p: Path):
+    if p.is_dir():
+        for i in p.iterdir():
+            yield from search_recursive(i)
+    else:
+        yield p
 
-def read_local(local):
-    import json
-    from pathlib import Path
-    p = Path(__file__).parent.joinpath(local)
-    if not p.exists():
-        p = Path(__file__).parent.joinpath(local.replace("_", "-"))
-    if not p.exists():
-        return {}
+def get_json_data(p: Path) -> dict[str,dict[str, dict]]:
+    json_files = [i for i in p.iterdir() if i.suffix == ".json"]
+    json_data = {}
+    for file in json_files:
+        for coding in ("utf-8", "gbk"):
+            try:
+                json_data.update(json.loads(file.read_text(encoding=coding)))
+                break
+            except UnicodeDecodeError:
+                pass
+    return json_data
 
-    def search_recursive(p: Path):
-        if p.is_dir():
-            for i in p.iterdir():
-                yield from search_recursive(i)
-        else:
-            yield p
+def get_json_data_recursive(p: Path) -> dict[str,dict[str, dict]]:
     json_files = [i for i in search_recursive(p) if i.suffix == ".json"]
     json_data = {}
     for file in json_files:
@@ -455,6 +506,15 @@ def read_local(local):
                 break
             except UnicodeDecodeError:
                 pass
+    return json_data
+
+def read_locale(locale):
+    p = Path(__file__).parent.joinpath(locale)
+    if not p.exists():
+        p = Path(__file__).parent.joinpath(locale.replace("_", "-"))
+    if not p.exists() or p.is_file():
+        return {}
+    json_data = get_json_data(p)
     data = {}
     for key, value in json_data.items():
         if isinstance(value, str):
@@ -469,9 +529,54 @@ def read_local(local):
                     data.update(sv)
     return data
 
+def reg_other_translations(translations_dict:dict, locale:str):
+    for word, translation in LANG_TEXT[locale].items():
+        translations_dict[locale][(ctxt, word)] = translation
+        translations_dict[locale][(None, word)] = translation
+        
+def reg_node_ctxt(translations_dict:dict, locale:str):
+    # 处理节点注册, 每个节点提供一个ctxt
+    # 1. 查找locale
+    p = Path(__file__).parent.joinpath(locale, "Nodes")
+    if not p.exists():
+        p = Path(__file__).parent.joinpath(locale.replace("_", "-"), "Nodes")
+    if not p.exists():
+        return {}
+    
+    json_data = get_json_data_recursive(p)
 
-for locale in lang_text:
-    lang_text[locale].update(read_local(locale))
+    if locale not in translations_dict:
+        translations_dict[locale] = {}
+    td = translations_dict[locale]
+    # 2. 注册所有Node
+    for node_name, node_translation in json_data.items():
+        ctxt = node_name
+        REG_CTXT.add(ctxt)
+        td[(ctxt, node_name)] = node_translation.pop("title", node_name)
+        for part in node_translation.values():
+            for wn, wv in part.items():
+                wn = get_reg_name(wn)
+                td[(ctxt, wn)] = wv
+                td[(None, wn)] = wv
+                # if node_name == "EmptyLatentImage": print(f"{node_name} reg: {wn} -> {wv}")
+
+
+for locale in LANG_TEXT:
+    LANG_TEXT[locale].update(read_locale(locale))
+
+translations_dict = {}
+for locale in LANG_TEXT:
+    translations_dict[locale] = {}
+    reg_node_ctxt(translations_dict, locale)
+    reg_other_translations(translations_dict, locale)
+    
+def get_ctxt(msgctxt):
+    if msgctxt in REG_CTXT:
+        return msgctxt
+    return ctxt
+
+
+
 
 
 cat = {'default_real': None,
@@ -522,10 +627,3 @@ cat = {'default_real': None,
        'id_windowmanager': 'WindowManager',
        'editor_view3d': 'View3D'
        }
-
-translations_dict = {}
-for cultral, translations in lang_text.items():
-    translations_dict[cultral] = {}
-    for word, translation in translations.items():
-        translations_dict[cultral][(ctxt, word)] = translation
-        translations_dict[cultral][(None, word)] = translation

@@ -21,7 +21,7 @@ from ..utils import logger, update_screen, Icon, _T
 from ..datas import ENUM_ITEMS_CACHE
 from ..preference import get_pref
 from ..timer import Timer
-from ..translations import ctxt
+from ..translations import ctxt, get_reg_name, get_ori_name
 from .manager import get_url, Task, WITH_PROXY
 
 NODES_POLL = {}
@@ -36,68 +36,8 @@ SOCKET_HASH_MAP = {  # {HASH: METATYPE}
     "STRING": "STRING",
     "BOOLEAN": "BOOLEAN"
 }
-INTERNAL_NAMES = {
-    "bl_description",
-    "bl_height_default",
-    "bl_height_max",
-    "bl_height_min",
-    "bl_icon",
-    "bl_idname",
-    "bl_label",
-    "bl_rna",
-    "bl_static_type",
-    "bl_width_default",
-    "bl_width_max",
-    "bl_width_min",
-    "calc_slot_index",
-    "class_type",
-    "color",
-    "dimensions",
-    "draw_buttons",
-    "draw_buttons_ext",
-    "dump",
-    "get_from_link",
-    "get_meta",
-    "height",
-    "hide",
-    "id",
-    "inp_types",
-    "input_template",
-    "inputs",
-    "internal_links",
-    "is_base_type",
-    "is_registered_node_type",
-    "label",
-    "load",
-    "location",
-    "mute",
-    "name",
-    "out_types",
-    "output_template",
-    "outputs",
-    "parent",
-    "poll",
-    "poll_instance",
-    "pool",
-    "query_stat",
-    "rna_type",
-    "select",
-    "serialize",
-    "set_stat",
-    "show_options",
-    "show_preview",
-    "show_texture",
-    "socket_value_update",
-    "switch_socket",
-    "type",
-    "unique_id",
-    "update",
-    "use_custom_color",
-    "width",
-    "width_hidden"
-}
 
-PROP_NAME_HEAD = "sdn_"
+
 name2path = {
     "CheckpointLoader": {"ckpt_name": "checkpoints"},
     "CheckpointLoaderSimple": {"ckpt_name": "checkpoints"},
@@ -178,18 +118,6 @@ def get_icon_path(nname):
     return PREVICONPATH.get(nname, {})
 
 
-def get_reg_name(inp_name):
-    if inp_name in INTERNAL_NAMES:
-        return PROP_NAME_HEAD + inp_name
-    return inp_name
-
-
-def get_ori_name(inp_name):
-    if inp_name.startswith(PROP_NAME_HEAD):
-        return inp_name.replace(PROP_NAME_HEAD, "")
-    return inp_name
-
-
 def get_fixed_seed():
     return int(random.randrange(4294967294))
 
@@ -202,6 +130,10 @@ class NodeBase(bpy.types.Node):
     builtin__stat__: bpy.props.StringProperty(subtype="BYTE_STRING")  # ori name: True/False
     pool = set()
 
+    def get_ctxt(self) -> str:
+        from ..translations.translation import get_ctxt
+        return get_ctxt(self.class_type)
+        
     def query_stat(self, name):
         if not self.builtin__stat__:
             return None
@@ -320,8 +252,11 @@ class NodeBase(bpy.types.Node):
                     continue
                 if fs.bl_idname == ts.bl_idname:
                     continue
-                if l.from_node.bl_idname == "NodeReroute":
-                    continue
+                # from端为转接点
+                # if not lfrom and l.from_node.bl_idname == "NodeReroute":
+                #     continue
+                # if fs.bl_idname == "NodeReroute":
+                #     continue
                 if not hasattr(bpy.context.space_data, "edit_tree"):
                     continue
 
@@ -1187,7 +1122,7 @@ def parse_node():
                     continue
                 if self.is_base_type(prop) and get_ori_name(prop) in self.inp_types:
                     l = Ops_Swith_Socket.draw_prop(l, self, prop)
-                l.prop(self, prop, text=prop, text_ctxt=ctxt)
+                l.prop(self, prop, text=prop, text_ctxt=self.get_ctxt())
 
         def find_icon(nname, inp_name, item):
             prev_path_list = get_icon_path(nname).get(inp_name)
@@ -1323,15 +1258,15 @@ def parse_node():
         def draw(self, context, layout, node: NodeBase, text):
             prop = get_reg_name(self.name)
             if self.is_output or not hasattr(node, prop):
-                layout.label(text=self.name, text_ctxt=ctxt)
+                layout.label(text=self.name, text_ctxt=node.get_ctxt())
                 return
             row = layout.row(align=True)
-            row.label(text=prop, text_ctxt=ctxt)
+            row.label(text=prop, text_ctxt=node.get_ctxt())
             op = row.operator(Ops_Swith_Socket.bl_idname, text="", icon="UNLINKED")
             op.node_name = node.name
             op.socket_name = self.name
             op.action = "ToProp"
-            row.prop(node, prop, text="", text_ctxt=ctxt)
+            row.prop(node, prop, text="", text_ctxt=node.get_ctxt())
         color = bpy.props.FloatVectorProperty(size=4, default=(rand()**0.5, rand()**0.5, rand()**0.5, 1))
         fields = {"draw": draw, "bl_label": stype, "__annotations__": {"color": color,
                                                                        "index": bpy.props.IntProperty(default=-1),
@@ -1769,7 +1704,7 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
         width = int(self.width) // 7
         lines = textwrap.wrap(text=str(getattr(self, prop)), width=width)
         for line in lines:
-            layout.label(text=line, text_ctxt=ctxt)
+            layout.label(text=line, text_ctxt=self.get_ctxt())
         row = draw_prop_with_link(layout, self, prop)
         row.operator("sdn.enable_mlt", text="", icon="TEXT")
         return True
@@ -1805,24 +1740,24 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
         return True
     if hasattr(self, "seed"):
         if prop == "seed":
-            row = draw_prop_with_link(layout, self, prop, text_ctxt=ctxt)
-            row.prop(self, "exe_rand", text="", icon="FILE_REFRESH", text_ctxt=ctxt)
-            row.prop(bpy.context.scene.sdn, "rand_all_seed", text="", icon="HAND", text_ctxt=ctxt)
-            row.prop(self, "sync_rand", text="", icon="MOD_WAVE", text_ctxt=ctxt)
+            row = draw_prop_with_link(layout, self, prop, text_ctxt=self.get_ctxt())
+            row.prop(self, "exe_rand", text="", icon="FILE_REFRESH", text_ctxt=self.get_ctxt())
+            row.prop(bpy.context.scene.sdn, "rand_all_seed", text="", icon="HAND", text_ctxt=self.get_ctxt())
+            row.prop(self, "sync_rand", text="", icon="MOD_WAVE", text_ctxt=self.get_ctxt())
             return True
         if prop in {"exe_rand", "sync_rand"}:
             return True
     elif self.class_type == "KSamplerAdvanced":
         if prop in {"add_noise", "return_with_leftover_noise"}:
-            def dpre(layout): layout.label(text=prop, text_ctxt=ctxt)
-            draw_prop_with_link(layout, self, prop, expand=True, pre=dpre, text_ctxt=ctxt)
+            def dpre(layout): layout.label(text=prop, text_ctxt=self.get_ctxt())
+            draw_prop_with_link(layout, self, prop, expand=True, pre=dpre, text_ctxt=self.get_ctxt())
             return True
         if prop == "noise_seed":
             def dpost(layout):
-                layout.prop(self, "exe_rand", text="", icon="FILE_REFRESH", text_ctxt=ctxt)
-                layout.prop(bpy.context.scene.sdn, "rand_all_seed", text="", icon="HAND", text_ctxt=ctxt)
-                layout.prop(self, "sync_rand", text="", icon="MOD_WAVE", text_ctxt=ctxt)
-            draw_prop_with_link(layout, self, prop, post=dpost, text_ctxt=ctxt)
+                layout.prop(self, "exe_rand", text="", icon="FILE_REFRESH", text_ctxt=self.get_ctxt())
+                layout.prop(bpy.context.scene.sdn, "rand_all_seed", text="", icon="HAND", text_ctxt=self.get_ctxt())
+                layout.prop(self, "sync_rand", text="", icon="MOD_WAVE", text_ctxt=self.get_ctxt())
+            draw_prop_with_link(layout, self, prop, post=dpost, text_ctxt=self.get_ctxt())
             return True
         if prop in {"exe_rand", "sync_rand"}:
             return True
@@ -1830,15 +1765,15 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
     elif self.class_type == "输入图像":
         if prop == "mode":
             if self.mode == "序列图":
-                # draw_prop_with_link(layout, self, "frames_dir", text="", text_ctxt=ctxt)
+                # draw_prop_with_link(layout, self, "frames_dir", text="", text_ctxt=self.get_ctxt())
                 layout.prop(self, "frames_dir", text="")
             else:
-                # draw_prop_with_link(layout, self, "image", text="", text_ctxt=ctxt)
-                layout.prop(self, "image", text="", text_ctxt=ctxt)
-            # draw_prop_with_link(layout.row(), self, prop, expand=True, text_ctxt=ctxt)
-            layout.row().prop(self, prop, expand=True, text_ctxt=ctxt)
+                # draw_prop_with_link(layout, self, "image", text="", text_ctxt=self.get_ctxt())
+                layout.prop(self, "image", text="", text_ctxt=self.get_ctxt())
+            # draw_prop_with_link(layout.row(), self, prop, expand=True, text_ctxt=self.get_ctxt())
+            layout.row().prop(self, prop, expand=True, text_ctxt=self.get_ctxt())
             if self.mode == "序列图":
-                layout.label(text="Frames Directory", text_ctxt=ctxt)
+                layout.label(text="Frames Directory", text_ctxt=self.get_ctxt())
             if self.mode == "渲染":
                 layout.label(text="Set Image Path of Render Result(.png)", icon="ERROR")
                 if bpy.context.scene.use_nodes:
@@ -1883,10 +1818,10 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
             return True
     elif self.class_type == "存储":
         if prop == "mode":
-            layout.prop(self, prop, expand=True, text_ctxt=ctxt)
+            layout.prop(self, prop, expand=True, text_ctxt=self.get_ctxt())
             if self.mode == "Save":
-                layout.prop(self, "filename_prefix", text_ctxt=ctxt)
-                layout.prop(self, "output_dir", text_ctxt=ctxt)
+                layout.prop(self, "filename_prefix", text_ctxt=self.get_ctxt())
+                layout.prop(self, "output_dir", text_ctxt=self.get_ctxt())
                 return True
             elif self.mode == "Import":
                 layout.prop(self, "obj", text="")
@@ -1918,10 +1853,10 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
         return True
     elif self.class_type == "Mask":
         if prop == "mode":
-            layout.prop(self, prop, expand=True, text_ctxt=ctxt)
+            layout.prop(self, prop, expand=True, text_ctxt=self.get_ctxt())
             if self.mode == "Grease Pencil":
                 row = layout.row(align=True)
-                row.prop(self, "gp", text="", text_ctxt=ctxt)
+                row.prop(self, "gp", text="", text_ctxt=self.get_ctxt())
                 icon = "RESTRICT_RENDER_ON" if self.disable_render else "RESTRICT_RENDER_OFF"
                 row.prop(self, "disable_render", text="", icon=icon)
                 icon = "HIDE_ON" if bpy.context.scene.sdn.disable_render_all else "HIDE_OFF"
@@ -1929,14 +1864,14 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
                 row.operator("sdn.mask", text="", icon="ADD").node_name = self.name
             if self.mode == "Object":
                 row = layout.row(align=True)
-                row.label(text="  Select mask Objects", text_ctxt=ctxt)
+                row.label(text="  Select mask Objects", text_ctxt=self.get_ctxt())
                 icon = "RESTRICT_RENDER_ON" if self.disable_render else "RESTRICT_RENDER_OFF"
                 row.prop(self, "disable_render", text="", icon=icon)
                 icon = "HIDE_ON" if bpy.context.scene.sdn.disable_render_all else "HIDE_OFF"
                 row.prop(bpy.context.scene.sdn, "disable_render_all", text="", icon=icon)
             if self.mode == "Collection":
                 row = layout.row(align=True)
-                row.label(text="  Select mask Collections", text_ctxt=ctxt)
+                row.label(text="  Select mask Collections", text_ctxt=self.get_ctxt())
                 icon = "RESTRICT_RENDER_ON" if self.disable_render else "RESTRICT_RENDER_OFF"
                 row.prop(self, "disable_render", text="", icon=icon)
                 icon = "HIDE_ON" if bpy.context.scene.sdn.disable_render_all else "HIDE_OFF"
