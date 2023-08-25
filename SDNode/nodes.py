@@ -947,9 +947,12 @@ class GetSelCol(bpy.types.Operator):
 def parse_node():
     logger.warn(_T("Parsing Node Start"))
     path = Path(__file__).parent / "object_info.json"
+    internal_path = Path(__file__).parent / "object_info_internal.json"
     object_info = {}
+    if internal_path.exists():
+        object_info.update(json.load(internal_path.open("r")))
     if path.exists():
-        object_info = json.load(path.open("r"))
+        object_info.update(json.load(path.open("r")))
     try:
         # linux may not include request
         try:
