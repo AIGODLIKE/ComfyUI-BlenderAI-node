@@ -553,6 +553,7 @@ def reg_node_ctxt(translations_dict:dict, locale:str):
         ctxt = node_name
         REG_CTXT.add(ctxt)
         td[(ctxt, node_name)] = node_translation.pop("title", node_name)
+        td[(None, node_name)] = td[(ctxt, node_name)]
         for part in node_translation.values():
             for wn, wv in part.items():
                 wn = get_reg_name(wn)

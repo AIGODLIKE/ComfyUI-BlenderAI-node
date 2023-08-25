@@ -220,7 +220,14 @@ class NodeBase(bpy.types.Node):
         return self.id
 
     def draw_label(self):
-        return self.name
+        ntype = _T(self.bl_idname)
+        if self.bl_idname in self.name:
+            return self.name.replace(self.bl_idname, ntype)
+        if ntype in self.name:
+            return self.name
+        if self.name != ntype:
+            return f"{self.name}[{ntype}]"
+        return ntype
 
     def update(self):
         if not self.is_registered_node_type():
@@ -1743,7 +1750,7 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
         return True
     if hasattr(self, "seed"):
         if prop == "seed":
-            row = draw_prop_with_link(layout, self, prop, text_ctxt=self.get_ctxt())
+            row = draw_prop_with_link(layout, self, prop, text=prop, text_ctxt=self.get_ctxt())
             row.prop(self, "exe_rand", text="", icon="FILE_REFRESH", text_ctxt=self.get_ctxt())
             row.prop(bpy.context.scene.sdn, "rand_all_seed", text="", icon="HAND", text_ctxt=self.get_ctxt())
             row.prop(self, "sync_rand", text="", icon="MOD_WAVE", text_ctxt=self.get_ctxt())
