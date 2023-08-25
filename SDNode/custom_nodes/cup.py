@@ -10,6 +10,7 @@ import atexit
 import server
 import gc
 import execution
+import folder_paths
 from aiohttp import web
 from pathlib import Path
 from PIL import Image
@@ -87,6 +88,10 @@ async def clear_cache(request):
         ob.outputs_ui.clear()
         ob.old_prompt.clear()
     return web.Response(status=200)
+
+@server.PromptServer.instance.routes.post("/cup/get_temp_directory")
+async def get_temp_directory(request):
+    return web.Response(status=200, body=folder_paths.get_temp_directory())
 
 
 class ToBlender:

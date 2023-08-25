@@ -54,7 +54,7 @@ other = {
     "Input Image Error": "输入图像错误",
     "Params Not Changed": "参数未变更",
     "Node Tree Not Executed, May Caused by:": "节点树未被执行, 可能原因:",
-    "Proc Resutl": "处理结果",
+    "Proc Result": "处理结果",
     "Ran Node": "运行节点",
     "ControlNet Init....": "ControlNet 初始化...",
     "ControlNet Init Finished.": "ControlNet 初始化完毕.",

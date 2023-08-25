@@ -260,12 +260,13 @@ class TaskManager:
         logger.warn(_T("ControlNet Init Finished."))
         logger.warn(_T("If controlnet still not worked, install manually by double clicked {}").format((controlnet / "install.bat").as_posix()))
 
-    def create_args(python:Path, model_path:Path):
+    def create_args(python: Path, model_path: Path):
         pref = get_pref()
         args = [python.as_posix()]
         # arg = f"-s {str(model_path)}/main.py"
         args.append("-s")
         args.append(f"{model_path.joinpath('main.py').resolve().as_posix()}")
+
         def parse_comfyUIStart():
             config = []
             try:
@@ -276,7 +277,7 @@ class TaskManager:
                 config = json.loads(path.read_text(encoding="utf-8"))
                 if not isinstance(config, list):
                     return []
-                config = " ".join(config).split(" ") # resplit
+                config = " ".join(config).split(" ")  # resplit
                 logger.info(f"{_T('Find Config')}: {config}")
             except IndexError:
                 logger.error(_T("No Config File Found"))
@@ -469,6 +470,15 @@ class TaskManager:
         except URLError:
             ...
 
+    def get_temp_directory():
+        req = request.Request(f"{TaskManager.get_url()}/cup/get_temp_directory", method="POST")
+        try:
+            res = request.urlopen(req)
+            return res.read().decode()
+        except Exception as e:
+            ...
+        return ""
+
     def interrupt():
         req = request.Request(f"{TaskManager.get_url()}/interrupt", method="POST")
         try:
@@ -571,7 +581,7 @@ class TaskManager:
             task = TaskManager.res_queue.get()
             if task.res.empty():
                 continue
-            logger.debug(_T("Proc Resutl"))
+            logger.debug(_T("Proc Result"))
             res = task.res.get()
             node = res["node"]
             prompt = task.task["prompt"]

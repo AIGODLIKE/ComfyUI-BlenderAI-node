@@ -7,7 +7,7 @@ from pathlib import Path
 
 class History:
     path = Path(__file__).parent.joinpath("history.json")
-    num = 10
+    num = 20
     is_dirty = True
     cache_histories = []
 

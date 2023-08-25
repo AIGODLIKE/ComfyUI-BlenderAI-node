@@ -1727,7 +1727,14 @@ def spec_functions(fields, nname, ndesc):
 
             def f(self, img_paths: list[str]):
                 self.prev.clear()
+
+                from .manager import TaskManager
+                d = TaskManager.get_temp_directory()
                 for img_path in img_paths:
+                    if isinstance(img_path, dict):
+                        img_path = Path(d).joinpath(img_path.get("filename")).as_posix()
+                    if not Path(img_path).exists():
+                        continue
                     p = self.prev.add()
                     p.image = bpy.data.images.load(img_path)
             Timer.put((f, self, img_paths))

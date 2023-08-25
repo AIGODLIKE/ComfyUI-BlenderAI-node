@@ -22,6 +22,52 @@ class InvalidNodeType(Exception):
     ...
 
 
+def serialize_wrapper(func):
+    def wrapper(self, *args, **kwargs):
+        try:
+            res = func(self, *args, **kwargs)
+            for k in res:
+                if not isinstance(res[k], tuple):
+                    continue
+                n = res[k][0]
+                if n.get("class_type") == "预览":
+                    n["class_type"] = "PreviewImage"
+            return res
+        except BaseException:
+            logger.error(traceback.format_exc())
+        return {}
+    return wrapper
+
+
+def save_json_wrapper(func):
+    def wrapper(self, *args, **kwargs):
+        try:
+            res = func(self, *args, **kwargs)
+            for node in res.get("nodes", []):
+                if node.get("type") == "预览":
+                    node["type"] = "PreviewImage"
+                if "(Blender特供)" in node.get("title", ""):
+                    node["title"] = node.get("title", "").replace("(Blender特供)", "")
+            return res
+        except BaseException:
+            logger.error(traceback.format_exc())
+        return {}
+    return wrapper
+
+
+def load_json_wrapper(func):
+    def wrapper(self, data, *args, **kwargs):
+        for node in data.get("nodes", []):
+            if node.get("type") == "PreviewImage":
+                node["type"] = "预览"
+        try:
+            return func(self, data, *args, **kwargs)
+        except BaseException:
+            logger.error(traceback.format_exc())
+        return []
+    return wrapper
+
+
 class CFNodeTree(NodeTree):
     bl_idname = TREE_TYPE
     bl_label = "ComfyUI Node"
@@ -37,6 +83,7 @@ class CFNodeTree(NodeTree):
         for node in self.get_nodes():
             node.serialize_pre()
 
+    @serialize_wrapper
     def serialize(self):
         """
         get prompts
@@ -82,6 +129,7 @@ class CFNodeTree(NodeTree):
         ox, oy = self.get_node_frame_offset(node)
         return node.location.x + ox, node.location.y + oy
 
+    @save_json_wrapper
     def save_json_ex(self, dump_nodes: list[bpy.types.Node], dump_frames=None, selected_only=False):
         self.validation(dump_nodes)
         self.calc_unique_id()
@@ -200,6 +248,7 @@ class CFNodeTree(NodeTree):
     def load_json_group(self, data) -> list[bpy.types.Node]:
         return self.load_json_ex(data, is_group=True)
 
+    @load_json_wrapper
     def load_json_ex(self, data, is_group=False):
         for node in self.get_nodes(False):
             node.select = False
@@ -226,7 +275,6 @@ class CFNodeTree(NodeTree):
                 else:
                     node.pool.add(old_id)
                     node.id = old_id
-                
 
         for link in data.get("links", []):
             # logger.debug(link)
@@ -351,7 +399,7 @@ class CFNodeTree(NodeTree):
         """
         self.id_clear_update()
         self.primitive_node_update()
-    
+
     def id_clear_update(self):
         ids = set()
         nodes = self.get_nodes(cmf=True)
@@ -378,8 +426,6 @@ class CFNodeTree(NodeTree):
                 old_prop = getattr(link.to_node, n)
                 setattr(link.to_node, n, type(old_prop)(prop))
 
-            
-                    
     def compute_execution_order(self):
         """
         Reference from ComfyUI
@@ -564,8 +610,7 @@ def reg_node_reroute():
     bpy.types.NodeReroute.set_stat = NodeBase.set_stat
     bpy.types.NodeReroute.switch_socket = NodeBase.switch_socket
     bpy.types.NodeReroute.get_from_link = NodeBase.get_from_link
-    
- 
+
     bpy.types.NodeReroute.class_type = "Reroute"
     bpy.types.NodeReroute.__metadata__ = {}
     bpy.types.NodeReroute.inp_types = []

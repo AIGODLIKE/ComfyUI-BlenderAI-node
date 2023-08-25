@@ -112,7 +112,6 @@ class Ops(bpy.types.Operator):
                 self.report({"ERROR"}, _T("Preset Not Selected!"))
                 return {"FINISHED"}
 
-        
         if self.action in {"Save", "SaveGroup", "Del", "DelGroup", "PresetFromBookmark"}:
             return wm.invoke_props_dialog(self, width=200)
         return self.execute(context)
@@ -419,6 +418,7 @@ class Ops_Mask(bpy.types.Operator):
                 cam["SD_Mask"] = mask
         return {"FINISHED"}
 
+
 class Load_History(bpy.types.Operator):
     bl_idname = "sdn.load_history"
     bl_label = "加载历史记录"
@@ -428,7 +428,7 @@ class Load_History(bpy.types.Operator):
     @classmethod
     def poll(cls, context: Context):
         return bpy.context.space_data.edit_tree
-    
+
     def execute(self, context):
         tree = bpy.context.space_data.edit_tree
         data = History.get_history_by_name(self.name)
@@ -438,4 +438,20 @@ class Load_History(bpy.types.Operator):
         if "workflow" in data:
             data = data["workflow"]
         tree.load_json(data)
+        return {"FINISHED"}
+
+
+class Copy_Tree(bpy.types.Operator):
+    bl_idname = "sdn.copy_tree"
+    bl_label = "拷贝节点树到剪切板"
+    bl_description = "Copy Tree to ClipBoard"
+    name: bpy.props.StringProperty()
+
+    @classmethod
+    def poll(cls, context: Context):
+        return bpy.context.space_data.edit_tree
+
+    def execute(self, context):
+        tree = bpy.context.space_data.edit_tree
+        bpy.context.window_manager.clipboard = json.dumps(tree.save_json())
         return {"FINISHED"}

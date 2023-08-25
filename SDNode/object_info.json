@@ -3393,7 +3393,7 @@
         "output_dir": [
           "STRING",
           {
-            "default": "/Users/karrycharon/Desktop"
+            "default": "C:\\Users\\KC\\Desktop"
           }
         ]
       },
@@ -4303,21 +4303,21 @@
         "latent_suffix": [
           "STRING",
           {
-            "default": "78883085_cache",
+            "default": "3500783_cache",
             "multiline": false
           }
         ],
         "image_suffix": [
           "STRING",
           {
-            "default": "26974248_cache",
+            "default": "56390721_cache",
             "multiline": false
           }
         ],
         "conditioning_suffix": [
           "STRING",
           {
-            "default": "54038291_cache",
+            "default": "29835209_cache",
             "multiline": false
           }
         ]

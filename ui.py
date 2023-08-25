@@ -1,6 +1,6 @@
 import bpy
 import platform
-from .ops import Ops, Load_History
+from .ops import Ops, Load_History, Copy_Tree
 from .translations import ctxt
 from .SDNode import TaskManager
 from .SDNode.tree import TREE_TYPE
@@ -36,10 +36,11 @@ class Panel(bpy.types.Panel):
         scale_popup = get_pref().popup_scale
         layout = self.layout
         col = layout.column()
-        col1 = col.column()
-        col1.alert = True
-        col1.scale_y = 2
-        col1.operator(Ops.bl_idname, text="Execute Node Tree", icon="PLAY").action = "Submit"
+        row1 = col.row(align=True)
+        row1.alert = True
+        row1.scale_y = 2
+        row1.operator(Ops.bl_idname, text="Execute Node Tree", icon="PLAY").action = "Submit"
+        row1.operator(Copy_Tree.bl_idname, text="", icon="COPYDOWN")
         row = col.row(align=True)
         row.scale_y = 1.3
         row.operator(Ops.bl_idname, text="Cancel", icon="CANCEL").action = "Cancel"
@@ -84,7 +85,7 @@ class Panel(bpy.types.Panel):
         sce = bpy.context.scene
         if len(sce.sdn_history_item) == 0:
             return
-        layout.template_list("HISTORY_UI_UIList", "", sce, "sdn_history_item", sce, "sdn_history_item_index")
+        layout.template_list("HISTORY_UL_UIList", "", sce, "sdn_history_item", sce, "sdn_history_item_index")
 
     def show_progress(self, layout: bpy.types.UILayout):
         layout = layout.box()
@@ -123,7 +124,7 @@ class Panel(bpy.types.Panel):
 class HistoryItem(bpy.types.PropertyGroup):
     name: bpy.props.StringProperty(default="")
 
-class HISTORY_UI_UIList(bpy.types.UIList):
+class HISTORY_UL_UIList(bpy.types.UIList):
 
     def draw_item(self,
                   context: bpy.types.Context,
