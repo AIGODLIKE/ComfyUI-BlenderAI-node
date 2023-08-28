@@ -29,10 +29,14 @@ const ext = {
                 navigator.clipboard.readText().then(text => {
                     try {
                         var data = JSON.parse(text);
+                        if(data.hasOwnProperty("workflow"))
+                            data = data.workflow;
                         window.app.loadGraphData(data);
                     } catch (e) {
                         if (e instanceof SyntaxError) {
                             alert("Clipboard data is not valid.");
+                        }else{
+                            alert(e);
                         }
                     }
                 });
