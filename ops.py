@@ -491,10 +491,17 @@ class Load_Batch(bpy.types.Operator):
             return {"FINISHED"}
         tree = bpy.context.space_data.edit_tree
         tasks = []
-        with open(csv_path, "r") as f:
-            reader = csv.reader(f)
-            for row in reader:
-                tasks.append(row)
+        for coding in ["utf-8", "gbk"]:
+            try:
+                tasks.clear()
+                with open(csv_path, "r", encoding=coding) as f:
+                    reader = csv.reader(f)
+                    for row in reader:
+                        tasks.append(row)
+                break
+            except UnicodeDecodeError:
+                continue
+
         for task in tasks:
             if not task:
                 continue
