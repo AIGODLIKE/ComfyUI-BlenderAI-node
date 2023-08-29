@@ -17,13 +17,13 @@ from .translations import translations_dict
 from .utils import Icon
 from .timer import timer_reg, timer_unreg
 from .preference import AddonPreference
-from .ops import Ops, Ops_Mask, Load_History, Copy_Tree
+from .ops import Ops, Ops_Mask, Load_History, Copy_Tree, Load_Batch
 from .ui import Panel, HISTORY_UL_UIList, HistoryItem
 from .SDNode.history import History
 from .prop import Prop
 
 
-clss = [Panel, Ops, Prop, HISTORY_UL_UIList, HistoryItem, Ops_Mask, Load_History, Copy_Tree, EnableMLT]
+clss = [Panel, Ops, Prop, HISTORY_UL_UIList, HistoryItem, Ops_Mask, Load_History, Copy_Tree, Load_Batch, EnableMLT]
 reg, unreg = bpy.utils.register_classes_factory(clss)
 
 def dump_info():

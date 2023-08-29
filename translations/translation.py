@@ -191,6 +191,9 @@ other = {
     "ClipBoard Content Format Error": "剪切板内容格式错误",
     "Submit Task and with Clear Cache if Alt Pressed": "执行节点树, 如果按下了Alt执行 则 强制执行",
     "ComfyUI not Run,To Run?": "ComfyUI未启动,确定启动?",
+    "Tree Copied to ClipBoard": "已复制到剪切板",
+    "Load Batch Task": "加载批量任务表",
+    "Copy Tree to ClipBoard": "复制到剪切板",
     # ui.py
     "ClearTask": "清理任务",
     "Cancel": "取消任务",

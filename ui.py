@@ -1,6 +1,6 @@
 import bpy
 import platform
-from .ops import Ops, Load_History, Copy_Tree
+from .ops import Ops, Load_History, Copy_Tree, Load_Batch
 from .translations import ctxt
 from .SDNode import TaskManager
 from .SDNode.tree import TREE_TYPE
@@ -40,12 +40,11 @@ class Panel(bpy.types.Panel):
         row1.alert = True
         row1.scale_y = 2
         row1.operator(Ops.bl_idname, text="Execute Node Tree", icon="PLAY").action = "Submit"
-        row1.operator(Copy_Tree.bl_idname, text="", icon="COPYDOWN")
         row = col.row(align=True)
         row.scale_y = 1.3
         row.operator(Ops.bl_idname, text="Cancel", icon="CANCEL").action = "Cancel"
         row.operator(Ops.bl_idname, text="ClearTask", icon="TRASH").action = "ClearTask"
-        
+        layout.operator(Load_Batch.bl_idname, text_ctxt=ctxt, icon="PLAY")
         layout.prop(bpy.context.scene.sdn, "frame_mode", text="")
         if bpy.context.scene.sdn.frame_mode == "Batch":
             box = layout.box()
@@ -68,8 +67,9 @@ class Panel(bpy.types.Panel):
         rrow = col.row(align=True)
         rrow.operator(Ops.bl_idname, text="Replace Node Tree", text_ctxt=ctxt).action = "Load"
         rrow.operator(Ops.bl_idname, text="", icon="TEXTURE", text_ctxt=ctxt).action = "PresetFromBookmark"
+        rrow.operator(Copy_Tree.bl_idname, text="", icon="COPYDOWN")
         rrow.operator(Ops.bl_idname, text="", icon="PASTEDOWN", text_ctxt=ctxt).action = "PresetFromClipBoard"
-
+        
         box = layout.box()
         row = box.row()
         row.label(text="Node Group", text_ctxt=ctxt)

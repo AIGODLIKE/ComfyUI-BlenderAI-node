@@ -1,7 +1,8 @@
+import typing
 import bpy
 import json
 from pathlib import Path
-from bpy.types import Context
+from bpy.types import Context, Event
 from mathutils import Vector
 from functools import partial
 from .translations import ctxt
@@ -443,8 +444,9 @@ class Load_History(bpy.types.Operator):
 
 class Copy_Tree(bpy.types.Operator):
     bl_idname = "sdn.copy_tree"
-    bl_label = "拷贝节点树到剪切板"
+    bl_label = "Copy Tree to ClipBoard"
     bl_description = "Copy Tree to ClipBoard"
+    bl_translation_context = ctxt
     name: bpy.props.StringProperty()
 
     @classmethod
@@ -454,4 +456,72 @@ class Copy_Tree(bpy.types.Operator):
     def execute(self, context):
         tree = bpy.context.space_data.edit_tree
         bpy.context.window_manager.clipboard = json.dumps(tree.save_json())
+        # 弹出提示 已复制到剪切板
+        def draw(pm: bpy.types.UIPopupMenu, context):
+            layout = pm.layout
+            layout.label(text=_T("Tree Copied to ClipBoard"))
+        bpy.context.window_manager.popup_menu(draw, title=_T("Tree Copied to ClipBoard"), icon="INFO")
+        return {"FINISHED"}
+
+
+class Load_Batch(bpy.types.Operator):
+    bl_idname = "sdn.load_batch"
+    bl_label = "Load Batch Task"
+    bl_description = "Load Batch Task"
+    bl_translation_context = ctxt
+    filter_glob: bpy.props.StringProperty(default = "*.csv",options = {"HIDDEN"})
+    filepath: bpy.props.StringProperty()
+
+    @classmethod
+    def poll(cls, context: Context):
+        return bpy.context.space_data.edit_tree
+
+    def invoke(self, context: Context, event: Event):
+        # 弹出文件选择框
+        wm = bpy.context.window_manager
+        wm.fileselect_add(self)
+        return {"RUNNING_MODAL"}
+
+    def execute(self, context):
+        import csv
+        # 批量任务格式
+        # 任务索引, 节点名, 参数名, 参数值, 节点名, 参数名, 参数值, ...
+        csv_path = Path(self.filepath)
+
+        if not csv_path.exists():
+            self.report({"ERROR"}, _T("File Not Found: ") + self.task_path)
+            return {"FINISHED"}
+        tree = bpy.context.space_data.edit_tree
+        tasks = []
+        for coding in ["utf-8", "gbk"]:
+            try:
+                tasks.clear()
+                with open(csv_path, "r", encoding=coding) as f:
+                    reader = csv.reader(f)
+                    for row in reader:
+                        tasks.append(row)
+                break
+            except UnicodeDecodeError:
+                continue
+
+        for task in tasks:
+            if not task:
+                continue
+            task_index = task[0]
+            pairs = task[1:]
+            if set(pairs) == {""}:
+                continue
+            for i in range(len(pairs) // 3):
+                nname, pname, pvalue = pairs[i * 3 : i * 3 + 3]
+                if not nname or not pname or not pvalue:
+                    continue
+                node = tree.nodes.get(nname)
+                if not node or not node.get_meta(pname):
+                    continue
+                ptype = type(getattr(node, pname))
+                # print(node, pname, pvalue, ptype)
+                setattr(node, pname, ptype(pvalue))
+            
+            # 提交任务
+            bpy.ops.sdn.ops("INVOKE_DEFAULT", action="Submit")
         return {"FINISHED"}
