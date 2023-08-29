@@ -444,8 +444,9 @@ class Load_History(bpy.types.Operator):
 
 class Copy_Tree(bpy.types.Operator):
     bl_idname = "sdn.copy_tree"
-    bl_label = "拷贝节点树到剪切板"
+    bl_label = "Copy Tree to ClipBoard"
     bl_description = "Copy Tree to ClipBoard"
+    bl_translation_context = ctxt
     name: bpy.props.StringProperty()
 
     @classmethod
@@ -465,8 +466,9 @@ class Copy_Tree(bpy.types.Operator):
 
 class Load_Batch(bpy.types.Operator):
     bl_idname = "sdn.load_batch"
-    bl_label = "加载批量任务"
+    bl_label = "Load Batch Task"
     bl_description = "Load Batch Task"
+    bl_translation_context = ctxt
     filter_glob: bpy.props.StringProperty(default = "*.csv",options = {"HIDDEN"})
     filepath: bpy.props.StringProperty()
 

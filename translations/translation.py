@@ -193,6 +193,7 @@ other = {
     "ComfyUI not Run,To Run?": "ComfyUI未启动,确定启动?",
     "Tree Copied to ClipBoard": "已复制到剪切板",
     "Load Batch Task": "加载批量任务表",
+    "Copy Tree to ClipBoard": "复制到剪切板",
     # ui.py
     "ClearTask": "清理任务",
     "Cancel": "取消任务",

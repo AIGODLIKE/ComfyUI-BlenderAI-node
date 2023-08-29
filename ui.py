@@ -44,7 +44,7 @@ class Panel(bpy.types.Panel):
         row.scale_y = 1.3
         row.operator(Ops.bl_idname, text="Cancel", icon="CANCEL").action = "Cancel"
         row.operator(Ops.bl_idname, text="ClearTask", icon="TRASH").action = "ClearTask"
-        layout.operator(Load_Batch.bl_idname, text="Load Batch Task", icon="PLAY")
+        layout.operator(Load_Batch.bl_idname, text_ctxt=ctxt, icon="PLAY")
         layout.prop(bpy.context.scene.sdn, "frame_mode", text="")
         if bpy.context.scene.sdn.frame_mode == "Batch":
             box = layout.box()
