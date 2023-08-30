@@ -1,5 +1,6 @@
 import typing
 import bpy
+import re
 import json
 from pathlib import Path
 from bpy.types import Context, Event
@@ -510,7 +511,7 @@ class Load_Batch(bpy.types.Operator):
     def execute(self, context):
         import csv
         # 批量任务格式
-        # 任务索引, 节点名, 参数名, 参数值, 节点名, 参数名, 参数值, ...
+        # 任务索引, 节点名.参数名, 参数值, 节点名.参数名, 参数值, ...
         csv_path = Path(self.filepath)
 
         if not csv_path.exists():
@@ -536,10 +537,12 @@ class Load_Batch(bpy.types.Operator):
             pairs = task[1:]
             if set(pairs) == {""}:
                 continue
-            for i in range(len(pairs) // 3):
-                nname, pname, pvalue = pairs[i * 3: i * 3 + 3]
-                if not nname or not pname or not pvalue:
+            for i in range(len(pairs) // 2):
+                n_dot_pname, pvalue = pairs[i * 2: i * 2 + 2]
+                if not n_dot_pname or not pvalue:
                     continue
+                # nodes["nname"].pname
+                nname, pname = re.match(r"nodes\[\"(.+)\"\]\.(.+)", n_dot_pname).groups()
                 node = tree.nodes.get(nname)
                 if not node or not node.get_meta(pname):
                     continue
