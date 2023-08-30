@@ -6,6 +6,15 @@ Add-on for using [ComfyUI](https://github.com/comfyanonymous/ComfyUI) in Blender
 3. Operation optimization (such as one click drawing mask)
 4. Node group presets
 5. Queue batch processing
+## How to install(Only on WINDOWS 10\11)
+
+1 .**Blender**
+
+Firstly, you need to install a [Blender](https://www.blender.org/download/)(Suggest Blender 3.5 or 3.6.X, previous versions or 4.0 have not been tested).
+![image](https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/aacf1cfe-ae44-4930-9a93-c226a8408066)
+
+2. **Add-on（ComfyUI BlenderAI node）**
+ComfyUI BlenderAI node is a standard Blender add-on. Just download the compressed package and install it like any other add-ons.
 
 [中文](README.md) [EN](README_EN.md)
 
