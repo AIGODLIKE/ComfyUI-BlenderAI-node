@@ -1,5 +1,8 @@
 # ComfyUI-BlenderAI-node
 Add-on for using [ComfyUI](https://github.com/comfyanonymous/ComfyUI) in Blender.
+## NOTE 
+
+If you want to use the latest version, please use the [develop](https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/tree/develop) branch.
 ## Function Introduction
 1. Automatically convert Comfyui nodes to Blender nodes, enabling Blender to directly generate images using ComfyUI（As long as your ComfyUI can run）
 2. Multiple Blender dedicated nodes(For example, directly inputting camera rendered images, compositing data, etc. into COMFYUI)
@@ -8,13 +11,27 @@ Add-on for using [ComfyUI](https://github.com/comfyanonymous/ComfyUI) in Blender
 5. Queue batch processing
 ## How to install(Only on WINDOWS 10\11)
 
-1 .**Blender**
+1 .**Install Blender**
 
 Firstly, you need to install a [Blender](https://www.blender.org/download/)(Suggest Blender 3.5 or 3.6.X, previous versions or 4.0 have not been tested).
 ![image](https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/aacf1cfe-ae44-4930-9a93-c226a8408066)
 
-2. **Add-on（ComfyUI BlenderAI node）**
+2. **Install add-on（ComfyUI BlenderAI node）**
+
 ComfyUI BlenderAI node is a standard Blender add-on. Just download the compressed package and install it like any other add-ons.
+![image](https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/2263fb70-5f85-43a1-a9c3-668620c976f6)
+
+Or you can try
+
+      cd %USERPROFILE%\AppData\Roaming\Blender Foundation\blender\
+      git clone https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node.git
+
+3.** Settings add-on**
+
+Set the already configured COMFYUI path，and select the startup mode based on VRAM
+![image](https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/a0058178-dcf0-4b23-8e79-3e4ae1267286)
+
+   
 
 [中文](README.md) [EN](README_EN.md)
 
