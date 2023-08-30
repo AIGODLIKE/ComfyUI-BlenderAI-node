@@ -1,5 +1,11 @@
 # ComfyUI-BlenderAI-node
-Blender Node integration of [ComfyUI](https://github.com/comfyanonymous/ComfyUI)
+Add-on for using [ComfyUI](https://github.com/comfyanonymous/ComfyUI) in Blender.
+## Function Introduction
+1. Automatically convert Comfyui nodes to Blender nodes, enabling Blender to directly generate images using ComfyUI（As long as your ComfyUI can run）
+2. Multiple Blender dedicated nodes(For example, directly inputting camera rendered images, compositing data, etc. into COMFYUI)
+3. Operation optimization (such as one click drawing mask)
+4. Node group presets
+5. Queue batch processing
 
 [中文](README.md) [EN](README_EN.md)
 
