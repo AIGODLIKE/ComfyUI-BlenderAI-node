@@ -46,13 +46,15 @@ Like other Blender nodes, you can use the shortcut keys "Shift+A" to bring up th
 ![image](https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/22c68423-07aa-4a07-93a9-9354880276e1)
 
 
-## Manual
+## User Manual
 
-[中文](README.md) [EN](README_EN.md)
+[中文手册](https://shimo.im/docs/Ee32m0w80rfLp4A2)
 
-[工具手册](https://shimo.im/docs/Ee32m0w80rfLp4A2)
+[EN](https://shimo.im/docs/JSforXF1JC8lSphG)
 
-[AIGODLIKE社区](www.aigodlike.com)
+## Our AI community
+
+[AIGODLIKE Community](https://www.aigodlike.com/)
 
 ## COMFYUI Integration Package
 
