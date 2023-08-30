@@ -121,6 +121,21 @@ def get_icon_path(nname):
 def get_fixed_seed():
     return int(random.randrange(4294967294))
 
+def get_tree():
+    tree = getattr(bpy.context.space_data, "edit_tree", None)
+    if tree:
+        return tree
+    for a in bpy.context.screen.areas:
+        if a.type != "NODE_EDITOR":
+            continue
+        for s in a.spaces:
+            if s.type != "NODE_EDITOR" or s.tree_type != "CFNodeTree":
+                continue
+            tree = s.edit_tree
+    if not tree:
+        from .tree import CFNodeTree
+        tree = CFNodeTree.instance
+    return tree
 
 class NodeBase(bpy.types.Node):
     bl_width_min = 200.0
@@ -274,7 +289,7 @@ class NodeBase(bpy.types.Node):
             return
         if bpy.context.space_data.type != "NODE_EDITOR":
             return
-        tree = bpy.context.space_data.edit_tree
+        tree = get_tree()
         if tree.bl_idname != "CFNodeTree":
             return
         # 对PrimitiveNode类型的输出进行限制
@@ -454,7 +469,7 @@ class NodeBase(bpy.types.Node):
                 logger.error(f" -> {e}")
 
     def dump(self, selected_only=False):
-        tree = bpy.context.space_data.edit_tree
+        tree = get_tree()
         all_links: bpy.types.NodeLinks = tree.links[:]
 
         inputs = []
@@ -641,7 +656,7 @@ class Ops_Swith_Socket(bpy.types.Operator):
     action: bpy.props.StringProperty(default="")
 
     def execute(self, context):
-        tree = bpy.context.space_data.edit_tree
+        tree = get_tree()
         node: NodeBase = None
         socket_name = get_ori_name(self.socket_name)
         if not (node := tree.nodes.get(self.node_name)):
@@ -675,7 +690,7 @@ class Ops_Add_SaveImage(bpy.types.Operator):
     node_name: bpy.props.StringProperty()
 
     def execute(self, context):
-        tree = bpy.context.space_data.edit_tree
+        tree = get_tree()
         node: NodeBase = None
         if not (node := tree.nodes.get(self.node_name)):
             return {"FINISHED"}
@@ -698,7 +713,7 @@ class Ops_Active_Tex(bpy.types.Operator):
     def execute(self, context):
         if not (img := bpy.data.images.get(self.img_name)):
             return {"FINISHED"}
-        tree = bpy.context.space_data.edit_tree
+        tree = get_tree()
         if not (node := tree.nodes.get(self.node_name)):
             return {"FINISHED"}
         node.image = None if img == node.image else img
@@ -1302,7 +1317,7 @@ def spec_gen_properties(nname, inp_name, prop):
     def set_sync_rand(self, seed):
         if not getattr(self, "sync_rand", False):
             return
-        tree = bpy.context.space_data.edit_tree
+        tree = get_tree()
         for node in tree.get_nodes():
             if node == self:
                 continue
@@ -1411,7 +1426,7 @@ def spec_extra_properties(properties, nname, ndesc):
         def update_sync_rand(self: bpy.types.Node, context):
             if not self.sync_rand:
                 return
-            tree = bpy.context.space_data.edit_tree
+            tree = get_tree()
             for node in tree.get_nodes():
                 if (not hasattr(node, "seed") and node.class_type != "KSamplerAdvanced") or node == self:
                     continue
@@ -1540,7 +1555,7 @@ def spec_extra_properties(properties, nname, ndesc):
 
 def spec_serialize_pre(self):
     def get_sync_rand_node():
-        tree = bpy.context.space_data.edit_tree
+        tree = get_tree()
         for node in tree.get_nodes():
             # node不是KSampler、KSamplerAdvanced 跳过
             if not hasattr(node, "seed") and node.class_type != "KSamplerAdvanced":

@@ -82,9 +82,65 @@ class Timer:
             ...
 
 
+class Worker:
+    JOB_WORK = set()
+    JOB_CLEAR = Queue()
+
+    @staticmethod
+    def push_worker(func):
+        Worker.JOB_WORK.add(func)
+
+    @staticmethod
+    def push_clear(func):
+        Worker.JOB_CLEAR.put(func)
+        
+    @staticmethod
+    def remove_worker(func):
+        Worker.JOB_WORK.discard(func)
+
+    @staticmethod
+    def worker():
+        for func in Worker.JOB_WORK:
+            try:
+                func()
+            except Exception as e:
+                traceback.print_exc()
+                logger.error(f"{type(e).__name__}: {e}")
+            except KeyboardInterrupt:
+                ...
+        return 1
+
+    @staticmethod
+    def reg():
+        bpy.app.timers.register(Worker.worker, persistent=True)
+
+    @staticmethod
+    def unreg():
+        try:
+            bpy.app.timers.unregister(Worker.worker)
+        except Exception:
+            ...
+
+    @staticmethod
+    @bpy.app.handlers.persistent
+    def clear(_):
+        Worker.JOB_WORK.clear()
+        while not Worker.JOB_CLEAR.empty():
+            try:
+                func = Worker.JOB_CLEAR.get()
+                func()
+            except Exception as e:
+                traceback.print_exc()
+                logger.error(f"{type(e).__name__}: {e}")
+            except KeyboardInterrupt:
+                ...
+
 def timer_reg():
     Timer.reg()
+    Worker.reg()
+    bpy.app.handlers.load_pre.append(Worker.clear)
 
 
 def timer_unreg():
     Timer.unreg()
+    Worker.unreg()

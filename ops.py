@@ -8,10 +8,10 @@ from functools import partial
 from .translations import ctxt
 from .prop import Prop
 from .utils import _T, logger, PngParse
-from .timer import Timer
+from .timer import Timer, Worker
 from .SDNode import TaskManager
 from .SDNode.history import History
-from .SDNode.tree import InvalidNodeType
+from .SDNode.tree import InvalidNodeType, CFNodeTree, get_tree
 
 
 class Ops(bpy.types.Operator):
@@ -22,6 +22,13 @@ class Ops(bpy.types.Operator):
     action: bpy.props.StringProperty(default="")
     save_name: bpy.props.StringProperty(name="Preset Name", default="预设")
     alt: bpy.props.BoolProperty(default=False)
+    is_advanced_enable = False
+
+    @staticmethod
+    def loop_exec():
+        if TaskManager.get_task_num() != 0:
+            return
+        bpy.ops.sdn.ops(action="Submit")
 
     @classmethod
     def description(cls, context: bpy.types.Context,
@@ -57,7 +64,7 @@ class Ops(bpy.types.Operator):
         elif path.suffix.lower() == ".json":
             data = path.read_text()
 
-        tree = bpy.context.space_data.edit_tree
+        tree = get_tree()
         if not tree:
             return
         data = json.loads(data)
@@ -158,97 +165,16 @@ class Ops(bpy.types.Operator):
         elif self.action == "Cancel":
             TaskManager.interrupt()
             return {"FINISHED"}
-        tree = getattr(bpy.context.space_data, "edit_tree", None)
+        tree = get_tree()
         if not tree:
+            logger.error(_T("No Node Tree Found!"))
             return {"FINISHED"}
-
-        def get_task(tree):
-            prompt = tree.serialize()
-            workflow = tree.save_json()
-            return {"prompt": prompt, "workflow": workflow, "api": "prompt"}
         # special for frames image mode
-        if self.action == "Submit" and (frames_nodes := self.find_frames_nodes(tree)):
-            def find_frames(path):
-                frames_map = {}
-                for file in Path(path).iterdir():
-                    if file.suffix.lower() not in {".png", ".jpg"}:
-                        continue
-                    piece = file.stem.split("_")
-                    try:
-                        frames_map[int(piece[-1])] = file.as_posix()
-                    except BaseException:
-                        ...
-                return frames_map
-            node_frames = {}
-            old_cfg = {}
-            for fnode in frames_nodes:
-                frames_dir = fnode.frames_dir
-                if not frames_dir:
-                    self.report({"ERROR"}, _T("Node<{}>Directory is Empty!").format(fnode.name))
-                    return {"FINISHED"}
-                if not Path(frames_dir).exists():
-                    self.report({"ERROR"}, _T("Node<{}>Directory Not Exists!").format(fnode.name))
-                    return {"FINISHED"}
-                node_frames[fnode] = find_frames(frames_dir)
-                old_cfg[fnode] = {}
-                old_cfg[fnode]["mode"] = fnode.mode
-                old_cfg[fnode]["image"] = fnode.image
-            pnode, pframes = node_frames.popitem()
-            pnode.mode = "输入"
-            for frame in pframes:
-                pnode.image = pframes[frame]
-                # logger.debug(f"F {frame}: {pnode.image}")
-                for fnode in node_frames:
-                    if not (fpath := node_frames[fnode].get(frame, "")):
-                        error_info = _T("Frame <{}> Not Found in <{}> Node Path!").format(frame, fnode.name)
-                        # self.report({"ERROR"}, error_info)
-                        logger.error(error_info)
-                        break
-                    fnode.mode = "输入"
-                    fnode.image = fpath
-                    # logger.debug(f"F {frame}: {fnode.image}")
-                else:
-                    logger.debug(_T("Frame Task <{}> Added!").format(frame))
-                    TaskManager.push_task(get_task(tree))
-            # restore config
-            for fnode in old_cfg:
-                setattr(fnode, "mode", old_cfg[fnode]["mode"])
-                setattr(fnode, "image", old_cfg[fnode]["image"])
-            return {"FINISHED"}
-        elif self.action == "Submit":
-            if self.alt:
-                TaskManager.clear_cache()
-            if bpy.context.scene.sdn.frame_mode == "MultiFrame":
-                sf = bpy.context.scene.frame_start
-                ef = bpy.context.scene.frame_end
-                for cf in range(sf, ef + 1):
-                    @Timer.wait_run
-                    def pre(cf):
-                        bpy.context.scene.frame_set(cf)
-                    pre = partial(pre, cf)
-                    TaskManager.push_task(get_task(tree), pre)
-            elif bpy.context.scene.sdn.frame_mode == "Batch":
-                batch_dir = bpy.context.scene.sdn.batch_dir
-                select_node = tree.nodes.active
-                if not select_node or select_node.bl_idname != "输入图像":
-                    self.report({"ERROR"}, "Input Image Node Not Selected!")
-                    return {"FINISHED"}
-
-                if not batch_dir or not Path(batch_dir).exists():
-                    self.report({"ERROR"}, "Batch Directory Not Set!")
-                    return {"FINISHED"}
-                old_mode, old_image = select_node.mode, select_node.image
-                select_node.mode = "输入"
-                for file in Path(batch_dir).iterdir():
-                    if file.is_dir():
-                        continue
-                    if file.suffix not in {".png", ".jpg", ".jpeg"}:
-                        continue
-                    select_node.image = file.as_posix()
-                    TaskManager.push_task(get_task(tree))
-                select_node.mode, select_node.image = old_mode, old_image
-            else:
-                TaskManager.push_task(get_task(tree))
+        if self.action == "Submit":
+            self.submit(tree)
+        elif self.action == "StopLoop":
+            Ops.is_advanced_enable = False
+            Worker.remove_worker(Ops.loop_exec)
         elif self.action == "ClearTask":
             TaskManager.clear_all()
         elif self.action == "Save":
@@ -260,7 +186,6 @@ class Ops(bpy.types.Operator):
             with open(file, "w") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
             Prop.mark_dirty()
-
         elif self.action == "Del":
             if not bpy.context.scene.sdn.presets:
                 self.report({"ERROR"}, _T("Preset Not Selected!"))
@@ -274,7 +199,6 @@ class Ops(bpy.types.Operator):
                 self.report({"ERROR"}, _T("Preset Not Selected!"))
                 return {"FINISHED"}
             tree.load_json(json.load(open(bpy.context.scene.sdn.presets)))
-
         elif self.action == "SaveGroup":
             data = tree.save_json_group()
             if not self.save_name:
@@ -332,6 +256,106 @@ class Ops(bpy.types.Operator):
                 return {"FINISHED"}
         return {"FINISHED"}
 
+    def submit(self, tree):
+
+        def get_task(tree):
+            prompt = tree.serialize()
+            workflow = tree.save_json()
+            return {"prompt": prompt, "workflow": workflow, "api": "prompt"}
+        if bpy.context.scene.sdn.advanced_exe and not Ops.is_advanced_enable:
+            Ops.is_advanced_enable = True
+            if bpy.context.scene.sdn.loop_exec:
+                Worker.push_worker(Ops.loop_exec)
+                return {"FINISHED"}
+            for _ in range(bpy.context.scene.sdn.batch_count):
+                bpy.ops.sdn.ops(action="Submit")
+            Ops.is_advanced_enable = False
+            return {"FINISHED"}
+        elif frames_nodes := self.find_frames_nodes(tree):
+
+            def find_frames(path):
+                frames_map = {}
+                for file in Path(path).iterdir():
+                    if file.suffix.lower() not in {".png", ".jpg"}:
+                        continue
+                    piece = file.stem.split("_")
+                    try:
+                        frames_map[int(piece[-1])] = file.as_posix()
+                    except BaseException:
+                        ...
+                return frames_map
+            node_frames = {}
+            old_cfg = {}
+            for fnode in frames_nodes:
+                frames_dir = fnode.frames_dir
+                if not frames_dir:
+                    self.report({"ERROR"}, _T("Node<{}>Directory is Empty!").format(fnode.name))
+                    return {"FINISHED"}
+                if not Path(frames_dir).exists():
+                    self.report({"ERROR"}, _T("Node<{}>Directory Not Exists!").format(fnode.name))
+                    return {"FINISHED"}
+                node_frames[fnode] = find_frames(frames_dir)
+                old_cfg[fnode] = {}
+                old_cfg[fnode]["mode"] = fnode.mode
+                old_cfg[fnode]["image"] = fnode.image
+            pnode, pframes = node_frames.popitem()
+            pnode.mode = "输入"
+            for frame in pframes:
+                pnode.image = pframes[frame]
+                # logger.debug(f"F {frame}: {pnode.image}")
+                for fnode in node_frames:
+                    if not (fpath := node_frames[fnode].get(frame, "")):
+                        error_info = _T("Frame <{}> Not Found in <{}> Node Path!").format(frame, fnode.name)
+                        # self.report({"ERROR"}, error_info)
+                        logger.error(error_info)
+                        break
+                    fnode.mode = "输入"
+                    fnode.image = fpath
+                    # logger.debug(f"F {frame}: {fnode.image}")
+                else:
+                    logger.debug(_T("Frame Task <{}> Added!").format(frame))
+                    TaskManager.push_task(get_task(tree))
+            # restore config
+            for fnode in old_cfg:
+                setattr(fnode, "mode", old_cfg[fnode]["mode"])
+                setattr(fnode, "image", old_cfg[fnode]["image"])
+            return {"FINISHED"}
+        else:
+            if self.alt:
+                TaskManager.clear_cache()
+            if bpy.context.scene.sdn.frame_mode == "MultiFrame":
+                sf = bpy.context.scene.frame_start
+                ef = bpy.context.scene.frame_end
+                for cf in range(sf, ef + 1):
+                    @Timer.wait_run
+                    def pre(cf):
+                        bpy.context.scene.frame_set(cf)
+                    pre = partial(pre, cf)
+                    TaskManager.push_task(get_task(tree), pre)
+            elif bpy.context.scene.sdn.frame_mode == "Batch":
+                batch_dir = bpy.context.scene.sdn.batch_dir
+                select_node = tree.nodes.active
+                if not select_node or select_node.bl_idname != "输入图像":
+                    self.report({"ERROR"}, "Input Image Node Not Selected!")
+                    return {"FINISHED"}
+
+                if not batch_dir or not Path(batch_dir).exists():
+                    self.report({"ERROR"}, "Batch Directory Not Set!")
+                    return {"FINISHED"}
+                old_mode, old_image = select_node.mode, select_node.image
+                select_node.mode = "输入"
+                for file in Path(batch_dir).iterdir():
+                    if file.is_dir():
+                        continue
+                    if file.suffix not in {".png", ".jpg", ".jpeg"}:
+                        continue
+                    select_node.image = file.as_posix()
+                    TaskManager.push_task(get_task(tree))
+                select_node.mode, select_node.image = old_mode, old_image
+            else:
+                TaskManager.push_task(get_task(tree))
+        return {"FINISHED"}
+
     def update_nodes_pos(self, event):
         for n in self.select_nodes:
             n.location = self.init_node_pos[n] + bpy.context.space_data.cursor_location - self.init_pos
@@ -346,7 +370,7 @@ class Ops(bpy.types.Operator):
         if event.value == "PRESS" and event.type in {"ESC", "LEFTMOUSE", "ENTER"}:
             return {"FINISHED"}
         if event.value == "PRESS" and event.type in {"RIGHTMOUSE"}:
-            tree = bpy.context.space_data.edit_tree
+            tree = get_tree()
             tree.safe_remove_nodes(self.select_nodes[:])
             return {"CANCELLED"}
 
@@ -362,7 +386,7 @@ class Ops_Mask(bpy.types.Operator):
     cam_name: bpy.props.StringProperty(default="")
 
     def execute(self, context):
-        tree = bpy.context.space_data.edit_tree
+        tree = get_tree()
         if not tree:
             self.report({"ERROR"}, "No NodeTree Found")
             return {"FINISHED"}
@@ -428,10 +452,10 @@ class Load_History(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context: Context):
-        return bpy.context.space_data.edit_tree
+        return get_tree()
 
     def execute(self, context):
-        tree = bpy.context.space_data.edit_tree
+        tree = get_tree()
         data = History.get_history_by_name(self.name)
         if not data:
             self.report({"ERROR"}, _T("History Not Found: ") + self.name)
@@ -454,9 +478,10 @@ class Copy_Tree(bpy.types.Operator):
         return bpy.context.space_data.edit_tree
 
     def execute(self, context):
-        tree = bpy.context.space_data.edit_tree
+        tree = get_tree()
         bpy.context.window_manager.clipboard = json.dumps(tree.save_json())
         # 弹出提示 已复制到剪切板
+
         def draw(pm: bpy.types.UIPopupMenu, context):
             layout = pm.layout
             layout.label(text=_T("Tree Copied to ClipBoard"))
@@ -469,7 +494,7 @@ class Load_Batch(bpy.types.Operator):
     bl_label = "Load Batch Task"
     bl_description = "Load Batch Task"
     bl_translation_context = ctxt
-    filter_glob: bpy.props.StringProperty(default = "*.csv",options = {"HIDDEN"})
+    filter_glob: bpy.props.StringProperty(default="*.csv", options={"HIDDEN"})
     filepath: bpy.props.StringProperty()
 
     @classmethod
@@ -491,7 +516,7 @@ class Load_Batch(bpy.types.Operator):
         if not csv_path.exists():
             self.report({"ERROR"}, _T("File Not Found: ") + self.task_path)
             return {"FINISHED"}
-        tree = bpy.context.space_data.edit_tree
+        tree = get_tree()
         tasks = []
         for coding in ["utf-8", "gbk"]:
             try:
@@ -512,7 +537,7 @@ class Load_Batch(bpy.types.Operator):
             if set(pairs) == {""}:
                 continue
             for i in range(len(pairs) // 3):
-                nname, pname, pvalue = pairs[i * 3 : i * 3 + 3]
+                nname, pname, pvalue = pairs[i * 3: i * 3 + 3]
                 if not nname or not pname or not pvalue:
                     continue
                 node = tree.nodes.get(nname)
@@ -521,7 +546,15 @@ class Load_Batch(bpy.types.Operator):
                 ptype = type(getattr(node, pname))
                 # print(node, pname, pvalue, ptype)
                 setattr(node, pname, ptype(pvalue))
-            
+
             # 提交任务
             bpy.ops.sdn.ops("INVOKE_DEFAULT", action="Submit")
         return {"FINISHED"}
+
+
+@bpy.app.handlers.persistent
+def clear(_):
+    Ops.is_advanced_enable = False
+
+
+bpy.app.handlers.load_pre.append(clear)

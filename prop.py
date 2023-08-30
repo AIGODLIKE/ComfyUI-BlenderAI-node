@@ -8,6 +8,7 @@ from .datas import PRESETS_DIR, PROP_CACHE, GROUPS_DIR
 FSWatcher.register(PRESETS_DIR)
 FSWatcher.register(GROUPS_DIR)
 
+
 class Prop(bpy.types.PropertyGroup):
     cache = PROP_CACHE
 
@@ -136,3 +137,6 @@ class Prop(bpy.types.PropertyGroup):
                                               ])
     batch_dir: bpy.props.StringProperty(name="Batch Directory", default=Path.home().joinpath("Desktop").as_posix(), subtype="DIR_PATH")
     disable_render_all: bpy.props.BoolProperty(default=False, description="禁用场景树所有渲染行为")
+    advanced_exe: bpy.props.BoolProperty(default=False, description="显示高级设置")
+    batch_count: bpy.props.IntProperty(default=1, min=1, name="批量执行数")
+    loop_exec: bpy.props.BoolProperty(default=False, name="循环执行")

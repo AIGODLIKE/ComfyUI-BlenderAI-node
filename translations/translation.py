@@ -140,6 +140,7 @@ other = {
     # __init__.py
     "Image not found or format error(png/json)": "魔法图鉴不存在或格式不正确(仅png/json)",
     "Execute Node Tree": "运行节点树",
+    "Stop Loop": "终止循环",
     "Node Tree": "节点树",
     "Save": "保存",
     "Delete": "删除",
@@ -194,6 +195,7 @@ other = {
     "Tree Copied to ClipBoard": "已复制到剪切板",
     "Load Batch Task": "加载批量任务表",
     "Copy Tree to ClipBoard": "复制到剪切板",
+    "No Node Tree Found!": "未找到节点树!",
     # ui.py
     "ClearTask": "清理任务",
     "Cancel": "取消任务",

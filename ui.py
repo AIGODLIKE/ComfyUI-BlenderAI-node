@@ -39,7 +39,16 @@ class Panel(bpy.types.Panel):
         row1 = col.row(align=True)
         row1.alert = True
         row1.scale_y = 2
-        row1.operator(Ops.bl_idname, text="Execute Node Tree", icon="PLAY").action = "Submit"
+        if Ops.is_advanced_enable:
+            row1.operator(Ops.bl_idname, text="Stop Loop", icon="PAUSE").action = "StopLoop"
+        else:
+            row1.operator(Ops.bl_idname, text="Execute Node Tree", icon="PLAY").action = "Submit"
+        row1.prop(bpy.context.scene.sdn, "advanced_exe", text="", icon="SETTINGS")
+        if bpy.context.scene.sdn.advanced_exe:
+            adv_col = col.box().column(align=True)
+            adv_col.prop(bpy.context.scene.sdn, "loop_exec", text_ctxt=ctxt, toggle=True)
+            if not bpy.context.scene.sdn.loop_exec:
+                adv_col.prop(bpy.context.scene.sdn, "batch_count", text_ctxt=ctxt)
         row = col.row(align=True)
         row.scale_y = 1.3
         row.operator(Ops.bl_idname, text="Cancel", icon="CANCEL").action = "Cancel"

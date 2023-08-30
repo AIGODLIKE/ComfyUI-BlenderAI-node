@@ -8,7 +8,7 @@ from functools import partial
 from collections import OrderedDict
 from bpy.types import NodeTree
 from nodeitems_utils import NodeCategory, NodeItem, register_node_categories, unregister_node_categories, _node_categories
-from .nodes import nodes_reg, nodes_unreg, parse_node, NodeBase
+from .nodes import nodes_reg, nodes_unreg, parse_node, NodeBase, get_tree
 from ..utils import logger, Icon, rgb2hex, hex2rgb, _T
 from ..datas import EnumCache
 from ..timer import Timer

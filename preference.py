@@ -70,7 +70,7 @@ class AddonPreference(bpy.types.AddonPreferences):
 
     ip: bpy.props.StringProperty(default="127.0.0.1", name="IP", description="服务IP地址",
                                  update=ip_check)
-    port: bpy.props.IntProperty(default=5000, min=1000, max=65535, name="端口", description="服务端口号")
+    port: bpy.props.IntProperty(default=8189, min=1000, max=65535, name="端口", description="服务端口号")
 
     def update_open_dir1(self, context):
         if self.open_dir1:
