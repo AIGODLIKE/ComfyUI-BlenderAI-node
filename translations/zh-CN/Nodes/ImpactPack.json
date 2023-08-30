@@ -176,6 +176,18 @@
             "SEGS": "Seg"
         }
     },
+    "ImpactSwitch": {
+        "title": "切换",
+        "inputs": {
+            "input1": "输入1",
+            "input2": "输入2",
+            "input3": "输入3",
+            "input4": "输入4"
+        },
+        "outputs": {
+            "*": "输出"
+        }
+    },
     "SEGSToImageList": {
         "title": "Seg到图像列表",
         "inputs": {
@@ -432,6 +444,15 @@
             "MASK": "遮罩"
         }
     },
+    "RemoveNoiseMask": {
+        "title": "移除噪波遮罩",
+        "inputs": {
+            "samples": "Latent"
+        },
+        "outputs": {
+            "LATENT": "Latent"
+        }
+    },
 
 
 
@@ -578,7 +599,7 @@
         }
     },
     "NoiseInjectionDetailerHookProvider": {
-        "title": "NoiseInjectionDetailerHookProvider",
+        "title": "插入噪波细化约束器",
         "widgets": {
             "source": "生成设备",
             "seed": "随机种",
@@ -594,7 +615,7 @@
         }
     },
     "NoiseInjectionHookProvider": {
-        "title": "NoiseInjectionHookProvider",
+        "title": "插入噪波约束器",
         "widgets": {
             "scheduler": "调度器",
             "source": "生成设备",
@@ -606,6 +627,9 @@
                 "randomize": "随机",
             "start_strength": "初始强度",
             "end_strength": "最终强度"
+        },
+        "outputs": {
+            "PK_HOOK": "约束"
         }
     },
     "SEGSDetailer": {
@@ -1032,7 +1056,8 @@
             "negative": "负面提示词"
         },
         "outputs": {
-            "BASIC_PIPE": "基础节点束"
+            "BASIC_PIPE": "基础节点束",
+            "basic_pipe": "基础节点束"
         }
     },
     "FromBasicPipe": {
@@ -1100,7 +1125,7 @@
             "upscale_model_opt": "放大模型"
         },
         "widgets": {
-            "scale_method": "放大方法",
+            "scale_method": "缩放方法",
                 "nearest-exact": "邻近-精确",
                 "bilinear": "双线性插值",
                 "area": "区域",
@@ -1122,7 +1147,7 @@
             "pk_hook_opt": "约束"
         },
         "widgets": {
-            "scale_method": "放大方法",
+            "scale_method": "缩放方法",
                 "nearest-exact": "邻近-精确",
                 "bilinear": "双线性插值",
                 "area": "区域",
@@ -1145,7 +1170,7 @@
             "pk_hook_opt": "约束"
         },
         "widgets": {
-            "scale_method": "放大方法",
+            "scale_method": "缩放方法",
                 "nearest-exact": "邻近-精确",
                 "bilinear": "双线性插值",
                 "area": "区域",
@@ -1202,7 +1227,7 @@
             "pk_hook_opt": "约束"
         },
         "widgets": {
-            "scale_method": "放大方法",
+            "scale_method": "缩放方法",
                 "nearest-exact": "邻近-精确",
                 "bilinear": "双线性插值",
                 "area": "区域",
@@ -1233,7 +1258,7 @@
             "pk_hook_opt": "约束"
         },
         "widgets": {
-            "scale_method": "放大方法",
+            "scale_method": "缩放方法",
                 "nearest-exact": "邻近-精确",
                 "bilinear": "双线性插值",
                 "area": "区域",
@@ -1267,7 +1292,7 @@
             "pk_hook_full_opt": "全局约束"
         },
         "widgets": {
-            "scale_method": "放大方法",
+            "scale_method": "缩放方法",
                 "nearest-exact": "邻近-精确",
                 "bilinear": "双线性插值",
                 "area": "区域",
@@ -1300,7 +1325,7 @@
             "pk_hook_full_opt": "全局约束"
         },
         "widgets": {
-            "scale_method": "放大方法",
+            "scale_method": "缩放方法",
                 "nearest-exact": "邻近-精确",
                 "bilinear": "双线性插值",
                 "area": "区域",
