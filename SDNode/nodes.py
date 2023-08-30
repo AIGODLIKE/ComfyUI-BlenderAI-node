@@ -359,9 +359,9 @@ class NodeBase(bpy.types.Node):
                     if hasattr(self, reg_name):
                         # 添加 widget
                         inputs[inp_name] = getattr(self, reg_name)
-                    else:
-                        # 添加 socket
-                        inputs[inp_name] = [None]
+                    # else:
+                    #     # 添加 socket
+                    #     inputs[inp_name] = [None]
             else:
                 # 添加 widget
                 inputs[inp_name] = getattr(self, reg_name)
