@@ -43,7 +43,8 @@ Switch to the ComfyUI workspace, use the shortcut key "N" to open the panel, and
 
 Like other Blender nodes, you can use the shortcut keys "Shift+A" to bring up the creation menu. You can also click on the "Replace Node Tree" button or "Append Node Tree" button on the right to add/append a node tree. In summary, you should create a node tree like COMFYUI
 **Image preview and input must use Blender specially designed nodes, otherwise the calculation results may not be displayed properly (using Blender specially designed nodes does not affect the data, it will automatically be saved as COMFYUI standard data)**
-![image](https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/588c9e85-306e-4d34-8f73-af9a9230a236)
+![image](https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/22c68423-07aa-4a07-93a9-9354880276e1)
+
 
 ## Manual
 
