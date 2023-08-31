@@ -441,3 +441,12 @@ NODE_CLASS_MAPPINGS = {
     'OpenPoseKeyPose': OpenPoseKeyPose,
     'OpenPoseCanny': OpenPoseCanny,
 }
+
+
+NODE_DISPLAY_NAME_MAPPINGS = {
+    # Sampling
+    "输入图像": "Input Image",
+    "Mask": "Mask",
+    "存储": "Save",
+    "预览": "Preview",
+}

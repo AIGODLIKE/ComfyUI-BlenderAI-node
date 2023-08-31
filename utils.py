@@ -37,7 +37,9 @@ def _T(word):
     culture = translation.setdefault(locale, {})
     if t := culture.get(word):
         return t
-
+    culture[word] = pgettext(word)
+    if t := culture.get(word):
+        return t
     def f(word):
         culture[word] = pgettext(word)
     Timer.put((f, word))

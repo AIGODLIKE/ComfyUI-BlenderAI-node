@@ -177,6 +177,10 @@ other = {
     "MultiFrame": "多帧",
     "Batch": "批量",
     "Batch Directory": "批量处理文件夹",
+    "Disable Render All": "禁用场景树所有渲染行为",
+    "Advanced Setting": "显示高级设置",
+    "Batch exec num": "批量执行数",
+    "Loop exec": "循环执行",
     # ops.py
     "No NodeTree Found": "节点树为空",
     "Node Not Found: ": "节点未找到",
@@ -196,12 +200,48 @@ other = {
     "Load Batch Task": "加载批量任务表",
     "Copy Tree to ClipBoard": "复制到剪切板",
     "No Node Tree Found!": "未找到节点树!",
+    "Load History": "加载历史",
+    "Load History Workflow": "加载历史工作流",
     # ui.py
     "ClearTask": "清理任务",
     "Cancel": "取消任务",
     # preference.py
+    "Preview Image Size": "预览图尺寸",
+    "Enable High Quality Preview Image": "启用高清预览图",
+    "ComfyUI Path": "ComfyUI路径",
     "With WEBUI Model": "兼容WEBUI模型",
     "With ComfyUI Model": "兼容ComfyUI模型",
+    "General": "通用",
+    "Common Path": "常用路径",
+    "Friendly Links" : "友情链接",
+    "VRam Mode": "显存模式",
+    "Gpu Only": "极高显存",
+    "Store and run everything (text encoders/CLIP models, etc... on the GPU).": "所有数据存储到显存",
+    "High VRam": "高显存",
+    "By default models will be unloaded to CPU memory after being used. This option keeps them in GPU memory.": "模型常驻显存, 减少加载时间",
+    "Normal VRam": "中显存",
+    "Used to force normal vram use if lowvram gets automatically enabled.": "自动启用 低显存 模式时强制使用normal vram",
+    "Low VRam": "低显存",
+    "Split the unet in parts to use less vram.": "拆分UNet来降低显存开销",
+    "No VRam": "超低显存",
+    "When lowvram isn't enough.": "如果低显存依然不够",
+    "Cpu Only": "仅CPU",
+    "To use the CPU for everything (slow).": "只使用CPU",
+    "Check Depencies Before Server Launch": "启动服务时检查依赖",
+    "Check ComfyUI(some) Depencies Before Server Launch": "启动服务时进行ComfyUI插件(部分)依赖安装检查",
+    "Force Log": "强制日志",
+    "Force Log, Generally Not Needed": "强制输出日志, 一般不需要开启",
+    "Service IP Address": "服务IP地址",
+    "Port": "端口",
+    "Service Port": "服务端口号",
+    "Open CKPT Folder": "打开CKPT模型文件夹",
+    "Open LoRA Folder": "打开LoRA模型文件夹",
+    "Open ComfyUI Folder": "打开ComfyUI文件夹",
+    "Open Cache Folder": "打开输出缓存文件夹",
+    "-AIGODLIKE Adventure Community": "-AIGODLIKE冒险社区",
+    "AIGODLIKE Open Source Community - Main Site": "AIGODLIKE开源社区-主站",
+    "-Good friends exploring in the AI world (alphabetical order)": "-在AI世界探索的好朋友们(首字母排序)",
+    "\"Thank you, these adventurers who are exploring and sharing their experience in the AI field, hurry up and follow them\"": "“感谢，这些在AI领域探索并分享经验的冒险者，快去关注啦～”",
     # MLT
     " Prompts": "提示词",
     "MLT": "多行文本",
@@ -221,6 +261,12 @@ other = {
 }
 
 LANG_TEXT = {
+    "en_US": {
+        # Blender
+        "输入图像": "Input Image",
+        "存储": "Save",
+        "预览": "Preview",
+    },
     "zh_CN": {
         **other,
         # 分类

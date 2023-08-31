@@ -136,7 +136,7 @@ class Prop(bpy.types.PropertyGroup):
                                               ("Batch", "Batch", "Batch", 2),
                                               ])
     batch_dir: bpy.props.StringProperty(name="Batch Directory", default=Path.home().joinpath("Desktop").as_posix(), subtype="DIR_PATH")
-    disable_render_all: bpy.props.BoolProperty(default=False, description="禁用场景树所有渲染行为")
-    advanced_exe: bpy.props.BoolProperty(default=False, description="显示高级设置")
-    batch_count: bpy.props.IntProperty(default=1, min=1, name="批量执行数")
-    loop_exec: bpy.props.BoolProperty(default=False, name="循环执行")
+    disable_render_all: bpy.props.BoolProperty(default=False, description="Disable Render All")
+    advanced_exe: bpy.props.BoolProperty(default=False, description="Advanced Setting")
+    batch_count: bpy.props.IntProperty(default=1, min=1, name="Batch exec num")
+    loop_exec: bpy.props.BoolProperty(default=False, name="Loop exec")

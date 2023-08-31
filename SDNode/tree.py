@@ -21,7 +21,16 @@ TREE_TYPE = "CFNodeTree"
 class InvalidNodeType(Exception):
     ...
 
+class NodeItem(NodeItem):
+    translation_context = ctxt
 
+    @staticmethod
+    def draw(self, layout, _context):
+        props = layout.operator("node.add_node", text=_T(self.label), text_ctxt=ctxt)
+        props.type = self.nodetype
+        props.use_transform = True
+
+            
 def serialize_wrapper(func):
     def wrapper(self, *args, **kwargs):
         try:
@@ -533,10 +542,10 @@ def reg_nodetree(identifier, cat_list, sub=False):
         return
 
     def draw_node_item(self, context):
-        layout = self.layout
+        layout :bpy.types.UILayout = self.layout
         col = layout.column(align=True)
         for menu in self.category.menus:
-            col.menu("NODE_MT_category%s" % menu.identifier)
+            col.menu("NODE_MT_category%s" % menu.identifier, text_ctxt=ctxt)
         for item in self.category.items(context):
             item.draw(item, col, context)
         for draw_fn in getattr(self.category, "draw_fns", []):

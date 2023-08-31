@@ -447,8 +447,8 @@ class Ops_Mask(bpy.types.Operator):
 
 class Load_History(bpy.types.Operator):
     bl_idname = "sdn.load_history"
-    bl_label = "加载历史记录"
-    bl_description = "Load History"
+    bl_label = "Load History"
+    bl_description = "Load History Workflow"
     name: bpy.props.StringProperty()
 
     @classmethod

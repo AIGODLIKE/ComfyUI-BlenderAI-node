@@ -3312,7 +3312,7 @@
       "MASK"
     ],
     "name": "输入图像",
-    "display_name": "输入图像",
+    "display_name": "Input Image",
     "description": "",
     "category": "Blender",
     "output_node": false
