@@ -1,6 +1,7 @@
 import os
 import json
 import sys
+import traceback
 import numpy as np
 import builtins
 import torch
@@ -31,6 +32,21 @@ def removetemp():
 
 
 removetemp()
+
+def execute_wrap():
+    def exec_wrap(func):
+        def wrap(*args, **kwargs):
+            try:
+                return func(*args, **kwargs)
+            except Exception:
+                traceback.print_exc()
+                sys.stdout.flush()
+        return wrap
+
+    execution.PromptExecutor.execute = exec_wrap(execution.PromptExecutor.execute)
+
+execute_wrap()
+
 atexit.register(removetemp)
 
 
