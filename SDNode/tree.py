@@ -3,6 +3,7 @@ import typing
 import time
 import sys
 import traceback
+from bpy.app.translations import pgettext
 from threading import Thread
 from functools import partial
 from collections import OrderedDict
@@ -26,7 +27,7 @@ class NodeItem(NodeItem):
 
     @staticmethod
     def draw(self, layout, _context):
-        props = layout.operator("node.add_node", text=_T(self.label), text_ctxt=ctxt)
+        props = layout.operator("node.add_node", text=pgettext(self.label), text_ctxt=ctxt)
         props.type = self.nodetype
         props.use_transform = True
 

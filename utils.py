@@ -30,18 +30,15 @@ def get_addon_name():
     return _T("无限圣杯 Node") + get_version()
 
 
-def _T(word):
+def _T(word, msgctxt=None):
     import bpy
     from bpy.app.translations import pgettext
     locale = bpy.context.preferences.view.language
     culture = translation.setdefault(locale, {})
     if t := culture.get(word):
         return t
-    culture[word] = pgettext(word)
-    if t := culture.get(word):
-        return t
     def f(word):
-        culture[word] = pgettext(word)
+        culture[word] = pgettext(word, msgctxt=msgctxt)
     Timer.put((f, word))
     return LANG_TEXT.get(locale, {}).get(word, word)
 
