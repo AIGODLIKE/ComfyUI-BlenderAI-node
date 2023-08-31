@@ -260,6 +260,19 @@ class TaskManager:
         logger.warn(_T("ControlNet Init Finished."))
         logger.warn(_T("If controlnet still not worked, install manually by double clicked {}").format((controlnet / "install.bat").as_posix()))
 
+    def web_config_init(ip=None, port=None):
+        if ip:
+            TaskManager.launch_ip = ip
+        elif get_ip() == "0.0.0.0":
+            TaskManager.launch_ip = "127.0.0.1"
+        else:
+            TaskManager.launch_ip = get_ip()
+        if port:
+            TaskManager.launch_port = port
+        else:
+            TaskManager.launch_port = get_port()
+        TaskManager.launch_url = f"http://{TaskManager.launch_ip}:{TaskManager.launch_port}"
+        
     def create_args(python: Path, model_path: Path):
         pref = get_pref()
         args = [python.as_posix()]
@@ -277,6 +290,14 @@ class TaskManager:
                 config = json.loads(path.read_text(encoding="utf-8"))
                 if not isinstance(config, list):
                     return []
+                for piece in config:
+                    # --listen 127.0.0.1 --port 8188
+                    if ip := re.match(r"--listen\s+([0-9.]+)", piece):
+                        ip = ip.group(1)
+                        ip = {"0.0.0.0": "127.0.0.1"}.get(ip, ip)
+                        get_pref().ip = ip
+                    if port := re.match(r".*?--port\s+([0-9]+)", piece):
+                        get_pref().port = int(port.group(1))
                 config = " ".join(config).split(" ")  # resplit
                 logger.info(f"{_T('Find Config')}: {config}")
             except IndexError:
@@ -364,13 +385,7 @@ class TaskManager:
                 continue
             shutil.copyfile(file, Path(model_path) / "custom_nodes" / file.name)
         args = TaskManager.create_args(python, Path(model_path))
-        if get_ip() == "0.0.0.0":
-            TaskManager.launch_ip = "127.0.0.1"
-        else:
-            TaskManager.launch_ip = get_ip()
-        TaskManager.launch_port = get_port()
-        TaskManager.launch_url = f"http://{TaskManager.launch_ip}:{TaskManager.launch_port}"
-
+        TaskManager.web_config_init()
         # cmd = " ".join([str(python), arg])
         # 加了 stderr后 无法获取 进度?
         # logger.debug(" ".join(args))
