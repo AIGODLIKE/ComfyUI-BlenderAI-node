@@ -30,7 +30,8 @@ Or you can try
 3. **Settings add-on**
 
 Set the already configured COMFYUI path，and select the startup mode based on VRAM
-![image](https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/a0058178-dcf0-4b23-8e79-3e4ae1267286)
+![image](https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/5d081ee7-0b2a-4871-bdf9-ada05bb12831)
+
 
 ## How to use
 
