@@ -20,14 +20,12 @@
         {
           "name": "samples",
           "type": "LATENT",
-          "link": 4,
-          "slot_index": 0
+          "link": 4
         },
         {
           "name": "vae",
           "type": "VAE",
-          "link": 6,
-          "slot_index": 1
+          "link": 6
         }
       ],
       "outputs": [
@@ -62,26 +60,22 @@
         {
           "name": "model",
           "type": "MODEL",
-          "link": 3,
-          "slot_index": 0
+          "link": 3
         },
         {
           "name": "positive",
           "type": "CONDITIONING",
-          "link": 9,
-          "slot_index": 1
+          "link": 9
         },
         {
           "name": "negative",
           "type": "CONDITIONING",
-          "link": 1,
-          "slot_index": 2
+          "link": 1
         },
         {
           "name": "latent_image",
           "type": "LATENT",
-          "link": 13,
-          "slot_index": 3
+          "link": 13
         }
       ],
       "outputs": [
@@ -94,11 +88,11 @@
           "slot_index": 0
         }
       ],
-      "title": "K采样器",
+      "title": "KSampler",
       "properties": {},
       "widgets_values": [
         "123456789",
-        false,
+        "fixed",
         20,
         8.0,
         "euler",
@@ -134,12 +128,12 @@
       "title": "ControlNet加载器",
       "properties": {},
       "widgets_values": [
-        "线-control_hed-fp16.safetensors"
+        "t2iadapter_depth-fp16.safetensors"
       ]
     },
     {
       "id": 15,
-      "type": "预览",
+      "type": "PreviewImage",
       "pos": [
         556.8773803710938,
         1224.972900390625
@@ -155,8 +149,7 @@
         {
           "name": "images",
           "type": "IMAGE",
-          "link": 12,
-          "slot_index": 0
+          "link": 12
         }
       ],
       "outputs": [],
@@ -209,7 +202,7 @@
       "title": "Checkpoint简易加载器",
       "properties": {},
       "widgets_values": [
-        "AbyssOrangeMix2_sfw.ckpt"
+        "AIGODLIKE华丽_4000.ckpt"
       ]
     },
     {
@@ -230,8 +223,7 @@
         {
           "name": "clip",
           "type": "CLIP",
-          "link": 0,
-          "slot_index": 0
+          "link": 0
         }
       ],
       "outputs": [
@@ -268,8 +260,7 @@
         {
           "name": "clip",
           "type": "CLIP",
-          "link": 2,
-          "slot_index": 0
+          "link": 2
         }
       ],
       "outputs": [
@@ -306,20 +297,17 @@
         {
           "name": "conditioning",
           "type": "CONDITIONING",
-          "link": 8,
-          "slot_index": 0
+          "link": 8
         },
         {
           "name": "control_net",
           "type": "CONTROL_NET",
-          "link": 7,
-          "slot_index": 1
+          "link": 7
         },
         {
           "name": "image",
           "type": "IMAGE",
-          "link": 10,
-          "slot_index": 2
+          "link": 10
         }
       ],
       "outputs": [
@@ -340,7 +328,7 @@
     },
     {
       "id": 9,
-      "type": "预览",
+      "type": "PreviewImage",
       "pos": [
         1476.05615234375,
         602.52978515625
@@ -356,8 +344,7 @@
         {
           "name": "images",
           "type": "IMAGE",
-          "link": 5,
-          "slot_index": 0
+          "link": 5
         }
       ],
       "outputs": [],
@@ -422,8 +409,7 @@
         {
           "name": "image",
           "type": "IMAGE",
-          "link": 11,
-          "slot_index": 0
+          "link": 11
         }
       ],
       "outputs": [
@@ -439,7 +425,10 @@
       ],
       "title": "HED(模糊线)预处理器",
       "properties": {},
-      "widgets_values": []
+      "widgets_values": [
+        "v1",
+        "enable"
+      ]
     },
     {
       "id": 10,
@@ -490,14 +479,12 @@
         {
           "name": "pixels",
           "type": "IMAGE",
-          "link": 14,
-          "slot_index": 0
+          "link": 14
         },
         {
           "name": "vae",
           "type": "VAE",
-          "link": 15,
-          "slot_index": 1
+          "link": 15
         }
       ],
       "outputs": [
@@ -522,23 +509,23 @@
       1,
       5,
       0,
-      "CheckpointLoaderSimple"
-    ],
-    [
-      1,
-      6,
-      0,
-      3,
-      2,
       "CLIPTextEncode"
     ],
     [
+      1,
+      6,
+      0,
+      3,
+      2,
+      "KSampler"
+    ],
+    [
       2,
       4,
       1,
       6,
       0,
-      "CheckpointLoaderSimple"
+      "CLIPTextEncode"
     ],
     [
       3,
@@ -546,7 +533,7 @@
       0,
       3,
       0,
-      "CheckpointLoaderSimple"
+      "KSampler"
     ],
     [
       4,
@@ -554,7 +541,7 @@
       0,
       8,
       0,
-      "KSampler"
+      "VAEDecode"
     ],
     [
       5,
@@ -562,7 +549,7 @@
       0,
       9,
       0,
-      "VAEDecode"
+      "预览"
     ],
     [
       6,
@@ -570,7 +557,7 @@
       0,
       8,
       1,
-      "VAELoader"
+      "VAEDecode"
     ],
     [
       7,
@@ -578,7 +565,7 @@
       0,
       14,
       1,
-      "ControlNetLoader"
+      "ControlNetApply"
     ],
     [
       8,
@@ -586,7 +573,7 @@
       0,
       14,
       0,
-      "CLIPTextEncode"
+      "ControlNetApply"
     ],
     [
       9,
@@ -594,7 +581,7 @@
       0,
       3,
       1,
-      "ControlNetApply"
+      "KSampler"
     ],
     [
       10,
@@ -602,7 +589,7 @@
       0,
       14,
       2,
-      "HEDPreprocessor"
+      "ControlNetApply"
     ],
     [
       11,
@@ -610,7 +597,7 @@
       0,
       11,
       0,
-      "输入图像"
+      "HEDPreprocessor"
     ],
     [
       12,
@@ -618,7 +605,7 @@
       0,
       15,
       0,
-      "HEDPreprocessor"
+      "预览"
     ],
     [
       13,
@@ -626,7 +613,7 @@
       0,
       3,
       3,
-      "VAEEncode"
+      "KSampler"
     ],
     [
       14,
@@ -634,7 +621,7 @@
       0,
       16,
       0,
-      "输入图像"
+      "VAEEncode"
     ],
     [
       15,
@@ -642,7 +629,7 @@
       2,
       16,
       1,
-      "CheckpointLoaderSimple"
+      "VAEEncode"
     ]
   ],
   "groups": [],

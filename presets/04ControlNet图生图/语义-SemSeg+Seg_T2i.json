@@ -305,7 +305,7 @@
       "title": "ControlNet加载器",
       "properties": {},
       "widgets_values": [
-        "语义-t2iadapter_seg-fp16.safetensors"
+        "t2iadapter_seg-fp16.safetensors"
       ]
     },
     {

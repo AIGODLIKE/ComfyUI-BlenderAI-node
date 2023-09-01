@@ -367,7 +367,7 @@
       "title": "ControlNet加载器",
       "properties": {},
       "widgets_values": [
-        "深度-t2iadapter_depth-fp16.safetensors"
+        "t2iadapter_depth-fp16.safetensors"
       ]
     },
     {

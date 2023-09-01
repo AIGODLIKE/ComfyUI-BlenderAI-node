@@ -1,0 +1,432 @@
+{
+  "last_node_id": 110,
+  "last_link_id": 10,
+  "nodes": [
+    {
+      "id": 55,
+      "type": "KSampler (Efficient)",
+      "pos": [
+        1187.8009033203125,
+        58.1243782043457
+      ],
+      "size": {
+        "0": 365.05828857421875,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 0
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 4
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 1
+        },
+        {
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 3
+        },
+        {
+          "name": "optional_vae",
+          "type": "VAE",
+          "link": 2
+        },
+        {
+          "name": "script",
+          "type": "SCRIPT",
+          "link": 9
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [],
+          "slot_index": 0
+        },
+        {
+          "name": "CONDITIONING+",
+          "type": "CONDITIONING+",
+          "links": [],
+          "slot_index": 1
+        },
+        {
+          "name": "CONDITIONING-",
+          "type": "CONDITIONING-",
+          "links": [],
+          "slot_index": 2
+        },
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [],
+          "slot_index": 3
+        },
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "links": [],
+          "slot_index": 4
+        },
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            5
+          ],
+          "slot_index": 5
+        }
+      ],
+      "title": "KSampler (Efficient)",
+      "properties": {},
+      "widgets_values": [
+        "Script",
+        "14196623",
+        "randomize",
+        20,
+        7.5,
+        "dpmpp_2m_sde",
+        "karras",
+        1.0,
+        "auto",
+        "true"
+      ]
+    },
+    {
+      "id": 110,
+      "type": "Efficient Loader",
+      "pos": [
+        240.3501739501953,
+        80.4696044921875
+      ],
+      "size": {
+        "0": 391.4876403808594,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "lora_stack",
+          "type": "LORA_STACK",
+          "link": null
+        },
+        {
+          "name": "cnet_stack",
+          "type": "CONTROL_NET_STACK",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            0
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "CONDITIONING+",
+          "type": "CONDITIONING+",
+          "links": [
+            4
+          ],
+          "slot_index": 1
+        },
+        {
+          "name": "CONDITIONING-",
+          "type": "CONDITIONING-",
+          "links": [
+            1
+          ],
+          "slot_index": 2
+        },
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            3
+          ],
+          "slot_index": 3
+        },
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "links": [
+            2
+          ],
+          "slot_index": 4
+        },
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [],
+          "slot_index": 5
+        },
+        {
+          "name": "DEPENDENCIES",
+          "type": "DEPENDENCIES",
+          "links": [
+            6
+          ],
+          "slot_index": 6
+        }
+      ],
+      "title": "Efficient Loader",
+      "properties": {},
+      "widgets_values": [
+        "Shyaku_qofo.ckpt",
+        "pastel-waifu-diffusion.vae.pt",
+        -2,
+        "None",
+        1.0,
+        1.0,
+        "masterpiece, best quality, movie still, 1girl, floating in the sky, cloud girl, cloud, (close-up:1.1), bright, happy, fun, soft lighting, closeup",
+        "embedding:EasyNegative.pt, embedding:bad-artist-anime.pt, lowres, low quality, worst quality, duplicate, morbid, mutilated, out of frame, extra fingers, mutated hands, poorly drawn hands, poorly drawn face, mutation, deformed, ugly, blurry, bad anatomy, bad proportions, extra limbs, cloned face, disfigured, out of frame, ugly, extra limbs, bad anatomy, gross proportions, malformed limbs, missing arms, missing legs, extra arms, extra legs, mutated hands, fused fingers, too many fingers, long neck, kid, teenage, badhandv4, EasyNegative, child, kid, teenage",
+        768,
+        768,
+        1
+      ]
+    },
+    {
+      "id": 3,
+      "type": "XY Plot",
+      "pos": [
+        881.3195190429688,
+        645.5755615234375
+      ],
+      "size": {
+        "0": 271.4360046386719,
+        "1": 100.0
+      },
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "dependencies",
+          "type": "DEPENDENCIES",
+          "link": 6
+        },
+        {
+          "name": "X",
+          "type": "XY",
+          "link": 7
+        },
+        {
+          "name": "Y",
+          "type": "XY",
+          "link": 8
+        }
+      ],
+      "outputs": [
+        {
+          "name": "SCRIPT",
+          "type": "SCRIPT",
+          "links": [
+            9
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "XY Plot",
+      "properties": {},
+      "widgets_values": [
+        0,
+        "False",
+        "Vertical",
+        "True",
+        "Plot"
+      ]
+    },
+    {
+      "id": 4,
+      "type": "XY Input: CFG Scale",
+      "pos": [
+        628.3820190429688,
+        823.5064697265625
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 100.0
+      },
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "X or Y",
+          "type": "X or Y",
+          "links": [
+            7
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "XY Input: CFG Scale",
+      "properties": {},
+      "widgets_values": [
+        3,
+        7.0,
+        9.0
+      ]
+    },
+    {
+      "id": 5,
+      "type": "PreviewImage",
+      "pos": [
+        1708.6971435546875,
+        -163.47935485839844
+      ],
+      "size": {
+        "0": 2457.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 5
+        }
+      ],
+      "outputs": [],
+      "title": "预览.001",
+      "properties": {},
+      "widgets_values": []
+    },
+    {
+      "id": 6,
+      "type": "XY Input: Seeds++ Batch",
+      "pos": [
+        625.0989379882812,
+        979.4064331054688
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 100.0
+      },
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "X or Y",
+          "type": "X or Y",
+          "links": [
+            8
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "XY Input: Seeds++ Batch",
+      "properties": {},
+      "widgets_values": [
+        3
+      ]
+    }
+  ],
+  "links": [
+    [
+      0,
+      110,
+      0,
+      55,
+      0,
+      "KSampler (Efficient)"
+    ],
+    [
+      1,
+      110,
+      2,
+      55,
+      2,
+      "KSampler (Efficient)"
+    ],
+    [
+      2,
+      110,
+      4,
+      55,
+      4,
+      "KSampler (Efficient)"
+    ],
+    [
+      3,
+      110,
+      3,
+      55,
+      3,
+      "KSampler (Efficient)"
+    ],
+    [
+      4,
+      110,
+      1,
+      55,
+      1,
+      "KSampler (Efficient)"
+    ],
+    [
+      5,
+      55,
+      5,
+      5,
+      0,
+      "预览"
+    ],
+    [
+      6,
+      110,
+      6,
+      3,
+      0,
+      "XY Plot"
+    ],
+    [
+      7,
+      4,
+      0,
+      3,
+      1,
+      "XY Plot"
+    ],
+    [
+      8,
+      6,
+      0,
+      3,
+      2,
+      "XY Plot"
+    ],
+    [
+      9,
+      3,
+      0,
+      55,
+      5,
+      "KSampler (Efficient)"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {},
+  "version": 0.4
+}

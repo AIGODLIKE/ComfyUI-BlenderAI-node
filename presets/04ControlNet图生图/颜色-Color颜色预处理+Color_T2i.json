@@ -168,7 +168,7 @@
       "title": "ControlNet加载器",
       "properties": {},
       "widgets_values": [
-        "颜色-t2iadapter_color-fp16.safetensors"
+        "t2iadapter_color-fp16.safetensors"
       ]
     },
     {

@@ -224,7 +224,7 @@
       "title": "ControlNet加载器",
       "properties": {},
       "widgets_values": [
-        "线-t2iadapter_sketch-fp16.safetensors"
+        "t2iadapter_sketch-fp16.safetensors"
       ]
     },
     {

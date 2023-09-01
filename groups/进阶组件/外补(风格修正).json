@@ -1,0 +1,426 @@
+{
+    "last_node_id": 40,
+    "last_link_id": 27,
+    "nodes": [
+        {
+            "id": 7,
+            "type": "VAEEncodeForInpaint",
+            "pos": [
+                2162.91943359375,
+                2067.465087890625
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 6,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "pixels",
+                    "type": "IMAGE",
+                    "link": 18
+                },
+                {
+                    "name": "vae",
+                    "type": "VAE",
+                    "link": null
+                },
+                {
+                    "name": "mask",
+                    "type": "MASK",
+                    "link": 19
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "LATENT",
+                    "type": "LATENT",
+                    "links": [
+                        20
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "VAE内补编码器",
+            "properties": {},
+            "widgets_values": [
+                6
+            ]
+        },
+        {
+            "id": 8,
+            "type": "ImagePadForOutpaint",
+            "pos": [
+                1884.50390625,
+                2067.465087890625
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 5,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "image",
+                    "type": "IMAGE",
+                    "link": null
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "IMAGE",
+                    "type": "IMAGE",
+                    "links": [
+                        18
+                    ],
+                    "slot_index": 0
+                },
+                {
+                    "name": "MASK",
+                    "type": "MASK",
+                    "links": [
+                        19
+                    ],
+                    "slot_index": 1
+                }
+            ],
+            "title": "外补画板",
+            "properties": {},
+            "widgets_values": [
+                0,
+                0,
+                0,
+                0,
+                40
+            ]
+        },
+        {
+            "id": 9,
+            "type": "KSampler",
+            "pos": [
+                2464.11279296875,
+                1715.751220703125
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 7,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "model",
+                    "type": "MODEL",
+                    "link": null
+                },
+                {
+                    "name": "positive",
+                    "type": "CONDITIONING",
+                    "link": 22
+                },
+                {
+                    "name": "negative",
+                    "type": "CONDITIONING",
+                    "link": null
+                },
+                {
+                    "name": "latent_image",
+                    "type": "LATENT",
+                    "link": 20
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "LATENT",
+                    "type": "LATENT",
+                    "slot_index": 0
+                }
+            ],
+            "title": "K采样器.001",
+            "properties": {},
+            "widgets_values": [
+                "0",
+                "fixed",
+                20,
+                8.0,
+                "euler",
+                "normal",
+                1.0
+            ]
+        },
+        {
+            "id": 11,
+            "type": "StyleModelApply",
+            "pos": [
+                2166.95703125,
+                1732.468017578125
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 100.0
+            },
+            "flags": {},
+            "order": 3,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "conditioning",
+                    "type": "CONDITIONING",
+                    "link": null
+                },
+                {
+                    "name": "style_model",
+                    "type": "STYLE_MODEL",
+                    "link": 25
+                },
+                {
+                    "name": "clip_vision_output",
+                    "type": "CLIP_VISION_OUTPUT",
+                    "link": 23
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "CONDITIONING",
+                    "type": "CONDITIONING",
+                    "links": [
+                        21
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "风格模型应用",
+            "properties": {},
+            "widgets_values": []
+        },
+        {
+            "id": 10,
+            "type": "unCLIPConditioning",
+            "pos": [
+                2166.00390625,
+                1887.91650390625
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 100.0
+            },
+            "flags": {},
+            "order": 4,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "conditioning",
+                    "type": "CONDITIONING",
+                    "link": 21
+                },
+                {
+                    "name": "clip_vision_output",
+                    "type": "CLIP_VISION_OUTPUT",
+                    "link": 24
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "CONDITIONING",
+                    "type": "CONDITIONING",
+                    "links": [
+                        22
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "逆CLIP条件",
+            "properties": {},
+            "widgets_values": [
+                1.0,
+                0.0
+            ]
+        },
+        {
+            "id": 12,
+            "type": "CLIPVisionEncode",
+            "pos": [
+                1885.2449951171875,
+                1913.58984375
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 100.0
+            },
+            "flags": {},
+            "order": 1,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "clip_vision",
+                    "type": "CLIP_VISION",
+                    "link": 26
+                },
+                {
+                    "name": "image",
+                    "type": "IMAGE",
+                    "link": null
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "CLIP_VISION_OUTPUT",
+                    "type": "CLIP_VISION_OUTPUT",
+                    "links": [
+                        23,
+                        24
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "CLIP视觉编码",
+            "properties": {},
+            "widgets_values": []
+        },
+        {
+            "id": 13,
+            "type": "StyleModelLoader",
+            "pos": [
+                1887.1307373046875,
+                1701.365966796875
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 100.0
+            },
+            "flags": {},
+            "order": 2,
+            "mode": 0,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "STYLE_MODEL",
+                    "type": "STYLE_MODEL",
+                    "links": [
+                        25
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "风格模型加载器",
+            "properties": {},
+            "widgets_values": [
+                "t2iadapter_style-fp16.safetensors"
+            ]
+        },
+        {
+            "id": 14,
+            "type": "CLIPVisionLoader",
+            "pos": [
+                1580.7322998046875,
+                1916.4195556640625
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 100.0
+            },
+            "flags": {},
+            "order": 0,
+            "mode": 0,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "CLIP_VISION",
+                    "type": "CLIP_VISION",
+                    "links": [
+                        26
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "CLIP视觉加载器",
+            "properties": {},
+            "widgets_values": [
+                "clip-vit-large-patch14.bin"
+            ]
+        }
+    ],
+    "links": [
+        [
+            18,
+            8,
+            0,
+            7,
+            0,
+            "VAEEncodeForInpaint"
+        ],
+        [
+            19,
+            8,
+            1,
+            7,
+            2,
+            "VAEEncodeForInpaint"
+        ],
+        [
+            20,
+            7,
+            0,
+            9,
+            3,
+            "KSampler"
+        ],
+        [
+            21,
+            11,
+            0,
+            10,
+            0,
+            "unCLIPConditioning"
+        ],
+        [
+            22,
+            10,
+            0,
+            9,
+            1,
+            "KSampler"
+        ],
+        [
+            23,
+            12,
+            0,
+            11,
+            2,
+            "StyleModelApply"
+        ],
+        [
+            24,
+            12,
+            0,
+            10,
+            1,
+            "unCLIPConditioning"
+        ],
+        [
+            25,
+            13,
+            0,
+            11,
+            1,
+            "StyleModelApply"
+        ],
+        [
+            26,
+            14,
+            0,
+            12,
+            0,
+            "CLIPVisionEncode"
+        ]
+    ],
+    "groups": [],
+    "config": {},
+    "extra": {},
+    "version": 0.4
+}

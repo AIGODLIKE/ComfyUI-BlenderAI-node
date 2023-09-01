@@ -209,7 +209,7 @@
       "title": "ControlNet加载器",
       "properties": {},
       "widgets_values": [
-        "平铺-control_v11f1e_sd15_tile.pth"
+        "control_v11f1e_sd15_tile.pth"
       ]
     },
     {

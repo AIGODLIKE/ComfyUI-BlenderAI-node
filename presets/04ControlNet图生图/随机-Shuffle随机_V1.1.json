@@ -257,7 +257,7 @@
       "title": "ControlNet加载器",
       "properties": {},
       "widgets_values": [
-        "随机-control_v11e_sd15_shuffle.pth"
+        "control_v11e_sd15_shuffle.pth"
       ]
     },
     {

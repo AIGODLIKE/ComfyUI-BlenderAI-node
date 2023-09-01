@@ -1,0 +1,185 @@
+{
+    "last_node_id": 6,
+    "last_link_id": 3,
+    "nodes": [
+        {
+            "id": 6,
+            "type": "CLIPTextEncode",
+            "pos": [
+                2358.064453125,
+                1537.03857421875
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 100.0
+            },
+            "flags": {},
+            "order": 2,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "clip",
+                    "type": "CLIP",
+                    "link": null
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "CONDITIONING",
+                    "type": "CONDITIONING",
+                    "links": [
+                        2
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "CLIP文本编码器.001",
+            "properties": {},
+            "widgets_values": [
+                ""
+            ]
+        },
+        {
+            "id": 3,
+            "type": "ConditioningSetTimestepRange",
+            "pos": [
+                2357.74560546875,
+                1694.875732421875
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 100.0
+            },
+            "flags": {},
+            "order": 1,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "conditioning",
+                    "type": "CONDITIONING",
+                    "link": 0
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "CONDITIONING",
+                    "type": "CONDITIONING",
+                    "links": [
+                        1
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "设置条件时间",
+            "properties": {},
+            "widgets_values": [
+                0.0,
+                1.0
+            ]
+        },
+        {
+            "id": 5,
+            "type": "ConditioningConcat",
+            "pos": [
+                2654.208984375,
+                1533.478759765625
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 100.0
+            },
+            "flags": {},
+            "order": 3,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "conditioning_to",
+                    "type": "CONDITIONING",
+                    "link": 2
+                },
+                {
+                    "name": "conditioning_from",
+                    "type": "CONDITIONING",
+                    "link": 1
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "CONDITIONING",
+                    "type": "CONDITIONING",
+                    "slot_index": 0
+                }
+            ],
+            "title": "条件联结",
+            "properties": {},
+            "widgets_values": []
+        },
+        {
+            "id": 4,
+            "type": "CLIPTextEncode",
+            "pos": [
+                2072.24462890625,
+                1697.08056640625
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 100.0
+            },
+            "flags": {},
+            "order": 0,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "clip",
+                    "type": "CLIP",
+                    "link": null
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "CONDITIONING",
+                    "type": "CONDITIONING",
+                    "links": [
+                        0
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "CLIP文本编码器",
+            "properties": {},
+            "widgets_values": [
+                ""
+            ]
+        }
+    ],
+    "links": [
+        [
+            0,
+            4,
+            0,
+            3,
+            0,
+            "ConditioningSetTimestepRange"
+        ],
+        [
+            1,
+            3,
+            0,
+            5,
+            1,
+            "ConditioningConcat"
+        ],
+        [
+            2,
+            6,
+            0,
+            5,
+            0,
+            "ConditioningConcat"
+        ]
+    ],
+    "groups": [],
+    "config": {},
+    "extra": {},
+    "version": 0.4
+}

@@ -1,0 +1,171 @@
+{
+    "last_node_id": 9,
+    "last_link_id": 3,
+    "nodes": [
+        {
+            "id": 9,
+            "type": "ImageUpscaleWithModel",
+            "pos": [
+                2123.091064453125,
+                1731.853759765625
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 100.0
+            },
+            "flags": {},
+            "order": 1,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "upscale_model",
+                    "type": "UPSCALE_MODEL",
+                    "link": 1
+                },
+                {
+                    "name": "image",
+                    "type": "IMAGE",
+                    "link": null
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "IMAGE",
+                    "type": "IMAGE",
+                    "links": [
+                        0
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "图像通过模型放大",
+            "properties": {},
+            "widgets_values": []
+        },
+        {
+            "id": 8,
+            "type": "UpscaleModelLoader",
+            "pos": [
+                1839.3944091796875,
+                1731.853759765625
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 100.0
+            },
+            "flags": {},
+            "order": 0,
+            "mode": 0,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "UPSCALE_MODEL",
+                    "type": "UPSCALE_MODEL",
+                    "links": [
+                        1
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "放大模型加载器",
+            "properties": {},
+            "widgets_values": [
+                "4x-UltraSharp.pth"
+            ]
+        },
+        {
+            "id": 3,
+            "type": "PreviewImage",
+            "pos": [
+                2712.79248046875,
+                1733.0877685546875
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 100.0
+            },
+            "flags": {},
+            "order": 3,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "images",
+                    "type": "IMAGE",
+                    "link": 2
+                }
+            ],
+            "outputs": [],
+            "title": "预览",
+            "properties": {},
+            "widgets_values": []
+        },
+        {
+            "id": 7,
+            "type": "ImageScaleBy",
+            "pos": [
+                2406.7880859375,
+                1731.853759765625
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 100.0
+            },
+            "flags": {},
+            "order": 2,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "image",
+                    "type": "IMAGE",
+                    "link": 0
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "IMAGE",
+                    "type": "IMAGE",
+                    "links": [
+                        2
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "图像按系数缩放",
+            "properties": {},
+            "widgets_values": [
+                "bicubic",
+                1.0
+            ]
+        }
+    ],
+    "links": [
+        [
+            0,
+            9,
+            0,
+            7,
+            0,
+            "ImageScaleBy"
+        ],
+        [
+            1,
+            8,
+            0,
+            9,
+            0,
+            "ImageUpscaleWithModel"
+        ],
+        [
+            2,
+            7,
+            0,
+            3,
+            0,
+            "预览"
+        ]
+    ],
+    "groups": [],
+    "config": {},
+    "extra": {},
+    "version": 0.4
+}

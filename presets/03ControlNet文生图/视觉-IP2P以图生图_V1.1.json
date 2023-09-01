@@ -301,7 +301,7 @@
             "title": "ControlNet加载器",
             "properties": {},
             "widgets_values": [
-                "视觉-control_v11e_sd15_ip2p.pth"
+                "control_v11e_sd15_ip2p.pth"
             ]
         },
         {
