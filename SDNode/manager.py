@@ -299,6 +299,10 @@ class TaskManager:
                     if port := re.match(r".*?--port\s+([0-9]+)", piece):
                         get_pref().port = int(port.group(1))
                 config = " ".join(config).split(" ")  # resplit
+                for i, piece in enumerate(config):
+                    if ".yaml" in piece.lower():
+                        piece = Path(piece.replace("\"", "")).resolve().as_posix()
+                        config[i] = piece
                 logger.info(f"{_T('Find Config')}: {config}")
             except IndexError:
                 logger.error(_T("No Config File Found"))
