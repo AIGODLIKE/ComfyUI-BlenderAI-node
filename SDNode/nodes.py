@@ -16,7 +16,7 @@ from random import random as rand
 from functools import partial, lru_cache
 from mathutils import Vector, Matrix
 from bpy.types import Context, Event
-from .utils import gen_mask, SELECTED_COLLECTIONS
+from .utils import gen_mask, get_tree, SELECTED_COLLECTIONS
 from ..utils import logger, update_screen, Icon, _T
 from ..datas import ENUM_ITEMS_CACHE
 from ..preference import get_pref
@@ -117,25 +117,9 @@ def get_icon_path(nname):
                 path_list[reg_name] = d[name2path[class_type][name]][0]
     return PREVICONPATH.get(nname, {})
 
-
-def get_fixed_seed():
-    return int(random.randrange(4294967294))
-
-def get_tree():
-    tree = getattr(bpy.context.space_data, "edit_tree", None)
-    if tree:
-        return tree
-    for a in bpy.context.screen.areas:
-        if a.type != "NODE_EDITOR":
-            continue
-        for s in a.spaces:
-            if s.type != "NODE_EDITOR" or s.tree_type != "CFNodeTree":
-                continue
-            tree = s.edit_tree
-    if not tree:
-        from .tree import CFNodeTree
-        tree = CFNodeTree.instance
-    return tree
+def get_blueprints(class_type):
+    from .blueprints import get_blueprints
+    return get_blueprints(class_type)
 
 class NodeBase(bpy.types.Node):
     bl_width_min = 200.0
@@ -145,10 +129,13 @@ class NodeBase(bpy.types.Node):
     builtin__stat__: bpy.props.StringProperty(subtype="BYTE_STRING")  # ori name: True/False
     pool = set()
 
+    def get_blueprints(self):
+        return get_blueprints(self.class_type)
+
     def get_ctxt(self) -> str:
         from ..translations.translation import get_ctxt
         return get_ctxt(self.class_type)
-        
+
     def query_stat(self, name):
         if not self.builtin__stat__:
             return None
@@ -218,20 +205,6 @@ class NodeBase(bpy.types.Node):
 
     def apply_unique_id(self):
         self.id = self.unique_id()
-        return self.id
-        from .tree import CFNodeTree
-        nodes = CFNodeTree.instance.get_nodes()
-        for n in nodes:
-            # 有相同, 重新生成
-            if n.id == self.id and n != self:
-                self.id = self.unique_id()
-                break
-        else:
-            # 唯一，则判断是不是-1
-            if self.id == "-1":
-                self.pool.discard(self.id)
-                self.id = self.unique_id()
-
         return self.id
 
     def draw_label(self):
@@ -350,12 +323,15 @@ class NodeBase(bpy.types.Node):
                 return link
 
     def serialize_pre(self):
-        spec_serialize_pre(self)
+        bp = self.get_blueprints()
+        return bp.serialize_pre(self)
 
     def serialize(self, execute=True):
         """
         gen prompt
         """
+        bp = self.get_blueprints()
+        return bp.serialize(self, execute)
         inputs = {}
         for inp_name in self.inp_types:
             # inp = self.inp_types[inp_name]
@@ -388,6 +364,8 @@ class NodeBase(bpy.types.Node):
         return cfg
 
     def load(self, data, with_id=True):
+        bp = self.get_blueprints()
+        return bp.load(self, data, with_id)
         self.pool.discard(self.id)
         self.location[:] = [data["pos"][0], -data["pos"][1]]
         if isinstance(data["size"], list):
@@ -469,6 +447,8 @@ class NodeBase(bpy.types.Node):
                 logger.error(f" -> {e}")
 
     def dump(self, selected_only=False):
+        bp = self.get_blueprints()
+        return bp.dump(self, selected_only)
         tree = get_tree()
         all_links: bpy.types.NodeLinks = tree.links[:]
 
@@ -1017,10 +997,10 @@ def parse_node():
         "category": "Utils",
         "output_node": False
     }
-
     for name, desc in object_info.items():
-        if "|pysssss" in name:
-            continue
+        bp = get_blueprints(name)
+        desc = bp.pre_filter(desc)
+    for name, desc in object_info.items():
         SOCKET_TYPE[name] = {}
         cat = desc["category"]
         for inp, inp_desc in desc["input"].get("required", {}).items():
@@ -1551,41 +1531,6 @@ def spec_extra_properties(properties, nname, ndesc):
     elif nname == "PrimitiveNode":
         prop = bpy.props.StringProperty()
         properties["prop"] = prop
-
-
-def spec_serialize_pre(self):
-    def get_sync_rand_node():
-        tree = get_tree()
-        for node in tree.get_nodes():
-            # node不是KSampler、KSamplerAdvanced 跳过
-            if not hasattr(node, "seed") and node.class_type != "KSamplerAdvanced":
-                continue
-            if node.sync_rand:
-                return node
-
-    if hasattr(self, "seed"):
-        if (snode := get_sync_rand_node()) and snode != self:
-            return
-        if not self.exe_rand and not bpy.context.scene.sdn.rand_all_seed:
-            return
-        self.seed = str(get_fixed_seed())
-
-    elif self.class_type == "KSamplerAdvanced":
-        if (snode := get_sync_rand_node()) and snode != self:
-            return
-        if not self.exe_rand and not bpy.context.scene.sdn.rand_all_seed:
-            return
-        self.noise_seed = str(get_fixed_seed())
-    elif self.class_type == "PrimitiveNode":
-        if not self.outputs[0].is_linked:
-            return
-        prop = getattr(self.outputs[0].links[0].to_node, get_reg_name(self.prop))
-        for link in self.outputs[0].links[1:]:
-            setattr(link.to_node, get_reg_name(link.to_socket.name), prop)
-    elif self.class_type == "预览":
-        if self.inputs[0].is_linked:
-            return
-        self.prev.clear()
 
 
 def spec_serialize(self, cfg, execute):
