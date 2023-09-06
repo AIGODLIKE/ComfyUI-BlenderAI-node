@@ -16,6 +16,9 @@ class AddonPreference(bpy.types.AddonPreferences):
 
     model_path: bpy.props.StringProperty(subtype="DIR_PATH", name="ComfyUI Path",
                                          default=str(Path(__file__).parent / "ComfyUI"))
+    python_path: bpy.props.StringProperty(subtype="FILE_PATH", 
+                                          name="Python Path", 
+                                          description="Select python dir or python.exe")
     page: bpy.props.EnumProperty(items=[("通用", "General", "", "COLLAPSEMENU", 0),
                                         ("常用路径", "Common Path", "", "URL", 1),
                                         ("友情链接", "Friendly Links", "", "URL", 2),
@@ -103,6 +106,7 @@ class AddonPreference(bpy.types.AddonPreferences):
 
     def draw_general(self, layout: bpy.types.UILayout):
         layout.prop(self, "model_path", text_ctxt=ctxt)
+        layout.prop(self, "python_path", text_ctxt=ctxt)
         layout.prop(self, "mem_level", text_ctxt=ctxt)
         row = layout.row(align=True)
         row.prop(self, "popup_scale", text_ctxt=ctxt)

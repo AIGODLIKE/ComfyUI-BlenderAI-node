@@ -8,6 +8,7 @@ from urllib.parse import urlparse
 from .kclogger import logger
 from .translations import LANG_TEXT
 from .timer import Timer
+from .datas import IMG_SUFFIX
 translation = {}
 
 def rmtree(path: Path):
@@ -188,7 +189,7 @@ class Icon(metaclass=MetaIn):
         path = FSWatcher.to_str(path)
         if path in Icon:
             return
-        if p.exists() and p.suffix.lower() in {".png", ".jpg", ".jpeg"}:
+        if p.exists() and p.suffix.lower() in IMG_SUFFIX:
             img = bpy.data.images.load(path)
             Icon.reg_icon_by_pixel(img, path)
             bpy.data.images.remove(img)
@@ -219,7 +220,7 @@ class Icon(metaclass=MetaIn):
         if img := Icon.find_image(path):
             Icon.update_icon_pixel(path, img)
             return img
-        elif p.suffix.lower() in {".png", ".jpg", ".jpeg"}:
+        elif p.suffix.lower() in IMG_SUFFIX:
             img = bpy.data.images.load(path)
             img.filepath = path
             Icon.update_path2bpy()

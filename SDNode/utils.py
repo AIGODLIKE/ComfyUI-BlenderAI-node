@@ -4,6 +4,21 @@ from pathlib import Path
 from ..utils import logger, _T
 SELECTED_COLLECTIONS = []
 
+def get_tree():
+    tree = getattr(bpy.context.space_data, "edit_tree", None)
+    if tree:
+        return tree
+    for a in bpy.context.screen.areas:
+        if a.type != "NODE_EDITOR":
+            continue
+        for s in a.spaces:
+            if s.type != "NODE_EDITOR" or s.tree_type != "CFNodeTree":
+                continue
+            tree = s.edit_tree
+    if not tree:
+        from .tree import CFNodeTree
+        tree = CFNodeTree.instance
+    return tree
 
 def get_cmpt(nt: bpy.types.NodeTree):
     for node in nt.nodes:

@@ -581,12 +581,14 @@ def reg_nodetree(identifier, cat_list, sub=False):
 def load_node(node_desc, root=""):
     node_cat = []
     for cat, nodes in node_desc.items():
+        ocat = cat
+        cat = cat.replace(" ", "_").replace("-", "_")
         items = []
         menus = []
         for item in nodes["items"]:
             items.append(NodeItem(item))
         menus.extend(load_node(nodes.get("menus", {}), root=cat))
-        cfn_cat = CFNodeCategory(f"{root}_{cat}", cat, items=items, menus=menus)
+        cfn_cat = CFNodeCategory(f"{root}_{cat}", name=ocat, items=items, menus=menus)
         node_cat.append(cfn_cat)
     return node_cat
 
@@ -621,6 +623,7 @@ def reg_node_reroute():
     bpy.types.NodeReroute.switch_socket = NodeBase.switch_socket
     bpy.types.NodeReroute.get_from_link = NodeBase.get_from_link
     bpy.types.NodeReroute.get_ctxt = NodeBase.get_ctxt
+    bpy.types.NodeReroute.get_blueprints = NodeBase.get_blueprints
 
     bpy.types.NodeReroute.class_type = "Reroute"
     bpy.types.NodeReroute.__metadata__ = {}
@@ -669,7 +672,7 @@ def rtnode_reg():
     t1 = time.time()
     node_desc, node_clss, socket = parse_node()
     t2 = time.time()
-    logger.info(f"ParseNode Time: {t2-t1:.2f}s")
+    logger.info(_T("ParseNode Time:") + f" {t2-t1:.2f}s")
     node_cat = load_node(node_desc=node_desc)
     clss.extend(node_clss)
     clss.extend(socket)

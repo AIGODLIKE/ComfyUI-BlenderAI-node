@@ -103,6 +103,9 @@ other = {
     "Node Tree Not Executed, May Caused by:": "节点树未被执行, 可能原因:",
     "Proc Result": "处理结果",
     "Ran Node": "运行节点",
+    "UnregNode Time:": "卸载节点耗时:",
+    "Launch Time:": "启动耗时:",
+    "RegNode Time:": "注册节点耗时:",
     "ControlNet Init....": "ControlNet 初始化...",
     "ControlNet Init Finished.": "ControlNet 初始化完毕.",
     "If controlnet still not worked, install manually by double clicked {}": "若ControlNet依然无法正常使用, 请手动双击 {} 安装",
@@ -120,6 +123,7 @@ other = {
     "None Input": "节点输入",
     "Parsing Node Finished!": "解析节点完成!",
     "Render": "渲染",
+    "Pre Function": "预处理",
     "Post Function": "后处理",
     "Load Preview Image": "加载预览图",
     "  Select mask Objects": "  选中mask物体(可多选)",
@@ -135,6 +139,7 @@ other = {
     "Image num per line": "每行图片数",
     # SDNode/tree.py
     "Invalid Node Type: {}": "检查到无效的节点: {}",
+    "ParseNode Time:": "解析节点耗时:",
     # SDNode/utils.py
     "Gen Mask": "遮罩生成",
     # __init__.py
@@ -209,6 +214,8 @@ other = {
     "Preview Image Size": "预览图尺寸",
     "Enable High Quality Preview Image": "启用高清预览图",
     "ComfyUI Path": "ComfyUI路径",
+    "Python Path": "Python解释器路径",
+    "Select python dir or python.exe": "选择python所在文件夹或python.exe",
     "With WEBUI Model": "兼容WEBUI模型",
     "With ComfyUI Model": "兼容ComfyUI模型",
     "General": "通用",
