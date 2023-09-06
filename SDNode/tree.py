@@ -581,12 +581,14 @@ def reg_nodetree(identifier, cat_list, sub=False):
 def load_node(node_desc, root=""):
     node_cat = []
     for cat, nodes in node_desc.items():
+        ocat = cat
+        cat = cat.replace(" ", "_").replace("-", "_")
         items = []
         menus = []
         for item in nodes["items"]:
             items.append(NodeItem(item))
         menus.extend(load_node(nodes.get("menus", {}), root=cat))
-        cfn_cat = CFNodeCategory(f"{root}_{cat}", cat, items=items, menus=menus)
+        cfn_cat = CFNodeCategory(f"{root}_{cat}", name=ocat, items=items, menus=menus)
         node_cat.append(cfn_cat)
     return node_cat
 
