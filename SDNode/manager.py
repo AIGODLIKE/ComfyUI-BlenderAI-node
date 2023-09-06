@@ -213,24 +213,11 @@ class TaskManager:
         """
         # controlnet check
         logger.warn(_T("ControlNet Init...."))
-        python = Path("python3")
-        if sys.platform == "win32":
-            python = Path(model_path) / "../python_embeded/python.exe"
-        # elif sys.platform == "darwin":
-        #     requirements = Path(model_path) / "requirements.txt"
-        #     command = [python.as_posix(), "-m", "pip", "install", "-r", requirements.as_posix()]
-        #     if fast_url := PkgInstaller.select_pip_source():
-        #         site = urlparse(fast_url)
-        #         command.append("-i")
-        #         command.append(fast_url)
-        #         command.append("--trusted-host")
-        #         command.append(site.netloc)
-        #     proc = Popen(command, cwd=model_path)
-        #     proc.wait()
+        python = TaskManager.get_python()
 
         controlnet = Path(model_path) / "custom_nodes/comfy_controlnet_preprocessors"
         if controlnet.exists():
-            fvcore = Path(model_path) / "../python_embeded/Lib/site-packages/fvcore"
+            fvcore = python.parent / "Lib/site-packages/fvcore"
             if not fvcore.exists():
                 command = [python.as_posix()]
                 command.append("-s")
@@ -272,13 +259,54 @@ class TaskManager:
         else:
             TaskManager.launch_port = get_port()
         TaskManager.launch_url = f"http://{TaskManager.launch_ip}:{TaskManager.launch_port}"
-        
+
+    def get_python():
+        python = Path("python3")
+        custom_python = Path(get_pref().python_path)
+        if get_pref().python_path and custom_python.exists():
+            if custom_python.is_dir():
+                if sys.platform == "win32":
+                    python = custom_python / "python.exe"
+                else:
+                    python = custom_python / "python3"
+            else:
+                python = custom_python
+        elif sys.platform == "win32":
+            model_path = get_pref().model_path
+            python = Path(model_path).parent / "python_embeded/python.exe"
+        # elif sys.platform == "darwin":
+        #     requirements = Path(model_path) / "requirements.txt"
+        #     command = [python.as_posix(), "-m", "pip", "install", "-r", requirements.as_posix()]
+        #     if fast_url := PkgInstaller.select_pip_source():
+        #         site = urlparse(fast_url)
+        #         command.append("-i")
+        #         command.append(fast_url)
+        #         command.append("--trusted-host")
+        #         command.append(site.netloc)
+        #     proc = Popen(command, cwd=model_path)
+        #     proc.wait()
+        return python
+
     def create_args(python: Path, model_path: Path):
         pref = get_pref()
         args = [python.as_posix()]
         # arg = f"-s {str(model_path)}/main.py"
         args.append("-s")
-        args.append(f"{model_path.joinpath('main.py').resolve().as_posix()}")
+
+        # 备份main.py 为 main-bak.py
+        # 为main-bak.py新增 sys.path代码
+        try:
+            with open(model_path.joinpath("main.py"), "r", encoding="utf-8") as f:
+                mainpy = f.read()
+                mainpy = "sys.path.append(r\"{}\")\n".format(model_path.as_posix()) + mainpy
+                mainpy = "import sys\n" + mainpy
+                Path(model_path.joinpath("main-bak.py")).write_text(mainpy, encoding="utf-8")
+        except BaseException:
+            ...
+        if get_pref().python_path and Path(get_pref().python_path).exists() and Path(model_path.joinpath("main-bak.py")).exists():
+            args.append(f"{model_path.joinpath('main-bak.py').resolve().as_posix()}")
+        else:
+            args.append(f"{model_path.joinpath('main.py').resolve().as_posix()}")
 
         def parse_comfyUIStart():
             config = []
@@ -353,9 +381,7 @@ class TaskManager:
             logger.error(_T("ComfyUI Path Not Found"))
             return
         logger.debug(f"{_T('Model Path')}: {model_path}")
-        python = Path("python3")
-        if sys.platform == "win32":
-            python = Path(model_path) / "../python_embeded/python.exe"
+        python = TaskManager.get_python()
         if pref.install_deps:
             TaskManager.run_server_pre(model_path)
 
@@ -395,9 +421,9 @@ class TaskManager:
         # logger.debug(" ".join(args))
         import bpy
         if bpy.app.version >= (3, 6):
-            p = Popen(args, stdout=PIPE, cwd=Path(model_path).joinpath("..").resolve().as_posix())
+            p = Popen(args, stdout=PIPE, cwd=Path(model_path).resolve().as_posix())
         else:
-            p = Popen(args, stdout=PIPE, cwd=Path(model_path).joinpath("..").resolve().as_posix())
+            p = Popen(args, stdout=PIPE, cwd=Path(model_path).resolve().as_posix())
         TaskManager.child = p
         TaskManager.pid = p.pid
         pidpath.write_text(str(p.pid))

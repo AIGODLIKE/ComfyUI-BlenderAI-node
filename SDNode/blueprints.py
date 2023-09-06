@@ -4,9 +4,7 @@ import bpy
 import random
 from pathlib import Path
 from copy import deepcopy
-from a_BlenderAI_Node.SDNode.manager import Task
-
-from a_BlenderAI_Node.SDNode.nodes import NodeBase
+from ..SDNode.nodes import NodeBase
 from .utils import gen_mask, get_tree
 from .nodes import NodeBase
 from ..SDNode.manager import Task

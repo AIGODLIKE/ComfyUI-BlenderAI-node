@@ -210,6 +210,8 @@ other = {
     "Preview Image Size": "预览图尺寸",
     "Enable High Quality Preview Image": "启用高清预览图",
     "ComfyUI Path": "ComfyUI路径",
+    "Python Path": "Python解释器路径",
+    "Select python dir or python.exe": "选择python所在文件夹或python.exe",
     "With WEBUI Model": "兼容WEBUI模型",
     "With ComfyUI Model": "兼容ComfyUI模型",
     "General": "通用",
