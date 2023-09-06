@@ -3,6 +3,7 @@ import typing
 import time
 import sys
 import traceback
+from string import ascii_letters
 from bpy.app.translations import pgettext
 from threading import Thread
 from functools import partial
@@ -583,6 +584,8 @@ def load_node(node_desc, root=""):
     for cat, nodes in node_desc.items():
         ocat = cat
         cat = cat.replace(" ", "_").replace("-", "_")
+        if cat and cat[-1] not in ascii_letters:
+            cat = cat[:-1] + "z"
         items = []
         menus = []
         for item in nodes["items"]:
