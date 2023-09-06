@@ -18,7 +18,7 @@ from mathutils import Vector, Matrix
 from bpy.types import Context, Event
 from .utils import gen_mask, get_tree, SELECTED_COLLECTIONS
 from ..utils import logger, update_screen, Icon, _T
-from ..datas import ENUM_ITEMS_CACHE
+from ..datas import ENUM_ITEMS_CACHE, IMG_SUFFIX
 from ..preference import get_pref
 from ..timer import Timer
 from ..translations import ctxt, get_reg_name, get_ori_name
@@ -28,7 +28,6 @@ NODES_POLL = {}
 Icon.reg_none(Path(__file__).parent / "NONE.png")
 PREVICONPATH = {}
 PATH_CFG = Path(__file__).parent / "PATH_CFG.json"
-
 SOCKET_TYPE = {}  # NodeType: {PropName: SocketType}
 SOCKET_HASH_MAP = {  # {HASH: METATYPE}
     "INT": "INT",
@@ -1135,19 +1134,26 @@ def parse_node():
             prev_path_list = get_icon_path(nname).get(inp_name)
             if not prev_path_list:
                 return 0
+            
             file_list = []
             for prev_path in prev_path_list:
-                if not Path(prev_path).exists():
+                pp = Path(prev_path)
+                if not pp.exists():
                     continue
-                for file in Path(prev_path).iterdir():
+                # 直接搜索 prev_path_list + item文件名 + jpg/png后缀
+                for suffix in IMG_SUFFIX:
+                    pimg = pp / Path(item).with_suffix(suffix).as_posix()
+                    if not pimg.exists():
+                        continue
+                    return Icon.reg_icon(pimg.absolute())
+                for file in pp.iterdir():
                     file_list.append(file)
             item_prefix = Path(item).stem
             # file_list = [file for prev_path in prev_path_list for file in Path(prev_path).iterdir()]
-            
             for file in file_list:
                 if (item not in file.stem) and (item_prefix not in file.stem):
                     continue
-                if file.suffix.lower() not in {".png", ".jpg", ".jpeg"}:
+                if file.suffix.lower() not in IMG_SUFFIX:
                     continue
                 # logger.info(f"🌟 Found Icon -> {file.name}")
                 return Icon.reg_icon(file.absolute())
@@ -1916,6 +1922,7 @@ def nodes_reg():
 
 def nodes_unreg():
     ENUM_ITEMS_CACHE.clear()
+    PREVICONPATH.clear()
     try:
         unreg()
     except BaseException:

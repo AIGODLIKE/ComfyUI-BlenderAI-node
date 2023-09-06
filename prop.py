@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 
 from .utils import Icon, FSWatcher
-from .datas import PRESETS_DIR, PROP_CACHE, GROUPS_DIR
+from .datas import PRESETS_DIR, PROP_CACHE, GROUPS_DIR, IMG_SUFFIX
 
 FSWatcher.register(PRESETS_DIR)
 FSWatcher.register(GROUPS_DIR)
@@ -40,7 +40,7 @@ class Prop(bpy.types.PropertyGroup):
                 continue
             icon_id = Icon["None"]
             for img in pd.iterdir():
-                if not (file.name in img.stem and img.suffix in {".png", ".jpg", ".jpeg"}):
+                if not (file.name in img.stem and img.suffix in IMG_SUFFIX):
                     continue
                 icon_id = Icon.reg_icon(img)
             items.append((str(file), file.stem, "", icon_id, len(items)))
@@ -79,7 +79,7 @@ class Prop(bpy.types.PropertyGroup):
                 continue
             icon_id = Icon["None"]
             for img in gd.iterdir():
-                if not (file.name in img.stem and img.suffix in {".png", ".jpg", ".jpeg"}):
+                if not (file.name in img.stem and img.suffix in IMG_SUFFIX):
                     continue
                 icon_id = Icon.reg_icon(img)
             items.append((str(file), file.stem, "", icon_id, len(items)))

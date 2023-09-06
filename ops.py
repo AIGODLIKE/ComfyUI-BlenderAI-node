@@ -13,7 +13,7 @@ from .timer import Timer, Worker
 from .SDNode import TaskManager
 from .SDNode.history import History
 from .SDNode.tree import InvalidNodeType, CFNodeTree, get_tree
-
+from .datas import IMG_SUFFIX
 
 class Ops(bpy.types.Operator):
     bl_idname = "sdn.ops"
@@ -277,7 +277,7 @@ class Ops(bpy.types.Operator):
             def find_frames(path):
                 frames_map = {}
                 for file in Path(path).iterdir():
-                    if file.suffix.lower() not in {".png", ".jpg"}:
+                    if file.suffix.lower() not in IMG_SUFFIX:
                         continue
                     piece = file.stem.split("_")
                     try:
@@ -348,7 +348,7 @@ class Ops(bpy.types.Operator):
                 for file in Path(batch_dir).iterdir():
                     if file.is_dir():
                         continue
-                    if file.suffix not in {".png", ".jpg", ".jpeg"}:
+                    if file.suffix not in IMG_SUFFIX:
                         continue
                     select_node.image = file.as_posix()
                     TaskManager.push_task(get_task(tree))
