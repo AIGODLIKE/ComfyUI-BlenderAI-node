@@ -604,10 +604,12 @@ class NodeBase(bpy.types.Node):
         return save
 
     def post_fn(self, task, result):
-        ...
+        bp = self.get_blueprints()
+        bp.post_fn(self, task, result)
 
     def pre_fn(self):
-        ...
+        bp = self.get_blueprints()
+        bp.pre_fn(self)
 
 
 class SocketBase(bpy.types.NodeSocket):
@@ -1141,6 +1143,7 @@ def parse_node():
                     file_list.append(file)
             item_prefix = Path(item).stem
             # file_list = [file for prev_path in prev_path_list for file in Path(prev_path).iterdir()]
+            
             for file in file_list:
                 if (item not in file.stem) and (item_prefix not in file.stem):
                     continue
@@ -1250,7 +1253,7 @@ def parse_node():
                   "__annotations__": properties,
                   "__metadata__": ndesc
                   }
-        spec_functions(fields, nname, ndesc)
+        # spec_functions(fields, nname, ndesc)
         NodeDesc = type(nname, (NodeBase,), fields)
         NodeDesc.dcolor = (rand() / 2, rand() / 2, rand() / 2)
         node_clss.append(NodeDesc)

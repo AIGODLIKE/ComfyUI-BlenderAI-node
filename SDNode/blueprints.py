@@ -4,8 +4,13 @@ import bpy
 import random
 from pathlib import Path
 from copy import deepcopy
+from a_BlenderAI_Node.SDNode.manager import Task
+
+from a_BlenderAI_Node.SDNode.nodes import NodeBase
 from .utils import gen_mask, get_tree
 from .nodes import NodeBase
+from ..SDNode.manager import Task
+from ..timer import Timer
 from ..kclogger import logger
 from ..utils import _T
 from ..translations import ctxt, get_reg_name, get_ori_name
@@ -34,8 +39,11 @@ class BluePrintBase:
     def load_specific(s, self: NodeBase, data, with_id=True):
         ...
 
+    def load_pre(s, self: NodeBase, data, with_id=True):
+        return data
+
     def load(s, self: NodeBase, data, with_id=True):
-        data = s.pre_filter(data)
+        data = s.load_pre(self, data, with_id)
         self.pool.discard(self.id)
         self.location[:] = [data["pos"][0], -data["pos"][1]]
         if isinstance(data["size"], list):
@@ -86,9 +94,10 @@ class BluePrintBase:
                 else:
                     logger.error(f"|{e}|")
             except IndexError:
-                logger.info(f"{_T('|IGNORED|')} -> {_T('Load')}<{self.class_type}>{_T('Params not matching with current node')}")
+                logger.info(f"{_T('|IGNORED|')} -> {_T('Load')}<{self.class_type}>{_T('Params not matching with current node')} " + reg_name)
             except Exception as e:
                 logger.error(f"{_T('Params Loading Error')} {self.class_type} -> {self.class_type}.{inp_name}")
+
                 logger.error(f" -> {e}")
 
     def dump_specific(s, self: NodeBase = None, cfg=None, selected_only=False, **kwargs):
@@ -229,12 +238,45 @@ class BluePrintBase:
             s.serialize_specific(self, cfg, execute)
         return cfg
 
+    def pre_fn(s, self: NodeBase):
+        # logger.debug(f"{self.class_type} {_T('Pre Function')}")
+        ...
+
+    def post_fn(s, self: NodeBase, t: Task, result):
+        logger.debug(f"{self.class_type}{_T('Post Function')}->{result}")
+
+
+class WD14Tagger(BluePrintBase):
+    comfyClass = "WD14Tagger|pysssss"
+
+    def pre_filter(s, desc):
+        desc["input"]["required"]["tags"] = ["STRING", {"default": "", "multiline": True}]
+
+    def dump_specific(s, self: NodeBase = None, cfg=None, selected_only=False, **kwargs):
+        cfg["widgets_values"] = cfg["widgets_values"][:4]
+
+    def post_fn(s, self: NodeBase, t: Task, result):
+        logger.debug(f"{self.class_type}{_T('Post Function')}->{result}")
+        text = result.get("output", {}).get("tags", [])
+        if text and isinstance(text[0], str):
+            self.tags = text[0]
+
+
+class PreviewTextNode(BluePrintBase):
+    comfyClass = "PreviewTextNode"
+
+    def post_fn(s, self: NodeBase, t: Task, result):
+        logger.debug(f"{self.class_type}{_T('Post Function')}->{result}")
+        text = result.get("output", {}).get("string", [])
+        if text and isinstance(text[0], str):
+            self.text = text[0]
+
 
 class CheckpointLoaderSimpleWithImages(BluePrintBase):
     comfyClass = "CheckpointLoader|pysssss"
 
     def pre_filter(s, desc):
-        for k in ["required", "required"]:
+        for k in ["required", "optional"]:
             for inp, inp_desc in desc["input"].get(k, {}).items():
                 stype = inp_desc[0]
                 if not isinstance(stype, list):
@@ -245,7 +287,6 @@ class CheckpointLoaderSimpleWithImages(BluePrintBase):
                     if "content" not in item:
                         continue
                     stype[idx] = item["content"]
-
         return desc
 
 
@@ -405,6 +446,85 @@ class 预览(BluePrintBase):
         if self.inputs[0].is_linked:
             return
         self.prev.clear()
+
+    def post_fn(s, self: NodeBase, t: Task, result):
+        logger.debug(f"{self.class_type}{_T('Post Function')}->{result}")
+        img_paths = result.get("output", {}).get("images", [])
+        if not img_paths:
+            return
+        logger.warn(f"{_T('Load Preview Image')}: {img_paths}")
+
+        def f(self, img_paths: list[str]):
+            self.prev.clear()
+
+            from .manager import TaskManager
+            d = TaskManager.get_temp_directory()
+            for img_path in img_paths:
+                if isinstance(img_path, dict):
+                    img_path = Path(d).joinpath(img_path.get("filename")).as_posix()
+                if not Path(img_path).exists():
+                    continue
+                p = self.prev.add()
+                p.image = bpy.data.images.load(img_path)
+        Timer.put((f, self, img_paths))
+
+
+class 存储(BluePrintBase):
+    comfyClass = "存储"
+
+    def post_fn(s, self: NodeBase, t: Task, result):
+        logger.debug(f"{self.class_type}{_T('Post Function')}->{result}")
+        img_paths = result.get("output", {}).get("images", [])
+        for img in img_paths:
+            if self.mode == "Save":
+                def f(self, img):
+                    return bpy.data.images.load(img)
+            elif self.mode == "Import":
+                def f(self, img):
+                    self.image.filepath = img
+                    self.image.filepath_raw = img
+                    self.image.source = "FILE"
+                    if self.image.packed_file:
+                        self.image.unpack(method="REMOVE")
+                    self.image.reload()
+            Timer.put((f, self, img))
+
+
+class 输入图像(BluePrintBase):
+    comfyClass = "输入图像"
+
+    def pre_fn(s, self: NodeBase):
+        if self.mode != "渲染":
+            return
+        if self.disable_render or bpy.context.scene.sdn.disable_render_all:
+            return
+
+        @Timer.wait_run
+        def r():
+            logger.warn(f"{_T('Render')}->{self.image}")
+            bpy.context.scene.render.filepath = self.image
+            if (cam := bpy.context.scene.camera) and (gpos := cam.get("SD_Mask", [])):
+                try:
+                    for gpo in gpos:
+                        gpo.hide_render = True
+                except BaseException:
+                    ...
+            if bpy.context.scene.use_nodes:
+                from .utils import set_composite
+                nt = bpy.context.scene.node_tree
+
+                with set_composite(nt) as cmp:
+                    render_layer: bpy.types.CompositorNodeRLayers = nt.nodes.new("CompositorNodeRLayers")
+                    if sel_render_layer := nt.nodes.get(self.render_layer, None):
+                        render_layer.scene = sel_render_layer.scene
+                        render_layer.layer = sel_render_layer.layer
+                    if out := render_layer.outputs.get(self.out_layers):
+                        nt.links.new(cmp.inputs["Image"], out)
+                    bpy.ops.render.render(write_still=True)
+                    nt.nodes.remove(render_layer)
+            else:
+                bpy.ops.render.render(write_still=True)
+        r()
 
 
 def get_blueprints(comfyClass, default=BluePrintBase) -> BluePrintBase:

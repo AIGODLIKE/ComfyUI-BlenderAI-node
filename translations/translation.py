@@ -120,6 +120,7 @@ other = {
     "None Input": "节点输入",
     "Parsing Node Finished!": "解析节点完成!",
     "Render": "渲染",
+    "Pre Function": "预处理",
     "Post Function": "后处理",
     "Load Preview Image": "加载预览图",
     "  Select mask Objects": "  选中mask物体(可多选)",
