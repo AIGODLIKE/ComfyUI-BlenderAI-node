@@ -672,7 +672,7 @@ def rtnode_reg():
     t1 = time.time()
     node_desc, node_clss, socket = parse_node()
     t2 = time.time()
-    logger.info(f"ParseNode Time: {t2-t1:.2f}s")
+    logger.info(_T("ParseNode Time:") + f" {t2-t1:.2f}s")
     node_cat = load_node(node_desc=node_desc)
     clss.extend(node_clss)
     clss.extend(socket)

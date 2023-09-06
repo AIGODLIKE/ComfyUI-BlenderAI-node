@@ -103,6 +103,9 @@ other = {
     "Node Tree Not Executed, May Caused by:": "节点树未被执行, 可能原因:",
     "Proc Result": "处理结果",
     "Ran Node": "运行节点",
+    "UnregNode Time:": "卸载节点耗时:",
+    "Launch Time:": "启动耗时:",
+    "RegNode Time:": "注册节点耗时:",
     "ControlNet Init....": "ControlNet 初始化...",
     "ControlNet Init Finished.": "ControlNet 初始化完毕.",
     "If controlnet still not worked, install manually by double clicked {}": "若ControlNet依然无法正常使用, 请手动双击 {} 安装",
@@ -136,6 +139,7 @@ other = {
     "Image num per line": "每行图片数",
     # SDNode/tree.py
     "Invalid Node Type: {}": "检查到无效的节点: {}",
+    "ParseNode Time:": "解析节点耗时:",
     # SDNode/utils.py
     "Gen Mask": "遮罩生成",
     # __init__.py

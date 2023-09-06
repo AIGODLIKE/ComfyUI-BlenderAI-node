@@ -197,15 +197,15 @@ class TaskManager:
         t1 = time.time()
         rtnode_unreg()
         t2 = time.time()
-        logger.info(f"UnregNode Time: {t2-t1:.2f}s")
+        logger.info(_T("UnregNode Time:") + f" {t2-t1:.2f}s")
         if not fake:
             TaskManager.run_server_ex()
             t3 = time.time()
-            logger.info(f"Launch Time: {t3-t2:.2f}s")
+            logger.info(_T("Launch Time:") + f" {t3-t2:.2f}s")
         t3 = time.time()
         rtnode_reg()
         t4 = time.time()
-        logger.info(f"RegNode Time: {t4-t3:.2f}s")
+        logger.info(_T("RegNode Time:") + f" {t4-t3:.2f}s")
 
     def run_server_pre(model_path):
         """
