@@ -1,7 +1,7 @@
 bl_info = {
     'name': '无限圣杯-节点',
     'author': '幻之境开发小组-会飞的键盘侠、只剩一瓶辣椒酱',
-    'version': (1, 2, 5),
+    'version': (1, 2, 6),
     'blender': (3, 0, 0),
     'location': '3DView->Panel',
     'category': '辣椒出品',
@@ -27,13 +27,14 @@ clss = [Panel, Ops, Prop, HISTORY_UL_UIList, HistoryItem, Ops_Mask, Load_History
 reg, unreg = bpy.utils.register_classes_factory(clss)
 
 def dump_info():
-    import json
+    import json, os
     from .preference import get_pref
     if "--get-blender-ai-node-info" in sys.argv:
         model_path = getattr(get_pref(), 'model_path')
         info = {"Version": ".".join([str(i) for i in bl_info["version"]]), "ComfyUIPath": model_path}
         sys.stderr.write(f"BlenderComfyUIInfo: {json.dumps(info)} BlenderComfyUIend")
         sys.stderr.flush()
+        print(f'Blender {os.getpid()} PID', file=sys.stderr)
 
 def register():
     bpy.utils.register_class(AddonPreference)
