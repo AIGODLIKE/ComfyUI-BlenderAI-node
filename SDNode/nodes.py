@@ -127,6 +127,7 @@ class NodeBase(bpy.types.Node):
     id: bpy.props.StringProperty(default="-1")
     builtin__stat__: bpy.props.StringProperty(subtype="BYTE_STRING")  # ori name: True/False
     pool = set()
+    class_type: str
 
     def get_blueprints(self):
         return get_blueprints(self.class_type)

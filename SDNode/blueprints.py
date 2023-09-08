@@ -4,7 +4,6 @@ import bpy
 import random
 from pathlib import Path
 from copy import deepcopy
-from ..SDNode.nodes import NodeBase
 from .utils import gen_mask, get_tree
 from .nodes import NodeBase
 from ..SDNode.manager import Task
@@ -121,7 +120,7 @@ class BluePrintBase:
 
     def dump(s, self: NodeBase, selected_only=False):
         tree = get_tree()
-        all_links: bpy.types.NodeLinks = tree.links[:]
+        all_links: list[bpy.types.NodeLink] = tree.links[:]
 
         inputs = []
         outputs = []
@@ -257,9 +256,12 @@ class WD14Tagger(BluePrintBase):
         logger.debug(f"{self.class_type}{_T('Post Function')}->{result}")
         text = result.get("output", {}).get("tags", [])
         text = "".join(text)
-        def f(self, text):
-            self.tags = text
+
+        def f(node, t):
+            node.tags = t
+
         Timer.put((f, self, text))
+
 
 class PreviewTextNode(BluePrintBase):
     comfyClass = "PreviewTextNode"
@@ -269,6 +271,22 @@ class PreviewTextNode(BluePrintBase):
         text = result.get("output", {}).get("string", [])
         if text and isinstance(text[0], str):
             self.text = text[0]
+
+    def dump_specific(s, self: NodeBase = None, cfg=None, selected_only=False, **kwargs):
+        inputs = cfg["inputs"]
+        for inp in inputs:
+            if inp.get("name") == "text" and "widget" in inp:
+                inp.pop("widget")
+
+
+class TextToConsole(BluePrintBase):
+    comfyClass = "Text to Console"
+
+    def dump_specific(s, self: NodeBase = None, cfg=None, selected_only=False, **kwargs):
+        inputs = cfg["inputs"]
+        for inp in inputs:
+            if inp.get("name") == "text" and "widget" in inp:
+                inp.pop("widget")
 
 
 class CheckpointLoaderSimpleWithImages(BluePrintBase):
@@ -293,7 +311,7 @@ class MultiAreaConditioning(BluePrintBase):
     comfyClass = "MultiAreaConditioning"
 
     def load_specific(s, self: NodeBase, data, with_id=True):
-        config = json.loads(self.config)
+        config = json.loads(getattr(self, "config"))
         for i in range(2):
             d = data["properties"]["values"][i]
             config[i]["x"] = d[0]
@@ -302,7 +320,7 @@ class MultiAreaConditioning(BluePrintBase):
             config[i]["sdn_height"] = d[3]
             config[i]["strength"] = d[4]
         self["config"] = json.dumps(config)
-        d = data["properties"]["values"][self.index]
+        d = data["properties"]["values"][getattr(self, "index")]
         self["x"] = d[0]
         self["y"] = d[1]
         self["sdn_width"] = d[2]
@@ -334,19 +352,8 @@ class MultiAreaConditioning(BluePrintBase):
             widgets_values += [self["resolutionX"],
                                self["resolutionY"],
                                None,
-                               self.index,
-                               *properties["values"][self.index]]
-
-
-class KSamplerAdvanced(BluePrintBase):
-    comfyClass = "KSamplerAdvanced"
-
-    def serialize_pre_specific(s, self: NodeBase):
-        if (snode := get_sync_rand_node()) and snode != self:
-            return
-        if not self.exe_rand and not bpy.context.scene.sdn.rand_all_seed:
-            return
-        self.noise_seed = str(get_fixed_seed())
+                               getattr(self, "index"),
+                               *properties["values"][getattr(self, "index")]]
 
 
 class KSampler(BluePrintBase):
@@ -360,6 +367,13 @@ class KSampler(BluePrintBase):
 
 class KSamplerAdvanced(BluePrintBase):
     comfyClass = "KSamplerAdvanced"
+
+    def serialize_pre_specific(s, self: NodeBase):
+        if (snode := get_sync_rand_node()) and snode != self:
+            return
+        if not getattr(self, "exe_rand") and not bpy.context.scene.sdn.rand_all_seed:
+            return
+        self.noise_seed = str(get_fixed_seed())
 
     def serialize_specific(s, self: NodeBase, cfg, execute):
         cfg["inputs"]["noise_seed"] = int(cfg["inputs"]["noise_seed"])
