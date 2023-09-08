@@ -256,9 +256,10 @@ class WD14Tagger(BluePrintBase):
     def post_fn(s, self: NodeBase, t: Task, result):
         logger.debug(f"{self.class_type}{_T('Post Function')}->{result}")
         text = result.get("output", {}).get("tags", [])
-        if text and isinstance(text[0], str):
-            self.tags = text[0]
-
+        text = "".join(text)
+        def f(self, text):
+            self.tags = text
+        Timer.put((f, self, text))
 
 class PreviewTextNode(BluePrintBase):
     comfyClass = "PreviewTextNode"
