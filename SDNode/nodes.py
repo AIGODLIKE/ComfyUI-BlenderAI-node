@@ -1758,7 +1758,7 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
                 layout.label(text="Set Image Path of Render Result(.png)", icon="ERROR")
                 if bpy.context.scene.use_nodes:
                     row = layout.row(align=True)
-                    row.prop_search(self, "render_layer", bpy.context.scene.node_tree, "nodes")
+                    row.prop_search(self, "render_layer", bpy.context.scene.sdn, "render_layer")
                     icon = "RESTRICT_RENDER_ON" if self.disable_render else "RESTRICT_RENDER_OFF"
                     row.prop(self, "disable_render", text="", icon=icon)
                     icon = "HIDE_ON" if bpy.context.scene.sdn.disable_render_all else "HIDE_OFF"
