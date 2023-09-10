@@ -116,9 +116,11 @@ def get_icon_path(nname):
                 path_list[reg_name] = d[name2path[class_type][name]][0]
     return PREVICONPATH.get(nname, {})
 
+
 def get_blueprints(class_type):
     from .blueprints import get_blueprints
     return get_blueprints(class_type)
+
 
 class NodeBase(bpy.types.Node):
     bl_width_min = 200.0
@@ -999,6 +1001,26 @@ def parse_node():
         "category": "Utils",
         "output_node": False
     }
+    object_info["Note"] = {
+        "input": {"required": {
+            "text": [
+                "STRING",
+                {
+                    "multiline": True
+                }
+            ],
+        }},
+        "output": ["*"],
+        "output_is_list": [False],
+        "output_name": [
+            "Output"
+        ],
+        "name": "Note",
+        "display_name": "Note",
+        "description": "",
+        "category": "Utils",
+        "output_node": False
+    }
     for name, desc in object_info.items():
         bp = get_blueprints(name)
         desc = bp.pre_filter(name, desc)
@@ -1135,7 +1157,7 @@ def parse_node():
             prev_path_list = get_icon_path(nname).get(inp_name)
             if not prev_path_list:
                 return 0
-            
+
             file_list = []
             for prev_path in prev_path_list:
                 pp = Path(prev_path)
