@@ -275,6 +275,40 @@ class WD14Tagger(BluePrintBase):
         Timer.put((f, self, text))
 
 
+class LoraLoaderPysssss(BluePrintBase):
+    comfyClass = "LoraLoader|pysssss"
+
+    def load_pre(s, self: NodeBase, data, with_id=True):
+        if not data["widgets_values"]:
+            return data
+        lora_name = data["widgets_values"][0]
+        if isinstance(lora_name, dict) and "content" in lora_name:
+            lora_name = lora_name["content"]
+        data["widgets_values"][0] = lora_name
+        return data
+
+    def dump_specific(s, self: NodeBase = None, cfg=None, selected_only=False, **kwargs):
+        content = cfg["widgets_values"][0]
+        cfg["widgets_values"][0] = {"content": content, "image": None}
+
+
+class CheckpointLoaderPysssss(BluePrintBase):
+    comfyClass = "CheckpointLoader|pysssss"
+
+    def load_pre(s, self: NodeBase, data, with_id=True):
+        if not data["widgets_values"]:
+            return data
+        ckpt_name = data["widgets_values"][0]
+        if isinstance(ckpt_name, dict) and "content" in ckpt_name:
+            ckpt_name = ckpt_name["content"]
+        data["widgets_values"][0] = ckpt_name
+        return data
+
+    def dump_specific(s, self: NodeBase = None, cfg=None, selected_only=False, **kwargs):
+        content = cfg["widgets_values"][0]
+        cfg["widgets_values"][0] = {"content": content, "image": None}
+
+
 class PreviewTextNode(BluePrintBase):
     comfyClass = "PreviewTextNode"
 
