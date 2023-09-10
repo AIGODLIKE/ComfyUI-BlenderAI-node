@@ -1001,7 +1001,7 @@ def parse_node():
     }
     for name, desc in object_info.items():
         bp = get_blueprints(name)
-        desc = bp.pre_filter(desc)
+        desc = bp.pre_filter(name, desc)
     for name, desc in object_info.items():
         SOCKET_TYPE[name] = {}
         cat = desc["category"]

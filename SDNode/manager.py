@@ -18,7 +18,7 @@ from threading import Thread
 from subprocess import Popen, PIPE
 from pathlib import Path
 from queue import Queue
-from ..utils import rmtree as rt, logger, _T, PkgInstaller
+from ..utils import rmtree as rt, logger, _T, PkgInstaller, FSWatcher
 from ..timer import Timer
 from ..preference import get_pref
 from ..SDNode.history import History
@@ -326,10 +326,14 @@ class TaskManager:
                         get_pref().ip = ip
                     if port := re.match(r".*?--port\s+([0-9]+)", piece):
                         get_pref().port = int(port.group(1))
-                config = " ".join(config).split(" ")  # resplit
+                config = " ".join(config)
+                config = re.split(r"\s(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)", config)
+                logger.info(f"{_T('Reparse Config')}: {config}")
+                # config = " ".join(config).split(" ")  # resplit
                 for i, piece in enumerate(config):
-                    if ".yaml" in piece.lower():
-                        piece = Path(piece.replace("\"", "")).resolve().as_posix()
+                    if piece[0] == piece[-1] == "\"":
+                        piece = Path(piece.replace("\"", "")).resolve()
+                        piece = FSWatcher.to_str(piece)
                         config[i] = piece
                 logger.info(f"{_T('Find Config')}: {config}")
             except IndexError:

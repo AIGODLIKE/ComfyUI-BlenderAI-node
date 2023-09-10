@@ -137,6 +137,8 @@ other = {
     "out_layers": "输出层",
     "Frames Directory": "序列图文件夹",
     "Image num per line": "每行图片数",
+    # SDNode/blueprints.py
+    "Non-Standard Enum Detected": "非标准枚举",
     # SDNode/tree.py
     "Invalid Node Type: {}": "检查到无效的节点: {}",
     "ParseNode Time:": "解析节点耗时:",

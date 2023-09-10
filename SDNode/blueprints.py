@@ -30,7 +30,19 @@ def get_fixed_seed():
 class BluePrintBase:
     comfyClass = ""
 
-    def pre_filter(s, desc):
+    def pre_filter(s, nname, desc):
+        for k in {"required", "optional"}:
+            for inp, inp_desc in desc["input"].get(k, {}).items():
+                stype = deepcopy(inp_desc[0])
+                if not stype:
+                    continue
+                if not (isinstance(stype, list) and isinstance(stype[0], dict)):
+                    continue
+                rep = [sti["content"] for sti in stype if "content" in sti]
+                inp_desc[0] = rep if rep else stype
+                if rep:
+                    logger.warn(f"{_T('Non-Standard Enum Detected')}: {nname}[{inp}] -> {rep}")
+
         return desc
 
     def load_specific(s, self: NodeBase, data, with_id=True):
@@ -246,7 +258,7 @@ class BluePrintBase:
 class WD14Tagger(BluePrintBase):
     comfyClass = "WD14Tagger|pysssss"
 
-    def pre_filter(s, desc):
+    def pre_filter(s, nname, desc):
         desc["input"]["required"]["tags"] = ["STRING", {"default": "", "multiline": True}]
 
     def dump_specific(s, self: NodeBase = None, cfg=None, selected_only=False, **kwargs):
@@ -287,24 +299,6 @@ class TextToConsole(BluePrintBase):
         for inp in inputs:
             if inp.get("name") == "text" and "widget" in inp:
                 inp.pop("widget")
-
-
-class CheckpointLoaderSimpleWithImages(BluePrintBase):
-    comfyClass = "CheckpointLoader|pysssss"
-
-    def pre_filter(s, desc):
-        for k in ["required", "optional"]:
-            for inp, inp_desc in desc["input"].get(k, {}).items():
-                stype = inp_desc[0]
-                if not isinstance(stype, list):
-                    continue
-                if not stype or not isinstance(stype[0], dict):
-                    continue
-                for idx, item in enumerate(stype):
-                    if "content" not in item:
-                        continue
-                    stype[idx] = item["content"]
-        return desc
 
 
 class MultiAreaConditioning(BluePrintBase):

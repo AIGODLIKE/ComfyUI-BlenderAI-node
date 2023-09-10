@@ -67,7 +67,8 @@ if FORCE_LOG:
     builtins.print = __print_wrap__
 
     sys.stdout.write = hk(sys.stdout.write)
-    sys.stderr.write = builtins.print
+    sys.stderr.write = hk(sys.stderr.write)
+    # sys.stderr.write = builtins.print
 
 
 def try_write_config():
