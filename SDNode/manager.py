@@ -335,6 +335,10 @@ class TaskManager:
                         piece = Path(piece.replace("\"", "")).resolve()
                         piece = FSWatcher.to_str(piece)
                         config[i] = piece
+                if "--auto-launch" in config:
+                    config.remove("--auto-launch")
+                if "--disable-auto-launch" in config:
+                    config.remove("--disable-auto-launch")
                 logger.info(f"{_T('Find Config')}: {config}")
             except IndexError:
                 logger.error(_T("No Config File Found"))
@@ -372,6 +376,9 @@ class TaskManager:
                 extra_model_paths.write_text(yaml)
                 args.append("--extra-model-paths-config")
                 args.append(extra_model_paths.as_posix())
+        # 特殊处理
+        if pref.auto_launch:
+            args.append("--auto-launch")
         return args
 
     def run_server_ex():

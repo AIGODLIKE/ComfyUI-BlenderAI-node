@@ -36,6 +36,7 @@ class AddonPreference(bpy.types.AddonPreferences):
                                       default="--lowvram")
     with_webui_model: bpy.props.StringProperty(default="", name="With WEBUI Model", subtype="DIR_PATH")
     with_comfyui_model: bpy.props.StringProperty(default="", name="With ComfyUI Model", subtype="DIR_PATH")
+    auto_launch: bpy.props.BoolProperty(default=False, name="Auto Launch Browser")
     install_deps: bpy.props.BoolProperty(default=False, name="Check Depencies Before Server Launch", description="Check ComfyUI(some) Depencies Before Server Launch")
     force_log: bpy.props.BoolProperty(default=False, name="Force Log", description="Force Log, Generally Not Needed")
     def get_cuda_list():
@@ -118,6 +119,7 @@ class AddonPreference(bpy.types.AddonPreferences):
         row.prop(self, "port")
         layout.prop(self, "cuda")
         row = layout.row(align=True)
+        row.prop(self, "auto_launch", toggle=True, text_ctxt=ctxt)
         row.prop(self, "install_deps", toggle=True, text_ctxt=ctxt)
         row.prop(self, "force_log", toggle=True, text_ctxt=ctxt)
 

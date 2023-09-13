@@ -236,6 +236,7 @@ other = {
     "When lowvram isn't enough.": "如果低显存依然不够",
     "Cpu Only": "仅CPU",
     "To use the CPU for everything (slow).": "只使用CPU",
+    "Auto Launch Browser": "启动浏览器(启动服务后)",
     "Check Depencies Before Server Launch": "启动服务时检查依赖",
     "Check ComfyUI(some) Depencies Before Server Launch": "启动服务时进行ComfyUI插件(部分)依赖安装检查",
     "Force Log": "强制日志",
