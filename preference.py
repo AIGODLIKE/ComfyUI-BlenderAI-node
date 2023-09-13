@@ -39,6 +39,8 @@ class AddonPreference(bpy.types.AddonPreferences):
     auto_launch: bpy.props.BoolProperty(default=False, name="Auto Launch Browser")
     install_deps: bpy.props.BoolProperty(default=False, name="Check Depencies Before Server Launch", description="Check ComfyUI(some) Depencies Before Server Launch")
     force_log: bpy.props.BoolProperty(default=False, name="Force Log", description="Force Log, Generally Not Needed")
+    fixed_preview_image_size: bpy.props.BoolProperty(default=False, name="Fixed Preview Image Size")
+    preview_image_size: bpy.props.IntProperty(default=256, min=64, max=8192, name="Preview Image Size")
     def get_cuda_list():
         """
         借助nvidia-smi获取CUDA版本列表
@@ -118,6 +120,9 @@ class AddonPreference(bpy.types.AddonPreferences):
         row.prop(self, "ip")
         row.prop(self, "port")
         layout.prop(self, "cuda")
+        row = layout.row(align=True)
+        row.prop(self, "fixed_preview_image_size", toggle=True, text_ctxt=ctxt)
+        row.prop(self, "preview_image_size", text_ctxt=ctxt)
         row = layout.row(align=True)
         row.prop(self, "auto_launch", toggle=True, text_ctxt=ctxt)
         row.prop(self, "install_deps", toggle=True, text_ctxt=ctxt)

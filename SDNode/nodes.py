@@ -1724,15 +1724,22 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
         w = max(self.bl_width_min, w)
         if not with_max:
             w = min(self.bl_width_max, w)
-        if self.width == w:
+        fpis = get_pref().fixed_preview_image_size
+        if self.width == w and not fpis:
             return
-
-        def delegate(self, w):
+        if fpis:
+            w = get_pref().preview_image_size
+        def delegate(self, w, fpis):
             self.width = w
             if with_max and self.bl_width_max < w:
                 self.bl_width_max = w
+            if fpis:
+                self.bl_width_max = w
+                self.bl_width_min = w
+            else:
+                self.bl_width_min = 200
 
-        Timer.put((delegate, self, w))
+        Timer.put((delegate, self, w, fpis))
     popup_scale = 5
     try:
         popup_scale = get_pref().popup_scale
