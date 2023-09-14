@@ -7,6 +7,7 @@ import json
 import math
 import textwrap
 import pickle
+from numpy import clip
 from copy import deepcopy
 from hashlib import md5
 from math import ceil
@@ -1725,26 +1726,27 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
         col.template_icon_view(self, prop, show_labels=True, scale_popup=popup_scale, scale=popup_scale)
         return True
 
-    def setwidth(self: NodeBase, w, with_max=False):
+    def setwidth(self: NodeBase, w, count=1):
+        oriw = w
         w = max(self.bl_width_min, w)
-        if not with_max:
-            w = min(self.bl_width_max, w)
         fpis = get_pref().fixed_preview_image_size
-        if self.width == w and not fpis:
-            return
         if fpis:
-            w = get_pref().preview_image_size
+            pw = get_pref().preview_image_size
+            w = min(oriw, pw)
+        sw = w
+        w *= count
         def delegate(self, w, fpis):
+            if not fpis:
+                self.bl_width_max = 8192
+                self.bl_width_min = 32
+            if self.width == w and not fpis:
+                return
             self.width = w
-            if with_max and self.bl_width_max < w:
+            if self.bl_width_max < w or fpis:
                 self.bl_width_max = w
-            if fpis:
-                self.bl_width_max = w
-                self.bl_width_min = w
-            else:
-                self.bl_width_min = 200
 
         Timer.put((delegate, self, w, fpis))
+        return sw
     popup_scale = 5
     try:
         popup_scale = get_pref().popup_scale
@@ -1826,7 +1828,9 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
                 row = layout.row(align=True)
                 row.label(text=f"{self.prev.file_format} : [{self.prev.size[0]} x {self.prev.size[1]}]")
                 row.operator(Set_Render_Res.bl_idname, text="", icon="LOOP_FORWARDS").node_name = self.name
-                layout.template_icon(icon_id, scale=max(self.prev.size[0], self.prev.size[1]) // 20)
+                w = max(self.prev.size[0], self.prev.size[1])
+                w = setwidth(self, w)
+                layout.template_icon(icon_id, scale=w // 20)
             return True
         elif prop in {"render_layer", "out_layers", "frames_dir", "disable_render"}:
             return True
@@ -1866,7 +1870,6 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
                 return True
             elif self.mode == "ToImage":
                 layout.prop(self, "image")
-
                 return True
         return True
     elif self.class_type == "Mask":
@@ -1924,18 +1927,19 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
                 return True
             p0 = self.prev[0].image
             w = max(p0.size[0], p0.size[1])
-            setwidth(self, w * min(self.lnum, pnum), with_max=True)
+            if w == 0:
+                return True
+            w = setwidth(self, w, count=min(self.lnum, pnum))
             layout.label(text=f"{p0.file_format} : [{p0.size[0]} x {p0.size[1]}]")
             col = layout.column(align=True)
             for i, p in enumerate(self.prev):
                 if i % self.lnum == 0:
-                    row = col.row(align=True)
-                    row.alignment = "LEFT"
+                    fcol = col.column_flow(columns=min(self.lnum, pnum), align=True)
                 prev = p.image
                 if prev.name not in Icon:
                     Icon.reg_icon_by_pixel(prev, prev.name)
                 icon_id = Icon[prev.name]
-                row.template_icon(icon_id, scale=max(prev.size[0], prev.size[1]) // 20)
+                fcol.template_icon(icon_id, scale=w // 20)
             return True
     elif self.class_type in {"OpenPoseFull", "OpenPoseHand", "OpenPoseMediaPipeFace", "OpenPoseDepth", "OpenPose", "OpenPoseFace", "OpenPoseLineart", "OpenPoseFullExtraLimb", "OpenPoseKeyPose", "OpenPoseCanny", }:
         return True
