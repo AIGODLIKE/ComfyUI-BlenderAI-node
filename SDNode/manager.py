@@ -459,6 +459,7 @@ class TaskManager:
             Thread(target=TaskManager.poll_res, daemon=True).start()
             Thread(target=TaskManager.poll_task, daemon=True).start()
             Thread(target=TaskManager.proc_res, daemon=True).start()
+            Timer.clear() # timer may cause crash
         else:
             logger.error(_T("Server Launch Failed"))
             TaskManager.close_server()

@@ -101,7 +101,7 @@ class CFNodeTree(NodeTree):
         """
         self.validation()
         self.serialize_pre()
-        return {node.id: (node.serialize(), node.pre_fn, node.post_fn) for node in self.get_nodes() if node.class_type not in {"Reroute", "PrimitiveNode"}}
+        return {node.id: node.make_serialze() for node in self.get_nodes() if node.class_type not in {"Reroute", "PrimitiveNode"}}
 
     def validation(self, nodes=None):
 

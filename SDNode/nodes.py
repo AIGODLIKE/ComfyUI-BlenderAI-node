@@ -612,6 +612,10 @@ class NodeBase(bpy.types.Node):
     def pre_fn(self):
         bp = self.get_blueprints()
         bp.pre_fn(self)
+    
+    def make_serialze(self):
+        bp = self.get_blueprints()
+        return bp.make_serialze(self)
 
 
 class SocketBase(bpy.types.NodeSocket):
@@ -1401,6 +1405,7 @@ def spec_extra_properties(properties, nname, ndesc):
     elif nname == "存储":
         items = [("Save", "Save", "", "", 0),
                  ("Import", "Import", "", "", 1),
+                 ("ToImage", "ToImage", "", "", 2),
                  ]
         prop = bpy.props.EnumProperty(items=items)
         properties["mode"] = prop
@@ -1856,8 +1861,12 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
                             op = col.operator(Ops_Active_Tex.bl_idname, text="", icon="REC")
                             op.node_name = self.name
                             op.img_name = t.name
-                if self.image:
-                    layout.label(text=f"当前纹理: {self.image.name}")
+                    if textures and self.image:
+                        layout.label(text=f"当前纹理: {self.image.name}")
+                return True
+            elif self.mode == "ToImage":
+                layout.prop(self, "image")
+
                 return True
         return True
     elif self.class_type == "Mask":

@@ -2,6 +2,7 @@ import json
 import re
 import bpy
 import random
+from functools import partial
 from pathlib import Path
 from copy import deepcopy
 from .utils import gen_mask, get_tree
@@ -253,6 +254,9 @@ class BluePrintBase:
 
     def post_fn(s, self: NodeBase, t: Task, result):
         logger.debug(f"{self.class_type}{_T('Post Function')}->{result}")
+
+    def make_serialze(s, self: NodeBase):
+        return (self.serialize(), self.pre_fn, self.post_fn)
 
 
 class WD14Tagger(BluePrintBase):
@@ -513,22 +517,34 @@ class 预览(BluePrintBase):
 class 存储(BluePrintBase):
     comfyClass = "存储"
 
-    def post_fn(s, self: NodeBase, t: Task, result):
-        logger.debug(f"{self.class_type}{_T('Post Function')}->{result}")
-        img_paths = result.get("output", {}).get("images", [])
-        for img in img_paths:
-            if self.mode == "Save":
-                def f(self, img):
-                    return bpy.data.images.load(img)
-            elif self.mode == "Import":
-                def f(self, img):
-                    self.image.filepath = img
-                    self.image.filepath_raw = img
-                    self.image.source = "FILE"
-                    if self.image.packed_file:
-                        self.image.unpack(method="REMOVE")
-                    self.image.reload()
-            Timer.put((f, self, img))
+    def make_serialze(s, self: NodeBase):
+        def __post_fn__(self: NodeBase, t: Task, result: dict, mode, image):
+            logger.debug(f"{self.class_type}{_T('<>Post Function')}->{result}")
+            img_paths = result.get("output", {}).get("images", [])
+            for img in img_paths:
+                if mode == "Save":
+                    def f(_, img):
+                        return bpy.data.images.load(img)
+                elif mode in {"Import", "ToImage"}:
+                    def f(img_src, img):
+                        img_src.filepath = img
+                        img_src.filepath_raw = img
+                        img_src.source = "FILE"
+                        if img_src.packed_file:
+                            img_src.unpack(method="REMOVE")
+                        img_src.reload()
+                Timer.put((f, image, img))
+        post_fn = partial(__post_fn__, self, mode=self.mode, image=self.image)
+        return self.serialize(), self.pre_fn, post_fn
+
+    def serialize_specific(s, self: NodeBase, cfg, execute):
+        if self.mode not in {"Import", "ToImage"}:
+            return
+        if "output_dir" in cfg.get("inputs", {}):
+            import tempfile
+            cfg.get("inputs", {})["output_dir"] = tempfile.gettempdir()
+        if "filename_prefix" in cfg.get("inputs", {}):
+            cfg.get("inputs", {})["filename_prefix"] = "SDNode"
 
 
 class 输入图像(BluePrintBase):
