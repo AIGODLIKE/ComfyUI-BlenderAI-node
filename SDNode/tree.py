@@ -639,6 +639,8 @@ def update_tree_handler():
         if CFNodeTree.instance:
             CFNodeTree.instance.update_tick()
             CFNodeTree.instance.calc_unique_id()
+    except ReferenceError:
+        ...
     except Exception as e:
         # logger.warn(str(e))
         traceback.print_exc()
