@@ -18,6 +18,10 @@ def get_tree():
     if not tree:
         from .tree import CFNodeTree
         tree = CFNodeTree.instance
+    try:
+        t = tree.load_json
+    except ReferenceError:
+        return None
     return tree
 
 def get_cmpt(nt: bpy.types.NodeTree):

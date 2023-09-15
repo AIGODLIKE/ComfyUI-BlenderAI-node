@@ -180,6 +180,7 @@ class Ops(bpy.types.Operator):
         tree = get_tree()
         if not tree:
             logger.error(_T("No Node Tree Found!"))
+            self.report({"ERROR"}, _T("No Node Tree Found!"))
             return {"FINISHED"}
         # special for frames image mode
         if self.action == "Submit":
@@ -453,7 +454,8 @@ class Ops(bpy.types.Operator):
             return {"FINISHED"}
         if event.value == "PRESS" and event.type in {"RIGHTMOUSE"}:
             tree = get_tree()
-            tree.safe_remove_nodes(self.select_nodes[:])
+            if tree:
+                tree.safe_remove_nodes(self.select_nodes[:])
             return {"CANCELLED"}
 
         return {"RUNNING_MODAL"}
@@ -538,6 +540,9 @@ class Load_History(bpy.types.Operator):
 
     def execute(self, context):
         tree = get_tree()
+        if not tree:
+            self.report({"ERROR"}, _T("No Node Tree Found!"))
+            return {"FINISHED"}
         data = History.get_history_by_name(self.name)
         if not data:
             self.report({"ERROR"}, _T("History Not Found: ") + self.name)
@@ -599,6 +604,9 @@ class Load_Batch(bpy.types.Operator):
             self.report({"ERROR"}, _T("File Not Found: ") + self.task_path)
             return {"FINISHED"}
         tree = get_tree()
+        if not tree:
+            self.report({"ERROR"}, _T("No Node Tree Found!"))
+            return {"FINISHED"}
         tasks = []
         for coding in ["utf-8", "gbk"]:
             try:
