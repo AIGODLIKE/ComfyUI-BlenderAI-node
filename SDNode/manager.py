@@ -339,6 +339,8 @@ class TaskManager:
                     config.remove("--auto-launch")
                 if "--disable-auto-launch" in config:
                     config.remove("--disable-auto-launch")
+                if "--windows-standalone-build" in config:
+                    config.remove("--windows-standalone-build")
                 logger.info(f"{_T('Find Config')}: {config}")
             except IndexError:
                 logger.error(_T("No Config File Found"))
