@@ -205,6 +205,13 @@ class NodeBase(bpy.types.Node):
         self.apply_unique_id()
         if hasattr(self, "sync_rand"):
             self.sync_rand = False
+        if self.class_type == "材质图":
+            name = node.name
+            get_tree().safe_remove_nodes([node])
+
+            def f(self, name):
+                self.name = name
+            Timer.put((f, self, name))
 
     def apply_unique_id(self):
         self.id = self.unique_id()
@@ -613,7 +620,7 @@ class NodeBase(bpy.types.Node):
     def pre_fn(self):
         bp = self.get_blueprints()
         bp.pre_fn(self)
-    
+
     def make_serialze(self):
         bp = self.get_blueprints()
         return bp.make_serialze(self)
@@ -1414,7 +1421,17 @@ def spec_extra_properties(properties, nname, ndesc):
         properties["obj"] = prop
         prop = bpy.props.PointerProperty(type=bpy.types.Image)
         properties["image"] = prop
-
+    elif nname == "材质图":
+        items = [("Object", "Object", "", "", 0),
+                 ("Selected Objects", "Selected Objects", "", "", 1),
+                 ("Collection", "Collection", "", "", 2),
+                 ]
+        prop = bpy.props.EnumProperty(items=items)
+        properties["mode"] = prop
+        prop = bpy.props.PointerProperty(type=bpy.types.Object)
+        properties["obj"] = prop
+        prop = bpy.props.PointerProperty(type=bpy.types.Collection)
+        properties["collection"] = prop
     elif nname == "Mask":
         items = [("Grease Pencil", "Grease Pencil", "", "", 0),
                  ("Object", "Object", "", "", 1),
@@ -1735,6 +1752,7 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
             w = min(oriw, pw)
         sw = w
         w *= count
+
         def delegate(self, w, fpis):
             if not fpis:
                 self.bl_width_max = 8192
@@ -1911,6 +1929,19 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
             return True
         elif prop in {"gp", "obj", "col", "cam", "disable_render"}:
             return True
+    elif self.class_type == "材质图":
+        if prop == "mode":
+            layout.prop(self, prop, expand=True, text_ctxt=self.get_ctxt())
+            if self.mode == "Object":
+                layout.prop(self, "obj", text="")
+            elif self.mode == "Selected Objects":
+                for obj in bpy.context.selected_objects:
+                    if obj.type != "MESH":
+                        continue
+                    layout.label(text=obj.name)
+            elif self.mode == "Collection":
+                layout.prop(self, "collection", text="")
+        return True
     elif self.class_type == "预览":
         if prop == "lnum":
             return True

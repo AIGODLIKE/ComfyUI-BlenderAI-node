@@ -241,7 +241,7 @@ class LoadImage:
     RETURN_TYPES = ("IMAGE", "MASK")
     FUNCTION = "load_image"
 
-    def load_image(self, image, mode):
+    def load_image(self, image, mode=None):
         try:
             image_path = image
             i = Image.open(image_path)
@@ -275,6 +275,14 @@ class LoadImage:
             m.update(f.read())
         return m.digest().hex()
 
+class MatImage(LoadImage):
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "image": ("STRING", {"default": ""}),
+            },
+        }
 
 class Mask:
     @classmethod
@@ -443,6 +451,7 @@ class OpenPoseCanny(OpenPoseBase):
 # NOTE: names should be globally unique
 NODE_CLASS_MAPPINGS = {
     "输入图像": LoadImage,
+    "材质图": MatImage,
     "Mask": Mask,
     "存储": SaveImage,
     # "导入": ToBlender,
@@ -463,6 +472,7 @@ NODE_CLASS_MAPPINGS = {
 NODE_DISPLAY_NAME_MAPPINGS = {
     # Sampling
     "输入图像": "Input Image",
+    "材质图": "Mat Image",
     "Mask": "Mask",
     "存储": "Save",
     "预览": "Preview",

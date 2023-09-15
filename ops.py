@@ -2,18 +2,31 @@ import typing
 import bpy
 import re
 import json
+import tempfile
 from pathlib import Path
 from bpy.types import Context, Event
 from mathutils import Vector
 from functools import partial
 from .translations import ctxt
 from .prop import Prop
-from .utils import _T, logger, PngParse
+from .utils import _T, logger, PngParse, FSWatcher
 from .timer import Timer, Worker
 from .SDNode import TaskManager
 from .SDNode.history import History
 from .SDNode.tree import InvalidNodeType, CFNodeTree, get_tree
 from .datas import IMG_SUFFIX
+
+
+def find_nodes_by_idname(tree, idname, find_nodes=None):
+    if find_nodes is None:
+        find_nodes = []
+    for node in tree.nodes:
+        if node.bl_idname == idname:
+            find_nodes.append(node)
+        if node.type == "GROUP":
+            find_nodes_by_idname(node.node_tree, idname, find_nodes)
+    return find_nodes
+
 
 class Ops(bpy.types.Operator):
     bl_idname = "sdn.ops"
@@ -126,14 +139,12 @@ class Ops(bpy.types.Operator):
         return self.execute(context)
 
     def find_frames_nodes(self, tree):
-        frames_nodes = []
-        for node in tree.nodes:
-            if node.bl_idname != "输入图像":
-                continue
-            if node.mode != "序列图":
-                continue
-            frames_nodes.append(node)
-        return frames_nodes
+        nodes = [n for n in find_nodes_by_idname(tree, "输入图像") if n.mode == "序列图"]
+        return nodes
+
+    def find_mat_image_nodes(self, tree):
+        nodes = find_nodes_by_idname(tree, "材质图")
+        return nodes[0] if nodes else None
 
     def execute(self, context: bpy.types.Context):
         try:
@@ -320,6 +331,76 @@ class Ops(bpy.types.Operator):
             for fnode in old_cfg:
                 setattr(fnode, "mode", old_cfg[fnode]["mode"])
                 setattr(fnode, "image", old_cfg[fnode]["image"])
+            return {"FINISHED"}
+        elif mat_image_node := self.find_mat_image_nodes(tree):
+            def recursive_node_parent(node, find_nodes=None):
+                # 查找 node 相连的所有父级节点
+                if find_nodes is None:
+                    find_nodes = []
+                for inp in node.inputs:
+                    if not inp.is_linked:
+                        continue
+                    for link in inp.links:
+                        if link.from_node in find_nodes:
+                            continue
+                        find_nodes.append(link.from_node)
+                        recursive_node_parent(link.from_node, find_nodes)
+                return find_nodes
+
+            def find_obj_mat_images(obj):
+                # 搜索 Mesh Object的所有材质的所有图片节点
+                images = []
+                image_nodes = []
+                for mat in obj.data.materials:
+                    fnodes = find_nodes_by_idname(mat.node_tree, "ShaderNodeTexImage")
+                    image_nodes.extend(fnodes)
+                for img_node in image_nodes:
+                    if not img_node.image:
+                        continue
+                    images.append(img_node.image)
+                return images
+            save_nodes = find_nodes_by_idname(tree, "存储")
+            images = []
+            query_objs = []
+            if mat_image_node.mode == "Object":
+                query_objs.append(mat_image_node.obj)
+            elif mat_image_node.mode == "Selected Objects":
+                query_objs.extend(bpy.context.selectable_objects)
+            elif mat_image_node.mode == "Collection":
+                collection: bpy.types.Collection = mat_image_node.collection
+                query_objs.extend(collection.objects)
+            for obj in query_objs:
+                if obj.type != "MESH":
+                    continue
+                images.extend(find_obj_mat_images(obj))
+            if not images:
+                self.report({"ERROR"}, _T("No Images Found!"))
+                return {"FINISHED"}
+            marked_sn = []
+            for sn in save_nodes:
+                if sn.mode != "ToImage":
+                    continue
+                p = recursive_node_parent(sn)
+                if mat_image_node not in p:
+                    continue
+                marked_sn.append(sn)
+            # 批量构造任务
+            for img in set(images):
+                for sn in marked_sn:
+                    sn.image = img
+                # 过滤 Render Result
+                if img.source == "VIEWER":
+                    continue
+                # mat_image_node的image必须为路径, 因此需要将img存储到本地(如果不是本地图片)
+                filepath = Path(img.filepath)
+                if not filepath.exists() or filepath.suffix.lower() not in IMG_SUFFIX:
+                    filepath = Path(tempfile.gettempdir()) / img.name
+                    filepath = filepath.with_suffix(".png")
+                    img.filepath = filepath.resolve().as_posix()
+                    img.filepath_raw = img.filepath
+                    img.save()
+                mat_image_node.image = FSWatcher.to_str(filepath)
+                TaskManager.push_task(get_task(tree))
             return {"FINISHED"}
         else:
             if self.alt:

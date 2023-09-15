@@ -31,6 +31,9 @@ def get_fixed_seed():
 class BluePrintBase:
     comfyClass = ""
 
+    def new_btn_enable(s, self, layout, context):
+        return True
+
     def pre_filter(s, nname, desc):
         for k in {"required", "optional"}:
             for inp, inp_desc in desc["input"].get(k, {}).items():
@@ -519,7 +522,7 @@ class 存储(BluePrintBase):
 
     def make_serialze(s, self: NodeBase):
         def __post_fn__(self: NodeBase, t: Task, result: dict, mode, image):
-            logger.debug(f"{self.class_type}{_T('<>Post Function')}->{result}")
+            logger.debug(f"{self.class_type}{_T('Post Function')}->{result}")
             img_paths = result.get("output", {}).get("images", [])
             for img in img_paths:
                 if mode == "Save":
@@ -527,6 +530,8 @@ class 存储(BluePrintBase):
                         return bpy.data.images.load(img)
                 elif mode in {"Import", "ToImage"}:
                     def f(img_src, img):
+                        if not img_src:
+                            return
                         img_src.filepath = img
                         img_src.filepath_raw = img
                         img_src.source = "FILE"
@@ -582,6 +587,17 @@ class 输入图像(BluePrintBase):
             else:
                 bpy.ops.render.render(write_still=True)
         r()
+
+
+class 材质图(BluePrintBase):
+    comfyClass = "材质图"
+
+    def new_btn_enable(s, self, layout, context):
+        if self.nodetype == s.comfyClass:
+            tree = context.space_data.edit_tree
+            mat_iamge_nodes = [n for n in tree.nodes if n.class_type == s.comfyClass]
+            return len(mat_iamge_nodes) == 0
+        return True
 
 
 def get_blueprints(comfyClass, default=BluePrintBase) -> BluePrintBase:
