@@ -11,6 +11,7 @@ import server
 import gc
 import execution
 import folder_paths
+import platform
 from functools import lru_cache
 from aiohttp import web
 from pathlib import Path
@@ -31,6 +32,14 @@ def rmtree(path: Path):
     if path.is_file():
         path.unlink()
     elif path.is_dir():
+        # 移除 .git
+        if path.name == ".git":
+            if platform.system() == "darwin":
+                from subprocess import call
+                call(['rm', '-rf', path.as_posix()])
+            elif platform.system() == "Windows":
+                os.system(f'rd/s/q "{path.as_posix()}"')
+            return
         for child in path.iterdir():
             rmtree(child)
         try:
