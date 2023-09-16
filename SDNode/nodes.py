@@ -1234,8 +1234,12 @@ def parse_node():
                             items.append((item, item, "", icon_id, len(items)))
                         return items
                     return wrap
-
                 prop = bpy.props.EnumProperty(items=get_items(nname, reg_name, inp))
+                # 判断可哈希
+                def is_all_hashable(some_list):
+                    return all(hasattr(item, "__hash__") for item in some_list)
+                if is_all_hashable(inp[0]) and set(inp[0]) == {True, False}:
+                    prop = bpy.props.BoolProperty()
             elif proptype == "INT":
                 # {'default': 20, 'min': 1, 'max': 10000}
                 inp[1]["max"] = min(int(inp[1].get("max", 9999999)), 2**31 - 1)

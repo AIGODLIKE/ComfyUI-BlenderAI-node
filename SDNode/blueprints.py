@@ -2,7 +2,7 @@ import json
 import re
 import bpy
 import random
-from functools import partial
+from functools import partial, lru_cache
 from pathlib import Path
 from copy import deepcopy
 from .utils import gen_mask, get_tree
@@ -47,7 +47,6 @@ class BluePrintBase:
                 if isinstance(stype, list) and is_bool_list(stype):
                     # 处理 bool 列表
                     logger.warn(f"{_T('Non-Standard Enum Detected')}: {nname}[{inp}] -> {stype}")
-                    inp_desc[0] = ["true", "false"]
                 if not (isinstance(stype, list) and isinstance(stype[0], dict)):
                     continue
                 rep = [sti["content"] for sti in stype if "content" in sti]
@@ -607,7 +606,7 @@ class 材质图(BluePrintBase):
             return len(mat_iamge_nodes) == 0
         return True
 
-
+@lru_cache(maxsize=1024)
 def get_blueprints(comfyClass, default=BluePrintBase) -> BluePrintBase:
     for cls in BluePrintBase.__subclasses__():
         if cls.comfyClass != comfyClass:
