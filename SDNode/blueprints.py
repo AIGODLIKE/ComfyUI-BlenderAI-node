@@ -27,6 +27,10 @@ def get_sync_rand_node():
 def get_fixed_seed():
     return int(random.randrange(4294967294))
 
+def is_bool_list(some_list: list):
+    if not some_list:
+        return False
+    return isinstance(some_list[0], bool)
 
 class BluePrintBase:
     comfyClass = ""
@@ -40,12 +44,16 @@ class BluePrintBase:
                 stype = deepcopy(inp_desc[0])
                 if not stype:
                     continue
+                if isinstance(stype, list) and is_bool_list(stype):
+                    # 处理 bool 列表
+                    logger.warn(f"{_T('Non-Standard Enum Detected')}: {nname}[{inp}] -> {stype}")
+                    inp_desc[0] = ["true", "false"]
                 if not (isinstance(stype, list) and isinstance(stype[0], dict)):
                     continue
                 rep = [sti["content"] for sti in stype if "content" in sti]
                 inp_desc[0] = rep if rep else stype
                 if rep:
-                    logger.warn(f"{_T('Non-Standard Enum Detected')}: {nname}[{inp}] -> {rep}")
+                    logger.warn(f"{_T('Non-Standard Enum Detected')}: {nname}[{inp}] -> {stype}")
 
         return desc
 

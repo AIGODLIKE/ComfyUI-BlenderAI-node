@@ -117,6 +117,13 @@ def get_icon_path(nname):
                 path_list[reg_name] = d[name2path[class_type][name]][0]
     return PREVICONPATH.get(nname, {})
 
+def calc_hash_type(stype):
+    from .blueprints import is_bool_list
+    if is_bool_list(stype):
+        hash_type = md5(f"{{True, False}}".encode()).hexdigest()
+    else:
+        hash_type = md5(",".join(stype).encode()).hexdigest()
+    return hash_type
 
 def get_blueprints(class_type):
     from .blueprints import get_blueprints
@@ -1039,30 +1046,19 @@ def parse_node():
     for name, desc in object_info.items():
         SOCKET_TYPE[name] = {}
         cat = desc["category"]
-        for inp, inp_desc in desc["input"].get("required", {}).items():
-
-            stype = inp_desc[0]
-            if isinstance(stype, list):
-                sockets.add("ENUM")
-                # 太长 不能注册为 socket type(<64)
-                hash_type = md5(",".join(stype).encode()).hexdigest()
-                sockets.add(hash_type)
-                SOCKET_HASH_MAP[hash_type] = "ENUM"
-                SOCKET_TYPE[name][inp] = hash_type
-            else:
-                sockets.add(inp_desc[0])
-                SOCKET_TYPE[name][inp] = inp_desc[0]
-        for inp, inp_desc in desc["input"].get("optional", {}).items():
-            stype = inp_desc[0]
-            if isinstance(stype, list):
-                sockets.add("ENUM")
-                hash_type = md5(",".join(stype).encode()).hexdigest()
-                sockets.add(hash_type)
-                SOCKET_HASH_MAP[hash_type] = "ENUM"
-                SOCKET_TYPE[name][inp] = hash_type
-            else:
-                sockets.add(inp_desc[0])
-                SOCKET_TYPE[name][inp] = inp_desc[0]
+        for inp_channel in {"required", "optional"}:
+            for inp, inp_desc in desc["input"].get(inp_channel, {}).items():
+                stype = inp_desc[0]
+                if isinstance(stype, list):
+                    sockets.add("ENUM")
+                    # 太长 不能注册为 socket type(<64)
+                    hash_type = calc_hash_type(stype)
+                    sockets.add(hash_type)
+                    SOCKET_HASH_MAP[hash_type] = "ENUM"
+                    SOCKET_TYPE[name][inp] = hash_type
+                else:
+                    sockets.add(inp_desc[0])
+                    SOCKET_TYPE[name][inp] = inp_desc[0]
         for index, out_type in enumerate(desc.get("output", [])):
             desc["output"][index] = [out_type, out_type]
         for index, out_name in enumerate(desc.get("output_name", [])):
@@ -1133,7 +1129,7 @@ def parse_node():
                 socket = inp[0]
                 if isinstance(inp[0], list):
                     # socket = "ENUM"
-                    socket = md5(",".join(inp[0]).encode()).hexdigest()
+                    socket = calc_hash_type(inp[0])
                     continue
                 if socket in {"ENUM", "INT", "FLOAT", "STRING", "BOOLEAN"}:
                     continue
