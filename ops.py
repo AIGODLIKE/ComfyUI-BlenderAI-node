@@ -1,4 +1,5 @@
 import typing
+from typing import Any
 import bpy
 import re
 import json
@@ -10,10 +11,10 @@ from functools import partial
 from .translations import ctxt
 from .prop import Prop
 from .utils import _T, logger, PngParse, FSWatcher
-from .timer import Timer, Worker
+from .timer import Timer, Worker, WorkerFunc
 from .SDNode import TaskManager
 from .SDNode.history import History
-from .SDNode.tree import InvalidNodeType, CFNodeTree, get_tree
+from .SDNode.tree import InvalidNodeType, CFNodeTree, get_tree, TREE_TYPE
 from .datas import IMG_SUFFIX
 
 
@@ -28,21 +29,37 @@ def find_nodes_by_idname(tree, idname, find_nodes=None):
     return find_nodes
 
 
+class LoopExec(WorkerFunc):
+    args = {}
+    # 单例
+    instance = None        
+    def __new__(cls, *args, **kwargs):
+        if not cls.instance:
+            cls.instance = super().__new__(cls)
+            cls.instance.args = {}
+        return cls.instance
+    
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        if TaskManager.get_task_num() != 0:
+            return
+        nt: CFNodeTree = LoopExec.args.get("nt", None)
+        try:
+            nt.load_json
+        except ReferenceError:
+            return
+        bpy.ops.sdn.ops(action="Submit", nt_name=nt.name)
+
+
 class Ops(bpy.types.Operator):
     bl_idname = "sdn.ops"
     bl_description = "SD Node"
     bl_label = "SD Node"
     bl_translation_context = ctxt
     action: bpy.props.StringProperty(default="")
+    nt_name: bpy.props.StringProperty(default="")
     save_name: bpy.props.StringProperty(name="Preset Name", default="预设")
     alt: bpy.props.BoolProperty(default=False)
     is_advanced_enable = False
-
-    @staticmethod
-    def loop_exec():
-        if TaskManager.get_task_num() != 0:
-            return
-        bpy.ops.sdn.ops(action="Submit")
 
     @classmethod
     def description(cls, context: bpy.types.Context,
@@ -78,7 +95,10 @@ class Ops(bpy.types.Operator):
         elif path.suffix.lower() == ".json":
             data = path.read_text()
 
-        tree = get_tree()
+        tree = get_tree(current=True)
+        if not tree:
+            bpy.ops.node.new_node_tree(type=TREE_TYPE, name="NodeTree")
+            tree = get_tree(current=True)
         if not tree:
             return
         data = json.loads(data)
@@ -177,7 +197,11 @@ class Ops(bpy.types.Operator):
         elif self.action == "Cancel":
             TaskManager.interrupt()
             return {"FINISHED"}
-        tree = get_tree()
+        if self.nt_name:
+            tree = bpy.data.node_groups.get(self.nt_name, None)
+            self.nt_name = ""
+        else:
+            tree = get_tree()
         if not tree:
             logger.error(_T("No Node Tree Found!"))
             self.report({"ERROR"}, _T("No Node Tree Found!"))
@@ -187,7 +211,7 @@ class Ops(bpy.types.Operator):
             self.submit(tree)
         elif self.action == "StopLoop":
             Ops.is_advanced_enable = False
-            Worker.remove_worker(Ops.loop_exec)
+            Worker.remove_worker(LoopExec())
         elif self.action == "ClearTask":
             TaskManager.clear_all()
         elif self.action == "Save":
@@ -211,6 +235,9 @@ class Ops(bpy.types.Operator):
             if not bpy.context.scene.sdn.presets:
                 self.report({"ERROR"}, _T("Preset Not Selected!"))
                 return {"FINISHED"}
+            if not getattr(bpy.context.space_data, "edit_tree", None):
+                bpy.ops.node.new_node_tree(type=TREE_TYPE, name="NodeTree")
+            tree = get_tree(current=True)
             tree.load_json(json.load(open(bpy.context.scene.sdn.presets)))
         elif self.action == "SaveGroup":
             data = tree.save_json_group()
@@ -263,13 +290,16 @@ class Ops(bpy.types.Operator):
                 data = json.loads(data)
                 if "workflow" in data:
                     data = data["workflow"]
+                if not getattr(bpy.context.space_data, "edit_tree", None):
+                    bpy.ops.node.new_node_tree(type=TREE_TYPE, name="NodeTree")
+                    tree = get_tree(current=True)
                 tree.load_json(data)
             except json.JSONDecodeError:
                 self.report({"ERROR"}, _T("ClipBoard Content Format Error"))
                 return {"FINISHED"}
         return {"FINISHED"}
 
-    def submit(self, tree):
+    def submit(self, tree: CFNodeTree):
 
         def get_task(tree):
             prompt = tree.serialize()
@@ -278,7 +308,9 @@ class Ops(bpy.types.Operator):
         if bpy.context.scene.sdn.advanced_exe and not Ops.is_advanced_enable:
             Ops.is_advanced_enable = True
             if bpy.context.scene.sdn.loop_exec:
-                Worker.push_worker(Ops.loop_exec)
+                loop_exec = LoopExec()
+                loop_exec.args["nt"] = tree
+                Worker.push_worker(loop_exec)
                 return {"FINISHED"}
             for _ in range(bpy.context.scene.sdn.batch_count):
                 bpy.ops.sdn.ops(action="Submit")

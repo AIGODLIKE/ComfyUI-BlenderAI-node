@@ -117,6 +117,7 @@ def get_icon_path(nname):
                 path_list[reg_name] = d[name2path[class_type][name]][0]
     return PREVICONPATH.get(nname, {})
 
+
 def calc_hash_type(stype):
     from .blueprints import is_bool_list
     if is_bool_list(stype):
@@ -124,6 +125,7 @@ def calc_hash_type(stype):
     else:
         hash_type = md5(",".join(stype).encode()).hexdigest()
     return hash_type
+
 
 def get_blueprints(class_type):
     from .blueprints import get_blueprints
@@ -138,6 +140,11 @@ class NodeBase(bpy.types.Node):
     builtin__stat__: bpy.props.StringProperty(subtype="BYTE_STRING")  # ori name: True/False
     pool = set()
     class_type: str
+
+    def get_tree(self):
+        from .tree import CFNodeTree
+        tree: CFNodeTree = self.id_data
+        return tree
 
     def get_blueprints(self):
         return get_blueprints(self.class_type)
@@ -214,7 +221,7 @@ class NodeBase(bpy.types.Node):
             self.sync_rand = False
         if self.class_type == "材质图":
             name = node.name
-            get_tree().safe_remove_nodes([node])
+            self.get_tree().safe_remove_nodes([node])
 
             def f(self, name):
                 self.name = name
@@ -279,7 +286,7 @@ class NodeBase(bpy.types.Node):
             return
         if bpy.context.space_data.type != "NODE_EDITOR":
             return
-        tree = get_tree()
+        tree = self.get_tree()
         if tree.bl_idname != "CFNodeTree":
             return
         # 对PrimitiveNode类型的输出进行限制
@@ -1236,6 +1243,7 @@ def parse_node():
                     return wrap
                 prop = bpy.props.EnumProperty(items=get_items(nname, reg_name, inp))
                 # 判断可哈希
+
                 def is_all_hashable(some_list):
                     return all(hasattr(item, "__hash__") for item in some_list)
                 if is_all_hashable(inp[0]) and set(inp[0]) == {True, False}:
@@ -1338,10 +1346,10 @@ def parse_node():
 
 def spec_gen_properties(nname, inp_name, prop):
 
-    def set_sync_rand(self, seed):
+    def set_sync_rand(self: NodeBase, seed):
         if not getattr(self, "sync_rand", False):
             return
-        tree = get_tree()
+        tree = self.get_tree()
         for node in tree.get_nodes():
             if node == self:
                 continue
@@ -1458,10 +1466,10 @@ def spec_extra_properties(properties, nname, ndesc):
         prop = bpy.props.BoolProperty(default=False)
         properties["exe_rand"] = prop
 
-        def update_sync_rand(self: bpy.types.Node, context):
+        def update_sync_rand(self: NodeBase, context):
             if not self.sync_rand:
                 return
-            tree = get_tree()
+            tree = self.get_tree()
             for node in tree.get_nodes():
                 if (not hasattr(node, "seed") and node.class_type != "KSamplerAdvanced") or node == self:
                     continue

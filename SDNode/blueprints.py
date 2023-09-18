@@ -5,7 +5,7 @@ import random
 from functools import partial, lru_cache
 from pathlib import Path
 from copy import deepcopy
-from .utils import gen_mask, get_tree
+from .utils import gen_mask
 from .nodes import NodeBase
 from ..SDNode.manager import Task
 from ..timer import Timer
@@ -14,8 +14,7 @@ from ..utils import _T
 from ..translations import ctxt, get_reg_name, get_ori_name
 
 
-def get_sync_rand_node():
-    tree = get_tree()
+def get_sync_rand_node(tree):
     for node in tree.get_nodes():
         # node不是KSampler、KSamplerAdvanced 跳过
         if not hasattr(node, "seed") and node.class_type != "KSamplerAdvanced":
@@ -27,10 +26,12 @@ def get_sync_rand_node():
 def get_fixed_seed():
     return int(random.randrange(4294967294))
 
+
 def is_bool_list(some_list: list):
     if not some_list:
         return False
     return isinstance(some_list[0], bool)
+
 
 class BluePrintBase:
     comfyClass = ""
@@ -142,7 +143,7 @@ class BluePrintBase:
         ...
 
     def dump(s, self: NodeBase, selected_only=False):
-        tree = get_tree()
+        tree = self.get_tree()
         all_links: list[bpy.types.NodeLink] = tree.links[:]
 
         inputs = []
@@ -209,7 +210,8 @@ class BluePrintBase:
 
     def serialize_pre(s, self: NodeBase):
         if hasattr(self, "seed"):
-            if (snode := get_sync_rand_node()) and snode != self:
+            tree = self.get_tree()
+            if (snode := get_sync_rand_node(tree)) and snode != self:
                 return
             if not self.exe_rand and not bpy.context.scene.sdn.rand_all_seed:
                 return
@@ -411,7 +413,8 @@ class KSamplerAdvanced(BluePrintBase):
     comfyClass = "KSamplerAdvanced"
 
     def serialize_pre_specific(s, self: NodeBase):
-        if (snode := get_sync_rand_node()) and snode != self:
+        tree = self.get_tree()
+        if (snode := get_sync_rand_node(tree)) and snode != self:
             return
         if not getattr(self, "exe_rand") and not bpy.context.scene.sdn.rand_all_seed:
             return
@@ -519,8 +522,11 @@ class 预览(BluePrintBase):
                     img_path = Path(d).joinpath(img_path.get("filename")).as_posix()
                 if not Path(img_path).exists():
                     continue
-                p = self.prev.add()
-                p.image = bpy.data.images.load(img_path)
+                try:
+                    p = self.prev.add()
+                    p.image = bpy.data.images.load(img_path)
+                except TypeError:
+                    ...
         Timer.put((f, self, img_paths))
 
 
@@ -605,6 +611,7 @@ class 材质图(BluePrintBase):
             mat_iamge_nodes = [n for n in tree.nodes if n.class_type == s.comfyClass]
             return len(mat_iamge_nodes) == 0
         return True
+
 
 @lru_cache(maxsize=1024)
 def get_blueprints(comfyClass, default=BluePrintBase) -> BluePrintBase:
