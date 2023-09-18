@@ -47,6 +47,8 @@ class LoopExec(WorkerFunc):
             nt.load_json
         except ReferenceError:
             return
+        except AttributeError:
+            return
         bpy.ops.sdn.ops(action="Submit", nt_name=nt.name)
 
 
@@ -429,9 +431,10 @@ class Ops(bpy.types.Operator):
                 if not filepath.exists() or filepath.suffix.lower() not in IMG_SUFFIX:
                     filepath = Path(tempfile.gettempdir()) / img.name
                     filepath = filepath.with_suffix(".png")
+                    tf = filepath.resolve().as_posix()
+                    img.save(filepath=tf)
                     img.filepath = filepath.resolve().as_posix()
                     img.filepath_raw = img.filepath
-                    img.save()
                 mat_image_node.image = FSWatcher.to_str(filepath)
                 TaskManager.push_task(get_task(tree))
             return {"FINISHED"}

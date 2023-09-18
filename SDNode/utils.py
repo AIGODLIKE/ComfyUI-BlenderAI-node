@@ -24,6 +24,8 @@ def get_tree(current=False):
         t = tree.load_json
     except ReferenceError:
         return None
+    except AttributeError:
+        return tree
     return tree
 
 def get_cmpt(nt: bpy.types.NodeTree):
