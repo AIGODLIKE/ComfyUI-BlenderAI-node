@@ -1038,7 +1038,7 @@ def parse_node():
             if isinstance(stype, list):
                 sockets.add("ENUM")
                 # 太长 不能注册为 socket type(<64)
-                hash_type = md5(",".join(stype).encode()).hexdigest()
+                hash_type = md5(",".join(map(str,stype)).encode()).hexdigest()
                 sockets.add(hash_type)
                 SOCKET_HASH_MAP[hash_type] = "ENUM"
                 SOCKET_TYPE[name][inp] = hash_type
@@ -1246,9 +1246,11 @@ def parse_node():
 
             elif proptype == "FLOAT":
                 {'default': 8.0, 'min': 0.0, 'max': 100.0}
-                if "step" in inp[1]:
+                if len(inp)>1 and "step" in inp[1]:
                     inp[1]["step"] *= 100
-                prop = bpy.props.FloatProperty(**inp[1])
+                    prop = bpy.props.FloatProperty(**inp[1])
+                else:
+                    prop = bpy.props.FloatProperty()
             elif proptype == "BOOLEAN":
                 prop = bpy.props.BoolProperty(**inp[1])
             elif proptype == "STRING":

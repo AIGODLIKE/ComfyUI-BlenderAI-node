@@ -44,6 +44,8 @@ class Ops(bpy.types.Operator):
             desc = _T(action)
         elif action == "Restart":
             desc = _T(action)
+        elif action == "Connect":
+            desc = _T("Connect to existing & running ComfyUI server")
         elif action == "Submit":
             desc = _T("Submit Task and with Clear Cache if Alt Pressed")
         return desc
@@ -145,6 +147,10 @@ class Ops(bpy.types.Operator):
 
     def execute_ex(self, context: bpy.types.Context):
         # logger.debug("EXE")
+        if self.action == "Connect":
+            TaskManager.connect_existing = not TaskManager.connect_existing
+            if TaskManager.connect_existing:
+                TaskManager.start_polling()
         if self.action == "Launch" or (self.action == "Submit" and not TaskManager.is_launched()):
             if TaskManager.is_launched():
                 self.report({"ERROR"}, "服务已经启动!")

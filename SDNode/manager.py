@@ -110,6 +110,8 @@ class TaskManager:
     execute_status_record = []
     error_msg = []
     progress_bar = 0
+    connect_existing: bool = False
+    is_polling: bool = False
     launch_ip = "127.0.0.1"
     launch_port = 8188
     launch_url = "http://127.0.0.1:8188"
@@ -138,6 +140,8 @@ class TaskManager:
         return TaskManager.task_queue.qsize()
 
     def is_launched() -> bool:
+        if TaskManager.connect_existing:
+            return True
         return TaskManager.pid != -1
 
     def get_ip():
@@ -158,6 +162,9 @@ class TaskManager:
         return f"http://{get_ip()}:{get_port()}"
 
     def force_kill(pid):
+        if TaskManager.connect_existing:
+            return
+
         if not pid:
             return
 
@@ -456,13 +463,18 @@ class TaskManager:
         if not TaskManager.process_exited:
             logger.warn(_T("Server Launched"))
             atexit.register(p.kill)
-            Thread(target=TaskManager.poll_res, daemon=True).start()
-            Thread(target=TaskManager.poll_task, daemon=True).start()
-            Thread(target=TaskManager.proc_res, daemon=True).start()
+            TaskManager.start_polling()
             Timer.clear() # timer may cause crash
         else:
             logger.error(_T("Server Launch Failed"))
             TaskManager.close_server()
+
+    def start_polling():
+        if TaskManager.is_polling:
+            return
+        Thread(target=TaskManager.poll_res, daemon=True).start()
+        Thread(target=TaskManager.poll_task, daemon=True).start()
+        Thread(target=TaskManager.proc_res, daemon=True).start()
 
     def stdout_listen():
         p = TaskManager.child
@@ -500,7 +512,7 @@ class TaskManager:
 
     def push_task(task, pre=None, post=None):
         logger.debug(_T('Add Task'))
-        if TaskManager.pid == -1:
+        if not TaskManager.is_launched():
             TaskManager.put_error_msg(_T("Server Not Launched, Add Task Failed"))
             TaskManager.put_error_msg(_T("Please Check ComfyUI Directory"))
             logger.error(_T("Server Not Launched"))
@@ -565,7 +577,7 @@ class TaskManager:
         logger.debug("Poll Task Thread Exit")
 
     def query_server_task():
-        if TaskManager.pid == -1:
+        if not TaskManager.is_launched():
             return {"queue_pending": [], "queue_running": []}
         try:
             req = request.Request(f"{TaskManager.get_url()}/queue")
@@ -601,6 +613,8 @@ class TaskManager:
                 data = json.dumps(content).encode()
                 req = request.Request(f"{TaskManager.get_url()}/{api}", data=data)
                 History.put_history(task.get("workflow"))
+                logger.debug(f'post to {TaskManager.get_url()}/{api}:')
+                logger.debug(data.decode())
                 try:
                     request.urlopen(req)
                 except request.HTTPError:
@@ -656,6 +670,9 @@ class TaskManager:
             msg = json.loads(message)
             mtype = msg["type"]
             data = msg["data"]
+
+            if mtype != 'progress':
+                logger.debug(f'got response: {message}')
 
             def update():
                 import bpy
