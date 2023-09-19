@@ -16,6 +16,7 @@ from .SDNode import TaskManager
 from .SDNode.history import History
 from .SDNode.tree import InvalidNodeType, CFNodeTree, get_tree, TREE_TYPE
 from .datas import IMG_SUFFIX
+from .preference import get_pref
 
 
 def find_nodes_by_idname(tree, idname, find_nodes=None):
@@ -32,13 +33,14 @@ def find_nodes_by_idname(tree, idname, find_nodes=None):
 class LoopExec(WorkerFunc):
     args = {}
     # 单例
-    instance = None        
+    instance = None
+
     def __new__(cls, *args, **kwargs):
         if not cls.instance:
             cls.instance = super().__new__(cls)
             cls.instance.args = {}
         return cls.instance
-    
+
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
         if TaskManager.get_task_num() != 0:
             return
@@ -677,6 +679,92 @@ class Load_Batch(bpy.types.Operator):
             # 提交任务
             bpy.ops.sdn.ops("INVOKE_DEFAULT", action="Submit")
         return {"FINISHED"}
+
+
+class Sync_Stencil_Image(bpy.types.Operator):
+    bl_idname = "sdn.sync_stencil_image"
+    bl_label = "Sync Stencil Image"
+    bl_description = "Sync Stencil Image"
+    bl_translation_context = ctxt
+    action: bpy.props.StringProperty(default="")
+    areas = set()
+
+    def execute(self, context: Context):
+        if self.action == "Clear":
+            self.areas.discard(context.area)
+            return {"FINISHED"}
+        self.areas.add(context.area)
+        wm = context.window_manager
+        wm.modal_handler_add(self)
+        self._timer = wm.event_timer_add(1 / 60, window=context.window)
+        return {"RUNNING_MODAL"}
+
+    def modal(self, context: Context, event: Event):
+        if context.area not in self.areas:
+            return {"FINISHED"}
+        if not context.area:
+            return {"FINISHED"}
+        if context.area.type != "VIEW_3D":
+            return {"PASS_THROUGH"}
+        # 鼠标不在当前viewport则返回
+        in_area = context.area.x + context.area.width > event.mouse_x > context.area.x and context.area.y + context.area.height > event.mouse_y > context.area.y
+        if not in_area:
+            return {"PASS_THROUGH"}
+
+        from bl_ui.properties_paint_common import UnifiedPaintPanel
+
+        rv3d = bpy.context.space_data.region_3d
+        area = context.area
+        # zoom to fac powf((float(M_SQRT2) + camzoom / 50.0f), 2.0f) / 4.0f;
+        # max(area.width, area.height) * fac
+        fac = (2**0.5 + rv3d.view_camera_zoom / 50)**2 / 4
+        length = max(area.width, area.height) * fac
+
+        settings = UnifiedPaintPanel.paint_settings(context)
+        brush = settings.brush  # 可能报错 没brush(settings为空)
+        width, height = area.width, area.height
+        if not brush:
+            return {"PASS_THROUGH"}
+        sos = get_pref().stencil_offset_size_xy
+        offset_top = Vector(sos) * bpy.context.preferences.view.ui_scale
+        enable_cam_offset = False
+        if enable_cam_offset:
+            coffx, coffy = rv3d.view_camera_offset
+            coffw = coffx * width
+            coffh = coffy * height
+            hwidth = width / 2
+            hheight = height / 2
+            fac = (2**0.5 + rv3d.view_camera_zoom / 50)**2 / 4
+            brush.stencil_pos = (hwidth - coffw, hheight - offset_top.y - coffh)
+        else:
+            rv3d.view_camera_offset = (0, 0)
+            pos = (width / 2 - offset_top.x, height / 2 - offset_top.y)
+            dim = (length / 2, length / 2)
+            self.update_brush(brush, pos, dim)
+        if rv3d.view_perspective != "CAMERA":
+            rv3d.view_perspective = "CAMERA"
+        return {"PASS_THROUGH"}
+
+    def update_brush(self, brush, pos, dim):
+        pos = Vector(pos)
+        dim = Vector(dim)
+        if brush.stencil_dimension != dim:
+            brush.stencil_dimension = dim
+        if brush.stencil_pos != pos:
+            brush.stencil_pos = pos
+
+
+def menu_sync_stencil_image(self, context):
+    if context.area in Sync_Stencil_Image.areas:
+        col = self.layout.column()
+        col.alert = True
+        col.operator(Sync_Stencil_Image.bl_idname, text="Stop Sync Stencil Image", icon="PAUSE").action = "Clear"
+    else:
+        self.layout.operator(Sync_Stencil_Image.bl_idname, icon="PLAY")
+
+
+bpy.types.VIEW3D_PT_tools_brush_settings.append(menu_sync_stencil_image)
+# bpy.types.VIEW3D_PT_tools_brush_display.append(menu_sync_stencil_image)
 
 
 @bpy.app.handlers.persistent

@@ -210,6 +210,8 @@ other = {
     "No Node Tree Found!": "未找到节点树!",
     "Load History": "加载历史",
     "Load History Workflow": "加载历史工作流",
+    "Sync Stencil Image": "同步镂板",
+    "Stop Sync Stencil Image": "停止同步",
     # ui.py
     "ClearTask": "清理任务",
     "Cancel": "取消任务",
@@ -255,6 +257,7 @@ other = {
     "AIGODLIKE Open Source Community - Main Site": "AIGODLIKE开源社区-主站",
     "-Good friends exploring in the AI world (alphabetical order)": "-在AI世界探索的好朋友们(首字母排序)",
     "\"Thank you, these adventurers who are exploring and sharing their experience in the AI field, hurry up and follow them\"": "“感谢，这些在AI领域探索并分享经验的冒险者，快去关注啦～”",
+    "Stencil Offset Size": "镂板偏移大小",
     # MLT
     " Prompts": "提示词",
     "MLT": "多行文本",

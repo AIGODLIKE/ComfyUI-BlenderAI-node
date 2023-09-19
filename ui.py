@@ -1,6 +1,8 @@
 import bpy
 import platform
-from .ops import Ops, Load_History, Copy_Tree, Load_Batch
+from bl_ui.properties_paint_common import UnifiedPaintPanel
+from bpy.types import Context
+from .ops import Ops, Load_History, Copy_Tree, Load_Batch, Sync_Stencil_Image
 from .translations import ctxt
 from .SDNode import TaskManager
 from .SDNode.tree import TREE_TYPE
@@ -78,7 +80,7 @@ class Panel(bpy.types.Panel):
         rrow.operator(Ops.bl_idname, text="", icon="TEXTURE", text_ctxt=ctxt).action = "PresetFromBookmark"
         rrow.operator(Copy_Tree.bl_idname, text="", icon="COPYDOWN")
         rrow.operator(Ops.bl_idname, text="", icon="PASTEDOWN", text_ctxt=ctxt).action = "PresetFromClipBoard"
-        
+
         box = layout.box()
         row = box.row()
         row.label(text="Node Group", text_ctxt=ctxt)
@@ -118,7 +120,6 @@ class Panel(bpy.types.Panel):
             row = layout.row()
             row.alignment = "CENTER"
             row.label(text=content[:134], text_ctxt=ctxt)
-            
 
         for error_msg in TaskManager.get_error_msg():
             row = layout.row()
@@ -130,8 +131,10 @@ class Panel(bpy.types.Panel):
             row.alert = True
             row.label(text="Adjust node tree and try again", text_ctxt=ctxt)
 
+
 class HistoryItem(bpy.types.PropertyGroup):
     name: bpy.props.StringProperty(default="")
+
 
 class HISTORY_UL_UIList(bpy.types.UIList):
 
@@ -142,4 +145,65 @@ class HISTORY_UL_UIList(bpy.types.UIList):
         row = layout.row(align=True)
         row.label(text="  " + item.name)
         row.operator(Load_History.bl_idname, text="", icon="TIME").name = item.name
-        
+
+
+class PanelViewport(bpy.types.Panel):
+    bl_idname = "SDNV_PT_UI"
+    bl_translation_context = ctxt
+    bl_label = get_addon_name()
+    bl_description = ""
+    bl_space_type = "VIEW_3D"
+    bl_region_type = "UI"
+    bl_category = "圣杯节点"
+
+    def draw(self, context: Context):
+        rv3d = bpy.context.space_data.region_3d
+        self.layout.prop(rv3d, "view_camera_offset")
+        self.layout.prop(rv3d, "view_camera_zoom")
+
+        self.layout.prop(rv3d, "view_distance")
+        self.layout.prop(rv3d, "view_location")
+        self.layout.prop(rv3d, "view_matrix")
+        self.layout.prop(rv3d, "view_perspective")
+        self.layout.prop(rv3d, "window_matrix")
+        area = context.area
+        # zoom to fac powf((float(M_SQRT2) + camzoom / 50.0f), 2.0f) / 4.0f;
+        # max(area.width, area.height) * fac
+        fac = (2**0.5 + rv3d.view_camera_zoom / 50)**2 / 4
+        length = max(area.width, area.height) * fac
+
+        self.layout.prop(area, "width")
+        self.layout.prop(area, "height")
+        self.layout.prop(area, "x")
+        self.layout.prop(area, "y")
+        space_data = context.space_data
+        self.layout.label(text=f"{length:.2f}")
+        self.layout.label(text=f"{fac:.6f}")
+
+        settings = UnifiedPaintPanel.paint_settings(context)
+        brush = settings.brush  # 可能报错 没brush(settings为空)
+        tex_slot = brush.texture_slot
+        col = self.layout.column()
+        col.template_ID_preview(tex_slot, "texture", new="texture.new", rows=3, cols=8)
+
+        # print(context.space_data.render_border_max_x)
+        from .timer import Timer
+
+        def f(brush, length, width, height):
+            if not brush:
+                return
+            offset_top = bpy.context.preferences.view.ui_scale * 26
+            enable_cam_offset = False
+            if enable_cam_offset:
+                coffx, coffy = rv3d.view_camera_offset
+                coffw = coffx * width
+                coffh = coffy * height
+                hwidth = width / 2
+                hheight = height / 2
+                fac = (2**0.5 + rv3d.view_camera_zoom / 50)**2 / 4
+                brush.stencil_pos = (hwidth - coffw, hheight - offset_top - coffh)
+            else:
+                rv3d.view_camera_offset = (0, 0)
+                brush.stencil_pos = (width / 2, (height) / 2 - offset_top)
+            brush.stencil_dimension = (length / 2, length / 2)
+        Timer.put((f, brush, length, area.width, area.height))

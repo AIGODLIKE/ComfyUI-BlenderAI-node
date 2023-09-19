@@ -41,6 +41,7 @@ class AddonPreference(bpy.types.AddonPreferences):
     force_log: bpy.props.BoolProperty(default=False, name="Force Log", description="Force Log, Generally Not Needed")
     fixed_preview_image_size: bpy.props.BoolProperty(default=False, name="Fixed Preview Image Size")
     preview_image_size: bpy.props.IntProperty(default=256, min=64, max=8192, name="Preview Image Size")
+    stencil_offset_size_xy: bpy.props.IntVectorProperty(default=(0, 18), size=2, min=-100, max=100, name="Stencil Offset Size")
     def get_cuda_list():
         """
         借助nvidia-smi获取CUDA版本列表
@@ -112,6 +113,7 @@ class AddonPreference(bpy.types.AddonPreferences):
         layout.prop(self, "python_path", text_ctxt=ctxt)
         layout.prop(self, "mem_level", text_ctxt=ctxt)
         row = layout.row(align=True)
+        row.prop(self, "stencil_offset_size_xy", text_ctxt=ctxt)
         row.prop(self, "popup_scale", text_ctxt=ctxt)
         row.prop(self, "enable_hq_preview", text="", icon="IMAGE_BACKGROUND", text_ctxt=ctxt)
         layout.prop(self, "with_webui_model")
