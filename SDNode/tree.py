@@ -4,14 +4,15 @@ import time
 import sys
 import traceback
 from string import ascii_letters
+from pathlib import Path
 from bpy.app.translations import pgettext
 from threading import Thread
 from functools import partial
 from collections import OrderedDict
 from bpy.types import NodeTree
 from nodeitems_utils import NodeCategory, NodeItem, register_node_categories, unregister_node_categories, _node_categories
-from .nodes import nodes_reg, nodes_unreg, parse_node, NodeBase, get_tree
-from ..utils import logger, Icon, rgb2hex, hex2rgb, _T
+from .nodes import nodes_reg, nodes_unreg, NodeParser, NodeBase, get_tree, clear_nodes_data_cache
+from ..utils import logger, Icon, rgb2hex, hex2rgb, _T, FSWatcher
 from ..datas import EnumCache
 from ..timer import Timer
 from ..translations import ctxt
@@ -184,7 +185,7 @@ class CFNodeTree(NodeTree):
         for i, link in enumerate(self.links):
             # links is an OBJECT
             # [id, origin_id, origin_slot, target_id, target_slot, type]
-            # TODO: 当有 NodeReroute 的时候 情况比较复杂
+            # 当有 NodeReroute 的时候 情况比较复杂
             # from_node = self.find_from_node(link)
             # to_node = self.find_to_node(link)
             # if (to_node not in dump_nodes) or (from_node not in dump_nodes):
@@ -547,10 +548,12 @@ class CFNodeCategory(NodeCategory):
         self.draw_fns = kwargs.pop("draw_fns", [])
         super().__init__(*args, **kwargs)
 
+
 def gen_cat_id(idstr):
     while idstr[0] == "_":
         idstr = idstr[1:]
     return "NODE_MT_%s" % idstr
+
 
 def reg_nodetree(identifier, cat_list, sub=False):
     if not cat_list:
@@ -592,9 +595,9 @@ def reg_nodetree(identifier, cat_list, sub=False):
     _node_categories[identifier] = (cat_list, draw_add_menu, menu_types)
 
 
-def load_node(node_desc, root=""):
+def load_node(nodetree_desc, root=""):
     node_cat = []
-    for cat, nodes in node_desc.items():
+    for cat, nodes in nodetree_desc.items():
         ocat = cat
         rep_chars = [" ", "-", "(", ")", "[", "]", "{", "}", ",", ".", ":", ";", "'", '"', "/", "\\", "|", "?", "*", "<", ">", "=", "+", "&", "^", "%", "$", "#", "@", "!", "`", "~"]
         for c in rep_chars:
@@ -691,17 +694,37 @@ def set_draw_intern(reg):
         NODE_MT_Utils.remove(draw_intern)
 
 
+def rtnode_reg_diff():
+    t1 = time.time()
+    _, node_clss, _ = NodeParser().parse(diff=True)
+    if not node_clss:
+        return
+    logger.debug(f"变更节点: {[c.bl_label for c in node_clss]}")
+    clear_nodes_data_cache()
+    clss_map = {}
+    for c in clss:
+        clss_map[c.bl_label] = c
+    for c in node_clss:
+        old_c = clss_map.pop(c.bl_label, None)
+        if old_c:
+            bpy.utils.unregister_class(old_c)
+            clss.remove(old_c)
+        bpy.utils.register_class(c)
+        clss.append(c)
+    logger.info(_T("RegNodeDiff Time:") + f" {time.time()-t1:.2f}s")
+
+
 def rtnode_reg():
     reg_node_reroute()
-
     clss.append(CFNodeTree)
     t1 = time.time()
-    node_desc, node_clss, socket = parse_node()
+    # nt_desc = {name: {items:[], menus:[nt_desc...]}}
+    nt_desc, node_clss, socket_clss = NodeParser().parse()
     t2 = time.time()
     logger.info(_T("ParseNode Time:") + f" {t2-t1:.2f}s")
-    node_cat = load_node(node_desc=node_desc)
+    node_cat = load_node(nodetree_desc=nt_desc)
     clss.extend(node_clss)
-    clss.extend(socket)
+    clss.extend(socket_clss)
     nodes_reg()
     reg()
     reg_nodetree(TREE_NAME, node_cat)  # register_node_categories(TREE_NAME, node_cat)
@@ -724,6 +747,22 @@ def rtnode_unreg():
     clss.clear()
 
 
+def cb(path):
+    FSWatcher.consume_change(path)
+    Timer.put(rtnode_reg_diff)
+
+NodeParser.DIFF_PATH.write_text("{}")
+FSWatcher.register(NodeParser.DIFF_PATH, cb)
+# def cb():
+#     NodeParser.DIFF_PATH.write_text("{}")
+#     time_stamp = NodeParser.DIFF_PATH.stat().st_mtime_ns
+#     while True:
+#         time.sleep(1)
+#         ts = NodeParser.DIFF_PATH.stat().st_mtime_ns
+#         if ts == time_stamp:
+#             continue
+#         time_stamp = ts
+#         Timer.put(rtnode_reg_diff)
 a = 2 * 8 + 4 * 8 + 64 + 4 + (4) + 64 + 2 + 2 + 8 + 8 + 8 + 4 * 2 + 4 * 2
 """
 2*8+4*8    +64+4+4 /8+64+2+2+8+8+8+4*2+4*2
