@@ -1,9 +1,10 @@
 import typing
-from typing import Any
 import bpy
 import re
 import json
 import tempfile
+import time
+from typing import Any
 from pathlib import Path
 from bpy.types import Context, Event
 from mathutils import Vector
@@ -14,7 +15,7 @@ from .utils import _T, logger, PngParse, FSWatcher
 from .timer import Timer, Worker, WorkerFunc
 from .SDNode import TaskManager
 from .SDNode.history import History
-from .SDNode.tree import InvalidNodeType, CFNodeTree, get_tree, TREE_TYPE
+from .SDNode.tree import InvalidNodeType, CFNodeTree, get_tree, TREE_TYPE, rtnode_reg, rtnode_unreg
 from .datas import IMG_SUFFIX
 from .preference import get_pref
 
@@ -678,6 +679,30 @@ class Load_Batch(bpy.types.Operator):
 
             # 提交任务
             bpy.ops.sdn.ops("INVOKE_DEFAULT", action="Submit")
+        return {"FINISHED"}
+
+
+class Fetch_Node_Status(bpy.types.Operator):
+    bl_idname = "sdn.fetch_node_status"
+    bl_label = "Fetch Node Status"
+    bl_description = "Fetch Node Status"
+    bl_translation_context = ctxt
+
+    @classmethod
+    def poll(cls, context: Context):
+        return bpy.context.space_data.edit_tree
+
+    def execute(self, context):
+        t1 = time.time()
+        rtnode_unreg()
+        t2 = time.time()
+        logger.info(_T("UnregNode Time:") + f" {t2-t1:.2f}s")
+
+        t3 = time.time()
+        rtnode_reg()
+        t4 = time.time()
+        logger.info(_T("RegNode Time:") + f" {t4-t3:.2f}s")
+        CFNodeTree.instance = getattr(bpy.context.space_data, "edit_tree", None)
         return {"FINISHED"}
 
 
