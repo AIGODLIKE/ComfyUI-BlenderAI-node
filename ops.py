@@ -693,6 +693,10 @@ class Fetch_Node_Status(bpy.types.Operator):
         return bpy.context.space_data.edit_tree
 
     def execute(self, context):
+        # from .SDNode.tree import rtnode_reg_diff
+        # t0 = time.time()
+        # rtnode_reg_diff()
+        # logger.info(_T("RegNodeDiff Time:") + f" {time.time()-t0:.2f}s")
         t1 = time.time()
         rtnode_unreg()
         t2 = time.time()

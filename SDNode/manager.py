@@ -422,7 +422,7 @@ class TaskManager:
                 continue
             if file.name == "cup.py":
                 t = file.read_text(encoding="utf-8")
-                t = t.replace("XXXMODEL-CFGXXX", str(Path(__file__).parent / "PATH_CFG.json"))
+                t = t.replace("XXXHOST-PATHXXX", Path(__file__).parent.as_posix())
                 t = t.replace("FORCE_LOG = False", f"FORCE_LOG = {get_pref().force_log}")
                 (Path(model_path) / "custom_nodes" / file.name).write_text(t, encoding="utf-8")
                 continue
