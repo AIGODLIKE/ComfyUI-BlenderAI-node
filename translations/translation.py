@@ -212,6 +212,7 @@ other = {
     "Load History Workflow": "加载历史工作流",
     "Sync Stencil Image": "同步镂板",
     "Stop Sync Stencil Image": "停止同步",
+    "Fetch Node Status": "更新节点信息",
     # ui.py
     "ClearTask": "清理任务",
     "Cancel": "取消任务",
