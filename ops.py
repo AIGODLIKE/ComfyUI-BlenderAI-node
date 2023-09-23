@@ -66,23 +66,6 @@ class Ops(bpy.types.Operator):
     alt: bpy.props.BoolProperty(default=False)
     is_advanced_enable = False
 
-    @classmethod
-    def description(cls, context: bpy.types.Context,
-                    properties: bpy.types.OperatorProperties) -> str:
-        desc = "SD Node"
-        action = properties.get("action", "")
-        if action == "PresetFromBookmark":
-            desc = _T("Load from Bookmark")
-        if action == "PresetFromClipBoard":
-            desc = _T("Load from ClipBoard")
-        elif action == "Launch":
-            desc = _T(action)
-        elif action == "Restart":
-            desc = _T(action)
-        elif action == "Submit":
-            desc = _T("Submit Task and with Clear Cache if Alt Pressed")
-        return desc
-
     def import_bookmark_set(self, value):
         path = Path(value)
         if not path.exists() or path.suffix.lower() not in {".png", ".json"}:
@@ -112,6 +95,23 @@ class Ops(bpy.types.Operator):
         tree.load_json(data)
 
     import_bookmark: bpy.props.StringProperty(name="Preset Bookmark", default=str(Path.cwd()), subtype="FILE_PATH", set=import_bookmark_set)
+
+    @classmethod
+    def description(cls, context: bpy.types.Context,
+                    properties: bpy.types.OperatorProperties) -> str:
+        desc = "SD Node"
+        action = properties.get("action", "")
+        if action == "PresetFromBookmark":
+            desc = _T("Load from Bookmark")
+        if action == "PresetFromClipBoard":
+            desc = _T("Load from ClipBoard")
+        elif action == "Launch":
+            desc = _T(action)
+        elif action == "Restart":
+            desc = _T(action)
+        elif action == "Submit":
+            desc = _T("Submit Task and with Clear Cache if Alt Pressed")
+        return desc
 
     def draw(self, context):
         layout = self.layout
@@ -163,6 +163,32 @@ class Ops(bpy.types.Operator):
             return wm.invoke_props_dialog(self, width=200)
         return self.execute(context)
 
+    def execute(self, context: bpy.types.Context):
+        try:
+            if res := getattr(self, self.action)():
+                return res
+            return {"FINISHED"}
+        except InvalidNodeType as e:
+            self.report({"ERROR"}, str(e.args))
+        return {"FINISHED"}
+
+    def modal(self, context, event: bpy.types.Event):
+        if not self.select_nodes:
+            return {"FINISHED"}
+        if event.type == "MOUSEMOVE":
+            self.update_nodes_pos(event)
+
+        # exit
+        if event.value == "PRESS" and event.type in {"ESC", "LEFTMOUSE", "ENTER"}:
+            return {"FINISHED"}
+        if event.value == "PRESS" and event.type in {"RIGHTMOUSE"}:
+            tree = get_tree()
+            if tree:
+                tree.safe_remove_nodes(self.select_nodes[:])
+            return {"CANCELLED"}
+
+        return {"RUNNING_MODAL"}
+
     def find_frames_nodes(self, tree):
         nodes = [n for n in find_nodes_by_idname(tree, "输入图像") if n.mode == "序列图"]
         return nodes
@@ -171,140 +197,18 @@ class Ops(bpy.types.Operator):
         nodes = find_nodes_by_idname(tree, "材质图")
         return nodes[0] if nodes else None
 
-    def execute(self, context: bpy.types.Context):
-        try:
-            res = self.execute_ex(context)
-            return res
-        except InvalidNodeType as e:
-            self.report({"ERROR"}, str(e.args))
-        return {"FINISHED"}
+    def ensure_tree(self):
+        tree = getattr(bpy.context.space_data, "edit_tree", None)
+        if not tree:
+            bpy.ops.node.new_node_tree(type=TREE_TYPE, name="NodeTree")
+            tree = getattr(bpy.context.space_data, "edit_tree", None)
+        return tree
 
-    def execute_ex(self, context: bpy.types.Context):
-        # logger.debug("EXE")
-        if self.action == "Launch" or (self.action == "Submit" and not TaskManager.is_launched()):
-            if TaskManager.is_launched():
-                self.report({"ERROR"}, "服务已经启动!")
-                return {"FINISHED"}
-            TaskManager.restart_server()
-            # hack fix tree update crash
-            tree = getattr(bpy.context.space_data, "edit_tree", None)
-            from .SDNode.tree import CFNodeTree
-            CFNodeTree.instance = tree
-            if self.action == "Launch":
-                return {"FINISHED"}
-        elif self.action == "Restart":
-            TaskManager.restart_server()
-            # hack fix tree update crash
-            tree = getattr(bpy.context.space_data, "edit_tree", None)
-            from .SDNode.tree import CFNodeTree
-            CFNodeTree.instance = tree
-            return {"FINISHED"}
-        elif self.action == "Cancel":
-            TaskManager.interrupt()
-            return {"FINISHED"}
+    def submit(self):
+        tree: CFNodeTree = get_tree()
         if self.nt_name:
             tree = bpy.data.node_groups.get(self.nt_name, None)
             self.nt_name = ""
-        else:
-            tree = get_tree()
-        if not tree:
-            logger.error(_T("No Node Tree Found!"))
-            self.report({"ERROR"}, _T("No Node Tree Found!"))
-            return {"FINISHED"}
-        # special for frames image mode
-        if self.action == "Submit":
-            self.submit(tree)
-        elif self.action == "StopLoop":
-            Ops.is_advanced_enable = False
-            Worker.remove_worker(LoopExec())
-        elif self.action == "ClearTask":
-            TaskManager.clear_all()
-        elif self.action == "Save":
-            data = tree.save_json()
-            if not self.save_name:
-                self.report({"ERROR"}, _T("Invalid Preset Name!"))
-                return {"CANCELLED"}
-            file = Path(bpy.context.scene.sdn.presets_dir) / f"{self.save_name}.json"
-            with open(file, "w") as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-            Prop.mark_dirty()
-        elif self.action == "Del":
-            if not bpy.context.scene.sdn.presets:
-                self.report({"ERROR"}, _T("Preset Not Selected!"))
-                return {"FINISHED"}
-            preset = Path(bpy.context.scene.sdn.presets)
-            preset.unlink()
-            self.report({"INFO"}, f"{preset.stem} {_T('Removed')}")
-            Prop.mark_dirty()
-        elif self.action == "Load":
-            if not bpy.context.scene.sdn.presets:
-                self.report({"ERROR"}, _T("Preset Not Selected!"))
-                return {"FINISHED"}
-            if not getattr(bpy.context.space_data, "edit_tree", None):
-                bpy.ops.node.new_node_tree(type=TREE_TYPE, name="NodeTree")
-            tree = get_tree(current=True)
-            tree.load_json(json.load(open(bpy.context.scene.sdn.presets)))
-        elif self.action == "SaveGroup":
-            data = tree.save_json_group()
-            if not self.save_name:
-                self.report({"ERROR"}, _T("Invalid Preset Name!"))
-                return {"CANCELLED"}
-            file = Path(bpy.context.scene.sdn.groups_dir) / f"{self.save_name}.json"
-            with open(file, "w") as f:
-                json.dump(data, f, ensure_ascii=False, indent=4)
-            Prop.mark_dirty()
-        elif self.action == "DelGroup":
-            if not bpy.context.scene.sdn.groups:
-                self.report({"ERROR"}, _T("Preset Not Selected!"))
-                return {"FINISHED"}
-            preset = Path(bpy.context.scene.sdn.groups)
-            preset.unlink()
-            self.report({"INFO"}, f"{preset.stem} {_T('Removed')}")
-            Prop.mark_dirty()
-        elif self.action == "LoadGroup":
-            if not bpy.context.scene.sdn.groups:
-                self.report({"ERROR"}, _T("Preset Not Selected!"))
-                return {"FINISHED"}
-            select_nodes = tree.load_json_group(json.load(open(bpy.context.scene.sdn.groups)))
-            if not select_nodes:
-                return {"FINISHED"}
-            self.select_nodes = select_nodes
-            v = Vector([0, 0])
-            for n in select_nodes:
-                v += n.location
-            v /= len(select_nodes)
-            self.init_node_pos = {}
-            for n in select_nodes:
-                n.location += context.space_data.cursor_location - v
-                self.init_node_pos[n] = n.location.copy()
-
-            bpy.context.window_manager.modal_handler_add(self)
-            return {"RUNNING_MODAL"}
-        elif self.action == "PresetFromBookmark":
-            return {"FINISHED"}
-            # png = Path(self.import_bookmark)
-            # logger.error(self.import_bookmark)
-            # if not png.exists() or png.suffix != ".png":
-            #     self.report({"ERROR"}, "魔法图鉴不存在或格式不正确(仅png)")
-            #     return {"FINISHED"}
-            # data = PngParse.read_text_chunk(self.import_bookmark)
-            # logger.error(data)
-        elif self.action == "PresetFromClipBoard":
-            try:
-                data = bpy.context.window_manager.clipboard
-                data = json.loads(data)
-                if "workflow" in data:
-                    data = data["workflow"]
-                if not getattr(bpy.context.space_data, "edit_tree", None):
-                    bpy.ops.node.new_node_tree(type=TREE_TYPE, name="NodeTree")
-                    tree = get_tree(current=True)
-                tree.load_json(data)
-            except json.JSONDecodeError:
-                self.report({"ERROR"}, _T("ClipBoard Content Format Error"))
-                return {"FINISHED"}
-        return {"FINISHED"}
-
-    def submit(self, tree: CFNodeTree):
 
         def get_task(tree):
             prompt = tree.serialize()
@@ -481,22 +385,126 @@ class Ops(bpy.types.Operator):
         for n in self.select_nodes:
             n.location = self.init_node_pos[n] + bpy.context.space_data.cursor_location - self.init_pos
 
-    def modal(self, context, event: bpy.types.Event):
-        if not self.select_nodes:
-            return {"FINISHED"}
-        if event.type == "MOUSEMOVE":
-            self.update_nodes_pos(event)
+    def Launch(self):
+        if TaskManager.is_launched():
+            self.report({"ERROR"}, "服务已经启动!")
+            return
+        self.Restart()
 
-        # exit
-        if event.value == "PRESS" and event.type in {"ESC", "LEFTMOUSE", "ENTER"}:
-            return {"FINISHED"}
-        if event.value == "PRESS" and event.type in {"RIGHTMOUSE"}:
-            tree = get_tree()
-            if tree:
-                tree.safe_remove_nodes(self.select_nodes[:])
-            return {"CANCELLED"}
+    def Submit(self):
+        if not TaskManager.is_launched():
+            self.Launch()
+        self.submit()
 
+    def Restart(self):
+        TaskManager.restart_server()
+        # hack fix tree update crash
+        tree = getattr(bpy.context.space_data, "edit_tree", None)
+        from .SDNode.tree import CFNodeTree
+        CFNodeTree.instance = tree
+
+    def Cancel(self):
+        TaskManager.interrupt()
+
+    def StopLoop(self):
+        Ops.is_advanced_enable = False
+        Worker.remove_worker(LoopExec())
+
+    def ClearTask(self):
+        TaskManager.clear_all()
+
+    def Save(self):
+        tree: CFNodeTree = get_tree()
+        if self.nt_name:
+            tree = bpy.data.node_groups.get(self.nt_name, None)
+            self.nt_name = ""
+
+        if not tree:
+            logger.error(_T("No Node Tree Found!"))
+            self.report({"ERROR"}, _T("No Node Tree Found!"))
+            return
+        if not self.save_name:
+            self.report({"ERROR"}, _T("Invalid Preset Name!"))
+            return
+        data = tree.save_json()
+        file = Path(bpy.context.scene.sdn.presets_dir) / f"{self.save_name}.json"
+        with open(file, "w") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        Prop.mark_dirty()
+
+    def Del(self):
+        if not bpy.context.scene.sdn.presets:
+            self.report({"ERROR"}, _T("Preset Not Selected!"))
+            return
+        preset = Path(bpy.context.scene.sdn.presets)
+        preset.unlink()
+        self.report({"INFO"}, f"{preset.stem} {_T('Removed')}")
+        Prop.mark_dirty()
+
+    def Load(self):
+        if not bpy.context.scene.sdn.presets:
+            self.report({"ERROR"}, _T("Preset Not Selected!"))
+            return
+        tree = self.ensure_tree()
+        tree.load_json(json.load(open(bpy.context.scene.sdn.presets)))
+
+    def SaveGroup(self):
+        tree = getattr(bpy.context.space_data, "edit_tree", None)
+        if not tree:
+            logger.error(_T("No Node Tree Found!"))
+            self.report({"ERROR"}, _T("No Node Tree Found!"))
+            return
+        if not self.save_name:
+            self.report({"ERROR"}, _T("Invalid Preset Name!"))
+            return
+        data = tree.save_json_group()
+        file = Path(bpy.context.scene.sdn.groups_dir) / f"{self.save_name}.json"
+        with open(file, "w") as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
+        Prop.mark_dirty()
+
+    def DelGroup(self):
+        if not bpy.context.scene.sdn.groups:
+            self.report({"ERROR"}, _T("Preset Not Selected!"))
+            return
+        preset = Path(bpy.context.scene.sdn.groups)
+        preset.unlink()
+        self.report({"INFO"}, f"{preset.stem} {_T('Removed')}")
+        Prop.mark_dirty()
+
+    def LoadGroup(self):
+        if not bpy.context.scene.sdn.groups:
+            self.report({"ERROR"}, _T("Preset Not Selected!"))
+            return
+        tree = self.ensure_tree()
+        select_nodes = tree.load_json_group(json.load(open(bpy.context.scene.sdn.groups)))
+        if not select_nodes:
+            return
+        self.select_nodes = select_nodes
+        v = Vector([0, 0])
+        for n in select_nodes:
+            v += n.location
+        v /= len(select_nodes)
+        self.init_node_pos = {}
+        for n in select_nodes:
+            n.location += bpy.context.space_data.cursor_location - v
+            self.init_node_pos[n] = n.location.copy()
+        bpy.context.window_manager.modal_handler_add(self)
         return {"RUNNING_MODAL"}
+
+    def PresetFromBookmark(self):
+        return
+
+    def PresetFromClipBoard(self):
+        try:
+            data = bpy.context.window_manager.clipboard
+            data = json.loads(data)
+            if "workflow" in data:
+                data = data["workflow"]
+            tree = self.ensure_tree()
+            tree.load_json(data)
+        except json.JSONDecodeError:
+            self.report({"ERROR"}, _T("ClipBoard Content Format Error"))
 
 
 class Ops_Mask(bpy.types.Operator):
