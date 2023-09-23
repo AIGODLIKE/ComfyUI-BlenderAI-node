@@ -1,4 +1,4 @@
-from functools import lru_cache
+from __future__ import annotations
 import os
 import re
 import shutil
@@ -10,6 +10,7 @@ import signal
 from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import urlparse
 
+from functools import lru_cache
 from copy import deepcopy
 from shutil import rmtree
 from urllib import request
@@ -94,6 +95,286 @@ class Task:
             return
         self._post()
 
+
+class TaskErrPaser:
+    class ErrType:
+        WITH_ORI = True
+        WITH_INFO = True
+        WITH_PRINT = True
+        def get_print(self, info):
+            etype = info["type"]
+            func = getattr(self, etype, self.unknown)
+            return func(info)
+
+        def unknown(self, info):
+            if self.WITH_PRINT:
+                print(info)
+            return []
+            
+        def __print__(self, info):
+            msg = _T(info["message"]).strip()
+            dt = _T(info["details"]).strip()
+            if self.WITH_ORI:
+                if msg:
+                    msg += " --> " + info["message"]
+                if dt:
+                    dt += " --> " + info["details"]
+            if self.WITH_PRINT:
+                print(msg)
+                print(dt)
+            if self.WITH_INFO and self.WITH_PRINT:
+                print(info)
+            info_list = []
+            if msg:
+                info_list.append(msg)
+            if dt:
+                info_list.append(dt)
+            return info_list
+            
+        def required_input_missing(self, info):
+            required_input_missing = 0
+            error0 = {
+                "type": "required_input_missing",
+                "message": "Required input is missing",
+                "details": "{x}",
+                "extra_info": {
+                    "input_name": "{x}"
+                }
+            }
+            return self.__print__(info)
+
+        def bad_linked_input(self, info):
+            bad_linked_input = 1
+            error1 = {
+                "type": "bad_linked_input",
+                "message": "Bad linked input, must be a length-2 list of [node_id, slot_index]",
+                "details": "{x}",
+                "extra_info": {
+                    "input_name": "{x}",
+                    "input_config": "{info}",
+                    "received_value": "{val}"
+                }
+            }
+            return self.__print__(info)
+
+        def return_type_mismatch(self, info):
+            return_type_mismatch = 2
+            error2 = {
+                "type": "return_type_mismatch",
+                "message": "Return type mismatch between linked nodes",
+                "details": "{details}",
+                "extra_info": {
+                    "input_name": "{x}",
+                    "input_config": "{info}",
+                    "received_type": "{received_type}",
+                    "linked_node": "{val}"
+                }
+            }
+            return self.__print__(info)
+
+        def invalid_input_type(self, info):
+            invalid_input_type = 3
+            error3 = {
+                "type": "invalid_input_type",
+                "message": "Failed to convert an input value to a {type_input} value",
+                "details": "{x}, {val}, {ex}",
+                "extra_info": {
+                    "input_name": "{x}",
+                    "input_config": "{info}",
+                    "received_value": "{val}",
+                    "exception_message": "{str(ex)}"
+                }
+            }
+            # 匹配message
+            type_input = re.match(r"Failed to convert an input value to a (.+) value", info["message"]).groups()
+            msg = _T("Failed to convert an input value to a {type_input} value").format(type_input)
+            self.__print__(info)
+            return (msg,)
+
+        def value_smaller_than_min(self, info):
+            value_smaller_than_min = 4
+            error4 = {
+                "type": "value_smaller_than_min",
+                "message": "Value {val} smaller than min of {min}",
+                "details": "{x}",
+                "extra_info": {
+                    "input_name": "{x}",
+                    "input_config": "{info}",
+                    "received_value": "{val}",
+                }
+            }
+            self.__print__(info)
+            # 匹配message
+            val, min = re.match(r"Value (.+) smaller than min of (.+)", info["message"]).groups()
+            msg = _T("Value {val} smaller than min of {min}").format(val, min)
+            return (msg,)
+
+        def value_bigger_than_max(self, info):
+            value_bigger_than_max = 5
+            error5 = {
+                "type": "value_bigger_than_max",
+                "message": "Value {val} bigger than max of {max}",
+                "details": "{x}",
+                "extra_info": {
+                    "input_name": "{x}",
+                    "input_config": "{info}",
+                    "received_value": "{val}",
+                }
+            }
+            self.__print__(info)
+            val, max = re.match(r"Value (.+) bigger than max of (.+)", info["message"]).groups()
+            msg = _T("Value {val} bigger than max of {max}").format(val, max)
+            return (msg,)
+            
+
+        def custom_validation_failed(self, info):
+            custom_validation_failed = 6
+            error6 = {
+                "type": "custom_validation_failed",
+                "message": "Custom validation failed for node",
+                "details": "{details}",
+                "extra_info": {
+                    "input_name": "{x}",
+                    "input_config": "{info}",
+                    "received_value": "{val}",
+                }
+            }
+            return self.__print__(info)
+
+        def value_not_in_list(self, info):
+            value_not_in_list = 7
+            error7 = {
+                "type": "value_not_in_list",
+                "message": "Value not in list",
+                "details": "{x}: '{val}' not in {list_info}",
+                "extra_info": {
+                    "input_name": "{x}",
+                    "input_config": "{input_config}",
+                    "received_value": "{val}",
+                }
+            }
+            return self.__print__(info)
+
+        def prompt_no_outputs(self, info):
+            prompt_no_outputs = 8
+            error8 = {
+                "type": "prompt_no_outputs",
+                "message": "Prompt has no outputs",
+                "details": "",
+                "extra_info": {}
+            }
+            return self.__print__(info)
+
+        def exception_during_validation(self, info):
+            exception_during_validation = 9
+            error9 = {
+                "type": "exception_during_validation",
+                "message": "Exception when validating node",
+                "details": "{str(ex)}",
+                "extra_info": {
+                    "exception_type": "{exception_type}",
+                    "traceback": "{traceback.format_tb(tb)}"
+                }
+            }
+            return self.__print__(info)
+
+        def prompt_outputs_failed_validation(self, info):
+            prompt_outputs_failed_validation = 10
+            error10 = {
+                "type": "prompt_outputs_failed_validation",
+                "message": "Prompt outputs failed validation",
+                "details": "{errors_list}",
+                "extra_info": {}
+            }
+            return self.__print__(info)
+
+        def exception_during_inner_validation(self, info):
+            exception_during_inner_validation = 11
+            error11 = {
+                "type": "exception_during_inner_validation",
+                "message": "Exception when validating inner node",
+                "details": "{str(ex)}",
+                "extra_info": {
+                    "input_name": "{x}",
+                    "input_config": "{info}",
+                    "exception_message": "{str(ex)}",
+                    "exception_type": "{exception_type}",
+                    "traceback": "{traceback.format_tb(tb)}",
+                    "linked_node": "{val}"
+                }
+            }
+            return self.__print__(info)
+
+    def decode_info(self, e: request.HTTPError):
+        try:
+            self.error_info = json.loads(e.read().decode())
+        except BaseException:
+            self.error_info = {}
+
+    def parse(self, e: request.HTTPError):
+        self.decode_info(e)
+        if not self.error_info:
+            return
+        print(self.error_info)
+        self.error_parse()
+        self.node_error_parse()
+
+    def error_parse(self):
+        if "error" not in self.error_info:
+            return
+        info_list = TaskErrPaser.ErrType().get_print(self.error_info["error"])
+        logger.error(info_list)
+        for ei in info_list:
+            TaskManager.put_error_msg(ei)
+        return
+        error = self.error_info["error"]
+        err_type = error.get("type", "")
+        msg = error.get("message", "")
+        details = error.get("details", "")
+        extra_info = error.get("extra_info", "")
+        print(f"Error Type: {err_type}")
+        print(f"Message: {msg}")
+        print(f"Details: {details}")
+        print(f"Extra Info: {extra_info}")
+        # type message details extra_info
+
+    def node_error_parse(self):
+        if "node_errors" not in self.error_info:
+            return
+        template = {"10": {"errors": [{"type": "value_not_in_list",
+                                       "message": "Value not in list",
+                                       "details": "vae_name: '' not in []",
+                                       "extra_info": {"input_name": "vae_name",
+                                                      "input_config": [[]],
+                                                      "received_value": ""}}
+                                      ],
+                           "dependent_outputs": ["9"],
+                           "class_type": "VAELoader"}}
+        node_errors = self.error_info["node_errors"]
+        import bpy
+        from .tree import get_tree
+        logger.error("Node Error Parse")
+        for sc in bpy.data.screens:
+            try:
+                tree = get_tree(screen=sc)
+                if tree: break
+            except Exception as e:
+                print(e)
+        try:
+            for node in node_errors:
+                print(f"Node:{node}")
+                for n in tree.nodes:
+                    if n.id == str(node):
+                        n.use_custom_color = True
+                        n.color = (1, 0, 0)
+                        n.label = n.name + "-ERROR"
+                        TaskManager.put_error_msg(n.name)
+                for err in node_errors[node]["errors"]:
+                    for ei in TaskErrPaser.ErrType().get_print(err):
+                        TaskManager.put_error_msg("    -- " + ei)
+                    # print(f"\t->", err)
+        except Exception as e:
+            print(e)
 
 class TaskManager:
     _instance = None
@@ -461,7 +742,7 @@ class TaskManager:
             Thread(target=TaskManager.poll_res, daemon=True).start()
             Thread(target=TaskManager.poll_task, daemon=True).start()
             Thread(target=TaskManager.proc_res, daemon=True).start()
-            Timer.clear() # timer may cause crash
+            Timer.clear()  # timer may cause crash
         else:
             logger.error(_T("Server Launch Failed"))
             TaskManager.close_server()
@@ -513,11 +794,6 @@ class TaskManager:
         logger.debug(_T("Add Result"))
         TaskManager.cur_task.res.put(res)
         TaskManager.res_queue.put(TaskManager.cur_task)
-
-    # def get_res():
-    #     if TaskManager.res_queue.empty():
-    #         return None
-    #     return TaskManager.res_queue.get()
 
     def query_process():
         ...
@@ -605,9 +881,15 @@ class TaskManager:
                 History.put_history(task.get("workflow"))
                 try:
                     request.urlopen(req)
-                except request.HTTPError:
+                except request.HTTPError as e:
+                    print(_T("Invalid Node Connection"))
                     TaskManager.put_error_msg(_T("Invalid Node Connection"))
-                    TaskManager.mark_finished()
+                    err_parser = TaskErrPaser()
+                    err_parser.parse(e)
+                    if err_parser.error_info:
+                        TaskManager.mark_finished_with_info([])
+                    else:
+                        TaskManager.mark_finished()
                 except URLError:
                     TaskManager.put_error_msg(_T("Server Not Launched"))
                     TaskManager.mark_finished(with_noexe=False)
@@ -629,6 +911,13 @@ class TaskManager:
             TaskManager.put_error_msg(f"    2.{_T('Input Image Error')}")
             TaskManager.put_error_msg(f"    3.{_T('Node Connection Error')}")
             TaskManager.put_error_msg(f"    4.{_T('Server Not Launched')}")
+        TaskManager.execute_status_record.clear()
+
+    def mark_finished_with_info(info):
+        TaskManager.progress = {}
+        TaskManager.cur_task = None
+        for i in info:
+            TaskManager.put_error_msg(i)
         TaskManager.execute_status_record.clear()
 
     def proc_res():

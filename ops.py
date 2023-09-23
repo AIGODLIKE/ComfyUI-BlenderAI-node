@@ -209,7 +209,16 @@ class Ops(bpy.types.Operator):
         if self.nt_name:
             tree = bpy.data.node_groups.get(self.nt_name, None)
             self.nt_name = ""
-
+        def reset_error_mark(tree):
+            if not tree:
+                return
+            from mathutils import Color
+            for n in tree.nodes:
+                if not n.label.endswith("-ERROR") or n.color != Color((1,0,0)):
+                    continue
+                n.use_custom_color = False
+                n.label = ""
+        reset_error_mark(tree)
         def get_task(tree):
             prompt = tree.serialize()
             workflow = tree.save_json()

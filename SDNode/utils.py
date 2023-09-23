@@ -4,11 +4,13 @@ from pathlib import Path
 from ..utils import logger, _T
 SELECTED_COLLECTIONS = []
 
-def get_tree(current=False):
+def get_tree(current=False, screen=None):
     tree = getattr(bpy.context.space_data, "edit_tree", None)
     if tree:
         return tree
-    for a in bpy.context.screen.areas:
+    if screen is None:
+        screen = bpy.context.screen
+    for a in screen.areas:
         if a.type != "NODE_EDITOR":
             continue
         for s in a.spaces:
