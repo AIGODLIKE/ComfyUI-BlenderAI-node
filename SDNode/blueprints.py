@@ -2,15 +2,20 @@ import json
 import re
 import bpy
 import random
+import os
+import textwrap
 from functools import partial, lru_cache
 from pathlib import Path
 from copy import deepcopy
+from bpy.types import Context, UILayout
 from .utils import gen_mask
-from .nodes import NodeBase
+from .nodes import NodeBase, Ops_Add_SaveImage, Ops_Link_Mask, Ops_Active_Tex, Set_Render_Res, Ops_Swith_Socket
+from .nodes import name2path, get_icon_path
 from ..SDNode.manager import Task
 from ..timer import Timer
+from ..preference import get_pref
 from ..kclogger import logger
-from ..utils import _T
+from ..utils import _T, Icon, update_screen
 from ..translations import ctxt, get_reg_name, get_ori_name
 
 
@@ -32,12 +37,83 @@ def is_bool_list(some_list: list):
         return False
     return isinstance(some_list[0], bool)
 
+def setwidth(self: NodeBase, w, count=1):
+    oriw = w
+    w = max(self.bl_width_min, w)
+    fpis = get_pref().fixed_preview_image_size
+    if fpis:
+        pw = get_pref().preview_image_size
+        w = min(oriw, pw)
+    sw = w
+    w *= count
+
+    def delegate(self, w, fpis):
+        if not fpis:
+            self.bl_width_max = 8192
+            self.bl_width_min = 32
+        if self.width == w and not fpis:
+            return
+        self.width = w
+        if self.bl_width_max < w or fpis:
+            self.bl_width_max = w
+
+    Timer.put((delegate, self, w, fpis))
+    return sw
 
 class BluePrintBase:
     comfyClass = ""
 
     def new_btn_enable(s, self, layout, context):
         return True
+
+    def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True) -> bool:
+        def draw_prop_with_link(layout, self, prop, row=True, pre=None, post=None, **kwargs):
+            layout = Ops_Swith_Socket.draw_prop(layout, self, prop, row, swlink)
+            if pre:
+                pre(layout)
+            layout.prop(self, prop, **kwargs)
+            if post:
+                post(layout)
+            return layout
+        # 多行文本处理
+        md = self.get_meta(prop)
+        if md and md[0] == "STRING" and len(md) > 1 and isinstance(md[1], dict) and md[1].get("multiline",):
+            width = int(self.width) // 7
+            lines = textwrap.wrap(text=str(getattr(self, prop)), width=width)
+            for line in lines:
+                layout.label(text=line, text_ctxt=self.get_ctxt())
+            row = draw_prop_with_link(layout, self, prop)
+            row.operator("sdn.enable_mlt", text="", icon="TEXT")
+            return True
+
+        def show_model_preview(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILayout, prop: str):
+            if self.class_type not in name2path:
+                return False
+            if prop not in get_icon_path(self.class_type):
+                return False
+            col = draw_prop_with_link(layout, self, prop, text="", row=False)
+            col.template_icon_view(self, prop, show_labels=True, scale_popup=popup_scale, scale=popup_scale)
+            return True
+
+        popup_scale = 5
+        try:
+            popup_scale = get_pref().popup_scale
+        except BaseException:
+            ...
+        if show_model_preview(self, context, layout, prop):
+            return True
+        if hasattr(self, "seed"):
+            if prop == "seed":
+                row = draw_prop_with_link(layout, self, prop, text=prop, text_ctxt=self.get_ctxt())
+                row.prop(self, "exe_rand", text="", icon="FILE_REFRESH", text_ctxt=self.get_ctxt())
+                row.prop(bpy.context.scene.sdn, "rand_all_seed", text="", icon="HAND", text_ctxt=self.get_ctxt())
+                row.prop(self, "sync_rand", text="", icon="MOD_WAVE", text_ctxt=self.get_ctxt())
+                return True
+            if prop in {"exe_rand", "sync_rand"}:
+                return True
+        if self.class_type in {"OpenPoseFull", "OpenPoseHand", "OpenPoseMediaPipeFace", "OpenPoseDepth", "OpenPose", "OpenPoseFace", "OpenPoseLineart", "OpenPoseFullExtraLimb", "OpenPoseKeyPose", "OpenPoseCanny", }:
+            return True
+        return False
 
     def pre_filter(s, nname, desc):
         for k in {"required", "optional"}:
@@ -354,6 +430,11 @@ class TextToConsole(BluePrintBase):
 class MultiAreaConditioning(BluePrintBase):
     comfyClass = "MultiAreaConditioning"
 
+    def spec_draw(s, self: NodeBase, context, layout, prop: str, swlink=True) -> bool:
+        if prop == "config":
+            return True
+        return False
+
     def load_specific(s, self: NodeBase, data, with_id=True):
         config = json.loads(getattr(self, "config"))
         for i in range(2):
@@ -411,7 +492,29 @@ class KSampler(BluePrintBase):
 
 class KSamplerAdvanced(BluePrintBase):
     comfyClass = "KSamplerAdvanced"
-
+    def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True) -> bool:
+        def draw_prop_with_link(layout, self, prop, row=True, pre=None, post=None, **kwargs):
+            layout = Ops_Swith_Socket.draw_prop(layout, self, prop, row, swlink)
+            if pre:
+                pre(layout)
+            layout.prop(self, prop, **kwargs)
+            if post:
+                post(layout)
+            return layout
+        if prop in {"add_noise", "return_with_leftover_noise"}:
+            def dpre(layout): layout.label(text=prop, text_ctxt=self.get_ctxt())
+            draw_prop_with_link(layout, self, prop, expand=True, pre=dpre, text_ctxt=self.get_ctxt())
+            return True
+        if prop == "noise_seed":
+            def dpost(layout):
+                layout.prop(self, "exe_rand", text="", icon="FILE_REFRESH", text_ctxt=self.get_ctxt())
+                layout.prop(bpy.context.scene.sdn, "rand_all_seed", text="", icon="HAND", text_ctxt=self.get_ctxt())
+                layout.prop(self, "sync_rand", text="", icon="MOD_WAVE", text_ctxt=self.get_ctxt())
+            draw_prop_with_link(layout, self, prop, post=dpost, text_ctxt=self.get_ctxt())
+            return True
+        if prop in {"exe_rand", "sync_rand"}:
+            return True
+        
     def serialize_pre_specific(s, self: NodeBase):
         tree = self.get_tree()
         if (snode := get_sync_rand_node(tree)) and snode != self:
@@ -427,6 +530,46 @@ class KSamplerAdvanced(BluePrintBase):
 class Mask(BluePrintBase):
     comfyClass = "Mask"
 
+    def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True) -> bool:
+        if prop == "mode":
+            layout.prop(self, prop, expand=True, text_ctxt=self.get_ctxt())
+            if self.mode == "Grease Pencil":
+                row = layout.row(align=True)
+                row.prop(self, "gp", text="", text_ctxt=self.get_ctxt())
+                icon = "RESTRICT_RENDER_ON" if self.disable_render else "RESTRICT_RENDER_OFF"
+                row.prop(self, "disable_render", text="", icon=icon)
+                icon = "HIDE_ON" if bpy.context.scene.sdn.disable_render_all else "HIDE_OFF"
+                row.prop(bpy.context.scene.sdn, "disable_render_all", text="", icon=icon)
+                row.operator("sdn.mask", text="", icon="ADD").node_name = self.name
+            if self.mode == "Object":
+                row = layout.row(align=True)
+                row.label(text="  Select mask Objects", text_ctxt=self.get_ctxt())
+                icon = "RESTRICT_RENDER_ON" if self.disable_render else "RESTRICT_RENDER_OFF"
+                row.prop(self, "disable_render", text="", icon=icon)
+                icon = "HIDE_ON" if bpy.context.scene.sdn.disable_render_all else "HIDE_OFF"
+                row.prop(bpy.context.scene.sdn, "disable_render_all", text="", icon=icon)
+            if self.mode == "Collection":
+                row = layout.row(align=True)
+                row.label(text="  Select mask Collections", text_ctxt=self.get_ctxt())
+                icon = "RESTRICT_RENDER_ON" if self.disable_render else "RESTRICT_RENDER_OFF"
+                row.prop(self, "disable_render", text="", icon=icon)
+                icon = "HIDE_ON" if bpy.context.scene.sdn.disable_render_all else "HIDE_OFF"
+                row.prop(bpy.context.scene.sdn, "disable_render_all", text="", icon=icon)
+            if self.mode == "Focus":
+                row = layout.row(align=True)
+                row.prop(self, "cam", text="")
+                icon = "RESTRICT_RENDER_ON" if self.disable_render else "RESTRICT_RENDER_OFF"
+                row.prop(self, "disable_render", text="", icon=icon)
+                icon = "HIDE_ON" if bpy.context.scene.sdn.disable_render_all else "HIDE_OFF"
+                row.prop(bpy.context.scene.sdn, "disable_render_all", text="", icon=icon)
+                op = row.operator(Ops_Link_Mask.bl_idname, text="", icon="VIEW_CAMERA")
+                op.action = "OnlyFocus"
+                op.cam_name = self.cam.name if self.cam else ""
+                op.node_name = self.name
+            return True
+        elif prop in {"gp", "obj", "col", "cam", "disable_render"}:
+            return True
+    
     def serialize_specific(s, self: NodeBase, cfg, execute):
         if self.disable_render or bpy.context.scene.sdn.disable_render_all:
             return
@@ -472,6 +615,17 @@ class Reroute(BluePrintBase):
 class PrimitiveNode(BluePrintBase):
     comfyClass = "PrimitiveNode"
 
+    def spec_draw(s, self: NodeBase, context, layout, prop: str, swlink=True):
+        if self.outputs[0].is_linked and self.outputs[0].links:
+            node = self.outputs[0].links[0].to_node
+            # 可能会导致prop在node中找不到的情况(断开连接的时候)
+            if not hasattr(node, self.prop):
+                return True
+            if self.get_blueprints().spec_draw(node, context, layout, self.prop, swlink=False):
+                return True
+            layout.prop(node, get_reg_name(self.prop))
+        return True
+
     def dump_specific(s, self: NodeBase = None, cfg=None, selected_only=False, **kwargs):
         outputs = cfg["outputs"]
         widgets_values = cfg["widgets_values"]
@@ -499,6 +653,37 @@ class PrimitiveNode(BluePrintBase):
 
 class 预览(BluePrintBase):
     comfyClass = "预览"
+
+    def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True) -> bool:
+        if prop == "lnum":
+            return True
+        if self.inputs[0].is_linked and self.inputs[0].links:
+            for link in self.inputs[0].links[0].from_socket.links:
+                if link.to_node.bl_idname == "存储":
+                    break
+            else:
+                layout.operator(Ops_Add_SaveImage.bl_idname, text="", icon="FILE_TICK").node_name = self.name
+        if prop == "prev":
+            layout.prop(self, "lnum")
+            pnum = len(self.prev)
+            if pnum == 0:
+                return True
+            p0 = self.prev[0].image
+            w = max(p0.size[0], p0.size[1])
+            if w == 0:
+                return True
+            w = setwidth(self, w, count=min(self.lnum, pnum))
+            layout.label(text=f"{p0.file_format} : [{p0.size[0]} x {p0.size[1]}]")
+            col = layout.column(align=True)
+            for i, p in enumerate(self.prev):
+                if i % self.lnum == 0:
+                    fcol = col.column_flow(columns=min(self.lnum, pnum), align=True)
+                prev = p.image
+                if prev.name not in Icon:
+                    Icon.reg_icon_by_pixel(prev, prev.name)
+                icon_id = Icon[prev.name]
+                fcol.template_icon(icon_id, scale=w // 20)
+            return True
 
     def serialize_pre_specific(s, self: NodeBase):
         if self.inputs[0].is_linked:
@@ -532,7 +717,45 @@ class 预览(BluePrintBase):
 
 class 存储(BluePrintBase):
     comfyClass = "存储"
-
+    def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True) -> bool:
+        if prop == "mode":
+            layout.prop(self, prop, expand=True, text_ctxt=self.get_ctxt())
+            if self.mode == "Save":
+                layout.prop(self, "filename_prefix", text_ctxt=self.get_ctxt())
+                layout.prop(self, "output_dir", text_ctxt=self.get_ctxt())
+                return True
+            elif self.mode == "Import":
+                layout.prop(self, "obj", text="")
+                if obj := self.obj:
+                    def find_tex(root, tex=None) -> list[bpy.types.Image]:
+                        tex = tex if tex else []
+                        for node in root.node_tree.nodes:
+                            if node.type in {"TEX_IMAGE", "TEX_ENVIRONMENT"}:
+                                if not node.image:
+                                    continue
+                                tex.append(node.image)
+                            if node.type == "GROUP":
+                                find_tex(node, tex)
+                        return tex
+                    if textures := find_tex(obj.active_material):
+                        box = layout.box()
+                        for t in textures:
+                            row = box.row(align=True)
+                            row.label(text=t.name)
+                            col = row.column()
+                            if t == self.image:
+                                col.alert = True
+                            op = col.operator(Ops_Active_Tex.bl_idname, text="", icon="REC")
+                            op.node_name = self.name
+                            op.img_name = t.name
+                    if textures and self.image:
+                        layout.label(text=f"当前纹理: {self.image.name}")
+                return True
+            elif self.mode == "ToImage":
+                layout.prop(self, "image")
+                return True
+        return True
+    
     def make_serialze(s, self: NodeBase):
         def __post_fn__(self: NodeBase, t: Task, result: dict, mode, image):
             logger.debug(f"{self.class_type}{_T('Post Function')}->{result}")
@@ -568,6 +791,62 @@ class 存储(BluePrintBase):
 class 输入图像(BluePrintBase):
     comfyClass = "输入图像"
 
+    def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True) -> bool:
+        if prop == "mode":
+            if self.mode == "序列图":
+                # draw_prop_with_link(layout, self, "frames_dir", text="", text_ctxt=self.get_ctxt())
+                layout.prop(self, "frames_dir", text="")
+            else:
+                # draw_prop_with_link(layout, self, "image", text="", text_ctxt=self.get_ctxt())
+                layout.prop(self, "image", text="", text_ctxt=self.get_ctxt())
+            # draw_prop_with_link(layout.row(), self, prop, expand=True, text_ctxt=self.get_ctxt())
+            layout.row().prop(self, prop, expand=True, text_ctxt=self.get_ctxt())
+            if self.mode == "序列图":
+                layout.label(text="Frames Directory", text_ctxt=self.get_ctxt())
+            if self.mode == "渲染":
+                layout.label(text="Set Image Path of Render Result(.png)", icon="ERROR")
+                if bpy.context.scene.use_nodes:
+                    row = layout.row(align=True)
+                    row.prop_search(self, "render_layer", bpy.context.scene.sdn, "render_layer")
+                    icon = "RESTRICT_RENDER_ON" if self.disable_render else "RESTRICT_RENDER_OFF"
+                    row.prop(self, "disable_render", text="", icon=icon)
+                    icon = "HIDE_ON" if bpy.context.scene.sdn.disable_render_all else "HIDE_OFF"
+                    row.prop(bpy.context.scene.sdn, "disable_render_all", text="", icon=icon)
+                    layout.prop(self, "out_layers")
+            return True
+        elif prop == "image":
+            if os.path.exists(self.image):
+                def f(self):
+                    Icon.load_icon(self.image)
+                    if not (img := Icon.find_image(self.image)):
+                        return
+                    self.prev = img
+                    w = max(self.prev.size[0], self.prev.size[1])
+                    setwidth(self, w)
+                    update_screen()
+                if Icon.try_mark_image(self.image) or not self.prev:
+                    Timer.put((f, self))
+                elif Icon.find_image(self.image) != self.prev:  # 修复加载A 后加载B图, 再加载A时 不更新
+                    Timer.put((f, self))
+            elif self.prev:
+                def f(self):
+                    self.prev = None
+                    update_screen()
+                Timer.put((f, self))
+            return True
+        elif prop == "prev":
+            if self.prev:
+                Icon.reg_icon_by_pixel(self.prev, self.prev.filepath)
+                icon_id = Icon[self.prev.filepath]
+                row = layout.row(align=True)
+                row.label(text=f"{self.prev.file_format} : [{self.prev.size[0]} x {self.prev.size[1]}]")
+                row.operator(Set_Render_Res.bl_idname, text="", icon="LOOP_FORWARDS").node_name = self.name
+                w = max(self.prev.size[0], self.prev.size[1])
+                w = setwidth(self, w)
+                layout.template_icon(icon_id, scale=w // 20)
+            return True
+        elif prop in {"render_layer", "out_layers", "frames_dir", "disable_render"}:
+            return True
     def pre_fn(s, self: NodeBase):
         if self.mode != "渲染":
             return
@@ -612,6 +891,19 @@ class 材质图(BluePrintBase):
             return len(mat_iamge_nodes) == 0
         return True
 
+    def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True) -> bool:
+        if prop == "mode":
+            layout.prop(self, prop, expand=True, text_ctxt=self.get_ctxt())
+            if self.mode == "Object":
+                layout.prop(self, "obj", text="")
+            elif self.mode == "Selected Objects":
+                for obj in bpy.context.selected_objects:
+                    if obj.type != "MESH":
+                        continue
+                    layout.label(text=obj.name)
+            elif self.mode == "Collection":
+                layout.prop(self, "collection", text="")
+        return True
 
 @lru_cache(maxsize=1024)
 def get_blueprints(comfyClass, default=BluePrintBase) -> BluePrintBase:

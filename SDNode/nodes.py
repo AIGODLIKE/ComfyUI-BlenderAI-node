@@ -1482,8 +1482,6 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
                 return True
             layout.prop(node, get_reg_name(self.prop))
         return True
-    if prop == "control_after_generate":
-        return True
     # 多行文本处理
     md = self.get_meta(prop)
     if md and md[0] == "STRING" and len(md) > 1 and isinstance(md[1], dict) and md[1].get("multiline",):
