@@ -1,8 +1,7 @@
-from typing import Any
-
 import bpy
 import traceback
 from queue import Queue
+from typing import Any
 from .kclogger import logger
 
 
@@ -81,6 +80,13 @@ class Timer:
         except Exception:
             ...
 
+class WorkerFunc:
+    args = {}
+    def __init__(self) -> None:
+        self.args = self.__class__.args
+        
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        pass
 
 class Worker:
     JOB_WORK = set()
@@ -102,13 +108,20 @@ class Worker:
     def worker():
         for func in Worker.JOB_WORK:
             try:
-                func()
+                Worker.executor(func)
             except Exception as e:
                 traceback.print_exc()
                 logger.error(f"{type(e).__name__}: {e}")
             except KeyboardInterrupt:
                 ...
         return 1
+    
+    @staticmethod
+    def executor(t):
+        if type(t) in {list, tuple}:
+            t[0](*t[1:])
+        else:
+            t()
 
     @staticmethod
     def reg():

@@ -1,19 +1,58 @@
 import typing
+from typing import Any
 import bpy
 import re
 import json
+import tempfile
 from pathlib import Path
 from bpy.types import Context, Event
 from mathutils import Vector
 from functools import partial
 from .translations import ctxt
 from .prop import Prop
-from .utils import _T, logger, PngParse
-from .timer import Timer, Worker
+from .utils import _T, logger, PngParse, FSWatcher
+from .timer import Timer, Worker, WorkerFunc
 from .SDNode import TaskManager
 from .SDNode.history import History
-from .SDNode.tree import InvalidNodeType, CFNodeTree, get_tree
+from .SDNode.tree import InvalidNodeType, CFNodeTree, get_tree, TREE_TYPE
 from .datas import IMG_SUFFIX
+from .preference import get_pref
+
+
+def find_nodes_by_idname(tree, idname, find_nodes=None):
+    if find_nodes is None:
+        find_nodes = []
+    for node in tree.nodes:
+        if node.bl_idname == idname:
+            find_nodes.append(node)
+        if node.type == "GROUP":
+            find_nodes_by_idname(node.node_tree, idname, find_nodes)
+    return find_nodes
+
+
+class LoopExec(WorkerFunc):
+    args = {}
+    # 单例
+    instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if not cls.instance:
+            cls.instance = super().__new__(cls)
+            cls.instance.args = {}
+        return cls.instance
+
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        if TaskManager.get_task_num() != 0:
+            return
+        nt: CFNodeTree = LoopExec.args.get("nt", None)
+        try:
+            nt.load_json
+        except ReferenceError:
+            return
+        except AttributeError:
+            return
+        bpy.ops.sdn.ops(action="Submit", nt_name=nt.name)
+
 
 class Ops(bpy.types.Operator):
     bl_idname = "sdn.ops"
@@ -21,15 +60,10 @@ class Ops(bpy.types.Operator):
     bl_label = "SD Node"
     bl_translation_context = ctxt
     action: bpy.props.StringProperty(default="")
+    nt_name: bpy.props.StringProperty(default="")
     save_name: bpy.props.StringProperty(name="Preset Name", default="预设")
     alt: bpy.props.BoolProperty(default=False)
     is_advanced_enable = False
-
-    @staticmethod
-    def loop_exec():
-        if TaskManager.get_task_num() != 0:
-            return
-        bpy.ops.sdn.ops(action="Submit")
 
     @classmethod
     def description(cls, context: bpy.types.Context,
@@ -67,7 +101,10 @@ class Ops(bpy.types.Operator):
         elif path.suffix.lower() == ".json":
             data = path.read_text()
 
-        tree = get_tree()
+        tree = get_tree(current=True)
+        if not tree:
+            bpy.ops.node.new_node_tree(type=TREE_TYPE, name="NodeTree")
+            tree = get_tree(current=True)
         if not tree:
             return
         data = json.loads(data)
@@ -128,14 +165,12 @@ class Ops(bpy.types.Operator):
         return self.execute(context)
 
     def find_frames_nodes(self, tree):
-        frames_nodes = []
-        for node in tree.nodes:
-            if node.bl_idname != "输入图像":
-                continue
-            if node.mode != "序列图":
-                continue
-            frames_nodes.append(node)
-        return frames_nodes
+        nodes = [n for n in find_nodes_by_idname(tree, "输入图像") if n.mode == "序列图"]
+        return nodes
+
+    def find_mat_image_nodes(self, tree):
+        nodes = find_nodes_by_idname(tree, "材质图")
+        return nodes[0] if nodes else None
 
     def execute(self, context: bpy.types.Context):
         try:
@@ -172,16 +207,21 @@ class Ops(bpy.types.Operator):
         elif self.action == "Cancel":
             TaskManager.interrupt()
             return {"FINISHED"}
-        tree = get_tree()
+        if self.nt_name:
+            tree = bpy.data.node_groups.get(self.nt_name, None)
+            self.nt_name = ""
+        else:
+            tree = get_tree()
         if not tree:
             logger.error(_T("No Node Tree Found!"))
+            self.report({"ERROR"}, _T("No Node Tree Found!"))
             return {"FINISHED"}
         # special for frames image mode
         if self.action == "Submit":
             self.submit(tree)
         elif self.action == "StopLoop":
             Ops.is_advanced_enable = False
-            Worker.remove_worker(Ops.loop_exec)
+            Worker.remove_worker(LoopExec())
         elif self.action == "ClearTask":
             TaskManager.clear_all()
         elif self.action == "Save":
@@ -205,6 +245,9 @@ class Ops(bpy.types.Operator):
             if not bpy.context.scene.sdn.presets:
                 self.report({"ERROR"}, _T("Preset Not Selected!"))
                 return {"FINISHED"}
+            if not getattr(bpy.context.space_data, "edit_tree", None):
+                bpy.ops.node.new_node_tree(type=TREE_TYPE, name="NodeTree")
+            tree = get_tree(current=True)
             tree.load_json(json.load(open(bpy.context.scene.sdn.presets)))
         elif self.action == "SaveGroup":
             data = tree.save_json_group()
@@ -257,13 +300,16 @@ class Ops(bpy.types.Operator):
                 data = json.loads(data)
                 if "workflow" in data:
                     data = data["workflow"]
+                if not getattr(bpy.context.space_data, "edit_tree", None):
+                    bpy.ops.node.new_node_tree(type=TREE_TYPE, name="NodeTree")
+                    tree = get_tree(current=True)
                 tree.load_json(data)
             except json.JSONDecodeError:
                 self.report({"ERROR"}, _T("ClipBoard Content Format Error"))
                 return {"FINISHED"}
         return {"FINISHED"}
 
-    def submit(self, tree):
+    def submit(self, tree: CFNodeTree):
 
         def get_task(tree):
             prompt = tree.serialize()
@@ -272,7 +318,9 @@ class Ops(bpy.types.Operator):
         if bpy.context.scene.sdn.advanced_exe and not Ops.is_advanced_enable:
             Ops.is_advanced_enable = True
             if bpy.context.scene.sdn.loop_exec:
-                Worker.push_worker(Ops.loop_exec)
+                loop_exec = LoopExec()
+                loop_exec.args["nt"] = tree
+                Worker.push_worker(loop_exec)
                 return {"FINISHED"}
             for _ in range(bpy.context.scene.sdn.batch_count):
                 bpy.ops.sdn.ops(action="Submit")
@@ -327,6 +375,77 @@ class Ops(bpy.types.Operator):
                 setattr(fnode, "mode", old_cfg[fnode]["mode"])
                 setattr(fnode, "image", old_cfg[fnode]["image"])
             return {"FINISHED"}
+        elif mat_image_node := self.find_mat_image_nodes(tree):
+            def recursive_node_parent(node, find_nodes=None):
+                # 查找 node 相连的所有父级节点
+                if find_nodes is None:
+                    find_nodes = []
+                for inp in node.inputs:
+                    if not inp.is_linked:
+                        continue
+                    for link in inp.links:
+                        if link.from_node in find_nodes:
+                            continue
+                        find_nodes.append(link.from_node)
+                        recursive_node_parent(link.from_node, find_nodes)
+                return find_nodes
+
+            def find_obj_mat_images(obj):
+                # 搜索 Mesh Object的所有材质的所有图片节点
+                images = []
+                image_nodes = []
+                for mat in obj.data.materials:
+                    fnodes = find_nodes_by_idname(mat.node_tree, "ShaderNodeTexImage")
+                    image_nodes.extend(fnodes)
+                for img_node in image_nodes:
+                    if not img_node.image:
+                        continue
+                    images.append(img_node.image)
+                return images
+            save_nodes = find_nodes_by_idname(tree, "存储")
+            images = []
+            query_objs = []
+            if mat_image_node.mode == "Object":
+                query_objs.append(mat_image_node.obj)
+            elif mat_image_node.mode == "Selected Objects":
+                query_objs.extend(bpy.context.selectable_objects)
+            elif mat_image_node.mode == "Collection":
+                collection: bpy.types.Collection = mat_image_node.collection
+                query_objs.extend(collection.objects)
+            for obj in query_objs:
+                if obj.type != "MESH":
+                    continue
+                images.extend(find_obj_mat_images(obj))
+            if not images:
+                self.report({"ERROR"}, _T("No Images Found!"))
+                return {"FINISHED"}
+            marked_sn = []
+            for sn in save_nodes:
+                if sn.mode != "ToImage":
+                    continue
+                p = recursive_node_parent(sn)
+                if mat_image_node not in p:
+                    continue
+                marked_sn.append(sn)
+            # 批量构造任务
+            for img in set(images):
+                for sn in marked_sn:
+                    sn.image = img
+                # 过滤 Render Result
+                if img.source == "VIEWER":
+                    continue
+                # mat_image_node的image必须为路径, 因此需要将img存储到本地(如果不是本地图片)
+                filepath = Path(img.filepath)
+                if not filepath.exists() or filepath.suffix.lower() not in IMG_SUFFIX:
+                    filepath = Path(tempfile.gettempdir()) / img.name
+                    filepath = filepath.with_suffix(".png")
+                    tf = filepath.resolve().as_posix()
+                    img.save(filepath=tf)
+                    img.filepath = filepath.resolve().as_posix()
+                    img.filepath_raw = img.filepath
+                mat_image_node.image = FSWatcher.to_str(filepath)
+                TaskManager.push_task(get_task(tree))
+            return {"FINISHED"}
         else:
             if self.alt:
                 TaskManager.clear_cache()
@@ -378,7 +497,8 @@ class Ops(bpy.types.Operator):
             return {"FINISHED"}
         if event.value == "PRESS" and event.type in {"RIGHTMOUSE"}:
             tree = get_tree()
-            tree.safe_remove_nodes(self.select_nodes[:])
+            if tree:
+                tree.safe_remove_nodes(self.select_nodes[:])
             return {"CANCELLED"}
 
         return {"RUNNING_MODAL"}
@@ -463,6 +583,9 @@ class Load_History(bpy.types.Operator):
 
     def execute(self, context):
         tree = get_tree()
+        if not tree:
+            self.report({"ERROR"}, _T("No Node Tree Found!"))
+            return {"FINISHED"}
         data = History.get_history_by_name(self.name)
         if not data:
             self.report({"ERROR"}, _T("History Not Found: ") + self.name)
@@ -524,6 +647,9 @@ class Load_Batch(bpy.types.Operator):
             self.report({"ERROR"}, _T("File Not Found: ") + self.task_path)
             return {"FINISHED"}
         tree = get_tree()
+        if not tree:
+            self.report({"ERROR"}, _T("No Node Tree Found!"))
+            return {"FINISHED"}
         tasks = []
         for coding in ["utf-8", "gbk"]:
             try:
@@ -559,6 +685,92 @@ class Load_Batch(bpy.types.Operator):
             # 提交任务
             bpy.ops.sdn.ops("INVOKE_DEFAULT", action="Submit")
         return {"FINISHED"}
+
+
+class Sync_Stencil_Image(bpy.types.Operator):
+    bl_idname = "sdn.sync_stencil_image"
+    bl_label = "Sync Stencil Image"
+    bl_description = "Sync Stencil Image"
+    bl_translation_context = ctxt
+    action: bpy.props.StringProperty(default="")
+    areas = set()
+
+    def execute(self, context: Context):
+        if self.action == "Clear":
+            self.areas.discard(context.area)
+            return {"FINISHED"}
+        self.areas.add(context.area)
+        wm = context.window_manager
+        wm.modal_handler_add(self)
+        self._timer = wm.event_timer_add(1 / 60, window=context.window)
+        return {"RUNNING_MODAL"}
+
+    def modal(self, context: Context, event: Event):
+        if context.area not in self.areas:
+            return {"FINISHED"}
+        if not context.area:
+            return {"FINISHED"}
+        if context.area.type != "VIEW_3D":
+            return {"PASS_THROUGH"}
+        # 鼠标不在当前viewport则返回
+        in_area = context.area.x + context.area.width > event.mouse_x > context.area.x and context.area.y + context.area.height > event.mouse_y > context.area.y
+        if not in_area:
+            return {"PASS_THROUGH"}
+
+        from bl_ui.properties_paint_common import UnifiedPaintPanel
+
+        rv3d = bpy.context.space_data.region_3d
+        area = context.area
+        # zoom to fac powf((float(M_SQRT2) + camzoom / 50.0f), 2.0f) / 4.0f;
+        # max(area.width, area.height) * fac
+        fac = (2**0.5 + rv3d.view_camera_zoom / 50)**2 / 4
+        length = max(area.width, area.height) * fac
+
+        settings = UnifiedPaintPanel.paint_settings(context)
+        brush = settings.brush  # 可能报错 没brush(settings为空)
+        width, height = area.width, area.height
+        if not brush:
+            return {"PASS_THROUGH"}
+        sos = get_pref().stencil_offset_size_xy
+        offset_top = Vector(sos) * bpy.context.preferences.view.ui_scale
+        enable_cam_offset = False
+        if enable_cam_offset:
+            coffx, coffy = rv3d.view_camera_offset
+            coffw = coffx * width
+            coffh = coffy * height
+            hwidth = width / 2
+            hheight = height / 2
+            fac = (2**0.5 + rv3d.view_camera_zoom / 50)**2 / 4
+            brush.stencil_pos = (hwidth - coffw, hheight - offset_top.y - coffh)
+        else:
+            rv3d.view_camera_offset = (0, 0)
+            pos = (width / 2 - offset_top.x, height / 2 - offset_top.y)
+            dim = (length / 2, length / 2)
+            self.update_brush(brush, pos, dim)
+        if rv3d.view_perspective != "CAMERA":
+            rv3d.view_perspective = "CAMERA"
+        return {"PASS_THROUGH"}
+
+    def update_brush(self, brush, pos, dim):
+        pos = Vector(pos)
+        dim = Vector(dim)
+        if brush.stencil_dimension != dim:
+            brush.stencil_dimension = dim
+        if brush.stencil_pos != pos:
+            brush.stencil_pos = pos
+
+
+def menu_sync_stencil_image(self, context):
+    if context.area in Sync_Stencil_Image.areas:
+        col = self.layout.column()
+        col.alert = True
+        col.operator(Sync_Stencil_Image.bl_idname, text="Stop Sync Stencil Image", icon="PAUSE").action = "Clear"
+    else:
+        self.layout.operator(Sync_Stencil_Image.bl_idname, icon="PLAY")
+
+
+bpy.types.VIEW3D_PT_tools_brush_settings.append(menu_sync_stencil_image)
+# bpy.types.VIEW3D_PT_tools_brush_display.append(menu_sync_stencil_image)
 
 
 @bpy.app.handlers.persistent

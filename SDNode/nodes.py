@@ -118,6 +118,15 @@ def get_icon_path(nname):
     return PREVICONPATH.get(nname, {})
 
 
+def calc_hash_type(stype):
+    from .blueprints import is_bool_list
+    if is_bool_list(stype):
+        hash_type = md5(f"{{True, False}}".encode()).hexdigest()
+    else:
+        hash_type = md5(",".join(stype).encode()).hexdigest()
+    return hash_type
+
+
 def get_blueprints(class_type):
     from .blueprints import get_blueprints
     return get_blueprints(class_type)
@@ -131,6 +140,11 @@ class NodeBase(bpy.types.Node):
     builtin__stat__: bpy.props.StringProperty(subtype="BYTE_STRING")  # ori name: True/False
     pool = set()
     class_type: str
+
+    def get_tree(self):
+        from .tree import CFNodeTree
+        tree: CFNodeTree = self.id_data
+        return tree
 
     def get_blueprints(self):
         return get_blueprints(self.class_type)
@@ -205,6 +219,13 @@ class NodeBase(bpy.types.Node):
         self.apply_unique_id()
         if hasattr(self, "sync_rand"):
             self.sync_rand = False
+        if self.class_type == "材质图":
+            name = node.name
+            self.get_tree().safe_remove_nodes([node])
+
+            def f(self, name):
+                self.name = name
+            Timer.put((f, self, name))
 
     def apply_unique_id(self):
         self.id = self.unique_id()
@@ -265,7 +286,7 @@ class NodeBase(bpy.types.Node):
             return
         if bpy.context.space_data.type != "NODE_EDITOR":
             return
-        tree = get_tree()
+        tree = self.get_tree()
         if tree.bl_idname != "CFNodeTree":
             return
         # 对PrimitiveNode类型的输出进行限制
@@ -613,7 +634,7 @@ class NodeBase(bpy.types.Node):
     def pre_fn(self):
         bp = self.get_blueprints()
         bp.pre_fn(self)
-    
+
     def make_serialze(self):
         bp = self.get_blueprints()
         return bp.make_serialze(self)
@@ -1032,30 +1053,20 @@ def parse_node():
     for name, desc in object_info.items():
         SOCKET_TYPE[name] = {}
         cat = desc["category"]
-        for inp, inp_desc in desc["input"].get("required", {}).items():
+        for inp_channel in {"required", "optional"}:
+            for inp, inp_desc in desc["input"].get(inp_channel, {}).items():
+                stype = inp_desc[0]
+                if isinstance(stype, list):
+                    sockets.add("ENUM")
+                    # 太长 不能注册为 socket type(<64)
+                    hash_type = calc_hash_type(stype)
+                    sockets.add(hash_type)
+                    SOCKET_HASH_MAP[hash_type] = "ENUM"
+                    SOCKET_TYPE[name][inp] = hash_type
+                else:
+                    sockets.add(inp_desc[0])
+                    SOCKET_TYPE[name][inp] = inp_desc[0]
 
-            stype = inp_desc[0]
-            if isinstance(stype, list):
-                sockets.add("ENUM")
-                # 太长 不能注册为 socket type(<64)
-                hash_type = md5(",".join(map(str,stype)).encode()).hexdigest()
-                sockets.add(hash_type)
-                SOCKET_HASH_MAP[hash_type] = "ENUM"
-                SOCKET_TYPE[name][inp] = hash_type
-            else:
-                sockets.add(inp_desc[0])
-                SOCKET_TYPE[name][inp] = inp_desc[0]
-        for inp, inp_desc in desc["input"].get("optional", {}).items():
-            stype = inp_desc[0]
-            if isinstance(stype, list):
-                sockets.add("ENUM")
-                hash_type = md5(",".join(stype).encode()).hexdigest()
-                sockets.add(hash_type)
-                SOCKET_HASH_MAP[hash_type] = "ENUM"
-                SOCKET_TYPE[name][inp] = hash_type
-            else:
-                sockets.add(inp_desc[0])
-                SOCKET_TYPE[name][inp] = inp_desc[0]
         for index, out_type in enumerate(desc.get("output", [])):
             desc["output"][index] = [out_type, out_type]
         for index, out_name in enumerate(desc.get("output_name", [])):
@@ -1126,7 +1137,7 @@ def parse_node():
                 socket = inp[0]
                 if isinstance(inp[0], list):
                     # socket = "ENUM"
-                    socket = md5(",".join(inp[0]).encode()).hexdigest()
+                    socket = calc_hash_type(inp[0])
                     continue
                 if socket in {"ENUM", "INT", "FLOAT", "STRING", "BOOLEAN"}:
                     continue
@@ -1231,8 +1242,13 @@ def parse_node():
                             items.append((item, item, "", icon_id, len(items)))
                         return items
                     return wrap
-
                 prop = bpy.props.EnumProperty(items=get_items(nname, reg_name, inp))
+                # 判断可哈希
+
+                def is_all_hashable(some_list):
+                    return all(hasattr(item, "__hash__") for item in some_list)
+                if is_all_hashable(inp[0]) and set(inp[0]) == {True, False}:
+                    prop = bpy.props.BoolProperty()
             elif proptype == "INT":
                 # {'default': 20, 'min': 1, 'max': 10000}
                 inp[1]["max"] = min(int(inp[1].get("max", 9999999)), 2**31 - 1)
@@ -1333,10 +1349,10 @@ def parse_node():
 
 def spec_gen_properties(nname, inp_name, prop):
 
-    def set_sync_rand(self, seed):
+    def set_sync_rand(self: NodeBase, seed):
         if not getattr(self, "sync_rand", False):
             return
-        tree = get_tree()
+        tree = self.get_tree()
         for node in tree.get_nodes():
             if node == self:
                 continue
@@ -1416,7 +1432,17 @@ def spec_extra_properties(properties, nname, ndesc):
         properties["obj"] = prop
         prop = bpy.props.PointerProperty(type=bpy.types.Image)
         properties["image"] = prop
-
+    elif nname == "材质图":
+        items = [("Object", "Object", "", "", 0),
+                 ("Selected Objects", "Selected Objects", "", "", 1),
+                 ("Collection", "Collection", "", "", 2),
+                 ]
+        prop = bpy.props.EnumProperty(items=items)
+        properties["mode"] = prop
+        prop = bpy.props.PointerProperty(type=bpy.types.Object)
+        properties["obj"] = prop
+        prop = bpy.props.PointerProperty(type=bpy.types.Collection)
+        properties["collection"] = prop
     elif nname == "Mask":
         items = [("Grease Pencil", "Grease Pencil", "", "", 0),
                  ("Object", "Object", "", "", 1),
@@ -1443,10 +1469,10 @@ def spec_extra_properties(properties, nname, ndesc):
         prop = bpy.props.BoolProperty(default=False)
         properties["exe_rand"] = prop
 
-        def update_sync_rand(self: bpy.types.Node, context):
+        def update_sync_rand(self: NodeBase, context):
             if not self.sync_rand:
                 return
-            tree = get_tree()
+            tree = self.get_tree()
             for node in tree.get_nodes():
                 if (not hasattr(node, "seed") and node.class_type != "KSamplerAdvanced") or node == self:
                     continue
@@ -1737,6 +1763,7 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
             w = min(oriw, pw)
         sw = w
         w *= count
+
         def delegate(self, w, fpis):
             if not fpis:
                 self.bl_width_max = 8192
@@ -1913,6 +1940,19 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
             return True
         elif prop in {"gp", "obj", "col", "cam", "disable_render"}:
             return True
+    elif self.class_type == "材质图":
+        if prop == "mode":
+            layout.prop(self, prop, expand=True, text_ctxt=self.get_ctxt())
+            if self.mode == "Object":
+                layout.prop(self, "obj", text="")
+            elif self.mode == "Selected Objects":
+                for obj in bpy.context.selected_objects:
+                    if obj.type != "MESH":
+                        continue
+                    layout.label(text=obj.name)
+            elif self.mode == "Collection":
+                layout.prop(self, "collection", text="")
+        return True
     elif self.class_type == "预览":
         if prop == "lnum":
             return True

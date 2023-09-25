@@ -2,10 +2,10 @@ import json
 import re
 import bpy
 import random
-from functools import partial
+from functools import partial, lru_cache
 from pathlib import Path
 from copy import deepcopy
-from .utils import gen_mask, get_tree
+from .utils import gen_mask
 from .nodes import NodeBase
 from ..SDNode.manager import Task
 from ..timer import Timer
@@ -14,8 +14,7 @@ from ..utils import _T
 from ..translations import ctxt, get_reg_name, get_ori_name
 
 
-def get_sync_rand_node():
-    tree = get_tree()
+def get_sync_rand_node(tree):
     for node in tree.get_nodes():
         # node不是KSampler、KSamplerAdvanced 跳过
         if not hasattr(node, "seed") and node.class_type != "KSamplerAdvanced":
@@ -28,8 +27,17 @@ def get_fixed_seed():
     return int(random.randrange(4294967294))
 
 
+def is_bool_list(some_list: list):
+    if not some_list:
+        return False
+    return isinstance(some_list[0], bool)
+
+
 class BluePrintBase:
     comfyClass = ""
+
+    def new_btn_enable(s, self, layout, context):
+        return True
 
     def pre_filter(s, nname, desc):
         for k in {"required", "optional"}:
@@ -37,12 +45,15 @@ class BluePrintBase:
                 stype = deepcopy(inp_desc[0])
                 if not stype:
                     continue
+                if isinstance(stype, list) and is_bool_list(stype):
+                    # 处理 bool 列表
+                    logger.warn(f"{_T('Non-Standard Enum Detected')}: {nname}[{inp}] -> {stype}")
                 if not (isinstance(stype, list) and isinstance(stype[0], dict)):
                     continue
                 rep = [sti["content"] for sti in stype if "content" in sti]
                 inp_desc[0] = rep if rep else stype
                 if rep:
-                    logger.warn(f"{_T('Non-Standard Enum Detected')}: {nname}[{inp}] -> {rep}")
+                    logger.warn(f"{_T('Non-Standard Enum Detected')}: {nname}[{inp}] -> {stype}")
 
         return desc
 
@@ -132,7 +143,7 @@ class BluePrintBase:
         ...
 
     def dump(s, self: NodeBase, selected_only=False):
-        tree = get_tree()
+        tree = self.get_tree()
         all_links: list[bpy.types.NodeLink] = tree.links[:]
 
         inputs = []
@@ -199,7 +210,8 @@ class BluePrintBase:
 
     def serialize_pre(s, self: NodeBase):
         if hasattr(self, "seed"):
-            if (snode := get_sync_rand_node()) and snode != self:
+            tree = self.get_tree()
+            if (snode := get_sync_rand_node(tree)) and snode != self:
                 return
             if not self.exe_rand and not bpy.context.scene.sdn.rand_all_seed:
                 return
@@ -401,7 +413,8 @@ class KSamplerAdvanced(BluePrintBase):
     comfyClass = "KSamplerAdvanced"
 
     def serialize_pre_specific(s, self: NodeBase):
-        if (snode := get_sync_rand_node()) and snode != self:
+        tree = self.get_tree()
+        if (snode := get_sync_rand_node(tree)) and snode != self:
             return
         if not getattr(self, "exe_rand") and not bpy.context.scene.sdn.rand_all_seed:
             return
@@ -509,8 +522,11 @@ class 预览(BluePrintBase):
                     img_path = Path(d).joinpath(img_path.get("filename")).as_posix()
                 if not Path(img_path).exists():
                     continue
-                p = self.prev.add()
-                p.image = bpy.data.images.load(img_path)
+                try:
+                    p = self.prev.add()
+                    p.image = bpy.data.images.load(img_path)
+                except TypeError:
+                    ...
         Timer.put((f, self, img_paths))
 
 
@@ -519,7 +535,7 @@ class 存储(BluePrintBase):
 
     def make_serialze(s, self: NodeBase):
         def __post_fn__(self: NodeBase, t: Task, result: dict, mode, image):
-            logger.debug(f"{self.class_type}{_T('<>Post Function')}->{result}")
+            logger.debug(f"{self.class_type}{_T('Post Function')}->{result}")
             img_paths = result.get("output", {}).get("images", [])
             for img in img_paths:
                 if mode == "Save":
@@ -527,6 +543,8 @@ class 存储(BluePrintBase):
                         return bpy.data.images.load(img)
                 elif mode in {"Import", "ToImage"}:
                     def f(img_src, img):
+                        if not img_src:
+                            return
                         img_src.filepath = img
                         img_src.filepath_raw = img
                         img_src.source = "FILE"
@@ -584,6 +602,18 @@ class 输入图像(BluePrintBase):
         r()
 
 
+class 材质图(BluePrintBase):
+    comfyClass = "材质图"
+
+    def new_btn_enable(s, self, layout, context):
+        if self.nodetype == s.comfyClass:
+            tree = context.space_data.edit_tree
+            mat_iamge_nodes = [n for n in tree.nodes if n.class_type == s.comfyClass]
+            return len(mat_iamge_nodes) == 0
+        return True
+
+
+@lru_cache(maxsize=1024)
 def get_blueprints(comfyClass, default=BluePrintBase) -> BluePrintBase:
     for cls in BluePrintBase.__subclasses__():
         if cls.comfyClass != comfyClass:

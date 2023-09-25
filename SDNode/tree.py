@@ -23,16 +23,25 @@ TREE_TYPE = "CFNodeTree"
 class InvalidNodeType(Exception):
     ...
 
+
 class NodeItem(NodeItem):
     translation_context = ctxt
 
     @staticmethod
-    def draw(self, layout, _context):
-        props = layout.operator("node.add_node", text=pgettext(self.label), text_ctxt=ctxt)
+    def draw(self, layout, context):
+        col = layout.column()
+        col.enabled = NodeItem.new_btn_enable(self, layout, context)
+        props = col.operator("node.add_node", text=pgettext(self.label), text_ctxt=ctxt)
         props.type = self.nodetype
         props.use_transform = True
 
-            
+    @staticmethod
+    def new_btn_enable(self, layout, context):
+        from .blueprints import get_blueprints
+        bp = get_blueprints(self.nodetype)
+        return bp.new_btn_enable(self, layout, context)
+
+
 def serialize_wrapper(func):
     def wrapper(self, *args, **kwargs):
         try:
@@ -101,7 +110,7 @@ class CFNodeTree(NodeTree):
         """
         self.validation()
         self.serialize_pre()
-        return {node.id: node.make_serialze() for node in self.get_nodes() if node.class_type not in {"Reroute", "PrimitiveNode"}}
+        return {node.id: node.make_serialze() for node in self.get_nodes() if node.class_type not in {"Reroute", "PrimitiveNode", "Note"}}
 
     def validation(self, nodes=None):
 
@@ -544,7 +553,7 @@ def reg_nodetree(identifier, cat_list, sub=False):
         return
 
     def draw_node_item(self, context):
-        layout :bpy.types.UILayout = self.layout
+        layout: bpy.types.UILayout = self.layout
         col = layout.column(align=True)
         for menu in self.category.menus:
             col.menu("NODE_MT_category%s" % menu.identifier, text_ctxt=ctxt)
