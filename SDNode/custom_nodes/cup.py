@@ -14,6 +14,7 @@ import execution
 import folder_paths
 import nodes
 import time
+import logging as logger
 from threading import Thread
 from aiohttp import web
 from pathlib import Path
@@ -224,6 +225,7 @@ class SaveImage:
     CATEGORY = CATEGORY_
 
     def save_images(self, images, filename_prefix="ComfyUI", output_dir=str(OO.absolute()), prompt=None, extra_pnginfo=None):
+        logger.debug(f'saving {len(images)} images to {output_dir}')
         self.output_dir = output_dir
 
         def map_filename(filename):

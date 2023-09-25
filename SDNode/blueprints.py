@@ -4,6 +4,8 @@ import bpy
 import random
 import os
 import textwrap
+import urllib.request
+import urllib.parse
 from functools import partial, lru_cache
 from pathlib import Path
 from copy import deepcopy
@@ -341,7 +343,7 @@ class BluePrintBase:
         ...
 
     def post_fn(s, self: NodeBase, t: Task, result):
-        logger.debug(f"{self.class_type}{_T('Post Function')}->{result}")
+        logger.debug(f"BluePrintBase: {self.class_type} {_T('Post Function')}->{result}")
 
     def make_serialze(s, self: NodeBase):
         return (self.serialize(), self.pre_fn, self.post_fn)
@@ -650,6 +652,15 @@ class PrimitiveNode(BluePrintBase):
         for link in self.outputs[0].links[1:]:
             setattr(link.to_node, get_reg_name(link.to_socket.name), prop)
 
+def get_image(data):
+    '''data = {"filename": filename, "subfolder": subfolder, "type": folder_type}'''
+    url_values = urllib.parse.urlencode(data)
+    from .manager import TaskManager
+    url = "{}/view?{}".format(TaskManager.get_url(), url_values)
+    logger.debug(f'requesting {url} for image data')
+    with urllib.request.urlopen(url) as response:
+        return response.read()
+
 
 class 预览(BluePrintBase):
     comfyClass = "预览"
@@ -694,25 +705,56 @@ class 预览(BluePrintBase):
         logger.debug(f"{self.class_type}{_T('Post Function')}->{result}")
         img_paths = result.get("output", {}).get("images", [])
         if not img_paths:
+            logger.error(f'response is {result}, cannot find images in it')
             return
         logger.warn(f"{_T('Load Preview Image')}: {img_paths}")
 
-        def f(self, img_paths: list[str]):
+        # def f(self, img_paths: list[str]):
+        #     self.prev.clear()
+
+        #     from .manager import TaskManager
+        #     d = TaskManager.get_temp_directory()
+        #     for img_path in img_paths:
+        #         if isinstance(img_path, dict):
+        #             img_path = Path(d).joinpath(img_path.get("filename")).as_posix()
+        #         if not Path(img_path).exists():
+        #             continue
+        #         try:
+        #             p = self.prev.add()
+        #             p.image = bpy.data.images.load(img_path)
+        #         except TypeError:
+        #             ...
+        # Timer.put((f, self, img_paths))
+
+        from PIL import Image
+        from io import BytesIO
+        import numpy as np
+
+        def f(self, img_paths: list[dict]):
             self.prev.clear()
 
-            from .manager import TaskManager
-            d = TaskManager.get_temp_directory()
-            for img_path in img_paths:
-                if isinstance(img_path, dict):
-                    img_path = Path(d).joinpath(img_path.get("filename")).as_posix()
-                if not Path(img_path).exists():
-                    continue
-                try:
-                    p = self.prev.add()
-                    p.image = bpy.data.images.load(img_path)
-                except TypeError:
-                    ...
+            #d = TaskManager.get_temp_directory()
+            #for img_path in img_paths:
+                #if isinstance(img_path, dict):
+                #    img_path = Path(d).joinpath(img_path.get("filename")).as_posix()
+                #if not Path(img_path).exists():
+                #    continue
+                #p = self.prev.add()
+                #p.image = bpy.data.images.load(img_path)
+
+            for data in img_paths:
+                img_data = get_image(data)
+                img = Image.open(BytesIO(img_data))
+                buf = np.flipud(np.array(img))
+                shape = buf.shape[:2]
+                blimg = bpy.data.images.new(data.get('filename', 'preview.png'), shape[0], shape[1], float_buffer=False)
+                blimg.pixels = np.dstack((buf.astype(np.float16)/255.0, np.ones(shape, dtype=np.float16))).ravel()
+                logger.debug(f'creating {data["filename"]} of size {shape} from memory')
+                p = self.prev.add()
+                p.image = blimg
         Timer.put((f, self, img_paths))
+
+PreviewImage = 预览
 
 
 class 存储(BluePrintBase):
