@@ -38,6 +38,7 @@
         "Sampler": "采样器",
         "Prompt": "提示词",
         "experimental": "实验",
+        "Regional": "区域",
         "Logic": "逻辑",
             "_for_test": "测试",
         "Debug": "调试",
@@ -49,7 +50,7 @@
         "Color Adjustments": "颜色",
     "VextraNodes": "Vextra节点",
     "AlekPet Nodes": "Alek节点",
-        "extras": "额外",
+        "extras": "拓展",
         "text": "文本",
     "Davemane42": "Dave节点",
     "Custom": "自定义节点",
@@ -125,6 +126,9 @@
         "Integer": "整数",
         "Parse": "分析",
         "Text": "文本",
+    "Comfyroll": "CR节点",
+        "Model Merge": "模型融合",
+    "Zuellni": "Zue节点",
         
 
 

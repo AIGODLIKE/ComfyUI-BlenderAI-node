@@ -1,12 +1,15 @@
 from __future__ import annotations
 import bpy
 import random
+import time
 import os
 import re
 import json
 import math
 import textwrap
 import pickle
+import urllib.request
+import urllib.parse
 from numpy import clip
 from copy import deepcopy
 from hashlib import md5
@@ -25,11 +28,16 @@ from ..timer import Timer
 from ..translations import ctxt, get_reg_name, get_ori_name
 from .manager import get_url, Task, WITH_PROXY
 
+try:
+    from requests import get as ______
+except BaseException:
+    from ..utils import PkgInstaller
+    PkgInstaller.try_install("requests")
+
 NODES_POLL = {}
 Icon.reg_none(Path(__file__).parent / "NONE.png")
 PREVICONPATH = {}
 PATH_CFG = Path(__file__).parent / "PATH_CFG.json"
-SOCKET_TYPE = {}  # NodeType: {PropName: SocketType}
 SOCKET_HASH_MAP = {  # {HASH: METATYPE}
     "INT": "INT",
     "FLOAT": "FLOAT",
@@ -127,11 +135,6 @@ def calc_hash_type(stype):
     return hash_type
 
 
-def get_blueprints(class_type):
-    from .blueprints import get_blueprints
-    return get_blueprints(class_type)
-
-
 class NodeBase(bpy.types.Node):
     bl_width_min = 200.0
     bl_width_max = 2000.0
@@ -147,6 +150,7 @@ class NodeBase(bpy.types.Node):
         return tree
 
     def get_blueprints(self):
+        from .blueprints import get_blueprints
         return get_blueprints(self.class_type)
 
     def get_ctxt(self) -> str:
@@ -177,7 +181,7 @@ class NodeBase(bpy.types.Node):
     def switch_socket(self, name, value):
         self.set_stat(name, value)
         if value:
-            socket_type = SOCKET_TYPE[self.class_type].get(name, "NONE")
+            socket_type = NodeParser.SOCKET_TYPE[self.class_type].get(name, "NONE")
             inp = self.inputs.new(socket_type, name)
             inp.slot_index = len(self.inputs) - 1
             return inp
@@ -356,276 +360,14 @@ class NodeBase(bpy.types.Node):
         """
         bp = self.get_blueprints()
         return bp.serialize(self, execute)
-        inputs = {}
-        for inp_name in self.inp_types:
-            # inp = self.inp_types[inp_name]
-            reg_name = get_reg_name(inp_name)
-            if inp := self.inputs.get(reg_name):
-                link = self.get_from_link(inp)
-                if link:
-                    from_node = link.from_node
-                    if from_node.bl_idname == "PrimitiveNode":
-                        # 添加 widget
-                        inputs[inp_name] = getattr(self, reg_name)
-                    else:
-                        # 添加 socket
-                        inputs[inp_name] = [link.from_node.id, link.from_node.outputs[:].index(link.from_socket)]
-                elif self.get_meta(inp_name):
-                    if hasattr(self, reg_name):
-                        # 添加 widget
-                        inputs[inp_name] = getattr(self, reg_name)
-                    # else:
-                    #     # 添加 socket
-                    #     inputs[inp_name] = [None]
-            else:
-                # 添加 widget
-                inputs[inp_name] = getattr(self, reg_name)
-        cfg = {
-            "inputs": inputs,
-            "class_type": self.class_type
-        }
-        spec_serialize(self, cfg, execute)
-        return cfg
 
     def load(self, data, with_id=True):
         bp = self.get_blueprints()
         return bp.load(self, data, with_id)
-        self.pool.discard(self.id)
-        self.location[:] = [data["pos"][0], -data["pos"][1]]
-        if isinstance(data["size"], list):
-            self.width, self.height = [data["size"][0], -data["size"][1]]
-        else:
-            self.width, self.height = [data["size"]["0"], -data["size"]["1"]]
-        title = data.get("title", "")
-        if self.class_type in {"KSampler", "KSamplerAdvanced"}:
-            logger.info(_T("Saved Title Name -> ") + title)  # do not replace name
-        elif title:
-            self.name = title
-        if with_id:
-            try:
-                self.id = str(data["id"])
-                self.pool.add(self.id)
-            except BaseException:
-                self.apply_unique_id()
-        # 处理 inputs
-        for inp in data.get("inputs", []):
-            name = inp.get("name", "")
-            if not self.is_base_type(name):
-                continue
-            new_socket = self.switch_socket(name, True)
-            if si := inp.get("slot_index"):
-                new_socket.slot_index = si
-            md = self.get_meta(name)
-            if isinstance(md, list):
-                continue
-            if not (default := inp.get("widget", {}).get("config", {}).get("default")):
-                continue
-            reg_name = get_reg_name(name)
-            setattr(self, reg_name, default)
-        # if self.class_type == "KSamplerAdvanced":
-        #     data["widgets_values"].pop(2)
-        if self.class_type == "KSampler":
-            v = data["widgets_values"][1]
-            if isinstance(v, bool):
-                data["widgets_values"][1] = ["fixed", "increment", "decrement", "randomize"][int(v)]
-        # if self.class_type == "DetailerForEach":
-        #     data["widgets_values"].pop(3)
-        if self.class_type == "MultiAreaConditioning":
-            config = json.loads(self.config)
-            for i in range(2):
-                d = data["properties"]["values"][i]
-                config[i]["x"] = d[0]
-                config[i]["y"] = d[1]
-                config[i]["sdn_width"] = d[2]
-                config[i]["sdn_height"] = d[3]
-                config[i]["strength"] = d[4]
-            self["config"] = json.dumps(config)
-            d = data["properties"]["values"][self.index]
-            self["x"] = d[0]
-            self["y"] = d[1]
-            self["sdn_width"] = d[2]
-            self["sdn_height"] = d[3]
-            self["strength"] = d[4]
-            self["resolutionX"] = data["properties"]["width"]
-            self["resolutionY"] = data["properties"]["height"]
-
-        for inp_name in self.inp_types:
-            if not self.is_base_type(inp_name):
-                continue
-            reg_name = get_reg_name(inp_name)
-            try:
-                v = data["widgets_values"].pop(0)
-                v = type(getattr(self, reg_name))(v)
-                setattr(self, reg_name, v)
-            except TypeError as e:
-                if inp_name in {"seed", "noise_seed"}:
-                    setattr(self, reg_name, str(v))
-                elif (enum := re.findall(' enum "(.*?)" not found', str(e), re.S)):
-                    logger.warn(f"{_T('|IGNORED|')} {self.class_type} -> {inp_name} -> {_T('Not Found Item')}: {enum[0]}")
-                else:
-                    logger.error(f"|{e}|")
-            except IndexError:
-                logger.info(f"{_T('|IGNORED|')} -> {_T('Load')}<{self.class_type}>{_T('Params not matching with current node')}")
-            except Exception as e:
-                logger.error(f"{_T('Params Loading Error')} {self.class_type} -> {self.class_type}.{inp_name}")
-                logger.error(f" -> {e}")
 
     def dump(self, selected_only=False):
         bp = self.get_blueprints()
         return bp.dump(self, selected_only)
-        tree = get_tree()
-        all_links: bpy.types.NodeLinks = tree.links[:]
-
-        inputs = []
-        outputs = []
-        widgets_values = []
-        # 单独处理 widgets_values
-        for inp_name in self.inp_types:
-            if not self.is_base_type(inp_name):
-                continue
-            widgets_values.append(getattr(self, get_reg_name(inp_name)))
-        for inp in self.inputs:
-            inp_name = inp.name
-            reg_name = get_reg_name(inp_name)
-            md = self.get_meta(reg_name)
-            inp_info = {"name": inp_name,
-                        "type": inp.bl_idname,
-                        "link": None}
-            link = self.get_from_link(inp)
-            is_base_type = self.is_base_type(inp_name)
-            if link:
-                if not selected_only:
-                    inp_info["link"] = all_links.index(inp.links[0])
-                elif inp.links[0].from_node.select:
-                    inp_info["link"] = all_links.index(inp.links[0])
-            if is_base_type:
-                if not self.query_stat(inp.name) or not md:
-                    continue
-                inp_info["widget"] = {"name": reg_name,
-                                      "config": md
-                                      }
-                inp_info["type"] = ",".join(md[0]) if isinstance(md[0], list) else md[0]
-            inputs.append(inp_info)
-        for i, out in enumerate(self.outputs):
-            out_info = {"name": out.name,
-                        "type": out.name,
-                        }
-            if not selected_only:
-                out_info["links"] = [all_links.index(link) for link in out.links]
-            elif out.links:
-                out_info["links"] = [all_links.index(link) for link in out.links if link.to_node.select]
-            out_info["slot_index"] = i
-            outputs.append(out_info)
-        properties = {}
-        if self.class_type == "MultiAreaConditioning":
-            config = json.loads(self["config"])
-            properties = {'Node name for S&R': 'MultiAreaConditioning',
-                          'width': self["resolutionX"],
-                          'height': self["resolutionY"],
-                          'values': [[64, 128, 384, 128, 10],
-                                     [320, 64, 192, 128, 0.03]]}
-            for i in range(2):
-                properties["values"][i] = [
-                    config[i]["x"],
-                    config[i]["y"],
-                    config[i]["sdn_width"],
-                    config[i]["sdn_height"],
-                    config[i]["strength"],
-                ]
-            widgets_values = [self["resolutionX"],
-                              self["resolutionY"],
-                              None,
-                              self.index,
-                              *properties["values"][self.index]
-                              ]
-        if self.class_type == "Reroute":
-            inputs = [
-                {"name": "",
-                 "type": "*",
-                 "link": None,
-                 }
-            ]
-            if self.inputs[0].is_linked:
-                if not selected_only:
-                    inputs[0]["link"] = all_links.index(self.inputs[0].links[0])
-                elif self.inputs[0].links[0].from_node.select:
-                    inputs[0]["link"] = all_links.index(self.inputs[0].links[0])
-            if not self.outputs[0].is_linked:
-                outputs[0]["name"] = outputs[0]["type"] = "*"
-            else:
-                def find_out_node(node: bpy.types.Node):
-                    output = node.outputs[0]
-                    if not output.is_linked:
-                        return None
-                    to = output.links[0].to_node
-                    to_socket = output.links[0].to_socket
-                    if to.class_type == "Reroute":
-                        return find_out_node(to)
-                    return to_socket
-                to_socket = find_out_node(self)
-                if out and to_socket:
-                    outputs[0]["name"] = to_socket.bl_idname
-                    outputs[0]["type"] = to_socket.bl_idname
-            properties = {
-                "showOutputText": True,
-                "horizontal": False
-            }
-        if self.class_type == "PrimitiveNode" and self.outputs[0].is_linked and self.outputs[0].links:
-            node = self.outputs[0].links[0].to_node
-            meta_data = deepcopy(node.get_meta(self.prop))
-            output = outputs[0]
-            output["name"] = "COMBO" if isinstance(meta_data[0], list) else meta_data[0]
-            output["type"] = ",".join(meta_data[0]) if isinstance(meta_data[0], list) else meta_data[0]
-            if output["name"] != "COMBO":
-                meta_data[1]["default"] = getattr(node, self.prop)
-            output["widget"] = {"name": self.prop,
-                                "config": meta_data
-                                }
-            widgets_values = [getattr(node, self.prop), "fixed"]
-        cfg = {
-            "id": int(self.id),
-            "type": self.class_type,
-            "pos": [self.location.x, -self.location.y],
-            "size": {"0": self.width, "1": self.height},
-            "flags": {},
-            "order": self.sdn_order,
-            "mode": 0,
-            "inputs": inputs,
-            "outputs": outputs,
-            "title": self.name,
-            "properties": properties,
-            "widgets_values": widgets_values
-        }
-        return cfg
-
-    def save(self):
-        save = {
-            "id": 11,
-            "type": "SaveImage",
-            "pos": [
-                1451,
-                189
-            ],
-            "size": {
-                "0": 210,
-                "1": 58
-            },
-            "flags": {},
-            "order": 2,
-            "mode": 0,
-            "inputs": [
-                {
-                    "name": "images",
-                    "type": "IMAGE",
-                    "link": 11  # id号 或 None
-                }
-            ],
-            "properties": {},
-            "widgets_values": [
-                "ComfyUI"
-            ]
-        }
-        return save
 
     def post_fn(self, task, result):
         bp = self.get_blueprints()
@@ -976,375 +718,386 @@ class GetSelCol(bpy.types.Operator):
         return {'FINISHED'}
 
 
-def parse_node():
-    logger.warn(_T("Parsing Node Start"))
-    path = Path(__file__).parent / "object_info.json"
-    internal_path = Path(__file__).parent / "object_info_internal.json"
-    object_info = {}
-    if internal_path.exists():
-        object_info.update(json.load(internal_path.open("r")))
-    if path.exists():
-        object_info.update(json.load(path.open("r")))
-    try:
-        # linux may not include request
-        try:
-            from requests import get as ______
-        except BaseException:
-            from ..utils import PkgInstaller
-            PkgInstaller.try_install("requests")
-        import requests
-        if WITH_PROXY:
-            req = requests.get(f"{get_url()}/object_info")
-        else:
-            req = requests.get(f"{get_url()}/object_info", proxies={"http": None, "https": None})
-        if req.status_code == 200:
-            cur_object_info = req.json()
-            object_info.update(cur_object_info)
-            path.write_text(json.dumps(object_info, ensure_ascii=False, indent=2))
-            object_info = cur_object_info
-    except requests.exceptions.ConnectionError:
-        logger.warn(_T("Server Launch Failed"))
+class NodeParser:
+    CACHED_OBJECT_INFO = {}
+    SOCKET_TYPE = {}  # NodeType: {PropName: SocketType}
+    OBJECT_INFO_REQ = None
+    DIFF_PATH = Path(__file__).parent / "diff_object_info.json"
+    PATH = Path(__file__).parent / "object_info.json"
+    INTERNAL_PATH = Path(__file__).parent / "object_info_internal.json"
 
-    nodetree_desc = {}
-    nodes_desc = {}
-    sockets = {"*", }  # Enum/Int/Float/String/Bool 不需要socket
-    # node input type -> {'required', 'optional', 'hidden'}
-    # node_inp_type = set()
-    # for node in object_info.values():
-    #     node_inp_type.update(set(node["input"].keys()))
-    # logger.info(f"Node Input Type -> {node_inp_type}")
-    SOCKET_TYPE.clear()
-    object_info["PrimitiveNode"] = {
-        "input": {"required": {}},
-        "output": ["*"],
-        "output_is_list": [False],
-        "output_name": [
-            "Output"
-        ],
-        "name": "PrimitiveNode",
-        "display_name": "Primitive",
-        "description": "",
-        "category": "Utils",
-        "output_node": False
-    }
-    object_info["Note"] = {
-        "input": {"required": {
-            "text": [
-                "STRING",
-                {
-                    "multiline": True
-                }
+    def __init__(self) -> None:
+        self.ori_object_info = {}
+        self.object_info = {}
+        self.diff_object_info = {}
+        self.diff = False
+
+    def load_internal(self):
+        self.object_info["PrimitiveNode"] = {
+            "input": {"required": {}},
+            "output": ["*"],
+            "output_is_list": [False],
+            "output_name": [
+                "Output"
             ],
-        }},
-        "output": ["*"],
-        "output_is_list": [False],
-        "output_name": [
-            "Output"
-        ],
-        "name": "Note",
-        "display_name": "Note",
-        "description": "",
-        "category": "Utils",
-        "output_node": False
-    }
-    for name, desc in object_info.items():
-        bp = get_blueprints(name)
-        desc = bp.pre_filter(name, desc)
-    for name, desc in object_info.items():
-        SOCKET_TYPE[name] = {}
-        cat = desc["category"]
-        for inp_channel in {"required", "optional"}:
-            for inp, inp_desc in desc["input"].get(inp_channel, {}).items():
-                stype = inp_desc[0]
-                if isinstance(stype, list):
-                    sockets.add("ENUM")
-                    # 太长 不能注册为 socket type(<64)
-                    hash_type = calc_hash_type(stype)
-                    sockets.add(hash_type)
-                    SOCKET_HASH_MAP[hash_type] = "ENUM"
-                    SOCKET_TYPE[name][inp] = hash_type
-                else:
-                    sockets.add(inp_desc[0])
-                    SOCKET_TYPE[name][inp] = inp_desc[0]
+            "name": "PrimitiveNode",
+            "display_name": "Primitive",
+            "description": "",
+            "category": "Utils",
+            "output_node": False
+        }
+        self.object_info["Note"] = {
+            "input": {"required": {
+                "text": [
+                    "STRING",
+                    {
+                        "multiline": True
+                    }
+                ],
+            }},
+            "output": ["*"],
+            "output_is_list": [False],
+            "output_name": [
+                "Output"
+            ],
+            "name": "Note",
+            "display_name": "Note",
+            "description": "",
+            "category": "Utils",
+            "output_node": False
+        }
 
-        for index, out_type in enumerate(desc.get("output", [])):
-            desc["output"][index] = [out_type, out_type]
-        for index, out_name in enumerate(desc.get("output_name", [])):
-            if not out_name:
-                continue
-            desc["output"][index][1] = out_name
-        cpath = cat.split("/")
-        nodes_desc[name] = desc
-        ncur = nodetree_desc
-
-        while cpath:
-            ccur = cpath.pop(0)
-            if ccur not in ncur:
-                ncur[ccur] = {"items": [], "menus": {}}
-            if not cpath:
-                ncur[ccur]["items"].append(name)
+    def fetch_object(self):
+        self.ori_object_info.clear()
+        if self.INTERNAL_PATH.exists():
+            self.ori_object_info.update(json.load(self.INTERNAL_PATH.open("r")))
+        if self.PATH.exists():
+            self.ori_object_info.update(json.load(self.PATH.open("r")))
+        try:
+            import requests
+            from urllib3.util import Timeout
+            timeout = Timeout(connect=0.1, read=2)
+            if WITH_PROXY:
+                req = requests.get(f"{get_url()}/object_info", timeout=timeout)
             else:
-                ncur = ncur[ccur]["menus"]
+                req = requests.get(f"{get_url()}/object_info", proxies={"http": None, "https": None}, timeout=timeout)
+            if req.status_code == 200:
+                cur_object_info = req.json()
+                self.ori_object_info.update(cur_object_info)
+                js = json.dumps(self.ori_object_info, ensure_ascii=False, indent=2)
+                self.PATH.write_text(js)
+                self.ori_object_info = cur_object_info
+        except requests.exceptions.ConnectionError:
+            logger.warn(_T("Server Launch Failed"))
+        except ModuleNotFoundError:
+            logger.error(f"Module: requests import error!")
+        return self.ori_object_info
 
-    # input / output / name / category
-    # logger.warn(nodes_desc)
-    # logger.warn(nodetree_desc)
-    nodes_desc_ = {
-        'KSampler': {
-            'input': {
-                'required': {
-                    'model': ['MODEL'],
-                    'seed': ['INT', {'default': 0, 'min': 0, 'max': 18446744073709551615}],
-                    'cfg': ['FLOAT', {'default': 8.0, 'min': 0.0, 'max': 100.0}],
-                    'sampler_name': [['euler', 'euler_ancestral']],
-                    'scheduler': [['karras', 'normal', 'simple', 'ddim_uniform']],
-                    'positive': ['CONDITIONING'],
-                    'latent_image': ['LATENT']}},
-            'output': ['LATENT'],
-            'output_name': ['LATENT'],  # optional
-            'name': 'KSampler',
-            'display_name': "",  # optional
-            'description': '',
-            'category': 'sampling'}
-    }
-    node_clss = []
+    def find_diff(self):
+        # 获取差异object_info
+        if self.DIFF_PATH.exists():
+            self.diff_object_info = json.load(self.DIFF_PATH.open("r"))
+        for name in {"Note", "PrimitiveNode", "Cache Node"}:
+            self.diff_object_info.pop(name, None)
+        return self.diff_object_info
 
-    for nname, ndesc in nodes_desc.items():
-        opt_types = ndesc["input"].get("optional", {})
-        inp_types = {}
-        for key, value in ndesc["input"].get("required", {}).items():
-            inp_types[key] = value
-            if key == "seed" or (nname == "KSamplerAdvanced" and key == "noise_seed"):
-                inp_types["control_after_generate"] = [["fixed", "increment", "decrement", "randomize"]]
+    def parse(self, diff=False):
+        if diff:
+            self.object_info = self.find_diff()
+        else:
+            logger.warn(_T("Parsing Node Start"))
+            self.object_info = self.fetch_object()
+            self.SOCKET_TYPE.clear()
+            self.load_internal()
+        # self.CACHED_OBJECT_INFO.update(deepcopy(self.ori_object_info))
+        nodetree_desc = self._get_nt_desc()
+        node_clss = self._parse_node_clss()
+        socket_clss = self._parse_sockets_clss()
+        if not diff:
+            logger.warn(_T("Parsing Node Finished!"))
+        return nodetree_desc, node_clss, socket_clss
 
-        inp_types.update(opt_types)
-        out_types = ndesc["output"]
-        # 节点初始化
+    def _get_n_desc(self):
+        from .blueprints import get_blueprints
+        for name, desc in self.object_info.items():
+            bp = get_blueprints(name)
+            desc = bp.pre_filter(name, desc)
+        _desc = {}
+        for name, desc in self.object_info.items():
+            for index, out_type in enumerate(desc.get("output", [])):
+                desc["output"][index] = [out_type, out_type]
+            for index, out_name in enumerate(desc.get("output_name", [])):
+                if not out_name:
+                    continue
+                desc["output"][index][1] = out_name
+            _desc[name] = desc
+        return _desc
 
-        def init(self: NodeBase, context):
-            # logger.error("INIT")
-            self.inputs.clear()
-            self.outputs.clear()
+    def _get_nt_desc(self):
+        _desc = {}
+        for name, desc in self.object_info.items():
+            cpath = desc["category"].split("/")
+            ncur = _desc
+            while cpath:
+                ccur = cpath.pop(0)
+                if ccur not in ncur:
+                    ncur[ccur] = {"items": [], "menus": {}}
+                if not cpath:
+                    ncur[ccur]["items"].append(name)
+                else:
+                    ncur = ncur[ccur]["menus"]
+        return _desc
 
-            self.apply_unique_id()
-            # self.use_custom_color = True
-            # self.color = self.dcolor
-            for index, inp_name in enumerate(self.inp_types):
-                inp = self.inp_types[inp_name]
-                if not inp:
-                    logger.error(f"{_T('None Input')}: %s", inp_name)
-                    continue
-                socket = inp[0]
-                if isinstance(inp[0], list):
-                    # socket = "ENUM"
-                    socket = calc_hash_type(inp[0])
-                    continue
-                if socket in {"ENUM", "INT", "FLOAT", "STRING", "BOOLEAN"}:
-                    continue
-                # logger.warn(inp)
-                in1 = self.inputs.new(socket, inp_name)
-                in1.display_shape = "DIAMOND_DOT"
-                # in1.link_limit = 0
-                in1.index = index
-            for index, [out_type, out_name] in enumerate(self.out_types):
-                if out_type in {"ENUM", }:
-                    continue
-                out = self.outputs.new(out_type, out_name)
-                out.display_shape = "DIAMOND_DOT"
-                # out.link_limit = 0
-                out.index = index
-            self.calc_slot_index()
+    def _get_socket_desc(self):
+        _desc = {"*", }  # Enum/Int/Float/String/Bool 不需要socket
+        for name, desc in self.object_info.items():
+            self.SOCKET_TYPE[name] = {}
+            for inp_channel in {"required", "optional"}:
+                for inp, inp_desc in desc["input"].get(inp_channel, {}).items():
+                    stype = inp_desc[0]
+                    if isinstance(stype, list):
+                        _desc.add("ENUM")
+                        # 太长 不能注册为 socket type(<64)
+                        hash_type = calc_hash_type(stype)
+                        _desc.add(hash_type)
+                        SOCKET_HASH_MAP[hash_type] = "ENUM"
+                        self.SOCKET_TYPE[name][inp] = hash_type
+                    else:
+                        _desc.add(inp_desc[0])
+                        self.SOCKET_TYPE[name][inp] = inp_desc[0]
+        return _desc
 
-        def draw_buttons(self: NodeBase, context, layout: bpy.types.UILayout):
-            for prop in self.__annotations__:
-                if self.query_stat(prop):
-                    continue
-                if prop == "control_after_generate":
-                    continue
-                l = layout
-                # 返回True 则不绘制
-                if spec_draw(self, context, l, prop):
-                    continue
-                if self.is_base_type(prop) and get_ori_name(prop) in self.inp_types:
-                    l = Ops_Swith_Socket.draw_prop(l, self, prop)
-                l.prop(self, prop, text=prop, text_ctxt=self.get_ctxt())
+    def _parse_sockets_clss(self):
+        socket_clss = []
+        sockets = self._get_socket_desc()
+        for stype in sockets:
+            if stype in {"ENUM", }:
+                continue
 
-        def find_icon(nname, inp_name, item):
-            prev_path_list = get_icon_path(nname).get(inp_name)
-            if not prev_path_list:
-                return 0
+            def draw(self, context, layout, node: NodeBase, text):
+                prop = get_reg_name(self.name)
+                if self.is_output or not hasattr(node, prop):
+                    layout.label(text=self.name, text_ctxt=node.get_ctxt())
+                    return
+                row = layout.row(align=True)
+                row.label(text=prop, text_ctxt=node.get_ctxt())
+                op = row.operator(Ops_Swith_Socket.bl_idname, text="", icon="UNLINKED")
+                op.node_name = node.name
+                op.socket_name = self.name
+                op.action = "ToProp"
+                row.prop(node, prop, text="", text_ctxt=node.get_ctxt())
+            color = bpy.props.FloatVectorProperty(size=4, default=(rand()**0.5, rand()**0.5, rand()**0.5, 1))
+            __annotations__ = {"color": color,
+                               "index": bpy.props.IntProperty(default=-1),
+                               "slot_index": bpy.props.IntProperty(default=-1)}
+            fields = {"draw": draw, "bl_label": stype, "__annotations__": __annotations__}
+            SocketDesc = type(stype, (SocketBase,), fields)
+            socket_clss.append(SocketDesc)
+        return socket_clss
 
-            file_list = []
-            for prev_path in prev_path_list:
-                pp = Path(prev_path)
-                if not pp.exists():
-                    continue
-                # 直接搜索 prev_path_list + item文件名 + jpg/png后缀
-                for suffix in IMG_SUFFIX:
-                    pimg = pp / Path(item).with_suffix(suffix).as_posix()
-                    if not pimg.exists():
+    def _parse_node_clss(self):
+        nodes_desc = self._get_n_desc()
+        node_clss = []
+        for nname, ndesc in nodes_desc.items():
+            opt_types = ndesc["input"].get("optional", {})
+            inp_types = {}
+            for key, value in ndesc["input"].get("required", {}).items():
+                inp_types[key] = value
+                if key == "seed" or (nname == "KSamplerAdvanced" and key == "noise_seed"):
+                    inp_types["control_after_generate"] = [["fixed", "increment", "decrement", "randomize"]]
+
+            inp_types.update(opt_types)
+            out_types = ndesc["output"]
+            # 节点初始化
+
+            def init(self: NodeBase, context):
+                # logger.error("INIT")
+                self.inputs.clear()
+                self.outputs.clear()
+
+                self.apply_unique_id()
+                # self.use_custom_color = True
+                # self.color = self.dcolor
+                for index, inp_name in enumerate(self.inp_types):
+                    inp = self.inp_types[inp_name]
+                    if not inp:
+                        logger.error(f"{_T('None Input')}: %s", inp_name)
                         continue
-                    return Icon.reg_icon(pimg.absolute())
-                for file in pp.iterdir():
-                    file_list.append(file)
-            item_prefix = Path(item).stem
-            # file_list = [file for prev_path in prev_path_list for file in Path(prev_path).iterdir()]
-            for file in file_list:
-                if (item not in file.stem) and (item_prefix not in file.stem):
+                    socket = inp[0]
+                    if isinstance(inp[0], list):
+                        # socket = "ENUM"
+                        socket = calc_hash_type(inp[0])
+                        continue
+                    if socket in {"ENUM", "INT", "FLOAT", "STRING", "BOOLEAN"}:
+                        continue
+                    # logger.warn(inp)
+                    in1 = self.inputs.new(socket, inp_name)
+                    in1.display_shape = "DIAMOND_DOT"
+                    # in1.link_limit = 0
+                    in1.index = index
+                for index, [out_type, out_name] in enumerate(self.out_types):
+                    if out_type in {"ENUM", }:
+                        continue
+                    out = self.outputs.new(out_type, out_name)
+                    out.display_shape = "DIAMOND_DOT"
+                    # out.link_limit = 0
+                    out.index = index
+                self.calc_slot_index()
+
+            def draw_buttons(self: NodeBase, context, layout: bpy.types.UILayout):
+                for prop in self.__annotations__:
+                    if self.query_stat(prop):
+                        continue
+                    if prop == "control_after_generate":
+                        continue
+                    l = layout
+                    # 返回True 则不绘制
+                    if spec_draw(self, context, l, prop):
+                        continue
+                    if self.is_base_type(prop) and get_ori_name(prop) in self.inp_types:
+                        l = Ops_Swith_Socket.draw_prop(l, self, prop)
+                    l.prop(self, prop, text=prop, text_ctxt=self.get_ctxt())
+
+            def find_icon(nname, inp_name, item):
+                prev_path_list = get_icon_path(nname).get(inp_name)
+                if not prev_path_list:
+                    return 0
+
+                file_list = []
+                for prev_path in prev_path_list:
+                    pp = Path(prev_path)
+                    if not pp.exists():
+                        continue
+                    # 直接搜索 prev_path_list + item文件名 + jpg/png后缀
+                    for suffix in IMG_SUFFIX:
+                        pimg = pp / Path(item).with_suffix(suffix).as_posix()
+                        if not pimg.exists():
+                            continue
+                        return Icon.reg_icon(pimg.absolute())
+                    for file in pp.iterdir():
+                        file_list.append(file)
+                item_prefix = Path(item).stem
+                # file_list = [file for prev_path in prev_path_list for file in Path(prev_path).iterdir()]
+                for file in file_list:
+                    if (item not in file.stem) and (item_prefix not in file.stem):
+                        continue
+                    if file.suffix.lower() not in IMG_SUFFIX:
+                        continue
+                    # logger.info(f"🌟 Found Icon -> {file.name}")
+                    return Icon.reg_icon(file.absolute())
+                # logger.info(f"🌚 No Icon <- {file.name}")
+                return Icon["NONE"]
+
+            def validate_inp(inp):
+                if not isinstance(inp, list):
+                    return
+                if len(inp) <= 1:
+                    return
+                if not isinstance(inp[1], dict):
+                    return
+                PARAMS = {"default", "min", "max", "step", "soft_min", "soft_max", "description", "subtype", "update", "options", "multiline"}
+                # 排除掉不需要的属性
+                for key in list(inp[1].keys()):
+                    if key in PARAMS:
+                        continue
+                    inp[1].pop(key)
+
+            properties = {}
+            for inp_name in inp_types:
+                reg_name = get_reg_name(inp_name)
+                inp = inp_types[inp_name]
+                if not inp:
+                    logger.error(f"{_T('None Input')}: %s", inp)
                     continue
-                if file.suffix.lower() not in IMG_SUFFIX:
+                proptype = inp[0]
+                if isinstance(inp[0], list):
+                    proptype = "ENUM"
+                validate_inp(inp)
+                if proptype not in {"ENUM", "INT", "FLOAT", "STRING", "BOOLEAN"}:
                     continue
-                # logger.info(f"🌟 Found Icon -> {file.name}")
-                return Icon.reg_icon(file.absolute())
-            # logger.info(f"🌚 No Icon <- {file.name}")
-            return Icon["NONE"]
+                if proptype == "ENUM":
 
-        def validate_inp(inp):
-            if not isinstance(inp, list):
-                return
-            if len(inp) <= 1:
-                return
-            if not isinstance(inp[1], dict):
-                return
-            PARAMS = {"default", "min", "max", "step", "soft_min", "soft_max", "description", "subtype", "update", "options", "multiline"}
-            # 排除掉不需要的属性
-            for key in list(inp[1].keys()):
-                if key in PARAMS:
-                    continue
-                inp[1].pop(key)
+                    def get_items(nname, inp_name, inp):
+                        def wrap(self, context):
+                            if nname not in ENUM_ITEMS_CACHE:
+                                ENUM_ITEMS_CACHE[nname] = {}
+                            if inp_name in ENUM_ITEMS_CACHE[nname]:
+                                return ENUM_ITEMS_CACHE[nname][inp_name]
+                            items = []
+                            for item in inp[0]:
+                                icon_id = find_icon(nname, inp_name, item)
+                                if icon_id:
+                                    ENUM_ITEMS_CACHE[nname][inp_name] = items
+                                items.append((item, item, "", icon_id, len(items)))
+                            return items
+                        return wrap
+                    prop = bpy.props.EnumProperty(items=get_items(nname, reg_name, inp))
+                    # 判断可哈希
 
-        properties = {}
-        for inp_name in inp_types:
-            reg_name = get_reg_name(inp_name)
-            inp = inp_types[inp_name]
-            if not inp:
-                logger.error(f"{_T('None Input')}: %s", inp)
-                continue
-            proptype = inp[0]
-            if isinstance(inp[0], list):
-                proptype = "ENUM"
-            validate_inp(inp)
-            if proptype not in {"ENUM", "INT", "FLOAT", "STRING", "BOOLEAN"}:
-                continue
-            if proptype == "ENUM":
+                    def is_all_hashable(some_list):
+                        return all(hasattr(item, "__hash__") for item in some_list)
+                    if is_all_hashable(inp[0]) and set(inp[0]) == {True, False}:
+                        prop = bpy.props.BoolProperty()
+                elif proptype == "INT":
+                    # {'default': 20, 'min': 1, 'max': 10000}
+                    inp[1]["max"] = min(int(inp[1].get("max", 9999999)), 2**31 - 1)
+                    inp[1]["min"] = max(int(inp[1].get("min", -999999)), -2**31)
+                    default = inp[1].get("default", 0)
+                    if not default:
+                        default = 0
+                    inp[1]["default"] = int(default)
+                    inp[1]["step"] = ceil(inp[1].get("step", 1))
+                    prop = bpy.props.IntProperty(**inp[1])
 
-                def get_items(nname, inp_name, inp):
-                    def wrap(self, context):
-                        if nname not in ENUM_ITEMS_CACHE:
-                            ENUM_ITEMS_CACHE[nname] = {}
-                        if inp_name in ENUM_ITEMS_CACHE[nname]:
-                            return ENUM_ITEMS_CACHE[nname][inp_name]
-                        items = []
-                        for item in inp[0]:
-                            icon_id = find_icon(nname, inp_name, item)
-                            if icon_id:
-                                ENUM_ITEMS_CACHE[nname][inp_name] = items
-                            items.append((item, item, "", icon_id, len(items)))
-                        return items
-                    return wrap
-                prop = bpy.props.EnumProperty(items=get_items(nname, reg_name, inp))
-                # 判断可哈希
+                elif proptype == "FLOAT":
+                    {'default': 8.0, 'min': 0.0, 'max': 100.0}
+                    if len(inp)>1:
+                        if "step" in inp[1]:
+                            inp[1]["step"] *= 100
+                        prop = bpy.props.FloatProperty(**inp[1])
+                elif proptype == "BOOLEAN":
+                    prop = bpy.props.BoolProperty(**inp[1])
+                elif proptype == "STRING":
+                    {'default': 'ComfyUI', 'multiline': True}
+                    subtype = "NONE"
 
-                def is_all_hashable(some_list):
-                    return all(hasattr(item, "__hash__") for item in some_list)
-                if is_all_hashable(inp[0]) and set(inp[0]) == {True, False}:
-                    prop = bpy.props.BoolProperty()
-            elif proptype == "INT":
-                # {'default': 20, 'min': 1, 'max': 10000}
-                inp[1]["max"] = min(int(inp[1].get("max", 9999999)), 2**31 - 1)
-                inp[1]["min"] = max(int(inp[1].get("min", -999999)), -2**31)
-                default = inp[1].get("default", 0)
-                if not default:
-                    default = 0
-                inp[1]["default"] = int(default)
-                inp[1]["step"] = ceil(inp[1].get("step", 1))
-                prop = bpy.props.IntProperty(**inp[1])
+                    def update_wrap(n=""):
+                        i_name = n
 
-            elif proptype == "FLOAT":
-                {'default': 8.0, 'min': 0.0, 'max': 100.0}
-                if len(inp)>1 and "step" in inp[1]:
-                    inp[1]["step"] *= 100
-                    prop = bpy.props.FloatProperty(**inp[1])
-                else:
-                    prop = bpy.props.FloatProperty()
-            elif proptype == "BOOLEAN":
-                prop = bpy.props.BoolProperty(**inp[1])
-            elif proptype == "STRING":
-                {'default': 'ComfyUI', 'multiline': True}
-                subtype = "NONE"
-
-                def update_wrap(n=""):
-                    i_name = n
-
-                    def wrap(self, context):
-                        if not self[i_name]:
-                            return
-                        if not self[i_name].startswith("//"):
-                            return
-                        self[i_name] = bpy.path.abspath(self[i_name])
-                    return wrap
-                update = update_wrap(inp_name)
-                if inp_name == "image":
-                    subtype = "FILE_PATH"
-                elif inp_name == "output_dir":
-                    subtype = "DIR_PATH"
-                else:
-                    def update(_, __): return
-                prop = bpy.props.StringProperty(default=str(inp[1].get("default", "")),
-                                                subtype=subtype,
-                                                update=update)
-            prop = spec_gen_properties(nname, inp_name, prop)
-            properties[reg_name] = prop
-        spec_extra_properties(properties, nname, ndesc)
-        fields = {"init": init,
-                  "inp_types": inp_types,
-                  "out_types": out_types,
-                  "class_type": nname,
-                  "bl_label": nname,
-                  "draw_buttons": draw_buttons,
-                  "__annotations__": properties,
-                  "__metadata__": ndesc
-                  }
-        # spec_functions(fields, nname, ndesc)
-        NodeDesc = type(nname, (NodeBase,), fields)
-        NodeDesc.dcolor = (rand() / 2, rand() / 2, rand() / 2)
-        node_clss.append(NodeDesc)
-    socket_clss = []
-    for stype in sockets:
-        {'STYLE_MODEL', 'VAE', 'CLIP_VISION', 'MASK', 'UPSCALE_MODEL', 'FLOAT', 'CLIP_VISION_OUTPUT', 'STRING', 'INT', 'IMAGE', 'MODEL', 'CONDITIONING', 'ENUM', 'CONTROL_NET', 'LATENT', 'CLIP'}
-        if stype in {"ENUM", }:
-            continue
-
-        def draw(self, context, layout, node: NodeBase, text):
-            prop = get_reg_name(self.name)
-            if self.is_output or not hasattr(node, prop):
-                layout.label(text=self.name, text_ctxt=node.get_ctxt())
-                return
-            row = layout.row(align=True)
-            row.label(text=prop, text_ctxt=node.get_ctxt())
-            op = row.operator(Ops_Swith_Socket.bl_idname, text="", icon="UNLINKED")
-            op.node_name = node.name
-            op.socket_name = self.name
-            op.action = "ToProp"
-            row.prop(node, prop, text="", text_ctxt=node.get_ctxt())
-        color = bpy.props.FloatVectorProperty(size=4, default=(rand()**0.5, rand()**0.5, rand()**0.5, 1))
-        fields = {"draw": draw, "bl_label": stype, "__annotations__": {"color": color,
-                                                                       "index": bpy.props.IntProperty(default=-1),
-                                                                       "slot_index": bpy.props.IntProperty(default=-1)}}
-        SocketDesc = type(stype, (SocketBase,), fields)
-        socket_clss.append(SocketDesc)
-
-    nodes_ = {
-        'sampling': {
-            'items': ['KSampler', 'KSamplerAdvanced']},
-        'conditioning': {
-            'items': ['CLIPTextEncode', 'CLIPSetLastLayer', 'ConditioningCombine', 'ConditioningSetArea', 'ControlNetApply'],
-            'menus': {'style_model': {'items': ['StyleModelApply']}}},
-        '无限圣杯': {
-            'items': ['存储', 'ToBlender', 'Mask', '蜡笔']}
-    }
-    logger.warn(_T("Parsing Node Finished!"))
-    return nodetree_desc, node_clss, socket_clss
+                        def wrap(self, context):
+                            if not self[i_name]:
+                                return
+                            if not self[i_name].startswith("//"):
+                                return
+                            self[i_name] = bpy.path.abspath(self[i_name])
+                        return wrap
+                    update = update_wrap(inp_name)
+                    if inp_name == "image":
+                        subtype = "FILE_PATH"
+                    elif inp_name == "output_dir":
+                        subtype = "DIR_PATH"
+                    else:
+                        def update(_, __): return
+                    prop = bpy.props.StringProperty(default=str(inp[1].get("default", "")),
+                                                    subtype=subtype,
+                                                    update=update)
+                prop = spec_gen_properties(nname, inp_name, prop)
+                properties[reg_name] = prop
+            spec_extra_properties(properties, nname, ndesc)
+            fields = {"init": init,
+                      "inp_types": inp_types,
+                      "out_types": out_types,
+                      "class_type": nname,
+                      "bl_label": nname,
+                      "draw_buttons": draw_buttons,
+                      "__annotations__": properties,
+                      "__metadata__": ndesc
+                      }
+            # spec_functions(fields, nname, ndesc)
+            NodeDesc = type(nname, (NodeBase,), fields)
+            NodeDesc.dcolor = (rand() / 2, rand() / 2, rand() / 2)
+            node_clss.append(NodeDesc)
+        return node_clss
 
 
 def spec_gen_properties(nname, inp_name, prop):
@@ -1632,6 +1385,14 @@ def spec_serialize(self, cfg, execute):
         cfg["inputs"]["image"] = rpath.as_posix()
         cfg["inputs"]["frame"] = bpy.context.scene.frame_current
 
+def get_image(data):
+    '''data = {"filename": filename, "subfolder": subfolder, "type": folder_type}'''
+    url_values = urllib.parse.urlencode(data)
+    from .manager import TaskManager
+    url = "{}/view?{}".format(TaskManager.get_url(), url_values)
+    logger.debug(f'requesting {url} for image data')
+    with urllib.request.urlopen(url) as response:
+        return response.read()
 
 def spec_functions(fields, nname, ndesc):
     if nname == "输入图像":
@@ -1690,24 +1451,38 @@ def spec_functions(fields, nname, ndesc):
     if nname == "预览":
         def post_fn(self: NodeBase, t: Task, result):
             logger.debug(f"{self.class_type}{_T('Post Function')}->{result}")
-            # return
             img_paths = result.get("output", {}).get("images", [])
             if not img_paths:
+                logger.error(f'response is {result}, cannot find images in it')
                 return
             logger.warn(f"{_T('Load Preview Image')}: {img_paths}")
 
-            def f(self, img_paths: list[str]):
+            from PIL import Image
+            from io import BytesIO
+            import numpy as np
+
+            def f(self, img_paths: list[dict]):
                 self.prev.clear()
 
-                from .manager import TaskManager
-                d = TaskManager.get_temp_directory()
-                for img_path in img_paths:
-                    if isinstance(img_path, dict):
-                        img_path = Path(d).joinpath(img_path.get("filename")).as_posix()
-                    if not Path(img_path).exists():
-                        continue
+                #d = TaskManager.get_temp_directory()
+                #for img_path in img_paths:
+                    #if isinstance(img_path, dict):
+                    #    img_path = Path(d).joinpath(img_path.get("filename")).as_posix()
+                    #if not Path(img_path).exists():
+                    #    continue
+                    #p = self.prev.add()
+                    #p.image = bpy.data.images.load(img_path)
+
+                for data in img_paths:
+                    img_data = get_image(data)
+                    img = Image.open(BytesIO(img_data))
+                    buf = np.flipud(np.array(img))
+                    shape = buf.shape[:2]
+                    blimg = bpy.data.images.new(data.get('filename', 'preview.png'), shape[0], shape[1], float_buffer=False)
+                    blimg.pixels = np.dstack((buf.astype(np.float16)/255.0, np.ones(shape, dtype=np.float16))).ravel()
+                    logger.debug(f'creating {data["filename"]} of size {shape} from memory')
                     p = self.prev.add()
-                    p.image = bpy.data.images.load(img_path)
+                    p.image = blimg
             Timer.put((f, self, img_paths))
 
         fields["post_fn"] = post_fn
@@ -1731,8 +1506,6 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
             if spec_draw(node, context, layout, self.prop, swlink=False):
                 return True
             layout.prop(node, get_reg_name(self.prop))
-        return True
-    if prop == "control_after_generate":
         return True
     # 多行文本处理
     md = self.get_meta(prop)
@@ -2006,10 +1779,14 @@ def nodes_reg():
 
 
 def nodes_unreg():
-    ENUM_ITEMS_CACHE.clear()
-    PREVICONPATH.clear()
+    clear_nodes_data_cache()
     try:
         unreg()
     except BaseException:
         ...
     Ops_Link_Mask.unreg()
+
+
+def clear_nodes_data_cache():
+    ENUM_ITEMS_CACHE.clear()
+    PREVICONPATH.clear()

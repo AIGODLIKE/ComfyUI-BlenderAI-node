@@ -2,7 +2,7 @@ import bpy
 import platform
 from bl_ui.properties_paint_common import UnifiedPaintPanel
 from bpy.types import Context
-from .ops import Ops, Load_History, Copy_Tree, Load_Batch, Sync_Stencil_Image
+from .ops import Ops, Load_History, Copy_Tree, Load_Batch, Fetch_Node_Status
 from .translations import ctxt
 from .SDNode import TaskManager
 from .SDNode.tree import TREE_TYPE
@@ -31,6 +31,7 @@ class Panel(bpy.types.Panel):
             row.operator("wm.console_toggle", text="", icon="CONSOLE", text_ctxt=ctxt)
         # row.prop(sdn, "restart_webui", text="", icon="RECOVER_LAST")
         row.operator(Ops.bl_idname, text="", icon="QUIT", text_ctxt=ctxt).action = "Launch"
+        row.operator(Fetch_Node_Status.bl_idname, text="", icon="FILE_REFRESH" , text_ctxt=ctxt)
         row.operator(Ops.bl_idname, text="", icon="RECOVER_LAST", text_ctxt=ctxt).action = "Restart"
         row.prop(sdn, "open_webui", text="", icon="URL", text_ctxt=ctxt)
 

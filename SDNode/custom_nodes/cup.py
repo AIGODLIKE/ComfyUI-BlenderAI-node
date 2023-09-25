@@ -12,6 +12,9 @@ import server
 import gc
 import execution
 import folder_paths
+import nodes
+import time
+from threading import Thread
 from aiohttp import web
 from pathlib import Path
 from PIL import Image
@@ -20,6 +23,7 @@ from PIL.PngImagePlugin import PngInfo
 FORCE_LOG = False
 CATEGORY_ = "Blender"
 TEMPDIR = Path(__file__).parent.parent / "SDNodeTemp"
+HOST_PATH = Path("XXXHOST-PATHXXX")
 
 
 def removetemp():
@@ -33,6 +37,7 @@ def removetemp():
 
 removetemp()
 
+
 def execute_wrap():
     def exec_wrap(func):
         def wrap(*args, **kwargs):
@@ -44,6 +49,7 @@ def execute_wrap():
         return wrap
 
     execution.PromptExecutor.execute = exec_wrap(execution.PromptExecutor.execute)
+
 
 execute_wrap()
 
@@ -72,7 +78,7 @@ if FORCE_LOG:
 
 
 def try_write_config():
-    config_path = r"XXXMODEL-CFGXXX"
+    config_path = HOST_PATH.joinpath("PATH_CFG.json")
     from folder_paths import folder_names_and_paths
     config = {}
     for k in folder_names_and_paths:
@@ -105,6 +111,60 @@ async def clear_cache(request):
         ob.outputs_ui.clear()
         ob.old_prompt.clear()
     return web.Response(status=200)
+
+
+def node_info(node_class):
+    """
+    ref: ComfyUI/server.py PromptServer
+    """
+    obj_class = nodes.NODE_CLASS_MAPPINGS[node_class]
+    info = {}
+    info['input'] = obj_class.INPUT_TYPES()
+    info['output'] = obj_class.RETURN_TYPES
+    info['output_is_list'] = obj_class.OUTPUT_IS_LIST if hasattr(obj_class, 'OUTPUT_IS_LIST') else [False] * len(obj_class.RETURN_TYPES)
+    info['output_name'] = obj_class.RETURN_NAMES if hasattr(obj_class, 'RETURN_NAMES') else info['output']
+    info['name'] = node_class
+    info['display_name'] = nodes.NODE_DISPLAY_NAME_MAPPINGS[node_class] if node_class in nodes.NODE_DISPLAY_NAME_MAPPINGS.keys() else node_class
+    info['description'] = ''
+    info['category'] = 'sd'
+    if hasattr(obj_class, 'OUTPUT_NODE') and obj_class.OUTPUT_NODE == True:
+        info['output_node'] = True
+    else:
+        info['output_node'] = False
+    if hasattr(obj_class, 'CATEGORY'):
+        info['category'] = obj_class.CATEGORY
+    return info
+
+
+CACHED_NODES = {}
+
+
+def update_cached_nodes():
+    filter_node = {"Note", "PrimitiveNode", "Cache Node"}
+    diff = {}
+    for x in nodes.NODE_CLASS_MAPPINGS:
+        if x in filter_node:
+            continue
+        ni = node_info(x)
+        if x not in CACHED_NODES:
+            diff[x] = ni
+        elif CACHED_NODES[x] != ni:
+            diff[x] = ni
+        CACHED_NODES[x] = ni
+    if not diff or diff == CACHED_NODES:
+        return
+    with HOST_PATH.joinpath("diff_object_info.json").open("w") as fp:
+        json.dump(diff, fp)
+
+
+def diff_listen_loop():
+    while True:
+        time.sleep(5)
+        update_cached_nodes()
+
+
+Thread(target=diff_listen_loop, daemon=True).start()
+
 
 @server.PromptServer.instance.routes.post("/cup/get_temp_directory")
 async def get_temp_directory(request):
@@ -275,6 +335,7 @@ class LoadImage:
             m.update(f.read())
         return m.digest().hex()
 
+
 class MatImage(LoadImage):
     @classmethod
     def INPUT_TYPES(s):
@@ -283,6 +344,7 @@ class MatImage(LoadImage):
                 "image": ("STRING", {"default": ""}),
             },
         }
+
 
 class Mask:
     @classmethod
