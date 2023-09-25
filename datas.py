@@ -1,7 +1,7 @@
 from pathlib import Path
 PRESETS_DIR = Path(__file__).parent / "presets"
 GROUPS_DIR = Path(__file__).parent / "groups"
-
+IMG_SUFFIX = {".png", ".jpg", ".jpeg"}
 
 class MetaIn(type):
     def __contains__(self, name):

@@ -20,14 +20,12 @@
         {
           "name": "samples",
           "type": "LATENT",
-          "link": 5,
-          "slot_index": 0
+          "link": 5
         },
         {
           "name": "vae",
           "type": "VAE",
-          "link": 7,
-          "slot_index": 1
+          "link": 7
         }
       ],
       "outputs": [
@@ -62,26 +60,22 @@
         {
           "name": "model",
           "type": "MODEL",
-          "link": 3,
-          "slot_index": 0
+          "link": 3
         },
         {
           "name": "positive",
           "type": "CONDITIONING",
-          "link": 10,
-          "slot_index": 1
+          "link": 10
         },
         {
           "name": "negative",
           "type": "CONDITIONING",
-          "link": 1,
-          "slot_index": 2
+          "link": 1
         },
         {
           "name": "latent_image",
           "type": "LATENT",
-          "link": 4,
-          "slot_index": 3
+          "link": 4
         }
       ],
       "outputs": [
@@ -94,11 +88,11 @@
           "slot_index": 0
         }
       ],
-      "title": "K采样器",
+      "title": "KSampler",
       "properties": {},
       "widgets_values": [
         "123456789",
-        false,
+        "fixed",
         20,
         8.0,
         "euler",
@@ -149,7 +143,7 @@
       "title": "Checkpoint简易加载器",
       "properties": {},
       "widgets_values": [
-        "AbyssOrangeMix2_sfw.ckpt"
+        "AIGODLIKE华丽_4000.ckpt"
       ]
     },
     {
@@ -170,8 +164,7 @@
         {
           "name": "clip",
           "type": "CLIP",
-          "link": 0,
-          "slot_index": 0
+          "link": 0
         }
       ],
       "outputs": [
@@ -208,20 +201,17 @@
         {
           "name": "conditioning",
           "type": "CONDITIONING",
-          "link": 9,
-          "slot_index": 0
+          "link": 9
         },
         {
           "name": "control_net",
           "type": "CONTROL_NET",
-          "link": 8,
-          "slot_index": 1
+          "link": 8
         },
         {
           "name": "image",
           "type": "IMAGE",
-          "link": 11,
-          "slot_index": 2
+          "link": 11
         }
       ],
       "outputs": [
@@ -273,7 +263,7 @@
     },
     {
       "id": 9,
-      "type": "预览",
+      "type": "PreviewImage",
       "pos": [
         1476.2161865234375,
         602.52978515625
@@ -289,8 +279,7 @@
         {
           "name": "images",
           "type": "IMAGE",
-          "link": 6,
-          "slot_index": 0
+          "link": 6
         }
       ],
       "outputs": [],
@@ -364,12 +353,12 @@
       "title": "ControlNet加载器",
       "properties": {},
       "widgets_values": [
-        "姿态-control_v11p_sd15_openpose.pth"
+        "control_v11p_sd15_openpose.pth"
       ]
     },
     {
       "id": 15,
-      "type": "预览",
+      "type": "PreviewImage",
       "pos": [
         556.8773803710938,
         1224.972900390625
@@ -385,8 +374,7 @@
         {
           "name": "images",
           "type": "IMAGE",
-          "link": 13,
-          "slot_index": 0
+          "link": 13
         }
       ],
       "outputs": [],
@@ -445,8 +433,7 @@
         {
           "name": "clip",
           "type": "CLIP",
-          "link": 2,
-          "slot_index": 0
+          "link": 2
         }
       ],
       "outputs": [
@@ -483,8 +470,7 @@
         {
           "name": "image",
           "type": "IMAGE",
-          "link": 12,
-          "slot_index": 0
+          "link": 12
         }
       ],
       "outputs": [
@@ -515,23 +501,23 @@
       1,
       5,
       0,
-      "CheckpointLoaderSimple"
-    ],
-    [
-      1,
-      6,
-      0,
-      3,
-      2,
       "CLIPTextEncode"
     ],
     [
+      1,
+      6,
+      0,
+      3,
+      2,
+      "KSampler"
+    ],
+    [
       2,
       4,
       1,
       6,
       0,
-      "CheckpointLoaderSimple"
+      "CLIPTextEncode"
     ],
     [
       3,
@@ -539,7 +525,7 @@
       0,
       3,
       0,
-      "CheckpointLoaderSimple"
+      "KSampler"
     ],
     [
       4,
@@ -547,7 +533,7 @@
       0,
       3,
       3,
-      "EmptyLatentImage"
+      "KSampler"
     ],
     [
       5,
@@ -555,7 +541,7 @@
       0,
       8,
       0,
-      "KSampler"
+      "VAEDecode"
     ],
     [
       6,
@@ -563,7 +549,7 @@
       0,
       9,
       0,
-      "VAEDecode"
+      "预览"
     ],
     [
       7,
@@ -571,7 +557,7 @@
       0,
       8,
       1,
-      "VAELoader"
+      "VAEDecode"
     ],
     [
       8,
@@ -579,7 +565,7 @@
       0,
       14,
       1,
-      "ControlNetLoader"
+      "ControlNetApply"
     ],
     [
       9,
@@ -587,7 +573,7 @@
       0,
       14,
       0,
-      "CLIPTextEncode"
+      "ControlNetApply"
     ],
     [
       10,
@@ -595,7 +581,7 @@
       0,
       3,
       1,
-      "ControlNetApply"
+      "KSampler"
     ],
     [
       11,
@@ -603,7 +589,7 @@
       0,
       14,
       2,
-      "OpenposePreprocessor"
+      "ControlNetApply"
     ],
     [
       12,
@@ -611,7 +597,7 @@
       0,
       11,
       0,
-      "输入图像"
+      "OpenposePreprocessor"
     ],
     [
       13,
@@ -619,7 +605,7 @@
       0,
       15,
       0,
-      "OpenposePreprocessor"
+      "预览"
     ]
   ],
   "groups": [],

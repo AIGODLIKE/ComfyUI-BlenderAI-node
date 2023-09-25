@@ -303,7 +303,7 @@
       "title": "ControlNet加载器",
       "properties": {},
       "widgets_values": [
-        "法向-control_v11p_sd15_normalbae.pth"
+        "control_v11p_sd15_normalbae.pth"
       ]
     },
     {
@@ -334,7 +334,7 @@
       "title": "ControlNet加载器.002",
       "properties": {},
       "widgets_values": [
-        "线-control_v11p_sd15s2_lineart_anime.pth"
+        "control_v11p_sd15s2_lineart_anime.pth"
       ]
     },
     {
@@ -532,7 +532,7 @@
       "title": "ControlNet加载器.001",
       "properties": {},
       "widgets_values": [
-        "颜色-t2iadapter_color-fp16.safetensors"
+        "t2iadapter_color-fp16.safetensors"
       ]
     },
     {

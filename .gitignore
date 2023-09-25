@@ -6,7 +6,10 @@ log.log
 *.log*
 ./SDNode/PATH_CFG.json
 SDNode/PATH_CFG.json
+SDNode/object_info.json
+SDNode/diff_object_info.json
 SDNode/config.yaml
+SDNode/history/history.json
 presets/00测试
 SDNode/pid
 .idea

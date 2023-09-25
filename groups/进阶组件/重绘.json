@@ -1,0 +1,279 @@
+{
+    "last_node_id": 40,
+    "last_link_id": 24,
+    "nodes": [
+        {
+            "id": 8,
+            "type": "SetLatentNoiseMask",
+            "pos": [
+                3368.327392578125,
+                1563.303466796875
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 100.0
+            },
+            "flags": {},
+            "order": 12,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "samples",
+                    "type": "LATENT",
+                    "link": null
+                },
+                {
+                    "name": "mask",
+                    "type": "MASK",
+                    "link": 18
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "LATENT",
+                    "type": "LATENT",
+                    "links": [
+                        20
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "设置Latent噪波遮罩",
+            "properties": {},
+            "widgets_values": []
+        },
+        {
+            "id": 11,
+            "type": "VAEDecode",
+            "pos": [
+                3939.078857421875,
+                1360.2889404296875
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 14,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "samples",
+                    "type": "LATENT",
+                    "link": 22
+                },
+                {
+                    "name": "vae",
+                    "type": "VAE",
+                    "link": 21
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "IMAGE",
+                    "type": "IMAGE",
+                    "links": [
+                        23
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "VAE解码.005",
+            "properties": {},
+            "widgets_values": []
+        },
+        {
+            "id": 7,
+            "type": "Mask",
+            "pos": [
+                3101.3212890625,
+                1697.25830078125
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 100.0
+            },
+            "flags": {},
+            "order": 1,
+            "mode": 0,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "MASK",
+                    "type": "MASK",
+                    "links": [
+                        18
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "遮罩",
+            "properties": {},
+            "widgets_values": [
+                "",
+                "alpha"
+            ]
+        },
+        {
+            "id": 9,
+            "type": "KSampler",
+            "pos": [
+                3657.375732421875,
+                1360.2889404296875
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 13,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "model",
+                    "type": "MODEL",
+                    "link": null
+                },
+                {
+                    "name": "positive",
+                    "type": "CONDITIONING",
+                    "link": null
+                },
+                {
+                    "name": "negative",
+                    "type": "CONDITIONING",
+                    "link": null
+                },
+                {
+                    "name": "latent_image",
+                    "type": "LATENT",
+                    "link": 20
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "LATENT",
+                    "type": "LATENT",
+                    "links": [
+                        22
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "K采样器.001",
+            "properties": {},
+            "widgets_values": [
+                "123",
+                "fixed",
+                20,
+                7.0,
+                "euler_ancestral",
+                "karras",
+                0.5
+            ]
+        },
+        {
+            "id": 12,
+            "type": "VAELoader",
+            "pos": [
+                3657.375732421875,
+                1697.25830078125
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 0,
+            "mode": 0,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "VAE",
+                    "type": "VAE",
+                    "links": [
+                        21
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "VAE加载器.004",
+            "properties": {},
+            "widgets_values": [
+                "ClearVAE_V2.1.safetensors"
+            ]
+        },
+        {
+            "id": 10,
+            "type": "预览",
+            "pos": [
+                4230.9716796875,
+                1360.2889404296875
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 100.0
+            },
+            "flags": {},
+            "order": 15,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "images",
+                    "type": "IMAGE",
+                    "link": 23
+                }
+            ],
+            "outputs": [],
+            "title": "预览.001",
+            "properties": {},
+            "widgets_values": []
+        }
+    ],
+    "links": [
+        [
+            18,
+            7,
+            0,
+            8,
+            1,
+            "SetLatentNoiseMask"
+        ],
+        [
+            20,
+            8,
+            0,
+            9,
+            3,
+            "KSampler"
+        ],
+        [
+            21,
+            12,
+            0,
+            11,
+            1,
+            "VAEDecode"
+        ],
+        [
+            22,
+            9,
+            0,
+            11,
+            0,
+            "VAEDecode"
+        ],
+        [
+            23,
+            11,
+            0,
+            10,
+            0,
+            "预览"
+        ]
+    ],
+    "groups": [],
+    "config": {},
+    "extra": {},
+    "version": 0.4
+}

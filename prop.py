@@ -1,12 +1,18 @@
+from __future__ import annotations
 import bpy
 import os
 from pathlib import Path
 
 from .utils import Icon, FSWatcher
-from .datas import PRESETS_DIR, PROP_CACHE, GROUPS_DIR
+from .datas import PRESETS_DIR, PROP_CACHE, GROUPS_DIR, IMG_SUFFIX
 
 FSWatcher.register(PRESETS_DIR)
 FSWatcher.register(GROUPS_DIR)
+
+
+class RenderLayerString(bpy.types.PropertyGroup):
+    name: bpy.props.StringProperty(name="Render Layer Name")
+
 
 class Prop(bpy.types.PropertyGroup):
     cache = PROP_CACHE
@@ -39,7 +45,7 @@ class Prop(bpy.types.PropertyGroup):
                 continue
             icon_id = Icon["None"]
             for img in pd.iterdir():
-                if not (file.name in img.stem and img.suffix in {".png", ".jpg", ".jpeg"}):
+                if not (file.name in img.stem and img.suffix in IMG_SUFFIX):
                     continue
                 icon_id = Icon.reg_icon(img)
             items.append((str(file), file.stem, "", icon_id, len(items)))
@@ -78,7 +84,7 @@ class Prop(bpy.types.PropertyGroup):
                 continue
             icon_id = Icon["None"]
             for img in gd.iterdir():
-                if not (file.name in img.stem and img.suffix in {".png", ".jpg", ".jpeg"}):
+                if not (file.name in img.stem and img.suffix in IMG_SUFFIX):
                     continue
                 icon_id = Icon.reg_icon(img)
             items.append((str(file), file.stem, "", icon_id, len(items)))
@@ -135,4 +141,25 @@ class Prop(bpy.types.PropertyGroup):
                                               ("Batch", "Batch", "Batch", 2),
                                               ])
     batch_dir: bpy.props.StringProperty(name="Batch Directory", default=Path.home().joinpath("Desktop").as_posix(), subtype="DIR_PATH")
-    disable_render_all: bpy.props.BoolProperty(default=False, description="禁用场景树所有渲染行为")
+    disable_render_all: bpy.props.BoolProperty(default=False, description="Disable Render All")
+    advanced_exe: bpy.props.BoolProperty(default=False, description="Advanced Setting")
+    batch_count: bpy.props.IntProperty(default=1, min=1, name="Batch exec num")
+    loop_exec: bpy.props.BoolProperty(default=False, name="Loop exec")
+    render_layer: bpy.props.CollectionProperty(type=RenderLayerString)
+
+
+def render_layer_update():
+    try:
+        bpy.context.scene.sdn.render_layer.clear()
+        if not bpy.context.scene.use_nodes:
+            return 1
+        for node in bpy.context.scene.node_tree.nodes:
+            if node.type != "R_LAYERS":
+                continue
+            item = bpy.context.scene.sdn.render_layer.add()
+            item.name = node.name
+    except:
+        ...
+    return 1
+
+bpy.app.timers.register(render_layer_update, persistent=True)

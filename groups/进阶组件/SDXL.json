@@ -1,0 +1,804 @@
+{
+    "last_node_id": 20,
+    "last_link_id": 20,
+    "nodes": [
+        {
+            "id": 7,
+            "type": "EmptyLatentImage",
+            "pos": [
+                -1105.2347412109375,
+                193.91342163085938
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 7,
+            "mode": 0,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "LATENT",
+                    "type": "LATENT",
+                    "links": [
+                        1
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "空Latent",
+            "properties": {},
+            "widgets_values": [
+                1024,
+                1024,
+                1
+            ]
+        },
+        {
+            "id": 16,
+            "type": "CLIPTextEncodeSDXL",
+            "pos": [
+                -1105.2347412109375,
+                -387.53204345703125
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 5,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "clip",
+                    "type": "CLIP",
+                    "link": 5
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "CONDITIONING",
+                    "type": "CONDITIONING",
+                    "links": [
+                        7
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "CLIP文本编码SDXL",
+            "properties": {},
+            "widgets_values": [
+                1024,
+                1024,
+                0,
+                0,
+                1024,
+                1024,
+                "",
+                ""
+            ]
+        },
+        {
+            "id": 17,
+            "type": "CLIPTextEncodeSDXL",
+            "pos": [
+                -1105.2347412109375,
+                -98.97232055664062
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 4,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "clip",
+                    "type": "CLIP",
+                    "link": 6
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "CONDITIONING",
+                    "type": "CONDITIONING",
+                    "links": [
+                        8
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "CLIP文本编码SDXL.001",
+            "properties": {},
+            "widgets_values": [
+                1024,
+                1024,
+                0,
+                0,
+                1024,
+                1024,
+                "",
+                ""
+            ]
+        },
+        {
+            "id": 10,
+            "type": "VAELoader",
+            "pos": [
+                -806.0872802734375,
+                -76.44595336914062
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 6,
+            "mode": 0,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "VAE",
+                    "type": "VAE",
+                    "links": [
+                        3,
+                        12
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "VAE加载器",
+            "properties": {},
+            "widgets_values": [
+                "sdxl_vae.safetensors"
+            ]
+        },
+        {
+            "id": 5,
+            "type": "KSampler",
+            "pos": [
+                -812.4608154296875,
+                -387.53204345703125
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 8,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "model",
+                    "type": "MODEL",
+                    "link": 0
+                },
+                {
+                    "name": "positive",
+                    "type": "CONDITIONING",
+                    "link": 7
+                },
+                {
+                    "name": "negative",
+                    "type": "CONDITIONING",
+                    "link": 8
+                },
+                {
+                    "name": "latent_image",
+                    "type": "LATENT",
+                    "link": 1
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "LATENT",
+                    "type": "LATENT",
+                    "links": [
+                        2,
+                        13
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "KSampler",
+            "properties": {},
+            "widgets_values": [
+                "0",
+                "fixed",
+                40,
+                7.0,
+                "dpmpp_2m_sde",
+                "karras",
+                1.0
+            ]
+        },
+        {
+            "id": 6,
+            "type": "CheckpointLoaderSimple",
+            "pos": [
+                -1408.8538818359375,
+                -387.53204345703125
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 3,
+            "mode": 0,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "MODEL",
+                    "type": "MODEL",
+                    "links": [
+                        0
+                    ],
+                    "slot_index": 0
+                },
+                {
+                    "name": "CLIP",
+                    "type": "CLIP",
+                    "links": [
+                        5,
+                        6
+                    ],
+                    "slot_index": 1
+                },
+                {
+                    "name": "VAE",
+                    "type": "VAE",
+                    "slot_index": 2
+                }
+            ],
+            "title": "Checkpoint加载器(简易).001",
+            "properties": {},
+            "widgets_values": [
+                "sd_xl_base_1.0.safetensors"
+            ]
+        },
+        {
+            "id": 9,
+            "type": "VAEDecode",
+            "pos": [
+                -523.5552978515625,
+                -388.26898193359375
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 13,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "samples",
+                    "type": "LATENT",
+                    "link": 2
+                },
+                {
+                    "name": "vae",
+                    "type": "VAE",
+                    "link": 3
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "IMAGE",
+                    "type": "IMAGE",
+                    "links": [
+                        4,
+                        18
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "VAE解码",
+            "properties": {},
+            "widgets_values": []
+        },
+        {
+            "id": 18,
+            "type": "CLIPTextEncodeSDXLRefiner",
+            "pos": [
+                -815.4241943359375,
+                -596.3063354492188
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 1,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "clip",
+                    "type": "CLIP",
+                    "link": 10
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "CONDITIONING",
+                    "type": "CONDITIONING",
+                    "links": [
+                        14
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "CLIP文本编码SDXL优化.001",
+            "properties": {},
+            "widgets_values": [
+                4.0,
+                1024,
+                1024,
+                ""
+            ]
+        },
+        {
+            "id": 8,
+            "type": "KSampler",
+            "pos": [
+                -515.3238525390625,
+                -802.2672729492188
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 9,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "model",
+                    "type": "MODEL",
+                    "link": 17
+                },
+                {
+                    "name": "positive",
+                    "type": "CONDITIONING",
+                    "link": 15
+                },
+                {
+                    "name": "negative",
+                    "type": "CONDITIONING",
+                    "link": 14
+                },
+                {
+                    "name": "latent_image",
+                    "type": "LATENT",
+                    "link": 13
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "LATENT",
+                    "type": "LATENT",
+                    "links": [
+                        16
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "KSampler.001",
+            "properties": {},
+            "widgets_values": [
+                "0",
+                "fixed",
+                50,
+                7.0,
+                "dpmpp_2m_sde",
+                "karras",
+                0.4000000059604645
+            ]
+        },
+        {
+            "id": 11,
+            "type": "CLIPTextEncodeSDXLRefiner",
+            "pos": [
+                -815.5816650390625,
+                -802.2672729492188
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 2,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "clip",
+                    "type": "CLIP",
+                    "link": 9
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "CONDITIONING",
+                    "type": "CONDITIONING",
+                    "links": [
+                        15
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "CLIP文本编码SDXL优化",
+            "properties": {},
+            "widgets_values": [
+                6.0,
+                1024,
+                1024,
+                ""
+            ]
+        },
+        {
+            "id": 12,
+            "type": "CheckpointLoaderSimple",
+            "pos": [
+                -1103.8482666015625,
+                -802.2672729492188
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 0,
+            "mode": 0,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "MODEL",
+                    "type": "MODEL",
+                    "links": [
+                        17
+                    ],
+                    "slot_index": 0
+                },
+                {
+                    "name": "CLIP",
+                    "type": "CLIP",
+                    "links": [
+                        9,
+                        10
+                    ],
+                    "slot_index": 1
+                },
+                {
+                    "name": "VAE",
+                    "type": "VAE",
+                    "slot_index": 2
+                }
+            ],
+            "title": "Checkpoint加载器(简易).002",
+            "properties": {},
+            "widgets_values": [
+                "sd_xl_refiner_1.0.safetensors"
+            ]
+        },
+        {
+            "id": 19,
+            "type": "VAEDecode",
+            "pos": [
+                -248.9000244140625,
+                -802.4638061523438
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 10,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "samples",
+                    "type": "LATENT",
+                    "link": 16
+                },
+                {
+                    "name": "vae",
+                    "type": "VAE",
+                    "link": 12
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "IMAGE",
+                    "type": "IMAGE",
+                    "links": [
+                        11,
+                        19
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "VAE解码.001",
+            "properties": {},
+            "widgets_values": []
+        },
+        {
+            "id": 20,
+            "type": "PreviewImage",
+            "pos": [
+                791.0262451171875,
+                -393.90570068359375
+            ],
+            "size": {
+                "0": 1024.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 12,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "images",
+                    "type": "IMAGE",
+                    "link": 11
+                }
+            ],
+            "outputs": [],
+            "title": "预览.001",
+            "properties": {},
+            "widgets_values": []
+        },
+        {
+            "id": 13,
+            "type": "存储",
+            "pos": [
+                -258.9876708984375,
+                -589.2365112304688
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 14,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "images",
+                    "type": "IMAGE",
+                    "link": 18
+                }
+            ],
+            "outputs": [],
+            "title": "存储",
+            "properties": {},
+            "widgets_values": [
+                "ComfyUI",
+                ""
+            ]
+        },
+        {
+            "id": 14,
+            "type": "存储",
+            "pos": [
+                791.0262451171875,
+                -593.9057006835938
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 11,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "images",
+                    "type": "IMAGE",
+                    "link": 19
+                }
+            ],
+            "outputs": [],
+            "title": "存储.001",
+            "properties": {},
+            "widgets_values": [
+                "ComfyUI",
+                ""
+            ]
+        },
+        {
+            "id": 15,
+            "type": "PreviewImage",
+            "pos": [
+                -258.9876708984375,
+                -389.23651123046875
+            ],
+            "size": {
+                "0": 1024.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 15,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "images",
+                    "type": "IMAGE",
+                    "link": 4
+                }
+            ],
+            "outputs": [],
+            "title": "预览",
+            "properties": {},
+            "widgets_values": []
+        }
+    ],
+    "links": [
+        [
+            0,
+            6,
+            0,
+            5,
+            0,
+            "KSampler"
+        ],
+        [
+            1,
+            7,
+            0,
+            5,
+            3,
+            "KSampler"
+        ],
+        [
+            2,
+            5,
+            0,
+            9,
+            0,
+            "VAEDecode"
+        ],
+        [
+            3,
+            10,
+            0,
+            9,
+            1,
+            "VAEDecode"
+        ],
+        [
+            4,
+            9,
+            0,
+            15,
+            0,
+            "预览"
+        ],
+        [
+            5,
+            6,
+            1,
+            16,
+            0,
+            "CLIPTextEncodeSDXL"
+        ],
+        [
+            6,
+            6,
+            1,
+            17,
+            0,
+            "CLIPTextEncodeSDXL"
+        ],
+        [
+            7,
+            16,
+            0,
+            5,
+            1,
+            "KSampler"
+        ],
+        [
+            8,
+            17,
+            0,
+            5,
+            2,
+            "KSampler"
+        ],
+        [
+            9,
+            12,
+            1,
+            11,
+            0,
+            "CLIPTextEncodeSDXLRefiner"
+        ],
+        [
+            10,
+            12,
+            1,
+            18,
+            0,
+            "CLIPTextEncodeSDXLRefiner"
+        ],
+        [
+            11,
+            19,
+            0,
+            20,
+            0,
+            "预览"
+        ],
+        [
+            12,
+            10,
+            0,
+            19,
+            1,
+            "VAEDecode"
+        ],
+        [
+            13,
+            5,
+            0,
+            8,
+            3,
+            "KSampler"
+        ],
+        [
+            14,
+            18,
+            0,
+            8,
+            2,
+            "KSampler"
+        ],
+        [
+            15,
+            11,
+            0,
+            8,
+            1,
+            "KSampler"
+        ],
+        [
+            16,
+            8,
+            0,
+            19,
+            0,
+            "VAEDecode"
+        ],
+        [
+            17,
+            12,
+            0,
+            8,
+            0,
+            "KSampler"
+        ],
+        [
+            18,
+            9,
+            0,
+            13,
+            0,
+            "存储"
+        ],
+        [
+            19,
+            19,
+            0,
+            14,
+            0,
+            "存储"
+        ]
+    ],
+    "groups": [],
+    "config": {},
+    "extra": {},
+    "version": 0.4
+}

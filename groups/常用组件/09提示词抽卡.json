@@ -1,0 +1,52 @@
+{
+    "last_node_id": 3,
+    "last_link_id": 0,
+    "nodes": [
+        {
+            "id": 3,
+            "type": "PromptGenerator",
+            "pos": [
+                -55.799903869628906,
+                -40.05171585083008
+            ],
+            "size": {
+                "0": 441.9412841796875,
+                "1": 100.0
+            },
+            "flags": {},
+            "order": 0,
+            "mode": 0,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "STRING",
+                    "type": "STRING",
+                    "slot_index": 0
+                }
+            ],
+            "title": "PromptGenerator",
+            "properties": {},
+            "widgets_values": [
+                "",
+                "random",
+                "random",
+                "random",
+                "random",
+                "random",
+                "random",
+                "random",
+                "random",
+                "random",
+                "random",
+                "random",
+                "random",
+                "random"
+            ]
+        }
+    ],
+    "links": [],
+    "groups": [],
+    "config": {},
+    "extra": {},
+    "version": 0.4
+}

@@ -1,0 +1,178 @@
+{
+    "last_node_id": 24,
+    "last_link_id": 11,
+    "nodes": [
+        {
+            "id": 21,
+            "type": "SolidMask",
+            "pos": [
+                4029.1767578125,
+                788.0503540039062
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 100.0
+            },
+            "flags": {},
+            "order": 1,
+            "mode": 0,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "MASK",
+                    "type": "MASK",
+                    "links": [
+                        8
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "纯块遮罩",
+            "properties": {},
+            "widgets_values": [
+                1.0,
+                768,
+                768
+            ]
+        },
+        {
+            "id": 22,
+            "type": "SolidMask",
+            "pos": [
+                4029.1767578125,
+                942.7916259765625
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 100.0
+            },
+            "flags": {},
+            "order": 0,
+            "mode": 0,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "MASK",
+                    "type": "MASK",
+                    "links": [
+                        9
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "纯块遮罩.001",
+            "properties": {},
+            "widgets_values": [
+                0.0,
+                512,
+                512
+            ]
+        },
+        {
+            "id": 23,
+            "type": "MaskComposite",
+            "pos": [
+                4298.16357421875,
+                787.4656982421875
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 100.0
+            },
+            "flags": {},
+            "order": 2,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "destination",
+                    "type": "MASK",
+                    "link": 8
+                },
+                {
+                    "name": "source",
+                    "type": "MASK",
+                    "link": 9
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "MASK",
+                    "type": "MASK",
+                    "links": [
+                        10
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "遮罩混合",
+            "properties": {},
+            "widgets_values": [
+                0,
+                0,
+                "multiply"
+            ]
+        },
+        {
+            "id": 24,
+            "type": "MaskToImage",
+            "pos": [
+                4299.08447265625,
+                985.1620483398438
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 100.0
+            },
+            "flags": {},
+            "order": 3,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "mask",
+                    "type": "MASK",
+                    "link": 10
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "IMAGE",
+                    "type": "IMAGE",
+                    "slot_index": 0
+                }
+            ],
+            "title": "遮罩到图像",
+            "properties": {},
+            "widgets_values": []
+        }
+    ],
+    "links": [
+        [
+            8,
+            21,
+            0,
+            23,
+            0,
+            "MaskComposite"
+        ],
+        [
+            9,
+            22,
+            0,
+            23,
+            1,
+            "MaskComposite"
+        ],
+        [
+            10,
+            23,
+            0,
+            24,
+            0,
+            "MaskToImage"
+        ]
+    ],
+    "groups": [],
+    "config": {},
+    "extra": {},
+    "version": 0.4
+}

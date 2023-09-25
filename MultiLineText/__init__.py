@@ -1,6 +1,6 @@
 import bpy
 from ..utils import PkgInstaller
-from ..translation import ctxt
+from ..translations import ctxt
 REGISTERED = [False]
 
 REQUIREMENTS = ["imgui"]

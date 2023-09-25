@@ -364,7 +364,7 @@
       "title": "ControlNet加载器",
       "properties": {},
       "widgets_values": [
-        "法向-control_v11p_sd15_normalbae.pth"
+        "control_v11p_sd15_normalbae.pth"
       ]
     },
     {

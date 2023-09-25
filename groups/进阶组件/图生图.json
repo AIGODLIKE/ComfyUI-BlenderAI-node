@@ -1,0 +1,407 @@
+{
+    "last_node_id": 40,
+    "last_link_id": 34,
+    "nodes": [
+        {
+            "id": 13,
+            "type": "KSampler",
+            "pos": [
+                3648.48974609375,
+                872.6265258789062
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 5,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "model",
+                    "type": "MODEL",
+                    "link": 29
+                },
+                {
+                    "name": "positive",
+                    "type": "CONDITIONING",
+                    "link": 33
+                },
+                {
+                    "name": "negative",
+                    "type": "CONDITIONING",
+                    "link": 32
+                },
+                {
+                    "name": "latent_image",
+                    "type": "LATENT",
+                    "link": 26
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "LATENT",
+                    "type": "LATENT",
+                    "links": [
+                        24
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "K采样器.002",
+            "properties": {},
+            "widgets_values": [
+                "0",
+                "fixed",
+                20,
+                8.0,
+                "euler",
+                "normal",
+                0.5
+            ]
+        },
+        {
+            "id": 14,
+            "type": "VAEDecode",
+            "pos": [
+                3932.185302734375,
+                872.6265258789062
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 6,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "samples",
+                    "type": "LATENT",
+                    "link": 24
+                },
+                {
+                    "name": "vae",
+                    "type": "VAE",
+                    "link": 28
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "IMAGE",
+                    "type": "IMAGE",
+                    "links": [
+                        25
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "VAE解码",
+            "properties": {},
+            "widgets_values": []
+        },
+        {
+            "id": 21,
+            "type": "预览",
+            "pos": [
+                4220.97119140625,
+                872.6265258789062
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 7,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "images",
+                    "type": "IMAGE",
+                    "link": 25
+                }
+            ],
+            "outputs": [],
+            "title": "预览.002",
+            "properties": {},
+            "widgets_values": []
+        },
+        {
+            "id": 18,
+            "type": "VAEEncode",
+            "pos": [
+                3335.776123046875,
+                1144.4364013671875
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 4,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "pixels",
+                    "type": "IMAGE",
+                    "link": null
+                },
+                {
+                    "name": "vae",
+                    "type": "VAE",
+                    "link": 27
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "LATENT",
+                    "type": "LATENT",
+                    "links": [
+                        26
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "VAE编码",
+            "properties": {},
+            "widgets_values": []
+        },
+        {
+            "id": 15,
+            "type": "VAELoader",
+            "pos": [
+                3335.761474609375,
+                1281.892578125
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 100.0
+            },
+            "flags": {},
+            "order": 3,
+            "mode": 0,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "VAE",
+                    "type": "VAE",
+                    "links": [
+                        27,
+                        28
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "VAE加载器",
+            "properties": {},
+            "widgets_values": [
+                "ClearVAE_V2.1.safetensors"
+            ]
+        },
+        {
+            "id": 17,
+            "type": "CLIPTextEncode",
+            "pos": [
+                3336.283447265625,
+                873.9492797851562
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 100.0
+            },
+            "flags": {},
+            "order": 2,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "clip",
+                    "type": "CLIP",
+                    "link": 30
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "CONDITIONING",
+                    "type": "CONDITIONING",
+                    "links": [
+                        33
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "CLIP文本编码器",
+            "properties": {},
+            "widgets_values": [
+                ""
+            ]
+        },
+        {
+            "id": 16,
+            "type": "CheckpointLoaderSimple",
+            "pos": [
+                3010.434326171875,
+                875.4063110351562
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 100.0
+            },
+            "flags": {},
+            "order": 0,
+            "mode": 0,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "MODEL",
+                    "type": "MODEL",
+                    "links": [
+                        29
+                    ],
+                    "slot_index": 0
+                },
+                {
+                    "name": "CLIP",
+                    "type": "CLIP",
+                    "links": [
+                        30,
+                        31
+                    ],
+                    "slot_index": 1
+                },
+                {
+                    "name": "VAE",
+                    "type": "VAE",
+                    "slot_index": 2
+                }
+            ],
+            "title": "Checkpoint加载器(简易)",
+            "properties": {},
+            "widgets_values": [
+                "Anything_v5PrtRE1.safetensors"
+            ]
+        },
+        {
+            "id": 19,
+            "type": "CLIPTextEncode",
+            "pos": [
+                3336.283447265625,
+                1005.0440063476562
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 100.0
+            },
+            "flags": {},
+            "order": 1,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "clip",
+                    "type": "CLIP",
+                    "link": 31
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "CONDITIONING",
+                    "type": "CONDITIONING",
+                    "links": [
+                        32
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "CLIP文本编码器.001",
+            "properties": {},
+            "widgets_values": [
+                ""
+            ]
+        }
+    ],
+    "links": [
+        [
+            24,
+            13,
+            0,
+            14,
+            0,
+            "VAEDecode"
+        ],
+        [
+            25,
+            14,
+            0,
+            21,
+            0,
+            "预览"
+        ],
+        [
+            26,
+            18,
+            0,
+            13,
+            3,
+            "KSampler"
+        ],
+        [
+            27,
+            15,
+            0,
+            18,
+            1,
+            "VAEEncode"
+        ],
+        [
+            28,
+            15,
+            0,
+            14,
+            1,
+            "VAEDecode"
+        ],
+        [
+            29,
+            16,
+            0,
+            13,
+            0,
+            "KSampler"
+        ],
+        [
+            30,
+            16,
+            1,
+            17,
+            0,
+            "CLIPTextEncode"
+        ],
+        [
+            31,
+            16,
+            1,
+            19,
+            0,
+            "CLIPTextEncode"
+        ],
+        [
+            32,
+            19,
+            0,
+            13,
+            2,
+            "KSampler"
+        ],
+        [
+            33,
+            17,
+            0,
+            13,
+            1,
+            "KSampler"
+        ]
+    ],
+    "groups": [],
+    "config": {},
+    "extra": {},
+    "version": 0.4
+}

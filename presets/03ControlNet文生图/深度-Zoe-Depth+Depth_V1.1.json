@@ -364,7 +364,7 @@
       "title": "ControlNet加载器",
       "properties": {},
       "widgets_values": [
-        "深度-control_v11p_sd15_depth.pth"
+        "control_v11p_sd15_depth.pth"
       ]
     },
     {

@@ -365,7 +365,7 @@
       "title": "ControlNet加载器",
       "properties": {},
       "widgets_values": [
-        "深度-control_depth-fp16.safetensors"
+        "control_depth-fp16.safetensors"
       ]
     },
     {
@@ -960,7 +960,7 @@
       "title": "ControlNet加载器.001",
       "properties": {},
       "widgets_values": [
-        "线-control_hed-fp16.safetensors"
+        "control_hed-fp16.safetensors"
       ]
     },
     {

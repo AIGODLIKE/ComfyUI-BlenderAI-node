@@ -1,0 +1,310 @@
+{
+    "last_node_id": 40,
+    "last_link_id": 32,
+    "nodes": [
+        {
+            "id": 13,
+            "type": "KSampler",
+            "pos": [
+                3648.48974609375,
+                872.6265258789062
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 2,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "model",
+                    "type": "MODEL",
+                    "link": 27
+                },
+                {
+                    "name": "positive",
+                    "type": "CONDITIONING",
+                    "link": 28
+                },
+                {
+                    "name": "negative",
+                    "type": "CONDITIONING",
+                    "link": 29
+                },
+                {
+                    "name": "latent_image",
+                    "type": "LATENT",
+                    "link": 26
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "LATENT",
+                    "type": "LATENT",
+                    "links": [
+                        24
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "K采样器.002",
+            "properties": {},
+            "widgets_values": [
+                "0",
+                "fixed",
+                20,
+                8.0,
+                "euler",
+                "normal",
+                0.5
+            ]
+        },
+        {
+            "id": 14,
+            "type": "VAEDecode",
+            "pos": [
+                3932.185302734375,
+                872.6265258789062
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 3,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "samples",
+                    "type": "LATENT",
+                    "link": 24
+                },
+                {
+                    "name": "vae",
+                    "type": "VAE",
+                    "link": 31
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "IMAGE",
+                    "type": "IMAGE",
+                    "links": [
+                        25
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "VAE解码",
+            "properties": {},
+            "widgets_values": []
+        },
+        {
+            "id": 21,
+            "type": "预览",
+            "pos": [
+                4220.97119140625,
+                872.6265258789062
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 4,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "images",
+                    "type": "IMAGE",
+                    "link": 25
+                }
+            ],
+            "outputs": [],
+            "title": "预览.002",
+            "properties": {},
+            "widgets_values": []
+        },
+        {
+            "id": 15,
+            "type": "FromBasicPipe_v2",
+            "pos": [
+                3083.1962890625,
+                872.6265258789062
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 100.0
+            },
+            "flags": {},
+            "order": 0,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "basic_pipe",
+                    "type": "BASIC_PIPE",
+                    "link": null
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "basic_pipe",
+                    "type": "basic_pipe",
+                    "slot_index": 0
+                },
+                {
+                    "name": "model",
+                    "type": "model",
+                    "links": [
+                        27
+                    ],
+                    "slot_index": 1
+                },
+                {
+                    "name": "clip",
+                    "type": "clip",
+                    "slot_index": 2
+                },
+                {
+                    "name": "vae",
+                    "type": "vae",
+                    "links": [
+                        30,
+                        31
+                    ],
+                    "slot_index": 3
+                },
+                {
+                    "name": "positive",
+                    "type": "positive",
+                    "links": [
+                        28
+                    ],
+                    "slot_index": 4
+                },
+                {
+                    "name": "negative",
+                    "type": "negative",
+                    "links": [
+                        29
+                    ],
+                    "slot_index": 5
+                }
+            ],
+            "title": "从基础束v2",
+            "properties": {},
+            "widgets_values": []
+        },
+        {
+            "id": 18,
+            "type": "VAEEncode",
+            "pos": [
+                3361.81005859375,
+                1062.2042236328125
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 1,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "pixels",
+                    "type": "IMAGE",
+                    "link": null
+                },
+                {
+                    "name": "vae",
+                    "type": "VAE",
+                    "link": 30
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "LATENT",
+                    "type": "LATENT",
+                    "links": [
+                        26
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "VAE编码",
+            "properties": {},
+            "widgets_values": []
+        }
+    ],
+    "links": [
+        [
+            24,
+            13,
+            0,
+            14,
+            0,
+            "VAEDecode"
+        ],
+        [
+            25,
+            14,
+            0,
+            21,
+            0,
+            "预览"
+        ],
+        [
+            26,
+            18,
+            0,
+            13,
+            3,
+            "KSampler"
+        ],
+        [
+            27,
+            15,
+            1,
+            13,
+            0,
+            "KSampler"
+        ],
+        [
+            28,
+            15,
+            4,
+            13,
+            1,
+            "KSampler"
+        ],
+        [
+            29,
+            15,
+            5,
+            13,
+            2,
+            "KSampler"
+        ],
+        [
+            30,
+            15,
+            3,
+            18,
+            1,
+            "VAEEncode"
+        ],
+        [
+            31,
+            15,
+            3,
+            14,
+            1,
+            "VAEDecode"
+        ]
+    ],
+    "groups": [],
+    "config": {},
+    "extra": {},
+    "version": 0.4
+}

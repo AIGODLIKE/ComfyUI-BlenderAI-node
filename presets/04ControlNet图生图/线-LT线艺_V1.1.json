@@ -224,7 +224,7 @@
       "title": "ControlNet加载器",
       "properties": {},
       "widgets_values": [
-        "线-control_v11p_sd15_lineart.pth"
+        "control_v11p_sd15_lineart.pth"
       ]
     },
     {

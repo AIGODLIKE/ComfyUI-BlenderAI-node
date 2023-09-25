@@ -305,7 +305,7 @@
       "title": "ControlNet加载器",
       "properties": {},
       "widgets_values": [
-        "语义-control_v11p_sd15_seg.pth"
+        "control_v11p_sd15_seg.pth"
       ]
     },
     {

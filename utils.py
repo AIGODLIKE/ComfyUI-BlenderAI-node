@@ -6,8 +6,9 @@ from threading import Thread
 from functools import lru_cache
 from urllib.parse import urlparse
 from .kclogger import logger
-from .translation import lang_text
+from .translations import LANG_TEXT
 from .timer import Timer
+from .datas import IMG_SUFFIX
 translation = {}
 
 def rmtree(path: Path):
@@ -37,11 +38,10 @@ def _T(word):
     culture = translation.setdefault(locale, {})
     if t := culture.get(word):
         return t
-
     def f(word):
         culture[word] = pgettext(word)
     Timer.put((f, word))
-    return lang_text.get(locale, {}).get(word, word)
+    return LANG_TEXT.get(locale, {}).get(word, word)
 
 
 def update_screen():
@@ -189,7 +189,7 @@ class Icon(metaclass=MetaIn):
         path = FSWatcher.to_str(path)
         if path in Icon:
             return
-        if p.exists() and p.suffix.lower() in {".png", ".jpg", ".jpeg"}:
+        if p.exists() and p.suffix.lower() in IMG_SUFFIX:
             img = bpy.data.images.load(path)
             Icon.reg_icon_by_pixel(img, path)
             bpy.data.images.remove(img)
@@ -220,7 +220,7 @@ class Icon(metaclass=MetaIn):
         if img := Icon.find_image(path):
             Icon.update_icon_pixel(path, img)
             return img
-        elif p.suffix.lower() in {".png", ".jpg", ".jpeg"}:
+        elif p.suffix.lower() in IMG_SUFFIX:
             img = bpy.data.images.load(path)
             img.filepath = path
             Icon.update_path2bpy()
@@ -376,6 +376,8 @@ class PkgInstaller:
                 command.append("--trusted-host")
                 command.append(site.netloc)
                 main(command)
+                if not PkgInstaller.is_installed(pkg):
+                    return False
             except Exception:
                 return False
         return True

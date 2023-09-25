@@ -3,16 +3,19 @@ import typing
 import time
 import sys
 import traceback
+from string import ascii_letters
+from pathlib import Path
+from bpy.app.translations import pgettext
 from threading import Thread
 from functools import partial
 from collections import OrderedDict
 from bpy.types import NodeTree
 from nodeitems_utils import NodeCategory, NodeItem, register_node_categories, unregister_node_categories, _node_categories
-from .nodes import nodes_reg, nodes_unreg, parse_node, NodeBase
-from ..utils import logger, Icon, rgb2hex, hex2rgb, _T
+from .nodes import nodes_reg, nodes_unreg, NodeParser, NodeBase, get_tree, clear_nodes_data_cache
+from ..utils import logger, Icon, rgb2hex, hex2rgb, _T, FSWatcher
 from ..datas import EnumCache
 from ..timer import Timer
-from ..translation import ctxt
+from ..translations import ctxt
 
 TREE_NAME = "CFNODES_SYS"
 TREE_TYPE = "CFNodeTree"
@@ -20,6 +23,70 @@ TREE_TYPE = "CFNodeTree"
 
 class InvalidNodeType(Exception):
     ...
+
+
+class NodeItem(NodeItem):
+    translation_context = ctxt
+
+    @staticmethod
+    def draw(self, layout, context):
+        col = layout.column()
+        col.enabled = NodeItem.new_btn_enable(self, layout, context)
+        props = col.operator("node.add_node", text=pgettext(self.label), text_ctxt=ctxt)
+        props.type = self.nodetype
+        props.use_transform = True
+
+    @staticmethod
+    def new_btn_enable(self, layout, context):
+        from .blueprints import get_blueprints
+        bp = get_blueprints(self.nodetype)
+        return bp.new_btn_enable(self, layout, context)
+
+
+def serialize_wrapper(func):
+    def wrapper(self, *args, **kwargs):
+        try:
+            res = func(self, *args, **kwargs)
+            for k in res:
+                if not isinstance(res[k], tuple):
+                    continue
+                n = res[k][0]
+                if n.get("class_type") == "预览":
+                    n["class_type"] = "PreviewImage"
+            return res
+        except BaseException:
+            logger.error(traceback.format_exc())
+        return {}
+    return wrapper
+
+
+def save_json_wrapper(func):
+    def wrapper(self, *args, **kwargs):
+        try:
+            res = func(self, *args, **kwargs)
+            for node in res.get("nodes", []):
+                if node.get("type") == "预览":
+                    node["type"] = "PreviewImage"
+                if "(Blender特供)" in node.get("title", ""):
+                    node["title"] = node.get("title", "").replace("(Blender特供)", "")
+            return res
+        except BaseException:
+            logger.error(traceback.format_exc())
+        return {}
+    return wrapper
+
+
+def load_json_wrapper(func):
+    def wrapper(self, data, *args, **kwargs):
+        for node in data.get("nodes", []):
+            if node.get("type") == "PreviewImage":
+                node["type"] = "预览"
+        try:
+            return func(self, data, *args, **kwargs)
+        except BaseException:
+            logger.error(traceback.format_exc())
+        return []
+    return wrapper
 
 
 class CFNodeTree(NodeTree):
@@ -37,13 +104,14 @@ class CFNodeTree(NodeTree):
         for node in self.get_nodes():
             node.serialize_pre()
 
+    @serialize_wrapper
     def serialize(self):
         """
         get prompts
         """
         self.validation()
         self.serialize_pre()
-        return {node.id: (node.serialize(), node.pre_fn, node.post_fn) for node in self.get_nodes() if node.class_type not in {"Reroute", "PrimitiveNode"}}
+        return {node.id: node.make_serialze() for node in self.get_nodes() if node.class_type not in {"Reroute", "PrimitiveNode", "Note"}}
 
     def validation(self, nodes=None):
 
@@ -82,6 +150,7 @@ class CFNodeTree(NodeTree):
         ox, oy = self.get_node_frame_offset(node)
         return node.location.x + ox, node.location.y + oy
 
+    @save_json_wrapper
     def save_json_ex(self, dump_nodes: list[bpy.types.Node], dump_frames=None, selected_only=False):
         self.validation(dump_nodes)
         self.calc_unique_id()
@@ -116,7 +185,7 @@ class CFNodeTree(NodeTree):
         for i, link in enumerate(self.links):
             # links is an OBJECT
             # [id, origin_id, origin_slot, target_id, target_slot, type]
-            # TODO: 当有 NodeReroute 的时候 情况比较复杂
+            # 当有 NodeReroute 的时候 情况比较复杂
             # from_node = self.find_from_node(link)
             # to_node = self.find_to_node(link)
             # if (to_node not in dump_nodes) or (from_node not in dump_nodes):
@@ -200,6 +269,7 @@ class CFNodeTree(NodeTree):
     def load_json_group(self, data) -> list[bpy.types.Node]:
         return self.load_json_ex(data, is_group=True)
 
+    @load_json_wrapper
     def load_json_ex(self, data, is_group=False):
         for node in self.get_nodes(False):
             node.select = False
@@ -226,7 +296,6 @@ class CFNodeTree(NodeTree):
                 else:
                     node.pool.add(old_id)
                     node.id = old_id
-                
 
         for link in data.get("links", []):
             # logger.debug(link)
@@ -351,7 +420,7 @@ class CFNodeTree(NodeTree):
         """
         self.id_clear_update()
         self.primitive_node_update()
-    
+
     def id_clear_update(self):
         ids = set()
         nodes = self.get_nodes(cmf=True)
@@ -378,8 +447,6 @@ class CFNodeTree(NodeTree):
                 old_prop = getattr(link.to_node, n)
                 setattr(link.to_node, n, type(old_prop)(prop))
 
-            
-                    
     def compute_execution_order(self):
         """
         Reference from ComfyUI
@@ -482,15 +549,21 @@ class CFNodeCategory(NodeCategory):
         super().__init__(*args, **kwargs)
 
 
+def gen_cat_id(idstr):
+    while idstr[0] == "_":
+        idstr = idstr[1:]
+    return "NODE_MT_%s" % idstr
+
+
 def reg_nodetree(identifier, cat_list, sub=False):
     if not cat_list:
         return
 
     def draw_node_item(self, context):
-        layout = self.layout
+        layout: bpy.types.UILayout = self.layout
         col = layout.column(align=True)
         for menu in self.category.menus:
-            col.menu("NODE_MT_category%s" % menu.identifier)
+            col.menu(gen_cat_id(menu.identifier), text_ctxt=ctxt)
         for item in self.category.items(context):
             item.draw(item, col, context)
         for draw_fn in getattr(self.category, "draw_fns", []):
@@ -506,7 +579,7 @@ def reg_nodetree(identifier, cat_list, sub=False):
             "poll": cat.poll,
             "draw": draw_node_item,
         }
-        menu_type = type(f"NODE_MT_category{cat.identifier}", (bpy.types.Menu,), __data__)
+        menu_type = type(gen_cat_id(cat.identifier), (bpy.types.Menu,), __data__)
         menu_types.append(menu_type)
         bpy.utils.register_class(menu_type)
     if sub:
@@ -517,20 +590,32 @@ def reg_nodetree(identifier, cat_list, sub=False):
 
         for cat in cat_list:
             if cat.poll(context):
-                layout.menu(f"NODE_MT_category{cat.identifier}")
+                layout.menu(gen_cat_id(cat.identifier))
 
     _node_categories[identifier] = (cat_list, draw_add_menu, menu_types)
 
 
-def load_node(node_desc, root=""):
+def load_node(nodetree_desc, root=""):
     node_cat = []
-    for cat, nodes in node_desc.items():
+    for cat, nodes in nodetree_desc.items():
+        ocat = cat
+        rep_chars = [" ", "-", "(", ")", "[", "]", "{", "}", ",", ".", ":", ";", "'", '"', "/", "\\", "|", "?", "*", "<", ">", "=", "+", "&", "^", "%", "$", "#", "@", "!", "`", "~"]
+        for c in rep_chars:
+            cat = cat.replace(c, "_")
+        # cat = cat.replace(" ", "_").replace("-", "_")
+        if cat and cat[-1] not in ascii_letters:
+            cat = cat[:-1] + "z"
         items = []
         menus = []
         for item in nodes["items"]:
             items.append(NodeItem(item))
         menus.extend(load_node(nodes.get("menus", {}), root=cat))
-        cfn_cat = CFNodeCategory(f"{root}_{cat}", cat, items=items, menus=menus)
+        cat_id = f"{root}_{cat}"
+        if len(cat_id) > 50:
+            from hashlib import md5
+            hash_root = md5(root.encode()).hexdigest()[:5]
+            cat_id = f"{cat}_{hash_root}"
+        cfn_cat = CFNodeCategory(cat_id, name=ocat, items=items, menus=menus)
         node_cat.append(cfn_cat)
     return node_cat
 
@@ -564,8 +649,9 @@ def reg_node_reroute():
     bpy.types.NodeReroute.set_stat = NodeBase.set_stat
     bpy.types.NodeReroute.switch_socket = NodeBase.switch_socket
     bpy.types.NodeReroute.get_from_link = NodeBase.get_from_link
-    
- 
+    bpy.types.NodeReroute.get_ctxt = NodeBase.get_ctxt
+    bpy.types.NodeReroute.get_blueprints = NodeBase.get_blueprints
+
     bpy.types.NodeReroute.class_type = "Reroute"
     bpy.types.NodeReroute.__metadata__ = {}
     bpy.types.NodeReroute.inp_types = []
@@ -577,6 +663,8 @@ def update_tree_handler():
         if CFNodeTree.instance:
             CFNodeTree.instance.update_tick()
             CFNodeTree.instance.calc_unique_id()
+    except ReferenceError:
+        ...
     except Exception as e:
         # logger.warn(str(e))
         traceback.print_exc()
@@ -596,27 +684,47 @@ def draw_intern(self, context):
 
 
 def set_draw_intern(reg):
-    NODE_MT_category_Utils = getattr(bpy.types, "NODE_MT_category_Utils", None)
-    if not NODE_MT_category_Utils:
+    NODE_MT_Utils = getattr(bpy.types, gen_cat_id("Utils"), None)
+    if not NODE_MT_Utils:
         return
-    # bpy.types.NODE_MT_category_Utils.draw._draw_funcs
+    # bpy.types.NODE_MT_Utils.draw._draw_funcs
     if reg:
-        NODE_MT_category_Utils.append(draw_intern)
+        NODE_MT_Utils.append(draw_intern)
     else:
-        NODE_MT_category_Utils.remove(draw_intern)
+        NODE_MT_Utils.remove(draw_intern)
+
+
+def rtnode_reg_diff():
+    t1 = time.time()
+    _, node_clss, _ = NodeParser().parse(diff=True)
+    if not node_clss:
+        return
+    logger.debug(f"变更节点: {[c.bl_label for c in node_clss]}")
+    clear_nodes_data_cache()
+    clss_map = {}
+    for c in clss:
+        clss_map[c.bl_label] = c
+    for c in node_clss:
+        old_c = clss_map.pop(c.bl_label, None)
+        if old_c:
+            bpy.utils.unregister_class(old_c)
+            clss.remove(old_c)
+        bpy.utils.register_class(c)
+        clss.append(c)
+    logger.info(_T("RegNodeDiff Time:") + f" {time.time()-t1:.2f}s")
 
 
 def rtnode_reg():
     reg_node_reroute()
-
     clss.append(CFNodeTree)
     t1 = time.time()
-    node_desc, node_clss, socket = parse_node()
+    # nt_desc = {name: {items:[], menus:[nt_desc...]}}
+    nt_desc, node_clss, socket_clss = NodeParser().parse()
     t2 = time.time()
-    logger.info(f"ParseNode Time: {t2-t1:.2f}s")
-    node_cat = load_node(node_desc=node_desc)
+    logger.info(_T("ParseNode Time:") + f" {t2-t1:.2f}s")
+    node_cat = load_node(nodetree_desc=nt_desc)
     clss.extend(node_clss)
-    clss.extend(socket)
+    clss.extend(socket_clss)
     nodes_reg()
     reg()
     reg_nodetree(TREE_NAME, node_cat)  # register_node_categories(TREE_NAME, node_cat)
@@ -639,6 +747,22 @@ def rtnode_unreg():
     clss.clear()
 
 
+def cb(path):
+    FSWatcher.consume_change(path)
+    Timer.put(rtnode_reg_diff)
+
+NodeParser.DIFF_PATH.write_text("{}")
+FSWatcher.register(NodeParser.DIFF_PATH, cb)
+# def cb():
+#     NodeParser.DIFF_PATH.write_text("{}")
+#     time_stamp = NodeParser.DIFF_PATH.stat().st_mtime_ns
+#     while True:
+#         time.sleep(1)
+#         ts = NodeParser.DIFF_PATH.stat().st_mtime_ns
+#         if ts == time_stamp:
+#             continue
+#         time_stamp = ts
+#         Timer.put(rtnode_reg_diff)
 a = 2 * 8 + 4 * 8 + 64 + 4 + (4) + 64 + 2 + 2 + 8 + 8 + 8 + 4 * 2 + 4 * 2
 """
 2*8+4*8    +64+4+4 /8+64+2+2+8+8+8+4*2+4*2
