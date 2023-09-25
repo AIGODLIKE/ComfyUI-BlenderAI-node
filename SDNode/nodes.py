@@ -133,11 +133,6 @@ def calc_hash_type(stype):
     return hash_type
 
 
-def get_blueprints(class_type):
-    from .blueprints import get_blueprints
-    return get_blueprints(class_type)
-
-
 class NodeBase(bpy.types.Node):
     bl_width_min = 200.0
     bl_width_max = 2000.0
@@ -153,6 +148,7 @@ class NodeBase(bpy.types.Node):
         return tree
 
     def get_blueprints(self):
+        from .blueprints import get_blueprints
         return get_blueprints(self.class_type)
 
     def get_ctxt(self) -> str:
@@ -362,276 +358,14 @@ class NodeBase(bpy.types.Node):
         """
         bp = self.get_blueprints()
         return bp.serialize(self, execute)
-        inputs = {}
-        for inp_name in self.inp_types:
-            # inp = self.inp_types[inp_name]
-            reg_name = get_reg_name(inp_name)
-            if inp := self.inputs.get(reg_name):
-                link = self.get_from_link(inp)
-                if link:
-                    from_node = link.from_node
-                    if from_node.bl_idname == "PrimitiveNode":
-                        # 添加 widget
-                        inputs[inp_name] = getattr(self, reg_name)
-                    else:
-                        # 添加 socket
-                        inputs[inp_name] = [link.from_node.id, link.from_node.outputs[:].index(link.from_socket)]
-                elif self.get_meta(inp_name):
-                    if hasattr(self, reg_name):
-                        # 添加 widget
-                        inputs[inp_name] = getattr(self, reg_name)
-                    # else:
-                    #     # 添加 socket
-                    #     inputs[inp_name] = [None]
-            else:
-                # 添加 widget
-                inputs[inp_name] = getattr(self, reg_name)
-        cfg = {
-            "inputs": inputs,
-            "class_type": self.class_type
-        }
-        spec_serialize(self, cfg, execute)
-        return cfg
 
     def load(self, data, with_id=True):
         bp = self.get_blueprints()
         return bp.load(self, data, with_id)
-        self.pool.discard(self.id)
-        self.location[:] = [data["pos"][0], -data["pos"][1]]
-        if isinstance(data["size"], list):
-            self.width, self.height = [data["size"][0], -data["size"][1]]
-        else:
-            self.width, self.height = [data["size"]["0"], -data["size"]["1"]]
-        title = data.get("title", "")
-        if self.class_type in {"KSampler", "KSamplerAdvanced"}:
-            logger.info(_T("Saved Title Name -> ") + title)  # do not replace name
-        elif title:
-            self.name = title
-        if with_id:
-            try:
-                self.id = str(data["id"])
-                self.pool.add(self.id)
-            except BaseException:
-                self.apply_unique_id()
-        # 处理 inputs
-        for inp in data.get("inputs", []):
-            name = inp.get("name", "")
-            if not self.is_base_type(name):
-                continue
-            new_socket = self.switch_socket(name, True)
-            if si := inp.get("slot_index"):
-                new_socket.slot_index = si
-            md = self.get_meta(name)
-            if isinstance(md, list):
-                continue
-            if not (default := inp.get("widget", {}).get("config", {}).get("default")):
-                continue
-            reg_name = get_reg_name(name)
-            setattr(self, reg_name, default)
-        # if self.class_type == "KSamplerAdvanced":
-        #     data["widgets_values"].pop(2)
-        if self.class_type == "KSampler":
-            v = data["widgets_values"][1]
-            if isinstance(v, bool):
-                data["widgets_values"][1] = ["fixed", "increment", "decrement", "randomize"][int(v)]
-        # if self.class_type == "DetailerForEach":
-        #     data["widgets_values"].pop(3)
-        if self.class_type == "MultiAreaConditioning":
-            config = json.loads(self.config)
-            for i in range(2):
-                d = data["properties"]["values"][i]
-                config[i]["x"] = d[0]
-                config[i]["y"] = d[1]
-                config[i]["sdn_width"] = d[2]
-                config[i]["sdn_height"] = d[3]
-                config[i]["strength"] = d[4]
-            self["config"] = json.dumps(config)
-            d = data["properties"]["values"][self.index]
-            self["x"] = d[0]
-            self["y"] = d[1]
-            self["sdn_width"] = d[2]
-            self["sdn_height"] = d[3]
-            self["strength"] = d[4]
-            self["resolutionX"] = data["properties"]["width"]
-            self["resolutionY"] = data["properties"]["height"]
-
-        for inp_name in self.inp_types:
-            if not self.is_base_type(inp_name):
-                continue
-            reg_name = get_reg_name(inp_name)
-            try:
-                v = data["widgets_values"].pop(0)
-                v = type(getattr(self, reg_name))(v)
-                setattr(self, reg_name, v)
-            except TypeError as e:
-                if inp_name in {"seed", "noise_seed"}:
-                    setattr(self, reg_name, str(v))
-                elif (enum := re.findall(' enum "(.*?)" not found', str(e), re.S)):
-                    logger.warn(f"{_T('|IGNORED|')} {self.class_type} -> {inp_name} -> {_T('Not Found Item')}: {enum[0]}")
-                else:
-                    logger.error(f"|{e}|")
-            except IndexError:
-                logger.info(f"{_T('|IGNORED|')} -> {_T('Load')}<{self.class_type}>{_T('Params not matching with current node')}")
-            except Exception as e:
-                logger.error(f"{_T('Params Loading Error')} {self.class_type} -> {self.class_type}.{inp_name}")
-                logger.error(f" -> {e}")
 
     def dump(self, selected_only=False):
         bp = self.get_blueprints()
         return bp.dump(self, selected_only)
-        tree = get_tree()
-        all_links: bpy.types.NodeLinks = tree.links[:]
-
-        inputs = []
-        outputs = []
-        widgets_values = []
-        # 单独处理 widgets_values
-        for inp_name in self.inp_types:
-            if not self.is_base_type(inp_name):
-                continue
-            widgets_values.append(getattr(self, get_reg_name(inp_name)))
-        for inp in self.inputs:
-            inp_name = inp.name
-            reg_name = get_reg_name(inp_name)
-            md = self.get_meta(reg_name)
-            inp_info = {"name": inp_name,
-                        "type": inp.bl_idname,
-                        "link": None}
-            link = self.get_from_link(inp)
-            is_base_type = self.is_base_type(inp_name)
-            if link:
-                if not selected_only:
-                    inp_info["link"] = all_links.index(inp.links[0])
-                elif inp.links[0].from_node.select:
-                    inp_info["link"] = all_links.index(inp.links[0])
-            if is_base_type:
-                if not self.query_stat(inp.name) or not md:
-                    continue
-                inp_info["widget"] = {"name": reg_name,
-                                      "config": md
-                                      }
-                inp_info["type"] = ",".join(md[0]) if isinstance(md[0], list) else md[0]
-            inputs.append(inp_info)
-        for i, out in enumerate(self.outputs):
-            out_info = {"name": out.name,
-                        "type": out.name,
-                        }
-            if not selected_only:
-                out_info["links"] = [all_links.index(link) for link in out.links]
-            elif out.links:
-                out_info["links"] = [all_links.index(link) for link in out.links if link.to_node.select]
-            out_info["slot_index"] = i
-            outputs.append(out_info)
-        properties = {}
-        if self.class_type == "MultiAreaConditioning":
-            config = json.loads(self["config"])
-            properties = {'Node name for S&R': 'MultiAreaConditioning',
-                          'width': self["resolutionX"],
-                          'height': self["resolutionY"],
-                          'values': [[64, 128, 384, 128, 10],
-                                     [320, 64, 192, 128, 0.03]]}
-            for i in range(2):
-                properties["values"][i] = [
-                    config[i]["x"],
-                    config[i]["y"],
-                    config[i]["sdn_width"],
-                    config[i]["sdn_height"],
-                    config[i]["strength"],
-                ]
-            widgets_values = [self["resolutionX"],
-                              self["resolutionY"],
-                              None,
-                              self.index,
-                              *properties["values"][self.index]
-                              ]
-        if self.class_type == "Reroute":
-            inputs = [
-                {"name": "",
-                 "type": "*",
-                 "link": None,
-                 }
-            ]
-            if self.inputs[0].is_linked:
-                if not selected_only:
-                    inputs[0]["link"] = all_links.index(self.inputs[0].links[0])
-                elif self.inputs[0].links[0].from_node.select:
-                    inputs[0]["link"] = all_links.index(self.inputs[0].links[0])
-            if not self.outputs[0].is_linked:
-                outputs[0]["name"] = outputs[0]["type"] = "*"
-            else:
-                def find_out_node(node: bpy.types.Node):
-                    output = node.outputs[0]
-                    if not output.is_linked:
-                        return None
-                    to = output.links[0].to_node
-                    to_socket = output.links[0].to_socket
-                    if to.class_type == "Reroute":
-                        return find_out_node(to)
-                    return to_socket
-                to_socket = find_out_node(self)
-                if out and to_socket:
-                    outputs[0]["name"] = to_socket.bl_idname
-                    outputs[0]["type"] = to_socket.bl_idname
-            properties = {
-                "showOutputText": True,
-                "horizontal": False
-            }
-        if self.class_type == "PrimitiveNode" and self.outputs[0].is_linked and self.outputs[0].links:
-            node = self.outputs[0].links[0].to_node
-            meta_data = deepcopy(node.get_meta(self.prop))
-            output = outputs[0]
-            output["name"] = "COMBO" if isinstance(meta_data[0], list) else meta_data[0]
-            output["type"] = ",".join(meta_data[0]) if isinstance(meta_data[0], list) else meta_data[0]
-            if output["name"] != "COMBO":
-                meta_data[1]["default"] = getattr(node, self.prop)
-            output["widget"] = {"name": self.prop,
-                                "config": meta_data
-                                }
-            widgets_values = [getattr(node, self.prop), "fixed"]
-        cfg = {
-            "id": int(self.id),
-            "type": self.class_type,
-            "pos": [self.location.x, -self.location.y],
-            "size": {"0": self.width, "1": self.height},
-            "flags": {},
-            "order": self.sdn_order,
-            "mode": 0,
-            "inputs": inputs,
-            "outputs": outputs,
-            "title": self.name,
-            "properties": properties,
-            "widgets_values": widgets_values
-        }
-        return cfg
-
-    def save(self):
-        save = {
-            "id": 11,
-            "type": "SaveImage",
-            "pos": [
-                1451,
-                189
-            ],
-            "size": {
-                "0": 210,
-                "1": 58
-            },
-            "flags": {},
-            "order": 2,
-            "mode": 0,
-            "inputs": [
-                {
-                    "name": "images",
-                    "type": "IMAGE",
-                    "link": 11  # id号 或 None
-                }
-            ],
-            "properties": {},
-            "widgets_values": [
-                "ComfyUI"
-            ]
-        }
-        return save
 
     def post_fn(self, task, result):
         bp = self.get_blueprints()
@@ -1032,7 +766,6 @@ class NodeParser:
         }
 
     def fetch_object(self):
-
         self.ori_object_info.clear()
         if self.INTERNAL_PATH.exists():
             self.ori_object_info.update(json.load(self.INTERNAL_PATH.open("r")))
@@ -1083,6 +816,7 @@ class NodeParser:
         return nodetree_desc, node_clss, socket_clss
 
     def _get_n_desc(self):
+        from .blueprints import get_blueprints
         for name, desc in self.object_info.items():
             bp = get_blueprints(name)
             desc = bp.pre_filter(name, desc)
