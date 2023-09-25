@@ -5,7 +5,8 @@
     "PrimitiveNode": {
         "title": "Primitive元节点",
         "outputs": {
-            "connect to widget input": "连接到组件输入"
+            "connect to widget input": "连接到组件输入",
+            "Output": "输出"
         }
     },
     "Reroute": {
@@ -511,6 +512,40 @@
     },
 
 
+    "LatentAdd": {
+        "title": "Latent相加",
+        "inputs": {
+            "samples1": "Latent1",
+            "samples2": "Latent2"
+        },
+        "outputs": {
+            "LATENT": "Latent"
+        }
+    },
+    "LatentSubtract": {
+        "title": "Latent相减",
+        "inputs": {
+            "samples1": "Latent1",
+            "samples2": "Latent2"
+        },
+        "outputs": {
+            "LATENT": "Latent"
+        }
+    },
+    "LatentMultiply": {
+        "title": "Latent相乘",
+        "inputs": {
+            "samples1": "Latent"
+        },
+        "widgets": {
+            "multiplier": "系数"
+        },
+        "outputs": {
+            "LATENT": "Latent"
+        }
+    },
+
+
     "VAEDecode": {
         "title": "VAE解码",
         "inputs": {
@@ -997,6 +1032,9 @@
             "samples": "Latent",
             "vae": "VAE"
         },
+        "widgets": {
+            "tile_size": "分块尺寸"
+        },
         "outputs": {
             "IMAGE": "图像"
         }
@@ -1006,6 +1044,9 @@
         "inputs": {
             "pixels": "图像",
             "vae": "VAE"
+        },
+        "widgets": {
+            "tile_size": "分块尺寸"
         },
         "outputs": {
             "LATENT": "Latent"
@@ -1029,7 +1070,8 @@
             "samples": "Latent"
         },
         "widgets": {
-            "samples": "Latent"
+            "samples": "Latent",
+            "latent": "Latent"
         }
     },
     "LoadLatent": {
@@ -1052,6 +1094,21 @@
         },
         "outputs": {
             "LATENT": "Latent"
+        }
+    },
+    "FreeU": {
+        "title": "FreeU模型重加权",
+        "inputs": {
+            "model": "模型"
+        },
+        "widgets": {
+            "b1": "B1",
+            "b2": "B2",
+            "s1": "S1",
+            "s2": "S2"
+        },
+        "outputs": {
+            "MODEL": "模型"
         }
     },
 
@@ -1183,7 +1240,7 @@
         }
     },
     "ModelMergeBlocks": {
-        "title": "分层融合模型",
+        "title": "融合模型(分层)",
         "inputs": {
             "model1": "模型1",
             "model2": "模型2"
@@ -1216,7 +1273,7 @@
         }
     },
     "ModelMergeBlockNumber": {
-        "title": "分层数融合模型",
+        "title": "融合模型(分层数)",
         "inputs": {
             "model1": "模型1",
             "model2": "模型2"
@@ -1227,6 +1284,29 @@
     },
     "ModelMergeSDXL": {
         "title": "融合SDXL模型",
+        "inputs": {
+            "model1": "模型1",
+            "model2": "模型2"
+        },
+        "outputs": {
+            "MODEL": "模型"
+        }
+    },
+    "ModelMergeSubtract": {
+        "title": "融合模型(相减)",
+        "inputs": {
+            "model1": "模型1",
+            "model2": "模型2"
+        },
+        "widgets": {
+            "multiplier": "系数"
+        },
+        "outputs": {
+            "MODEL": "模型"
+        }
+    },
+    "ModelMergeAdd": {
+        "title": "模型融合(相加)",
         "inputs": {
             "model1": "模型1",
             "model2": "模型2"
