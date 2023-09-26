@@ -904,9 +904,11 @@ class 预览(BluePrintBase):
                 img_data = get_image(data)
                 img = Image.open(BytesIO(img_data))
                 buf = np.flipud(np.array(img))
-                shape = buf.shape[:2][::-1]
-                blimg = bpy.data.images.new(data.get('filename', 'preview.png'), shape[0], shape[1], float_buffer=False)
-                blimg.pixels = np.dstack((buf.astype(np.float16)/255.0, np.ones(shape, dtype=np.float16))).ravel()
+                shape = buf.shape[:2]
+                blimg = bpy.data.images.new(data.get('filename', 'preview.png'), shape[1], shape[0], float_buffer=False)
+                buf = np.dstack((buf.astype(np.float16)/255.0, np.ones(shape, dtype=np.float16)))
+                buf = buf.reshape((shape[1], shape[0], 4))
+                blimg.pixels = buf.ravel()
                 logger.debug(f'creating {data["filename"]} of size {shape} from memory')
                 p = self.prev.add()
                 p.image = blimg
