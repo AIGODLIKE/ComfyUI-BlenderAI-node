@@ -901,7 +901,7 @@ class NodeParser:
             inp_types = {}
             for key, value in ndesc["input"].get("required", {}).items():
                 inp_types[key] = value
-                if key == "seed" or (nname == "KSamplerAdvanced" and key == "noise_seed"):
+                if key in {"seed", "noise_seed"}:
                     inp_types["control_after_generate"] = [["fixed", "increment", "decrement", "randomize"]]
 
             inp_types.update(opt_types)
@@ -929,7 +929,7 @@ class NodeParser:
                     if socket in {"ENUM", "INT", "FLOAT", "STRING", "BOOLEAN"}:
                         continue
                     # logger.warn(inp)
-                    in1 = self.inputs.new(socket, inp_name)
+                    in1 = self.inputs.new(socket, get_reg_name(inp_name))
                     in1.display_shape = "DIAMOND_DOT"
                     # in1.link_limit = 0
                     in1.index = index
@@ -1108,24 +1108,23 @@ def spec_gen_properties(nname, inp_name, prop):
                 continue
             if hasattr(node, "seed"):
                 node["seed"] = seed
-            elif node.class_type == "KSamplerAdvanced":
+            elif hasattr(node, "noise_seed"):
                 node["noise_seed"] = seed
 
-    if nname == "KSamplerAdvanced":
-        if inp_name == "noise_seed":
-            def setter(self, v):
-                try:
-                    _ = int(v)
-                    self["noise_seed"] = v
-                except Exception:
-                    ...
-                set_sync_rand(self, self["noise_seed"])
+    if inp_name == "noise_seed":
+        def setter(self, v):
+            try:
+                _ = int(v)
+                self["noise_seed"] = v
+            except Exception:
+                ...
+            set_sync_rand(self, self["noise_seed"])
 
-            def getter(self):
-                if "noise_seed" not in self:
-                    self["noise_seed"] = "0"
-                return str(self["noise_seed"])
-            prop = bpy.props.StringProperty(default="0", set=setter, get=getter)
+        def getter(self):
+            if "noise_seed" not in self:
+                self["noise_seed"] = "0"
+            return str(self["noise_seed"])
+        prop = bpy.props.StringProperty(default="0", set=setter, get=getter)
     elif inp_name == "seed":
         def setter(self, v):
             try:
@@ -1215,7 +1214,7 @@ def spec_extra_properties(properties, nname, ndesc):
         prop = bpy.props.CollectionProperty(type=Images)
         properties["prev"] = prop
         properties["lnum"] = bpy.props.IntProperty(default=3, min=1, max=10, name="Image num per line")
-    elif nname == "KSamplerAdvanced" or "seed" in properties:
+    elif "seed" in properties or "noise_seed" in properties:
         prop = bpy.props.BoolProperty(default=False)
         properties["exe_rand"] = prop
 
@@ -1224,7 +1223,11 @@ def spec_extra_properties(properties, nname, ndesc):
                 return
             tree = self.get_tree()
             for node in tree.get_nodes():
-                if (not hasattr(node, "seed") and node.class_type != "KSamplerAdvanced") or node == self:
+                # if (not hasattr(node, "seed") and node.class_type != "KSamplerAdvanced") or node == self:
+                #     continue
+                if node == self:
+                    continue
+                if not (hasattr(node, "seed") or hasattr(node, "noise_seed")):
                     continue
                 node.sync_rand = False
         prop = bpy.props.BoolProperty(default=False, name="Sync Rand", description="Sync Rand", update=update_sync_rand)
@@ -1375,7 +1378,7 @@ def spec_serialize(self, cfg, execute):
         gen_mask(self)
     elif hasattr(self, "seed"):
         cfg["inputs"]["seed"] = int(cfg["inputs"]["seed"])
-    elif self.class_type == "KSamplerAdvanced":
+    elif hasattr(self, "noise_seed"):
         cfg["inputs"]["noise_seed"] = int(cfg["inputs"]["noise_seed"])
     elif self.class_type in {"OpenPoseFull", "OpenPoseHand", "OpenPoseMediaPipeFace", "OpenPoseDepth", "OpenPose", "OpenPoseFace", "OpenPoseLineart", "OpenPoseFullExtraLimb", "OpenPoseKeyPose", "OpenPoseCanny", }:
         rpath = Path(bpy.path.abspath(bpy.context.scene.render.filepath)) / "MultiControlnet"
@@ -1540,7 +1543,7 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
             return True
         if prop in {"exe_rand", "sync_rand"}:
             return True
-    elif self.class_type == "KSamplerAdvanced":
+    elif hasattr(self, "noise_seed"):
         if prop in {"add_noise", "return_with_leftover_noise"}:
             def dpre(layout): layout.label(text=prop, text_ctxt=self.get_ctxt())
             draw_prop_with_link(layout, self, prop, expand=True, pre=dpre, text_ctxt=self.get_ctxt())
@@ -1554,7 +1557,6 @@ def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILa
             return True
         if prop in {"exe_rand", "sync_rand"}:
             return True
-
     elif self.class_type == "输入图像":
         if prop == "mode":
             if self.mode == "序列图":

@@ -37,6 +37,7 @@ def is_bool_list(some_list: list):
         return False
     return isinstance(some_list[0], bool)
 
+
 def setwidth(self: NodeBase, w, count=1):
     oriw = w
     w = max(self.bl_width_min, w)
@@ -59,6 +60,7 @@ def setwidth(self: NodeBase, w, count=1):
 
     Timer.put((delegate, self, w, fpis))
     return sw
+
 
 class BluePrintBase:
     comfyClass = ""
@@ -233,8 +235,9 @@ class BluePrintBase:
         for inp in self.inputs:
             inp_name = inp.name
             reg_name = get_reg_name(inp_name)
+            ori_name = get_ori_name(inp_name)
             md = self.get_meta(reg_name)
-            inp_info = {"name": inp_name,
+            inp_info = {"name": ori_name,
                         "type": inp.bl_idname,
                         "link": None}
             link = self.get_from_link(inp)
@@ -247,7 +250,7 @@ class BluePrintBase:
             if is_base_type:
                 if not self.query_stat(inp.name) or not md:
                     continue
-                inp_info["widget"] = {"name": reg_name,
+                inp_info["widget"] = {"name": ori_name,
                                       "config": md
                                       }
                 inp_info["type"] = ",".join(md[0]) if isinstance(md[0], list) else md[0]
@@ -333,6 +336,8 @@ class BluePrintBase:
             # 公共部分
             if hasattr(self, "seed"):
                 cfg["inputs"]["seed"] = int(cfg["inputs"]["seed"])
+            if hasattr(self, "noise_seed"):
+                cfg["inputs"]["noise_seed"] = int(cfg["inputs"]["noise_seed"])
             s.serialize_specific(self, cfg, execute)
         return cfg
 
@@ -492,6 +497,7 @@ class KSampler(BluePrintBase):
 
 class KSamplerAdvanced(BluePrintBase):
     comfyClass = "KSamplerAdvanced"
+
     def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True) -> bool:
         def draw_prop_with_link(layout, self, prop, row=True, pre=None, post=None, **kwargs):
             layout = Ops_Swith_Socket.draw_prop(layout, self, prop, row, swlink)
@@ -514,7 +520,7 @@ class KSamplerAdvanced(BluePrintBase):
             return True
         if prop in {"exe_rand", "sync_rand"}:
             return True
-        
+
     def serialize_pre_specific(s, self: NodeBase):
         tree = self.get_tree()
         if (snode := get_sync_rand_node(tree)) and snode != self:
@@ -522,9 +528,6 @@ class KSamplerAdvanced(BluePrintBase):
         if not getattr(self, "exe_rand") and not bpy.context.scene.sdn.rand_all_seed:
             return
         self.noise_seed = str(get_fixed_seed())
-
-    def serialize_specific(s, self: NodeBase, cfg, execute):
-        cfg["inputs"]["noise_seed"] = int(cfg["inputs"]["noise_seed"])
 
 
 class Mask(BluePrintBase):
@@ -569,7 +572,7 @@ class Mask(BluePrintBase):
             return True
         elif prop in {"gp", "obj", "col", "cam", "disable_render"}:
             return True
-    
+
     def serialize_specific(s, self: NodeBase, cfg, execute):
         if self.disable_render or bpy.context.scene.sdn.disable_render_all:
             return
@@ -717,6 +720,7 @@ class 预览(BluePrintBase):
 
 class 存储(BluePrintBase):
     comfyClass = "存储"
+
     def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True) -> bool:
         if prop == "mode":
             layout.prop(self, prop, expand=True, text_ctxt=self.get_ctxt())
@@ -755,7 +759,7 @@ class 存储(BluePrintBase):
                 layout.prop(self, "image")
                 return True
         return True
-    
+
     def make_serialze(s, self: NodeBase):
         def __post_fn__(self: NodeBase, t: Task, result: dict, mode, image):
             logger.debug(f"{self.class_type}{_T('Post Function')}->{result}")
@@ -786,7 +790,6 @@ class 存储(BluePrintBase):
             cfg.get("inputs", {})["output_dir"] = tempfile.gettempdir()
         if "filename_prefix" in cfg.get("inputs", {}):
             cfg.get("inputs", {})["filename_prefix"] = "SDNode"
-
 
 class 输入图像(BluePrintBase):
     comfyClass = "输入图像"
@@ -847,6 +850,7 @@ class 输入图像(BluePrintBase):
             return True
         elif prop in {"render_layer", "out_layers", "frames_dir", "disable_render"}:
             return True
+
     def pre_fn(s, self: NodeBase):
         if self.mode != "渲染":
             return
@@ -904,6 +908,7 @@ class 材质图(BluePrintBase):
             elif self.mode == "Collection":
                 layout.prop(self, "collection", text="")
         return True
+
 
 @lru_cache(maxsize=1024)
 def get_blueprints(comfyClass, default=BluePrintBase) -> BluePrintBase:

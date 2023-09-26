@@ -281,7 +281,12 @@ class CFNodeTree(NodeTree):
             if t == "Reroute":
                 node = self.nodes.new(type="NodeReroute")
             else:
-                node = self.nodes.new(type=t)
+                try:
+                    node = self.nodes.new(type=t)
+                except RuntimeError as e:
+                    from .manager import TaskManager
+                    TaskManager.put_error_msg(str(e))
+                    continue
             if is_group:
                 node.load(node_info, with_id=False)
             else:
