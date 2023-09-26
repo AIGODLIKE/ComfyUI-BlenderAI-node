@@ -950,8 +950,10 @@ class NodeParser:
                         continue
                     l = layout
                     # 返回True 则不绘制
-                    if spec_draw(self, context, l, prop):
+                    if self.get_blueprints().draw_button(self, context, l, prop):
                         continue
+                    # if spec_draw(self, context, l, prop):
+                    #     continue
                     if self.is_base_type(prop) and get_ori_name(prop) in self.inp_types:
                         l = Ops_Swith_Socket.draw_prop(l, self, prop)
                     l.prop(self, prop, text=prop, text_ctxt=self.get_ctxt())
@@ -1467,6 +1469,7 @@ def spec_functions(fields, nname, ndesc):
 
 
 def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILayout, prop: str, swlink=True):
+    return
     def draw_prop_with_link(layout, self, prop, row=True, pre=None, post=None, **kwargs):
         layout = Ops_Swith_Socket.draw_prop(layout, self, prop, row, swlink)
         if pre:

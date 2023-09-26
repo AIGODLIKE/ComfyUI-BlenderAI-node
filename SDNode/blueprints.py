@@ -38,6 +38,16 @@ def is_bool_list(some_list: list):
     return isinstance(some_list[0], bool)
 
 
+def draw_prop_with_link(layout, self, prop, swlink, row=True, pre=None, post=None, **kwargs):
+    layout = Ops_Swith_Socket.draw_prop(layout, self, prop, row, swlink)
+    if pre:
+        pre(layout)
+    layout.prop(self, prop, **kwargs)
+    if post:
+        post(layout)
+    return layout
+
+
 def setwidth(self: NodeBase, w, count=1):
     oriw = w
     w = max(self.bl_width_min, w)
@@ -68,15 +78,16 @@ class BluePrintBase:
     def new_btn_enable(s, self, layout, context):
         return True
 
-    def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True) -> bool:
-        def draw_prop_with_link(layout, self, prop, row=True, pre=None, post=None, **kwargs):
-            layout = Ops_Swith_Socket.draw_prop(layout, self, prop, row, swlink)
-            if pre:
-                pre(layout)
-            layout.prop(self, prop, **kwargs)
-            if post:
-                post(layout)
-            return layout
+    def draw_button(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True):
+        def show_model_preview(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILayout, prop: str):
+            if self.class_type not in name2path:
+                return False
+            if prop not in get_icon_path(self.class_type):
+                return False
+            col = draw_prop_with_link(layout, self, prop, swlink, text="", row=False)
+            col.template_icon_view(self, prop, show_labels=True, scale_popup=popup_scale, scale=popup_scale)
+            return True
+
         # 多行文本处理
         md = self.get_meta(prop)
         if md and md[0] == "STRING" and len(md) > 1 and isinstance(md[1], dict) and md[1].get("multiline",):
@@ -84,17 +95,8 @@ class BluePrintBase:
             lines = textwrap.wrap(text=str(getattr(self, prop)), width=width)
             for line in lines:
                 layout.label(text=line, text_ctxt=self.get_ctxt())
-            row = draw_prop_with_link(layout, self, prop)
+            row = draw_prop_with_link(layout, self, prop, swlink)
             row.operator("sdn.enable_mlt", text="", icon="TEXT")
-            return True
-
-        def show_model_preview(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILayout, prop: str):
-            if self.class_type not in name2path:
-                return False
-            if prop not in get_icon_path(self.class_type):
-                return False
-            col = draw_prop_with_link(layout, self, prop, text="", row=False)
-            col.template_icon_view(self, prop, show_labels=True, scale_popup=popup_scale, scale=popup_scale)
             return True
 
         popup_scale = 5
@@ -106,15 +108,34 @@ class BluePrintBase:
             return True
         if hasattr(self, "seed"):
             if prop == "seed":
-                row = draw_prop_with_link(layout, self, prop, text=prop, text_ctxt=self.get_ctxt())
+                row = draw_prop_with_link(layout, self, prop, swlink, text=prop, text_ctxt=self.get_ctxt())
                 row.prop(self, "exe_rand", text="", icon="FILE_REFRESH", text_ctxt=self.get_ctxt())
                 row.prop(bpy.context.scene.sdn, "rand_all_seed", text="", icon="HAND", text_ctxt=self.get_ctxt())
                 row.prop(self, "sync_rand", text="", icon="MOD_WAVE", text_ctxt=self.get_ctxt())
                 return True
             if prop in {"exe_rand", "sync_rand"}:
                 return True
-        if self.class_type in {"OpenPoseFull", "OpenPoseHand", "OpenPoseMediaPipeFace", "OpenPoseDepth", "OpenPose", "OpenPoseFace", "OpenPoseLineart", "OpenPoseFullExtraLimb", "OpenPoseKeyPose", "OpenPoseCanny", }:
+        elif hasattr(self, "noise_seed"):
+            if prop in {"add_noise", "return_with_leftover_noise"}:
+                def dpre(layout): layout.label(text=prop, text_ctxt=self.get_ctxt())
+                draw_prop_with_link(layout, self, prop, swlink, expand=True, pre=dpre, text_ctxt=self.get_ctxt())
+                return True
+            if prop == "noise_seed":
+                def dpost(layout):
+                    layout.prop(self, "exe_rand", text="", icon="FILE_REFRESH", text_ctxt=self.get_ctxt())
+                    layout.prop(bpy.context.scene.sdn, "rand_all_seed", text="", icon="HAND", text_ctxt=self.get_ctxt())
+                    layout.prop(self, "sync_rand", text="", icon="MOD_WAVE", text_ctxt=self.get_ctxt())
+                draw_prop_with_link(layout, self, prop, swlink, post=dpost, text_ctxt=self.get_ctxt())
+                return True
+            if prop in {"exe_rand", "sync_rand"}:
+                return True
+        elif self.class_type in {"OpenPoseFull", "OpenPoseHand", "OpenPoseMediaPipeFace", "OpenPoseDepth", "OpenPose", "OpenPoseFace", "OpenPoseLineart", "OpenPoseFullExtraLimb", "OpenPoseKeyPose", "OpenPoseCanny", }:
             return True
+        elif self.get_blueprints().spec_draw(self, context, layout, prop, swlink):
+            return True
+        return False
+
+    def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True) -> bool:
         return False
 
     def pre_filter(s, nname, desc):
@@ -499,24 +520,16 @@ class KSamplerAdvanced(BluePrintBase):
     comfyClass = "KSamplerAdvanced"
 
     def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True) -> bool:
-        def draw_prop_with_link(layout, self, prop, row=True, pre=None, post=None, **kwargs):
-            layout = Ops_Swith_Socket.draw_prop(layout, self, prop, row, swlink)
-            if pre:
-                pre(layout)
-            layout.prop(self, prop, **kwargs)
-            if post:
-                post(layout)
-            return layout
         if prop in {"add_noise", "return_with_leftover_noise"}:
             def dpre(layout): layout.label(text=prop, text_ctxt=self.get_ctxt())
-            draw_prop_with_link(layout, self, prop, expand=True, pre=dpre, text_ctxt=self.get_ctxt())
+            draw_prop_with_link(layout, self, prop, swlink, expand=True, pre=dpre, text_ctxt=self.get_ctxt())
             return True
         if prop == "noise_seed":
             def dpost(layout):
                 layout.prop(self, "exe_rand", text="", icon="FILE_REFRESH", text_ctxt=self.get_ctxt())
                 layout.prop(bpy.context.scene.sdn, "rand_all_seed", text="", icon="HAND", text_ctxt=self.get_ctxt())
                 layout.prop(self, "sync_rand", text="", icon="MOD_WAVE", text_ctxt=self.get_ctxt())
-            draw_prop_with_link(layout, self, prop, post=dpost, text_ctxt=self.get_ctxt())
+            draw_prop_with_link(layout, self, prop, swlink, post=dpost, text_ctxt=self.get_ctxt())
             return True
         if prop in {"exe_rand", "sync_rand"}:
             return True
@@ -624,7 +637,7 @@ class PrimitiveNode(BluePrintBase):
             # 可能会导致prop在node中找不到的情况(断开连接的时候)
             if not hasattr(node, self.prop):
                 return True
-            if self.get_blueprints().spec_draw(node, context, layout, self.prop, swlink=False):
+            if self.get_blueprints().draw_button(node, context, layout, self.prop, swlink=False):
                 return True
             layout.prop(node, get_reg_name(self.prop))
         return True
@@ -791,18 +804,16 @@ class 存储(BluePrintBase):
         if "filename_prefix" in cfg.get("inputs", {}):
             cfg.get("inputs", {})["filename_prefix"] = "SDNode"
 
+
 class 输入图像(BluePrintBase):
     comfyClass = "输入图像"
 
     def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True) -> bool:
         if prop == "mode":
             if self.mode == "序列图":
-                # draw_prop_with_link(layout, self, "frames_dir", text="", text_ctxt=self.get_ctxt())
                 layout.prop(self, "frames_dir", text="")
             else:
-                # draw_prop_with_link(layout, self, "image", text="", text_ctxt=self.get_ctxt())
                 layout.prop(self, "image", text="", text_ctxt=self.get_ctxt())
-            # draw_prop_with_link(layout.row(), self, prop, expand=True, text_ctxt=self.get_ctxt())
             layout.row().prop(self, prop, expand=True, text_ctxt=self.get_ctxt())
             if self.mode == "序列图":
                 layout.label(text="Frames Directory", text_ctxt=self.get_ctxt())
