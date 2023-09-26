@@ -1082,7 +1082,10 @@ class NodeParser:
                                                     update=update)
                 prop = spec_gen_properties(nname, inp_name, prop)
                 properties[reg_name] = prop
-            spec_extra_properties(properties, nname, ndesc)
+            from .blueprints import get_blueprints
+            bp = get_blueprints(nname)
+            bp.extra_properties(properties, nname, ndesc)
+            # spec_extra_properties(properties, nname, ndesc)
             fields = {"init": init,
                       "inp_types": inp_types,
                       "out_types": out_types,
@@ -1145,6 +1148,7 @@ def spec_gen_properties(nname, inp_name, prop):
 
 
 def spec_extra_properties(properties, nname, ndesc):
+    return
     if nname == "输入图像":
         prop = bpy.props.PointerProperty(type=bpy.types.Image)
         properties["prev"] = prop

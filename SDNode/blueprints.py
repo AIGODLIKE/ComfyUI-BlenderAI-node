@@ -10,7 +10,7 @@ from copy import deepcopy
 from bpy.types import Context, UILayout
 from .utils import gen_mask
 from .nodes import NodeBase, Ops_Add_SaveImage, Ops_Link_Mask, Ops_Active_Tex, Set_Render_Res, Ops_Swith_Socket
-from .nodes import name2path, get_icon_path
+from .nodes import name2path, get_icon_path, Images
 from ..SDNode.manager import Task
 from ..timer import Timer
 from ..preference import get_pref
@@ -137,6 +137,31 @@ class BluePrintBase:
 
     def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True) -> bool:
         return False
+
+    def extra_properties(s, properties, nname, ndesc):
+        if "seed" in properties or "noise_seed" in properties:
+            prop = bpy.props.BoolProperty(default=False)
+            properties["exe_rand"] = prop
+
+            def update_sync_rand(self: NodeBase, context):
+                if not self.sync_rand:
+                    return
+                tree = self.get_tree()
+                for node in tree.get_nodes():
+                    # if (not hasattr(node, "seed") and node.class_type != "KSamplerAdvanced") or node == self:
+                    #     continue
+                    if node == self:
+                        continue
+                    if not (hasattr(node, "seed") or hasattr(node, "noise_seed")):
+                        continue
+                    node.sync_rand = False
+            prop = bpy.props.BoolProperty(default=False, name="Sync Rand", description="Sync Rand", update=update_sync_rand)
+            properties["sync_rand"] = prop
+        bp = get_blueprints(nname)
+        bp.spec_extra_properties(properties, nname, ndesc)
+
+    def spec_extra_properties(s, properties, nname, ndesc):
+        ...
 
     def pre_filter(s, nname, desc):
         for k in {"required", "optional"}:
@@ -456,6 +481,122 @@ class TextToConsole(BluePrintBase):
 class MultiAreaConditioning(BluePrintBase):
     comfyClass = "MultiAreaConditioning"
 
+    def spec_extra_properties(s, properties, nname, ndesc):
+        config = [{"x": 0,
+                   "y": 0,
+                   "sdn_width": 0,
+                   "sdn_height": 0,
+                   "strength": 1.0,
+                   "col": (1, 0, 1, 0.5)
+                   },
+                  {"x": 0,
+                   "y": 0,
+                   "sdn_width": 0,
+                   "sdn_height": 0,
+                   "strength": 1.0,
+                   "col": (0, 1, 1, 0.5)
+                   }]
+
+        def config_set(self, value):
+            self["config"] = value
+
+        def config_get(self):
+            if 'config' not in self:
+                self['config'] = json.dumps(config)
+            return self['config']
+
+        prop = bpy.props.StringProperty(default=json.dumps(config), set=config_set, get=config_get)
+        properties["config"] = prop
+
+        def update(self):
+            config = json.loads(self.config)
+            c = config[self.index]
+            for k in c:
+                if k not in self:
+                    continue
+                c[k] = getattr(self, k)
+            self.config = json.dumps(config)
+
+        def resolutionX_set(self, value):
+            self['resolutionX'] = (value // 64) * 64
+
+        def resolutionX_get(self):
+            if 'resolutionX' not in self:
+                self['resolutionX'] = 0
+            return self['resolutionX']
+        prop = bpy.props.IntProperty(default=0, min=0, max=4096, set=resolutionX_set, get=resolutionX_get)
+        properties["resolutionX"] = prop
+
+        def resolutionY_set(self, value):
+            self['resolutionY'] = (value // 64) * 64
+
+        def resolutionY_get(self):
+            if 'resolutionY' not in self:
+                self['resolutionY'] = 0
+            return self['resolutionY']
+        prop = bpy.props.IntProperty(default=0, min=0, max=4096, set=resolutionY_set, get=resolutionY_get)
+        properties["resolutionY"] = prop
+
+        def update_index(self, context):
+            config = json.loads(self.config)
+            c = config[self.index]
+            for k in c:
+                if k not in self:
+                    continue
+                self[k] = c[k]
+
+        prop = bpy.props.IntProperty(default=0, min=0, max=1, update=update_index)
+        properties["index"] = prop
+
+        def x_set(self, value):
+            self['x'] = (value // 64) * 64
+            update(self)
+
+        def x_get(self):
+            if 'x' not in self:
+                self['x'] = 0
+            return self['x']
+        prop = bpy.props.IntProperty(default=0, min=0, max=4096, set=x_set, get=x_get)
+        properties["x"] = prop
+
+        def y_set(self, value):
+            self['y'] = (value // 64) * 64
+            update(self)
+
+        def y_get(self):
+            if 'y' not in self:
+                self['y'] = 0
+            return self['y']
+        prop = bpy.props.IntProperty(default=0, min=0, max=4096, set=y_set, get=y_get)
+        properties["y"] = prop
+
+        def sdn_width_set(self, value):
+            self['sdn_width'] = (value // 64) * 64
+            update(self)
+
+        def sdn_width_get(self):
+            if 'sdn_width' not in self:
+                self['sdn_width'] = 0
+            return self['sdn_width']
+        prop = bpy.props.IntProperty(default=0, min=0, max=4096, set=sdn_width_set, get=sdn_width_get)
+        properties["sdn_width"] = prop
+
+        def sdn_height_set(self, value):
+            self['sdn_height'] = (value // 64) * 64
+            update(self)
+
+        def sdn_height_get(self):
+            if 'sdn_height' not in self:
+                self['sdn_height'] = 0
+            return self['sdn_height']
+        prop = bpy.props.IntProperty(default=0, min=0, max=4096, set=sdn_height_set, get=sdn_height_get)
+        properties["sdn_height"] = prop
+
+        def update_strength(self, context):
+            update(self)
+        prop = bpy.props.FloatProperty(default=1.0, min=0, max=10, update=update_strength)
+        properties["strength"] = prop
+
     def spec_draw(s, self: NodeBase, context, layout, prop: str, swlink=True) -> bool:
         if prop == "config":
             return True
@@ -546,6 +687,25 @@ class KSamplerAdvanced(BluePrintBase):
 class Mask(BluePrintBase):
     comfyClass = "Mask"
 
+    def spec_extra_properties(s, properties, nname, ndesc):
+        items = [("Grease Pencil", "Grease Pencil", "", "", 0),
+                 ("Object", "Object", "", "", 1),
+                 ("Collection", "Collection", "", "", 2),
+                 ("Focus", "Focus", "", "", 3),
+                 ]
+        prop = bpy.props.EnumProperty(items=items)
+        properties["mode"] = prop
+        prop = bpy.props.PointerProperty(type=bpy.types.Object, poll=lambda s, o: o.type == "GPENCIL")
+        properties["gp"] = prop
+        prop = bpy.props.PointerProperty(type=bpy.types.Object, poll=lambda s, o: o.type == "CAMERA")
+        properties["cam"] = prop
+        prop = bpy.props.BoolProperty(default=False)
+        properties["disable_render"] = prop
+        # prop = bpy.props.PointerProperty(type=bpy.types.Object)
+        # properties["obj"] = prop
+        # prop = bpy.props.PointerProperty(type=bpy.types.Collection)
+        # properties["col"] = prop
+
     def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True) -> bool:
         if prop == "mode":
             layout.prop(self, prop, expand=True, text_ctxt=self.get_ctxt())
@@ -631,6 +791,10 @@ class Reroute(BluePrintBase):
 class PrimitiveNode(BluePrintBase):
     comfyClass = "PrimitiveNode"
 
+    def spec_extra_properties(s, properties, nname, ndesc):
+        prop = bpy.props.StringProperty()
+        properties["prop"] = prop
+
     def spec_draw(s, self: NodeBase, context, layout, prop: str, swlink=True):
         if self.outputs[0].is_linked and self.outputs[0].links:
             node = self.outputs[0].links[0].to_node
@@ -669,6 +833,11 @@ class PrimitiveNode(BluePrintBase):
 
 class 预览(BluePrintBase):
     comfyClass = "预览"
+
+    def spec_extra_properties(s, properties, nname, ndesc):
+        prop = bpy.props.CollectionProperty(type=Images)
+        properties["prev"] = prop
+        properties["lnum"] = bpy.props.IntProperty(default=3, min=1, max=10, name="Image num per line")
 
     def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True) -> bool:
         if prop == "lnum":
@@ -733,6 +902,18 @@ class 预览(BluePrintBase):
 
 class 存储(BluePrintBase):
     comfyClass = "存储"
+
+    def spec_extra_properties(s, properties, nname, ndesc):
+        items = [("Save", "Save", "", "", 0),
+                 ("Import", "Import", "", "", 1),
+                 ("ToImage", "ToImage", "", "", 2),
+                 ]
+        prop = bpy.props.EnumProperty(items=items)
+        properties["mode"] = prop
+        prop = bpy.props.PointerProperty(type=bpy.types.Object)
+        properties["obj"] = prop
+        prop = bpy.props.PointerProperty(type=bpy.types.Image)
+        properties["image"] = prop
 
     def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True) -> bool:
         if prop == "mode":
@@ -807,6 +988,34 @@ class 存储(BluePrintBase):
 
 class 输入图像(BluePrintBase):
     comfyClass = "输入图像"
+
+    def spec_extra_properties(s, properties, nname, ndesc):
+        prop = bpy.props.PointerProperty(type=bpy.types.Image)
+        properties["prev"] = prop
+        prop = bpy.props.StringProperty(default="", name="Render Layer")
+        properties["render_layer"] = prop
+
+        def search_layers(self, context):
+            items = []
+            if not bpy.context.scene.use_nodes:
+                return items
+            nodes = bpy.context.scene.node_tree.nodes
+            render_layer = nodes.get(self.render_layer, None)
+            if not render_layer:
+                return items
+            for output in render_layer.outputs:
+                if not output.enabled:
+                    continue
+                items.append((output.name, output.name, "", len(items)))
+            return items
+        prop = bpy.props.EnumProperty(items=search_layers, name="Output Layer")
+        properties["out_layers"] = prop
+        prop = bpy.props.StringProperty(name="Frames Directory",
+                                        subtype="DIR_PATH",
+                                        default=Path.home().joinpath("Desktop").as_posix())
+        properties["frames_dir"] = prop
+        prop = bpy.props.BoolProperty(default=False)
+        properties["disable_render"] = prop
 
     def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True) -> bool:
         if prop == "mode":
@@ -905,6 +1114,18 @@ class 材质图(BluePrintBase):
             mat_iamge_nodes = [n for n in tree.nodes if n.class_type == s.comfyClass]
             return len(mat_iamge_nodes) == 0
         return True
+
+    def spec_extra_properties(s, properties, nname, ndesc):
+        items = [("Object", "Object", "", "", 0),
+                 ("Selected Objects", "Selected Objects", "", "", 1),
+                 ("Collection", "Collection", "", "", 2),
+                 ]
+        prop = bpy.props.EnumProperty(items=items)
+        properties["mode"] = prop
+        prop = bpy.props.PointerProperty(type=bpy.types.Object)
+        properties["obj"] = prop
+        prop = bpy.props.PointerProperty(type=bpy.types.Collection)
+        properties["collection"] = prop
 
     def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True) -> bool:
         if prop == "mode":
