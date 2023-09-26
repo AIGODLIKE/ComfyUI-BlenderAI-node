@@ -1095,7 +1095,6 @@ class NodeParser:
                       "__annotations__": properties,
                       "__metadata__": ndesc
                       }
-            # spec_functions(fields, nname, ndesc)
             NodeDesc = type(nname, (NodeBase,), fields)
             NodeDesc.dcolor = (rand() / 2, rand() / 2, rand() / 2)
             node_clss.append(NodeDesc)
@@ -1358,122 +1357,9 @@ def spec_extra_properties(properties, nname, ndesc):
         properties["prop"] = prop
 
 
-def spec_serialize(self, cfg, execute):
-    def hide_gp():
-        if (cam := bpy.context.scene.camera) and (gpos := cam.get("SD_Mask", [])):
-            try:
-                for gpo in gpos:
-                    gpo.hide_render = True
-            except BaseException:
-                ...
-    if not execute:
-        return
-    if self.class_type == "输入图像":
-        ...
-        # if self.mode == "渲染":
-        #     logger.warn(f"{_T('Render')}->{self.image}")
-        #     bpy.context.scene.render.filepath = self.image
-        #     hide_gp()
-        #     bpy.ops.render.render(write_still=True)
-        # elif self.mode == "输入":
-        #     ...
-    elif self.class_type == "Mask":
-        # print(self.channel)
-        if self.disable_render or bpy.context.scene.sdn.disable_render_all:
-            return
-        gen_mask(self)
-    elif hasattr(self, "seed"):
-        cfg["inputs"]["seed"] = int(cfg["inputs"]["seed"])
-    elif hasattr(self, "noise_seed"):
-        cfg["inputs"]["noise_seed"] = int(cfg["inputs"]["noise_seed"])
-    elif self.class_type in {"OpenPoseFull", "OpenPoseHand", "OpenPoseMediaPipeFace", "OpenPoseDepth", "OpenPose", "OpenPoseFace", "OpenPoseLineart", "OpenPoseFullExtraLimb", "OpenPoseKeyPose", "OpenPoseCanny", }:
-        rpath = Path(bpy.path.abspath(bpy.context.scene.render.filepath)) / "MultiControlnet"
-        cfg["inputs"]["image"] = rpath.as_posix()
-        cfg["inputs"]["frame"] = bpy.context.scene.frame_current
-
-
-def spec_functions(fields, nname, ndesc):
-    if nname == "输入图像":
-        def render(self: NodeBase):
-            if self.mode != "渲染":
-                return
-            if self.disable_render or bpy.context.scene.sdn.disable_render_all:
-                return
-
-            @Timer.wait_run
-            def r():
-                logger.warn(f"{_T('Render')}->{self.image}")
-                bpy.context.scene.render.filepath = self.image
-                if (cam := bpy.context.scene.camera) and (gpos := cam.get("SD_Mask", [])):
-                    try:
-                        for gpo in gpos:
-                            gpo.hide_render = True
-                    except BaseException:
-                        ...
-                if bpy.context.scene.use_nodes:
-                    from .utils import set_composite
-                    nt = bpy.context.scene.node_tree
-
-                    with set_composite(nt) as cmp:
-                        render_layer: bpy.types.CompositorNodeRLayers = nt.nodes.new("CompositorNodeRLayers")
-                        if sel_render_layer := nt.nodes.get(self.render_layer, None):
-                            render_layer.scene = sel_render_layer.scene
-                            render_layer.layer = sel_render_layer.layer
-                        if out := render_layer.outputs.get(self.out_layers):
-                            nt.links.new(cmp.inputs["Image"], out)
-                        bpy.ops.render.render(write_still=True)
-                        nt.nodes.remove(render_layer)
-                else:
-                    bpy.ops.render.render(write_still=True)
-            r()
-        fields["pre_fn"] = render
-    if nname == "存储":
-        def post_fn(self: NodeBase, t: Task, result):
-            logger.debug(f"{self.class_type}{_T('Post Function')}->{result}")
-            img_paths = result.get("output", {}).get("images", [])
-            for img in img_paths:
-                if self.mode == "Save":
-                    def f(self, img):
-                        return bpy.data.images.load(img)
-                elif self.mode == "Import":
-                    def f(self, img):
-                        self.image.filepath = img
-                        self.image.filepath_raw = img
-                        self.image.source = "FILE"
-                        if self.image.packed_file:
-                            self.image.unpack(method="REMOVE")
-                        self.image.reload()
-                Timer.put((f, self, img))
-
-        fields["post_fn"] = post_fn
-    if nname == "预览":
-        def post_fn(self: NodeBase, t: Task, result):
-            logger.debug(f"{self.class_type}{_T('Post Function')}->{result}")
-            # return
-            img_paths = result.get("output", {}).get("images", [])
-            if not img_paths:
-                return
-            logger.warn(f"{_T('Load Preview Image')}: {img_paths}")
-
-            def f(self, img_paths: list[str]):
-                self.prev.clear()
-
-                from .manager import TaskManager
-                d = TaskManager.get_temp_directory()
-                for img_path in img_paths:
-                    if isinstance(img_path, dict):
-                        img_path = Path(d).joinpath(img_path.get("filename")).as_posix()
-                    if not Path(img_path).exists():
-                        continue
-                    p = self.prev.add()
-                    p.image = bpy.data.images.load(img_path)
-            Timer.put((f, self, img_paths))
-
-        fields["post_fn"] = post_fn
-
-
 def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILayout, prop: str, swlink=True):
     return
+
     def draw_prop_with_link(layout, self, prop, row=True, pre=None, post=None, **kwargs):
         layout = Ops_Swith_Socket.draw_prop(layout, self, prop, row, swlink)
         if pre:
