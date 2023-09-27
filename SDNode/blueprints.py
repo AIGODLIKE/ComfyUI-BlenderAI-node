@@ -894,24 +894,36 @@ class 预览(BluePrintBase):
             return
         logger.warn(f"{_T('Load Preview Image')}: {img_paths}")
 
-        from PIL import Image
-        from io import BytesIO
-        import numpy as np
-
         def f(self, img_paths: list[dict]):
             self.prev.clear()
-            for data in img_paths:
-                img_data = get_image(data)
-                img = Image.open(BytesIO(img_data))
-                buf = np.flipud(np.array(img))
-                shape = buf.shape[:2]
-                blimg = bpy.data.images.new(data.get('filename', 'preview.png'), shape[1], shape[0], float_buffer=False)
-                buf = np.dstack((buf.astype(np.float16)/255.0, np.ones(shape, dtype=np.float16)))
-                buf = buf.reshape((shape[1], shape[0], 4))
-                blimg.pixels = buf.ravel()
-                logger.debug(f'creating {data["filename"]} of size {shape} from memory')
-                p = self.prev.add()
-                p.image = blimg
+            try:
+                from PIL import Image
+                from io import BytesIO
+                import numpy as np
+                for data in img_paths:
+                    img_data = get_image(data)
+                    img = Image.open(BytesIO(img_data))
+                    buf = np.flipud(np.array(img))
+                    shape = buf.shape[:2]
+                    blimg = bpy.data.images.new(data.get('filename', 'preview.png'), shape[1], shape[0], float_buffer=False)
+                    buf = np.dstack((buf.astype(np.float16)/255.0, np.ones(shape, dtype=np.float16)))
+                    blimg.pixels = buf.ravel()
+                    logger.debug(f'creating {data["filename"]} of size {shape} from memory')
+                    p = self.prev.add()
+                    p.image = blimg
+            except (ImportError, TypeError): # in case PIL/numpy cannot be imported or error occured, fallback to bpy.data.images.load
+                from .manager import TaskManager
+                d = TaskManager.get_temp_directory()
+                for img_path in img_paths:
+                    if isinstance(img_path, dict):
+                        img_path = Path(d).joinpath(img_path.get("filename")).as_posix()
+                    if not Path(img_path).exists():
+                        continue
+                    try:
+                        p = self.prev.add()
+                        p.image = bpy.data.images.load(img_path)
+                    except TypeError:
+                        ...
         Timer.put((f, self, img_paths))
 
 PreviewImage = 预览
