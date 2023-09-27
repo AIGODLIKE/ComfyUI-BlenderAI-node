@@ -109,6 +109,8 @@ class Ops(bpy.types.Operator):
             desc = _T(action)
         elif action == "Restart":
             desc = _T(action)
+        elif action == "Connect":
+            desc = _T("Connect to existing & running ComfyUI server")
         elif action == "Submit":
             desc = _T("Submit Task and with Clear Cache if Alt Pressed")
         return desc
@@ -404,6 +406,11 @@ class Ops(bpy.types.Operator):
         if not TaskManager.is_launched():
             self.Launch()
         self.submit()
+
+    def Connect(self):
+        TaskManager.connect_existing = not TaskManager.connect_existing
+        if TaskManager.connect_existing:
+            TaskManager.start_polling()
 
     def Restart(self):
         TaskManager.restart_server()

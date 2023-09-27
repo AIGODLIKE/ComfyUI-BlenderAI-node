@@ -8,6 +8,8 @@ import json
 import math
 import textwrap
 import pickle
+import urllib.request
+import urllib.parse
 from numpy import clip
 from copy import deepcopy
 from hashlib import md5
@@ -1051,9 +1053,10 @@ class NodeParser:
 
                 elif proptype == "FLOAT":
                     {'default': 8.0, 'min': 0.0, 'max': 100.0}
-                    if "step" in inp[1]:
-                        inp[1]["step"] *= 100
-                    prop = bpy.props.FloatProperty(**inp[1])
+                    if len(inp)>1:
+                        if "step" in inp[1]:
+                            inp[1]["step"] *= 100
+                        prop = bpy.props.FloatProperty(**inp[1])
                 elif proptype == "BOOLEAN":
                     prop = bpy.props.BoolProperty(**inp[1])
                 elif proptype == "STRING":
@@ -1355,7 +1358,6 @@ def spec_extra_properties(properties, nname, ndesc):
     elif nname == "PrimitiveNode":
         prop = bpy.props.StringProperty()
         properties["prop"] = prop
-
 
 def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILayout, prop: str, swlink=True):
     return

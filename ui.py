@@ -52,6 +52,9 @@ class Panel(bpy.types.Panel):
             adv_col.prop(bpy.context.scene.sdn, "loop_exec", text_ctxt=ctxt, toggle=True)
             if not bpy.context.scene.sdn.loop_exec:
                 adv_col.prop(bpy.context.scene.sdn, "batch_count", text_ctxt=ctxt)
+        col.operator(Ops.bl_idname,
+                text="Disconnect from ComfyUI" if TaskManager.connect_existing else "Connect Existing ComfyUI",
+                icon="LINKED" if TaskManager.connect_existing else "UNLINKED").action = "Connect"
         row = col.row(align=True)
         row.scale_y = 1.3
         row.operator(Ops.bl_idname, text="Cancel", icon="CANCEL").action = "Cancel"
@@ -146,7 +149,6 @@ class HISTORY_UL_UIList(bpy.types.UIList):
         row = layout.row(align=True)
         row.label(text="  " + item.name)
         row.operator(Load_History.bl_idname, text="", icon="TIME").name = item.name
-
 
 class PanelViewport(bpy.types.Panel):
     bl_idname = "SDNV_PT_UI"
