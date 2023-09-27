@@ -410,6 +410,12 @@ class Ops(bpy.types.Operator):
     def Connect(self):
         TaskManager.connect_existing = not TaskManager.connect_existing
         if TaskManager.connect_existing:
+            TaskManager.launch_ip = get_pref().ip
+            TaskManager.launch_port = get_pref().port
+            TaskManager.launch_url = f"http://{get_pref().ip}:{get_pref().port}"
+            rtnode_unreg()
+            rtnode_reg()
+            CFNodeTree.instance = getattr(bpy.context.space_data, "edit_tree", None)
             TaskManager.start_polling()
 
     def Restart(self):

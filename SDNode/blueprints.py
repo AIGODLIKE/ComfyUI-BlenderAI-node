@@ -6,6 +6,7 @@ import os
 import textwrap
 import urllib.request
 import urllib.parse
+import tempfile
 from functools import partial, lru_cache
 from pathlib import Path
 from copy import deepcopy
@@ -832,14 +833,18 @@ class PrimitiveNode(BluePrintBase):
         for link in self.outputs[0].links[1:]:
             setattr(link.to_node, get_reg_name(link.to_socket.name), prop)
 
-def get_image(data):
+def get_image_path(data):
     '''data = {"filename": filename, "subfolder": subfolder, "type": folder_type}'''
     url_values = urllib.parse.urlencode(data)
     from .manager import TaskManager
     url = "{}/view?{}".format(TaskManager.get_url(), url_values)
     logger.debug(f'requesting {url} for image data')
     with urllib.request.urlopen(url) as response:
-        return response.read()
+        img_data = response.read()
+        img_path = Path(tempfile.gettempdir()) / data.get('filename', 'preview.png')
+        with open(img_path, "wb") as f:
+            f.write(img_data)
+        return img_path
 
 
 class 预览(BluePrintBase):
@@ -894,24 +899,22 @@ class 预览(BluePrintBase):
             return
         logger.warn(f"{_T('Load Preview Image')}: {img_paths}")
 
-        from PIL import Image
-        from io import BytesIO
-        import numpy as np
-
         def f(self, img_paths: list[dict]):
             self.prev.clear()
             for data in img_paths:
-                img_data = get_image(data)
-                img = Image.open(BytesIO(img_data))
-                buf = np.flipud(np.array(img))
-                shape = buf.shape[:2]
-                blimg = bpy.data.images.new(data.get('filename', 'preview.png'), shape[1], shape[0], float_buffer=False)
-                buf = np.dstack((buf.astype(np.float16)/255.0, np.ones(shape, dtype=np.float16)))
-                buf = buf.reshape((shape[1], shape[0], 4))
-                blimg.pixels = buf.ravel()
-                logger.debug(f'creating {data["filename"]} of size {shape} from memory')
-                p = self.prev.add()
-                p.image = blimg
+                img_path = get_image_path(data)
+                if not img_path:
+                    continue
+                img_path = Path(img_path).as_posix()
+                # if isinstance(img_path, dict):
+                #     img_path = Path(d).joinpath(img_path.get("filename")).as_posix()
+                if not Path(img_path).exists():
+                    continue
+                try:
+                    p = self.prev.add()
+                    p.image = bpy.data.images.load(img_path)
+                except TypeError:
+                    ...
         Timer.put((f, self, img_paths))
 
 PreviewImage = 预览
