@@ -521,6 +521,9 @@ class Ops(bpy.types.Operator):
         try:
             data = bpy.context.window_manager.clipboard
             data = json.loads(data)
+            if not isinstance(data, dict):
+                self.report({"ERROR"}, _T("ClipBoard Content Format Error"))
+                return
             if "workflow" in data:
                 data = data["workflow"]
             tree = self.ensure_tree()
