@@ -110,6 +110,9 @@ other = {
     "ControlNet Init Finished.": "ControlNet 初始化完毕.",
     "If controlnet still not worked, install manually by double clicked {}": "若ControlNet依然无法正常使用, 请手动双击 {} 安装",
     "Execute Node Cancelled!": "执行被跳过!",
+    "Remote Server Connect Failed": "远程服务连接失败",
+    "Executing Node": "正在执行节点",
+    "Execution Cached": "执行缓存",
     # SDNode/nodes.py
     "icon path load error": "预览图配置解析失败",
     "|IGNORED|": "|已忽略|",
@@ -199,7 +202,7 @@ other = {
     "Node<{}>Directory Not Exists!": "节点<{}>的文件夹路径不存在!",
     "Frame <{}> Not Found in <{}> Node Path!": "帧<{}> 在节点<{}>路径中未找到对应!",
     "Frame <{}> Add to Task!": "帧任务<{}>添加成功!",
-    "Launch": "启动ComfyUI",
+    "Launch": "启动/连接 ComfyUI服务",
     "Restart": "重启ComfyUI",
     "ClipBoard Content Format Error": "剪切板内容格式错误",
     "Submit Task and with Clear Cache if Alt Pressed": "执行节点树, 如果按下了Alt执行 则 强制执行",
@@ -217,6 +220,9 @@ other = {
     "ClearTask": "清理任务",
     "Cancel": "取消任务",
     # preference.py
+    "Server Type": "服务类型",
+    "LocalServer": "本机启动",
+    "RemoteServer": "服务直连(含局域网)",
     "Preview Image Size": "预览图尺寸",
     "Enable High Quality Preview Image": "启用高清预览图",
     "ComfyUI Path": "ComfyUI路径",

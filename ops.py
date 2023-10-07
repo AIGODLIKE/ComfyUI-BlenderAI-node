@@ -727,6 +727,7 @@ class Fetch_Node_Status(bpy.types.Operator):
         # t0 = time.time()
         # rtnode_reg_diff()
         # logger.info(_T("RegNodeDiff Time:") + f" {time.time()-t0:.2f}s")
+        Timer.clear()
         t1 = time.time()
         rtnode_unreg()
         t2 = time.time()

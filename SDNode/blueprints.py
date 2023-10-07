@@ -62,6 +62,9 @@ def setwidth(self: NodeBase, w, count=1):
     w *= count
 
     def delegate(self, w, fpis):
+        """
+        可能会因为 width 访问导致crash, 可以先清理Timer
+        """
         if not fpis:
             self.bl_width_max = 8192
             self.bl_width_min = 32
@@ -837,7 +840,7 @@ def get_image_path(data):
     '''data = {"filename": filename, "subfolder": subfolder, "type": folder_type}'''
     url_values = urllib.parse.urlencode(data)
     from .manager import TaskManager
-    url = "{}/view?{}".format(TaskManager.get_url(), url_values)
+    url = "{}/view?{}".format(TaskManager.server.get_url(), url_values)
     logger.debug(f'requesting {url} for image data')
     with urllib.request.urlopen(url) as response:
         img_data = response.read()
