@@ -662,7 +662,7 @@ def reg_node_reroute():
     bpy.types.NodeReroute.__metadata__ = {}
     bpy.types.NodeReroute.inp_types = []
     bpy.types.NodeReroute.out_types = []
-
+    bpy.types.NodeFrame.class_type = "NodeFrame"
 
 def update_tree_handler():
     try:
