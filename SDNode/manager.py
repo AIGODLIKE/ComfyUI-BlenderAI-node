@@ -393,9 +393,10 @@ class Server:
         self.launch_port = 8188
         self.launch_url = "http://127.0.0.1:8188"
 
-    def run(self):
+    def run(self) -> bool:
         self.uid = time.time_ns()
         TaskManager.clear_error_msg()
+        return True
 
     def close(self):
         ...
@@ -437,13 +438,14 @@ class RemoteServer(Server):
         self.server_connected = False
         super().__init__()
 
-    def run(self):
+    def run(self) -> bool:
         self.server_connected = False
         TaskManager.clear_error_msg()
         self.uid = time.time_ns()
         self.launch_ip = get_ip()
         self.launch_port = get_port()
         self.launch_url = f"http://{self.launch_ip}:{self.launch_port}"
+        return self.wait_connect()
 
     def wait_connect(self) -> bool:
         import requests
@@ -469,7 +471,7 @@ class LocalServer(Server):
         self.stdout_listen_exited = False
         super().__init__()
 
-    def run(self):
+    def run(self) -> bool:
         TaskManager.clear_error_msg()
         self.uid = time.time_ns()
         pidpath = Path(__file__).parent / "pid"
@@ -532,6 +534,7 @@ class LocalServer(Server):
         pidpath.write_text(str(p.pid))
         atexit.register(self.child.kill)
         Thread(target=self.stdout_listen, daemon=True).start()
+        return self.wait_connect()
 
     def close(self):
         if self.child:
@@ -830,17 +833,15 @@ class TaskManager:
             TaskManager.server = LocalServer()
         else:
             TaskManager.server = RemoteServer()
-        TaskManager.server.run()
-
-        connected = TaskManager.server.wait_connect()
-        if not TaskManager.server.stdout_listen_exited:
+        running = TaskManager.server.run()
+        if not TaskManager.server.stdout_listen_exited and running:
             logger.warn(_T("Server Launched"))
             TaskManager.start_polling()
             Timer.clear()  # timer may cause crash
         else:
             logger.error(_T("Server Launch Failed"))
             TaskManager.server.close()
-        return connected
+        return running
 
     def start_polling():
         Thread(target=TaskManager.poll_res, daemon=True).start()
