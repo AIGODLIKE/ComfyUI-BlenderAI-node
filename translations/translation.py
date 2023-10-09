@@ -117,6 +117,7 @@ other = {
     "icon path load error": "预览图配置解析失败",
     "|IGNORED|": "|已忽略|",
     "Not Found Item": "未找到项",
+    "Not Found Node": "未找到节点",
     "Load": "载入",
     "Params not matching with current node": "参数与当前节点不匹配",
     "Params Loading Error": "参数载入错误",

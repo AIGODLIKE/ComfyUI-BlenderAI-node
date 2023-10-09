@@ -304,6 +304,12 @@ class CFNodeTree(NodeTree):
 
         for link in data.get("links", []):
             # logger.debug(link)
+            if str(link[1]) not in id_map:
+                logger.warn(f"{_T('|IGNORED|')} Link -> {link[0]} -> {_T('Not Found Node')}: {link[1]}")
+                continue
+            if str(link[3]) not in id_map:
+                logger.warn(f"{_T('|IGNORED|')} Link -> {link[0]} -> {_T('Not Found Node')}: {link[3]}")
+                continue
             from_node = id_node_map[str(link[1])]
             to_node = id_node_map[str(link[3])]
             if not from_node or not to_node:
