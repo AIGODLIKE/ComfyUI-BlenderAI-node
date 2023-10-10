@@ -694,6 +694,13 @@ def draw_intern(self, context):
     props.type = "NodeReroute"
     props.use_transform = True
 
+def draw_intern_node_search(self, context):
+    if bpy.app.version <= (3, 6):
+        return
+    layout: bpy.types.UILayout = self.layout
+    if hasattr(bpy.ops.sdn, "node_search"):
+        layout.operator_context = "INVOKE_DEFAULT"
+        layout.operator("sdn.node_search", text="Search", text_ctxt=ctxt, icon="VIEWZOOM")
 
 def set_draw_intern(reg):
     NODE_MT_Utils = getattr(bpy.types, gen_cat_id("Utils"), None)
@@ -701,8 +708,12 @@ def set_draw_intern(reg):
         return
     # bpy.types.NODE_MT_Utils.draw._draw_funcs
     if reg:
+        bpy.types.NODE_MT_add.prepend(draw_intern_node_search)
+        NODE_MT_Utils.prepend(draw_intern_node_search)
         NODE_MT_Utils.append(draw_intern)
     else:
+        bpy.types.NODE_MT_add.remove(draw_intern_node_search)
+        NODE_MT_Utils.remove(draw_intern_node_search)
         NODE_MT_Utils.remove(draw_intern)
 
 

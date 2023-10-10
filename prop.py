@@ -150,6 +150,7 @@ class Prop(bpy.types.PropertyGroup):
     linker_socket: bpy.props.StringProperty(name="Linker Socket Name")
     linker_socket_out: bpy.props.BoolProperty(default=False, name="Linker Socket Out")
     linker_socket_index: bpy.props.IntProperty(name="Linker Socket Index")
+    linker_search_content: bpy.props.StringProperty(name="Linker Search Content")
 
 
 def render_layer_update():
