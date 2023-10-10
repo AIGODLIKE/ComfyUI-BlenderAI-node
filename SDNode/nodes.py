@@ -532,7 +532,10 @@ class Ops_Link_Mask(bpy.types.Operator):
         bpy.context.window_manager.modal_handler_add(self)
         import gpu
         import gpu_extras
-        shader_color = gpu.shader.from_builtin("2D_UNIFORM_COLOR")
+        if bpy.app.version >= (4, 0):
+            shader_color = gpu.shader.from_builtin("UNIFORM_COLOR")
+        else:
+            shader_color = gpu.shader.from_builtin("2D_UNIFORM_COLOR")
         shader_line = gpu.shader.from_builtin("POLYLINE_SMOOTH_COLOR")
         shader_line.uniform_float("viewportSize", gpu.state.viewport_get()[2:4])
         shader_line.uniform_float("lineSmooth", True)
