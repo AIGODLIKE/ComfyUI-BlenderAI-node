@@ -1,4 +1,5 @@
 import bpy
+from ..translations.translation import ctxt
 from VoronoiLinker import VoronoiOpBase, voronoiAnchorName, Prefs, GetNearestNodes, voronoiPreviewResultNdName
 from VoronoiLinker import GetNearestSockets, MinFromFgs, DoPreview, GetOpKey, ToolInvokeStencilPrepare, EditTreeIsNoneDrawCallback, VoronoiPreviewerDrawCallback
 
@@ -85,7 +86,8 @@ class DRAG_LINK_MT_NODE_PIE(bpy.types.Menu):
         row.scale_y = 5
         col = box.column()
         # row.operator('comfy.node_search', text='', icon='VIEWZOOM')
-        from ..SDNode.nodes import NodeBase, calc_hash_type, _T
+        from ..SDNode.nodes import NodeBase, calc_hash_type, ctxt
+        from ..utils import _T2
         def find_node_by_type(sb):
             ft = bpy.context.scene.sdn.linker_socket
             is_out = bpy.context.scene.sdn.linker_socket_out
@@ -107,15 +109,16 @@ class DRAG_LINK_MT_NODE_PIE(bpy.types.Menu):
                     if out_type == ft:
                         return True
             return False
-        lnum = 3
+        lnum = 4
         count = 0
         for sb in NodeBase.__subclasses__():
             if not find_node_by_type(sb):
                 continue
             if count % lnum == 0:
                 fcol = col.column_flow(columns=lnum, align=True)
+                fcol.scale_y = 1.6
             count += 1
-            op = fcol.operator(DragLinkOps.bl_idname, text=_T(sb.class_type))
+            op = fcol.operator(DragLinkOps.bl_idname, text=_T2(sb.class_type), text_ctxt=ctxt)
             op.create_type = sb.class_type
 
 class Comfyui_VoronoiSwaper(bpy.types.Operator, VoronoiOpBase):  # =VP=
@@ -278,6 +281,7 @@ class DragLinkOps(bpy.types.Operator):
     bl_idname = "sdn.drag_link"
     bl_description = "Drag Link"
     bl_label = "Drag Link"
+    bl_translation_context = ctxt
     
     create_type: bpy.props.StringProperty()
 

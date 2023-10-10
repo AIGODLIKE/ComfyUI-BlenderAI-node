@@ -4,7 +4,7 @@ from pathlib import Path
 ctxt = "SDN"
 
 REG_CTXT = {ctxt, }
-
+REPLACE_DICT = {}
 PROP_NAME_HEAD = "sdn_"
 INTERNAL_NAMES = {
     "bl_description",
@@ -604,12 +604,13 @@ def read_locale(locale):
                     data.update(sv)
     return data
 
-def reg_other_translations(translations_dict:dict, locale:str):
+def reg_other_translations(translations_dict:dict, replace_dict:dict, locale:str):
     for word, translation in LANG_TEXT[locale].items():
         translations_dict[locale][(ctxt, word)] = translation
         translations_dict[locale][(None, word)] = translation
+        replace_dict[locale][word] = translation
         
-def reg_node_ctxt(translations_dict:dict, locale:str):
+def reg_node_ctxt(translations_dict:dict, replace_dict:dict, locale:str):
     # 处理节点注册, 每个节点提供一个ctxt
     # 1. 查找locale
     p = Path(__file__).parent.joinpath(locale, "Nodes")
@@ -622,18 +623,23 @@ def reg_node_ctxt(translations_dict:dict, locale:str):
 
     if locale not in translations_dict:
         translations_dict[locale] = {}
+    if locale not in replace_dict:
+        replace_dict[locale] = {}
     td = translations_dict[locale]
+    rd = replace_dict[locale]
     # 2. 注册所有Node
     for node_name, node_translation in json_data.items():
         ctxt = node_name
         REG_CTXT.add(ctxt)
         td[(ctxt, node_name)] = node_translation.pop("title", node_name)
         td[(None, node_name)] = td[(ctxt, node_name)]
+        rd[node_name] = td[(ctxt, node_name)]
         for part in node_translation.values():
             for wn, wv in part.items():
                 wn = get_reg_name(wn)
                 td[(ctxt, wn)] = wv
                 td[(None, wn)] = wv
+                rd[wn] = wv
                 # if node_name == "EmptyLatentImage": print(f"{node_name} reg: {wn} -> {wv}")
 
 
@@ -643,8 +649,9 @@ for locale in LANG_TEXT:
 translations_dict = {}
 for locale in LANG_TEXT:
     translations_dict[locale] = {}
-    reg_node_ctxt(translations_dict, locale)
-    reg_other_translations(translations_dict, locale)
+    REPLACE_DICT[locale] = {}
+    reg_node_ctxt(translations_dict, REPLACE_DICT, locale)
+    reg_other_translations(translations_dict, REPLACE_DICT, locale)
     
 def get_ctxt(msgctxt):
     if msgctxt in REG_CTXT:
