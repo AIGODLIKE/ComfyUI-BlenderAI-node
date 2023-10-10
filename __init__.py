@@ -21,7 +21,7 @@ from .ops import Ops, Ops_Mask, Load_History, Copy_Tree, Load_Batch, Fetch_Node_
 from .ui import Panel, HISTORY_UL_UIList, HistoryItem
 from .SDNode.history import History
 from .prop import RenderLayerString, Prop
-
+from .Linker import linker_register, linker_unregister
 
 clss = [Panel, Ops, RenderLayerString, Prop, HISTORY_UL_UIList, HistoryItem, Ops_Mask, Load_History, Copy_Tree, Load_Batch, Fetch_Node_Status, Sync_Stencil_Image, EnableMLT]
 reg, unreg = bpy.utils.register_classes_factory(clss)
@@ -50,6 +50,7 @@ def register():
     bpy.types.Scene.sdn_history_item = bpy.props.CollectionProperty(type=HistoryItem)
     bpy.types.Scene.sdn_history_item_index = bpy.props.IntProperty(default=0)
     History.register_timer()
+    linker_register()
     
 def unregister():
     bpy.utils.unregister_class(AddonPreference)
@@ -63,6 +64,7 @@ def unregister():
     del bpy.types.Scene.sdn_history_item
     del bpy.types.Scene.sdn_history_item_index
     modules_update()
+    linker_unregister()
 
 def modules_update():
     from .kclogger import close_logger
