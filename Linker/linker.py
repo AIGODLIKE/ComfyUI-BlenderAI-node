@@ -28,7 +28,7 @@ class DRAG_LINK_MT_NODE_PIE(bpy.types.Menu):
         col = pie.column()
         box = col.box()
         box.separator(factor=0.02)
-        
+
         row = box.row()
         row.scale_y = 0.25
         row.alignment = 'CENTER'
@@ -36,7 +36,7 @@ class DRAG_LINK_MT_NODE_PIE(bpy.types.Menu):
         col = box.column()
         col.scale_x = 2
         col.scale_y = 4
-        col.operator(NodeSearch.bl_idname, text='', icon='VIEWZOOM')
+        col.operator("sdn.node_search", text='', icon='VIEWZOOM')
 
         # Right
         pie = layout.menu_pie()
@@ -55,6 +55,7 @@ class DRAG_LINK_MT_NODE_PIE(bpy.types.Menu):
         br.label(text="Linker")
         col = box.column()
         # row.operator('comfy.node_search', text='', icon='VIEWZOOM')
+
         def find_node_by_type(sb):
             ft = bpy.context.scene.sdn.linker_socket
             is_out = bpy.context.scene.sdn.linker_socket_out
@@ -87,6 +88,7 @@ class DRAG_LINK_MT_NODE_PIE(bpy.types.Menu):
             count += 1
             op = fcol.operator(DragLinkOps.bl_idname, text=_T2(sb.class_type), text_ctxt=ctxt)
             op.create_type = sb.class_type
+
 
 class Comfyui_VoronoiSwaper(bpy.types.Operator, VoronoiOpBase):  # =VP=
     bl_idname = 'comfy.voronoi_previewer'
@@ -244,41 +246,20 @@ class Comfyui_VoronoiSwaper(bpy.types.Operator, VoronoiOpBase):  # =VP=
                         traceback.print_exc()
                 return {'FINISHED'}
         return {'RUNNING_MODAL'}
-    
-class NodeSearch(bpy.types.Operator):
-    bl_idname = "sdn.node_search"
-    bl_label = "Node Search"
-    bl_options = {"REGISTER"}
-    bl_property = "item"
-    def node_items(self, context):
-        return [(sb.class_type, _T2(sb.class_type), "") for sb in NodeBase.__subclasses__()]
-    item: bpy.props.EnumProperty(items=node_items)
 
-    def invoke(self, context, event):
-        context.window_manager.invoke_search_popup(self)
-        return {"CANCELLED"}
 
-    def execute(self, context):
-        try:
-            bpy.ops.node.add_node(use_transform=True, settings=[], type=self.item)
-        except:
-            self.report({'WARNING'}, f"未定义的节点 > {self.item}")
-            
-        bpy.ops.node.translate_attach("INVOKE_DEFAULT")
-        return {"FINISHED"}
-    
 class DragLinkOps(bpy.types.Operator):
     bl_idname = "sdn.drag_link"
     bl_description = "Drag Link"
     bl_label = "Drag Link"
     bl_translation_context = ctxt
-    
+
     create_type: bpy.props.StringProperty()
 
     def execute(self, context: bpy.types.Context):
         self.select_nodes = []
         self.init_pos = context.space_data.cursor_location.copy()
-        
+
         n = bpy.context.scene.sdn.linker_node
         socket = bpy.context.scene.sdn.linker_socket
         is_out = bpy.context.scene.sdn.linker_socket_out
@@ -336,7 +317,8 @@ class DragLinkOps(bpy.types.Operator):
     def update_nodes_pos(self, event):
         for n in self.select_nodes:
             n.location = self.init_node_pos + bpy.context.space_data.cursor_location - self.init_pos
-            
+
+
 list_addonKeymaps = []
 
 
@@ -351,7 +333,6 @@ def linker_register():
         bpy.utils.register_class(Comfyui_VoronoiSwaper)
         bpy.utils.register_class(DRAG_LINK_MT_NODE_PIE)
         bpy.utils.register_class(DragLinkOps)
-        bpy.utils.register_class(NodeSearch)
         blId, key, shift, ctrl, alt, dict_props = Comfyui_VoronoiSwaper.bl_idname, 'R', False, False, False, {'isPlaceAnAnchor': False}
         kmi = globalVars.newKeyMapNodeEditor.keymap_items.new(idname=blId, type=key, value='PRESS', shift=shift, ctrl=ctrl, alt=alt)
         for ti in dict_props:
@@ -365,7 +346,6 @@ def linker_unregister():
         bpy.utils.unregister_class(Comfyui_VoronoiSwaper)
         bpy.utils.unregister_class(DRAG_LINK_MT_NODE_PIE)
         bpy.utils.unregister_class(DragLinkOps)
-        bpy.utils.unregister_class(NodeSearch)
         from VoronoiLinker import globalVars
         for li in list_addonKeymaps:
             globalVars.newKeyMapNodeEditor.keymap_items.remove(li)

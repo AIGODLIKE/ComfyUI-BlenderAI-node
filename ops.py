@@ -211,16 +211,18 @@ class Ops(bpy.types.Operator):
         if self.nt_name:
             tree = bpy.data.node_groups.get(self.nt_name, None)
             self.nt_name = ""
+
         def reset_error_mark(tree):
             if not tree:
                 return
             from mathutils import Color
             for n in tree.nodes:
-                if not n.label.endswith("-ERROR") or n.color != Color((1,0,0)):
+                if not n.label.endswith("-ERROR") or n.color != Color((1, 0, 0)):
                     continue
                 n.use_custom_color = False
                 n.label = ""
         reset_error_mark(tree)
+
         def get_task(tree):
             prompt = tree.serialize()
             workflow = tree.save_json()
@@ -741,6 +743,32 @@ class Fetch_Node_Status(bpy.types.Operator):
         t4 = time.time()
         logger.info(_T("RegNode Time:") + f" {t4-t3:.2f}s")
         CFNodeTree.instance = getattr(bpy.context.space_data, "edit_tree", None)
+        return {"FINISHED"}
+
+
+class NodeSearch(bpy.types.Operator):
+    bl_idname = "sdn.node_search"
+    bl_label = "Node Search"
+    bl_options = {"REGISTER"}
+    bl_property = "item"
+
+    def node_items(self, context):
+        from .SDNode.tree import NodeBase
+        from .utils import _T2
+        return [(sb.class_type, _T2(sb.class_type), "") for sb in NodeBase.__subclasses__()]
+    item: bpy.props.EnumProperty(items=node_items)
+
+    def invoke(self, context, event):
+        context.window_manager.invoke_search_popup(self)
+        return {"CANCELLED"}
+
+    def execute(self, context):
+        try:
+            bpy.ops.node.add_node(use_transform=True, settings=[], type=self.item)
+        except BaseException:
+            self.report({'WARNING'}, f"未定义的节点 > {self.item}")
+
+        bpy.ops.node.translate_attach("INVOKE_DEFAULT")
         return {"FINISHED"}
 
 
