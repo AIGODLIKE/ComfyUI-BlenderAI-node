@@ -709,11 +709,9 @@ def set_draw_intern(reg):
     # bpy.types.NODE_MT_Utils.draw._draw_funcs
     if reg:
         bpy.types.NODE_MT_add.prepend(draw_intern_node_search)
-        NODE_MT_Utils.prepend(draw_intern_node_search)
         NODE_MT_Utils.append(draw_intern)
     else:
         bpy.types.NODE_MT_add.remove(draw_intern_node_search)
-        NODE_MT_Utils.remove(draw_intern_node_search)
         NODE_MT_Utils.remove(draw_intern)
 
 
