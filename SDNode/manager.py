@@ -477,6 +477,7 @@ class LocalServer(Server):
         pidpath = Path(__file__).parent / "pid"
         if pidpath.exists():
             self.force_kill(pidpath.read_text())
+            pidpath.unlink()
 
         pref = get_pref()
         model_path = pref.model_path
@@ -537,6 +538,11 @@ class LocalServer(Server):
         return self.wait_connect()
 
     def close(self):
+        pidpath = Path(__file__).parent / "pid"
+        if pidpath.exists():
+            self.force_kill(pidpath.read_text())
+            pidpath.unlink()
+            
         if self.child:
             self.child.kill()
         self.child = None
@@ -577,7 +583,9 @@ class LocalServer(Server):
                 process = psutil.Process(pid)
                 if "python" not in process.name():
                     return
-                os.system(f'taskkill /F /IM {process.name()}')
+                process.kill()
+                # os.system(f'taskkill /F /IM {process.name()}')
+                os.system(f'taskkill /pid {pid} -t -f')
             except psutil.NoSuchProcess:
                 return
         elif sys.platform == "darwin":
