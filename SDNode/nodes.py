@@ -868,6 +868,8 @@ class NodeParser:
                     else:
                         _desc.add(inp_desc[0])
                         self.SOCKET_TYPE[name][inp] = inp_desc[0]
+            for out_type in desc["output"]:
+                _desc.add(out_type[0])
         return _desc
 
     def _parse_sockets_clss(self):
