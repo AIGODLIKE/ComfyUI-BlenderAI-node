@@ -869,7 +869,18 @@ class NodeParser:
                         _desc.add(inp_desc[0])
                         self.SOCKET_TYPE[name][inp] = inp_desc[0]
             for out_type in desc["output"]:
-                _desc.add(out_type[0])
+                # _desc.add(out_type[0])
+                stype = out_type[0]
+                if isinstance(stype, list):
+                    _desc.add("ENUM")
+                    # 太长 不能注册为 socket type(<64)
+                    hash_type = calc_hash_type(stype)
+                    _desc.add(hash_type)
+                    SOCKET_HASH_MAP[hash_type] = "ENUM"
+                    # self.SOCKET_TYPE[name][inp] = hash_type
+                else:
+                    _desc.add(out_type[0])
+                    # self.SOCKET_TYPE[name][inp] = inp_desc[0]
         return _desc
 
     def _parse_sockets_clss(self):

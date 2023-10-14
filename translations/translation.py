@@ -69,6 +69,8 @@ INTERNAL_NAMES = {
 
 
 def get_reg_name(inp_name):
+    if inp_name.startswith("_"):
+        return PROP_NAME_HEAD + inp_name
     if inp_name in INTERNAL_NAMES:
         return PROP_NAME_HEAD + inp_name
     return inp_name
