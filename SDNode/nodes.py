@@ -399,6 +399,13 @@ class SocketBase(bpy.types.NodeSocket):
     def draw_color(self, context, node):
         return self.color
 
+    if bpy.app.version >= (4, 0):
+        draw_color_simple_ = (1, 0, 0, 1)
+
+        @classmethod
+        def draw_color_simple(cls):
+            return cls.draw_color_simple_
+
 
 class Ops_Swith_Socket(bpy.types.Operator):
     bl_idname = "sdn.switch_socket"
@@ -902,11 +909,16 @@ class NodeParser:
                 op.socket_name = self.name
                 op.action = "ToProp"
                 row.prop(node, prop, text="", text_ctxt=node.get_ctxt())
-            color = bpy.props.FloatVectorProperty(size=4, default=(rand()**0.5, rand()**0.5, rand()**0.5, 1))
+            rand_color = (rand()**0.5, rand()**0.5, rand()**0.5, 1)
+            color = bpy.props.FloatVectorProperty(size=4, default=rand_color)
             __annotations__ = {"color": color,
                                "index": bpy.props.IntProperty(default=-1),
                                "slot_index": bpy.props.IntProperty(default=-1)}
-            fields = {"draw": draw, "bl_label": stype, "__annotations__": __annotations__}
+            fields = {"draw": draw, 
+                      "bl_label": stype, 
+                      "__annotations__": __annotations__,
+                      "draw_color_simple_": rand_color
+                      }
             SocketDesc = type(stype, (SocketBase,), fields)
             socket_clss.append(SocketDesc)
         return socket_clss
@@ -1069,7 +1081,7 @@ class NodeParser:
 
                 elif proptype == "FLOAT":
                     {'default': 8.0, 'min': 0.0, 'max': 100.0}
-                    if len(inp)>1:
+                    if len(inp) > 1:
                         if "step" in inp[1]:
                             inp[1]["step"] *= 100
                         prop = bpy.props.FloatProperty(**inp[1])
@@ -1374,6 +1386,7 @@ def spec_extra_properties(properties, nname, ndesc):
     elif nname == "PrimitiveNode":
         prop = bpy.props.StringProperty()
         properties["prop"] = prop
+
 
 def spec_draw(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILayout, prop: str, swlink=True):
     return
