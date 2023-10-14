@@ -143,7 +143,10 @@ def DrawText(pos, ofs, txt, drawCol, fontSizeOverwrite=0):
 def DrawWay(vpos, vcol, wid):
     gpu.state.blend_set('ALPHA')
     gpuLine.bind()
-    gpuLine.uniform_float('lineWidth', wid)
+    if bpy.app.version >= (4, 0):
+        gpuLine.uniform_float('lineWidth', wid * 2)
+    else:
+        gpuLine.uniform_float('lineWidth', wid)
     gpu_extras.batch.batch_for_shader(gpuLine, 'LINE_STRIP', {'pos': vpos, 'color': vcol}).draw(gpuLine)
 
 
@@ -272,7 +275,7 @@ def DrawWidePoint(loc, colfac=Vector((1.0, 1.0, 1.0, 1.0)), resolution=54, forci
 
 def StartDrawCallbackStencil(self, context):
     gpuLine.uniform_float('viewportSize', gpu.state.viewport_get()[2:4])
-    gpuLine.uniform_float('lineSmooth', True)
+    gpuLine.uniform_float('lineSmooth', bpy.app.version < (4, 0))
 
 
 def PreviewerDrawCallback(self, context):
