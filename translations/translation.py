@@ -1,10 +1,22 @@
 import json
+import bpy
 from pathlib import Path
 
 ctxt = "SDN"
 LOCALE_MAP = {
     "zh_HANS": "zh_CN"
 }
+# 4.0 zh_HANS -> zh_HANS
+# 3.0 zh_HANS -> zh_CN
+LOCALE_MAP_INV = {}
+if bpy.app.version < (4, 0):
+    LOCALE_MAP_INV = {
+        "zh_HANS": "zh_CN"
+    }
+
+def get_locale_inv(locale):
+    return LOCALE_MAP_INV.get(locale, locale)
+
 REG_CTXT = {ctxt, }
 REPLACE_DICT = {}
 PROP_NAME_HEAD = "sdn_"
@@ -289,13 +301,13 @@ other = {
 }
 
 LANG_TEXT = {
-    "en_US": {
+    get_locale_inv("en_US"): {
         # Blender
         "输入图像": "Input Image",
         "存储": "Save",
         "预览": "Preview",
     },
-    "zh_HANS": {
+    get_locale_inv("zh_HANS"): {
         **other,
         # 分类
         # "vae": "变分数据",
