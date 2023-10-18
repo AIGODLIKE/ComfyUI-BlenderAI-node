@@ -1,7 +1,7 @@
 bl_info = {
     'name': '无限圣杯-节点',
     'author': '幻之境开发小组-会飞的键盘侠、只剩一瓶辣椒酱',
-    'version': (1, 3, 0),
+    'version': (1, 3, 2),
     'blender': (3, 0, 0),
     'location': '3DView->Panel',
     'category': '辣椒出品',

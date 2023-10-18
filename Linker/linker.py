@@ -443,15 +443,13 @@ class DRAG_LINK_MT_NODE_PIE(bpy.types.Menu):
                     if out_type == ft:
                         return True
             return False
-        lnum = 4
-        count = 0
-        for sb in NodeBase.__subclasses__():
-            if not find_node_by_type(sb):
-                continue
+        sb_list = [sb for sb in NodeBase.__subclasses__() if find_node_by_type(sb)]
+        lnum = min(4, len(sb_list))
+        for count, sb in enumerate(sb_list):
             if count % lnum == 0:
                 fcol = col.column_flow(columns=lnum, align=True)
                 fcol.scale_y = 1.6
-            count += 1
+                fcol.ui_units_x = lnum * 7
             op = fcol.operator(DragLinkOps.bl_idname, text=_T2(sb.class_type), text_ctxt=ctxt)
             op.create_type = sb.class_type
 
