@@ -552,7 +552,7 @@ class LocalServer(Server):
         while True:
             import requests
             try:
-                if requests.get(f"{self.get_url()}/object_info", proxies={"http": None, "https": None}, timeout=0.1).status_code == 200:
+                if requests.get(f"{self.get_url()}/object_info", proxies={"http": None, "https": None}, timeout=1).status_code == 200:
                     return True
             except requests.exceptions.ConnectionError:
                 ...
@@ -776,7 +776,7 @@ class TaskManager:
     server: Server = FakeServer()
     task_queue = Queue()
     res_queue = Queue()
-    SessionId = {"SessionId": "无限圣杯"}
+    SessionId = {"SessionId": "ComfyUICUP"}
     status = {}
     progress = {}
     executing = {}
@@ -1047,7 +1047,7 @@ class TaskManager:
                 setattr(tm, mtype, data)
 
             if mtype == "status":
-                {'status': {'exec_info': {'queue_remaining': 1}}, 'sid': '无限圣杯'}
+                {'status': {'exec_info': {'queue_remaining': 1}}, 'sid': 'ComfyUICUP'}
                 SessionId["SessionId"] = data.get("sid", SessionId["SessionId"])
             elif mtype == "executing":
                 {"type": "executing", "data": {"node": "7"}}
