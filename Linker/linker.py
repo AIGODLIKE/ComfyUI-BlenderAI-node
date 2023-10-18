@@ -143,10 +143,7 @@ def DrawText(pos, ofs, txt, drawCol, fontSizeOverwrite=0):
 def DrawWay(vpos, vcol, wid):
     gpu.state.blend_set('ALPHA')
     gpuLine.bind()
-    if bpy.app.version >= (4, 0):
-        gpuLine.uniform_float('lineWidth', wid * 2)
-    else:
-        gpuLine.uniform_float('lineWidth', wid)
+    gpuLine.uniform_float('lineWidth', wid * 2)
     gpu_extras.batch.batch_for_shader(gpuLine, 'LINE_STRIP', {'pos': vpos, 'color': vcol}).draw(gpuLine)
 
 
@@ -260,7 +257,7 @@ def DrawCircle(pos, rd, col=(1.0, 1.0, 1.0, .75), resolution=54):
     DrawAreaFan(vpos, col)
 
 
-def DrawWidePoint(loc, colfac=Vector((1.0, 1.0, 1.0, 1.0)), resolution=54, forciblyCol=False):
+def DrawWidePoint(loc, colfac=Vector((1.0, 1.0, 1.0, 1.0)), resolution=54):
     pos = VecWorldToRegScale(loc)
     loc = Vector((loc.x + 6 * 1 * 1000, loc.y))
     rd = (VecWorldToRegScale(loc)[0] - pos[0]) / 1000
@@ -275,7 +272,7 @@ def DrawWidePoint(loc, colfac=Vector((1.0, 1.0, 1.0, 1.0)), resolution=54, forci
 
 def StartDrawCallbackStencil(self, context):
     gpuLine.uniform_float('viewportSize', gpu.state.viewport_get()[2:4])
-    gpuLine.uniform_float('lineSmooth', bpy.app.version < (4, 0))
+    gpuLine.uniform_bool('lineSmooth', True)
 
 
 def PreviewerDrawCallback(self, context):
