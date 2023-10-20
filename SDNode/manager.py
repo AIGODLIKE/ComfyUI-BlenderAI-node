@@ -147,7 +147,7 @@ class Task:
                     break
             n = self.executing_node
             n.use_custom_color = True
-            n.color = (0.6, 0.7, 0.7)
+            n.color = (0, 0, 0)
             n.label = n.name + "-EXEC"
         Timer.put((f, self))
 
