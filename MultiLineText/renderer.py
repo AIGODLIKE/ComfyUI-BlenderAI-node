@@ -4,6 +4,7 @@ import numpy as np
 import bgl as gl
 import bpy
 import time
+import platform
 # from OpenGL import GL as gl
 from gpu_extras.batch import batch_for_shader
 from ..utils import logger
@@ -371,7 +372,8 @@ class Renderer400(BaseOpenGLRenderer):
     def refresh_font_texture_ex(scene=None):
         # save texture state
         self = Renderer.instance
-        if not (img := bpy.data.images.get(".imgui_font", None)) or img.bindcode == 0:
+        if not (img := bpy.data.images.get(".imgui_font", None)) \
+            or (platform.platform == "win32" and img.bindcode == 0):
             ts = time.time()
             width, height, pixels = self.io.fonts.get_tex_data_as_rgba32()
             if not img:
@@ -386,68 +388,54 @@ class Renderer400(BaseOpenGLRenderer):
         self.io.fonts.texture_id = self._font_texture
 
     def _create_device_objects(self):
-        self._bl_shader = gpu.types.GPUShader(self.VERTEX_SHADER_SRC, self.FRAGMENT_SHADER_SRC)
+        # self._bl_shader = gpu.types.GPUShader(self.VERTEX_SHADER_SRC, self.FRAGMENT_SHADER_SRC)
+        vert_out = gpu.types.GPUStageInterfaceInfo("imgui_interface")
+        vert_out.smooth('VEC2', "Frag_UV")
+        vert_out.smooth('VEC4', "Frag_Color")
 
-        # vert_out = gpu.types.GPUStageInterfaceInfo("imgui_interface")
-        # vert_out.smooth('VEC2', "Frag_UV")
-        # vert_out.smooth('VEC4', "Frag_Color")
+        shader_info = gpu.types.GPUShaderCreateInfo()
+        shader_info.push_constant('MAT4', "ProjMtx")
+        shader_info.sampler(0, 'FLOAT_2D', "Texture")
+        shader_info.vertex_in(0, 'VEC2', "Position")
+        shader_info.vertex_in(1, 'VEC2', "UV")
+        shader_info.vertex_in(2, 'VEC4', "Color")
+        shader_info.vertex_out(vert_out)
+        shader_info.fragment_out(0, 'VEC4', "Out_Color")
 
-        # shader_info = gpu.types.GPUShaderCreateInfo()
-        # shader_info.push_constant('MAT4', "ProjMtx")
-        # shader_info.sampler(0, 'FLOAT_2D', "Texture")
-        # shader_info.vertex_in(0, 'VEC2', "Position")
-        # shader_info.vertex_in(1, 'VEC2', "UV")
-        # shader_info.vertex_in(2, 'VEC4', "Color")
-        # shader_info.vertex_out(vert_out)
-        # shader_info.fragment_out(0, 'VEC4', "Out_Color")
+        shader_info.vertex_source("""
+        void main() {
+            Frag_UV = UV;
+            Frag_Color = Color;
+            gl_Position = ProjMtx * vec4(Position.xy, 0, 1);
+        }
+        """
+        )
 
-        # shader_info.vertex_source("""
-        # // uniform mat4 ProjMtx;
-        # // in vec2 Position;
-        # // in vec2 UV;
-        # // in vec4 Color;
-        # //
-        # // out vec2 Frag_UV;
-        # // out vec4 Frag_Color;
+        shader_info.fragment_source("""
+        vec4 linear_to_srgb(vec4 linear) {
+            return mix(
+                1.055 * pow(linear, vec4(1.0 / 2.4)) - 0.055,
+                12.92 * linear,
+                step(linear, vec4(0.00031308))
+            );
+        }
 
-        # void main() {
-        #     Frag_UV = UV;
-        #     Frag_Color = Color;
-        #     gl_Position = ProjMtx * vec4(Position.xy, 0, 1);
-        # }
-        # """
-        # )
+        vec4 srgb_to_linear(vec4 srgb) {
+            return mix(
+                pow((srgb + 0.055) / 1.055, vec4(2.4)),
+                srgb / 12.92,
+                step(srgb, vec4(0.04045))
+            );
+        }
 
-        # shader_info.fragment_source("""
-        # // uniform sampler2D Texture;
-        # // in vec2 Frag_UV;
-        # // in vec4 Frag_Color;
-        # // out vec4 Out_Color;
+        void main() {
+            Out_Color = Frag_Color * texture(Texture, Frag_UV.st);
+            Out_Color.rgba = srgb_to_linear(Out_Color.rgba)*1.25;
+        }
+                                    """
+        )
 
-        # vec4 linear_to_srgb(vec4 linear) {
-        #     return mix(
-        #         1.055 * pow(linear, vec4(1.0 / 2.4)) - 0.055,
-        #         12.92 * linear,
-        #         step(linear, vec4(0.00031308))
-        #     );
-        # }
-
-        # vec4 srgb_to_linear(vec4 srgb) {
-        #     return mix(
-        #         pow((srgb + 0.055) / 1.055, vec4(2.4)),
-        #         srgb / 12.92,
-        #         step(srgb, vec4(0.04045))
-        #     );
-        # }
-
-        # void main() {
-        #     Out_Color = Frag_Color * texture(Texture, Frag_UV.st);
-        #     Out_Color.rgba = srgb_to_linear(Out_Color.rgba)*1.25;
-        # }
-        #                             """
-        # )
-
-        # self._bl_shader = gpu.shader.create_from_info(shader_info)
+        self._bl_shader = gpu.shader.create_from_info(shader_info)
 
     def render(self, draw_data):
         io = self.io
