@@ -31,7 +31,7 @@ class Panel(bpy.types.Panel):
             row.operator("wm.console_toggle", text="", icon="CONSOLE", text_ctxt=ctxt)
         # row.prop(sdn, "restart_webui", text="", icon="RECOVER_LAST")
         row.operator(Ops.bl_idname, text="", icon="QUIT", text_ctxt=ctxt).action = "Launch"
-        row.operator(Fetch_Node_Status.bl_idname, text="", icon="FILE_REFRESH" , text_ctxt=ctxt)
+        row.operator(Fetch_Node_Status.bl_idname, text="", icon="FILE_REFRESH", text_ctxt=ctxt)
         row.operator(Ops.bl_idname, text="", icon="RECOVER_LAST", text_ctxt=ctxt).action = "Restart"
         row.prop(sdn, "open_webui", text="", icon="URL", text_ctxt=ctxt)
 
@@ -101,6 +101,18 @@ class Panel(bpy.types.Panel):
         if len(sce.sdn_history_item) == 0:
             return
         layout.template_list("HISTORY_UL_UIList", "", sce, "sdn_history_item", sce, "sdn_history_item_index")
+        # self.debug_draw()
+
+    def debug_draw(self):
+        rv3d = bpy.context.space_data.region_3d
+        self.layout.prop(rv3d, "view_camera_offset")
+        self.layout.prop(rv3d, "view_camera_zoom")
+
+        self.layout.prop(rv3d, "view_distance")
+        self.layout.prop(rv3d, "view_location")
+        self.layout.prop(rv3d, "view_matrix")
+        self.layout.prop(rv3d, "view_perspective")
+        self.layout.prop(rv3d, "window_matrix")
 
     def show_progress(self, layout: bpy.types.UILayout):
         layout = layout.box()
@@ -149,6 +161,7 @@ class HISTORY_UL_UIList(bpy.types.UIList):
         row = layout.row(align=True)
         row.label(text="  " + item.name)
         row.operator(Load_History.bl_idname, text="", icon="TIME").name = item.name
+
 
 class PanelViewport(bpy.types.Panel):
     bl_idname = "SDNV_PT_UI"

@@ -9,7 +9,7 @@ import atexit
 import signal
 from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import urlparse
-
+from mathutils import Color
 from functools import lru_cache
 from copy import deepcopy
 from shutil import rmtree
@@ -22,7 +22,7 @@ from queue import Queue
 from ..utils import rmtree as rt, logger, _T, PkgInstaller, FSWatcher
 from ..timer import Timer
 from ..preference import get_pref
-from ..SDNode.history import History
+from .history import History
 
 
 def get_ip():
@@ -79,11 +79,22 @@ mycomfyui:
 
 
 class Task:
-    def __init__(self, task=None, pre=None, post=None) -> None:
+    def __init__(self, task=None, pre=None, post=None, tree=None) -> None:
         self.task = task
         self.res = Queue()
         self._pre = pre
         self._post = post
+        from .tree import CFNodeTree
+        self.tree: CFNodeTree = tree
+        self.executing_node_id = ""
+        self.executing_node = None
+        self.is_finished = False
+        self.process = {}
+        # 记录node的类型 防止节点树变更
+        self.node_ref_map = {}
+        if not tree:
+            return
+        self.node_ref_map = {n.id: n.bl_idname for n in tree.nodes if hasattr(n, "id")}
 
     def submit_pre(self):
         if not self._pre:
@@ -94,6 +105,64 @@ class Task:
         if not self._post:
             return
         self._post()
+
+    def is_tree_valid(self):
+        if not self.tree:
+            return False
+        try:
+            dir(self.tree)
+        except ReferenceError:
+            return False
+        return True
+
+    def set_finished(self):
+        self.is_finished = True
+        if not self.is_tree_valid():
+            return
+
+        def f(self: Task):
+            for n in self.tree.nodes:
+                if not n.label.endswith("-EXEC"):
+                    continue
+                n.use_custom_color = False
+                n.label = ""
+        Timer.put((f, self))
+
+    def set_executing_node_id(self, node_id):
+        self.executing_node_id = node_id
+        if not self.is_tree_valid():
+            return
+        self.process = {}
+
+        def f(self: Task):
+            if self.executing_node:
+                self.executing_node.use_custom_color = False
+                self.executing_node.label = ""
+            self.executing_node = None
+            for n in self.tree.nodes:
+                if not hasattr(n, "id"):
+                    continue
+                if n.id == node_id and n.bl_idname == self.node_ref_map.get(node_id, ""):
+                    self.executing_node = n
+                    break
+            n = self.executing_node
+            n.use_custom_color = True
+            n.color = (0.6, 0.7, 0.7)
+            n.label = n.name + "-EXEC"
+        Timer.put((f, self))
+
+    def set_process(self, process, node_id=""):
+        """
+        process: {'value': 20, 'max': 20}
+        """
+        if not self.is_tree_valid():
+            return
+        if not node_id:
+            node_id = self.executing_node_id
+        if not self.executing_node:
+            return
+        self.process = process
+        # self.tree.display_process()
 
 
 class TaskErrPaser:
@@ -542,7 +611,7 @@ class LocalServer(Server):
         if pidpath.exists():
             self.force_kill(pidpath.read_text())
             pidpath.unlink()
-            
+
         if self.child:
             self.child.kill()
         self.child = None
@@ -861,14 +930,14 @@ class TaskManager:
         TaskManager.server.close()
         TaskManager.run_server()
 
-    def push_task(task, pre=None, post=None):
+    def push_task(task, pre=None, post=None, tree=None):
         logger.debug(_T('Add Task'))
         if not TaskManager.is_launched():
             TaskManager.put_error_msg(_T("Server Not Launched, Add Task Failed"))
             TaskManager.put_error_msg(_T("Please Check ComfyUI Directory"))
             logger.error(_T("Server Not Launched"))
             return
-        TaskManager.task_queue.put(Task(task, pre=pre, post=post))
+        TaskManager.task_queue.put(Task(task, pre=pre, post=post, tree=tree))
 
     def push_res(res):
         logger.debug(_T("Add Result"))
@@ -1033,8 +1102,10 @@ class TaskManager:
                 ...
             elif mtype == "execution_cached":
                 logger.debug(f"{_T('Execution Cached')}: {data.get('nodes', '')}")
+            elif mtype == "status":
+                ...
             elif mtype != 'progress':
-                logger.debug(f'got response: {message}')
+                logger.debug(f'{_T("got response")}: {message}')
 
             def update():
                 import bpy
@@ -1051,9 +1122,13 @@ class TaskManager:
             elif mtype == "executing":
                 {"type": "executing", "data": {"node": "7"}}
                 if not data["node"]:
+                    if tm.cur_task:
+                        tm.cur_task.set_finished()
                     tm.mark_finished()
                 else:
                     TaskManager.execute_status_record.append(data["node"])
+                    if tm.cur_task:
+                        tm.cur_task.set_executing_node_id(n)
                 # logger.debug(data)
             elif mtype == "progress":
                 m = 40
@@ -1065,6 +1140,8 @@ class TaskManager:
                 content = f"\r{v*100/m:3.0f}% " + cf + cp + f" {v}/{m}"
                 sys.stdout.write(content)
                 sys.stdout.flush()
+                if tm.cur_task:
+                    tm.cur_task.set_process(data)
 
             elif mtype == "executed":
                 {"node": "9", "output": {"images": ["ComfyUI_00028_.png"]}}

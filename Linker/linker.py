@@ -88,7 +88,7 @@ def DoPreview(context, goalSk):
 
 
 def VecWorldToRegScale(vec):
-    vec = vec.copy() * UiScale()
+    vec = vec * UiScale()
     return Vector(bpy.context.region.view2d.view_to_region(vec.x, vec.y, clip=False))
 
 

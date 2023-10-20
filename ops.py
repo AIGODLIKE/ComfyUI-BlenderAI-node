@@ -217,7 +217,7 @@ class Ops(bpy.types.Operator):
                 return
             from mathutils import Color
             for n in tree.nodes:
-                if not n.label.endswith("-ERROR") or n.color != Color((1, 0, 0)):
+                if not n.label.endswith(("-ERROR", "-EXEC")) or n.color != Color((1, 0, 0)):
                     continue
                 n.use_custom_color = False
                 n.label = ""
@@ -281,7 +281,7 @@ class Ops(bpy.types.Operator):
                     # logger.debug(f"F {frame}: {fnode.image}")
                 else:
                     logger.debug(_T("Frame Task <{}> Added!").format(frame))
-                    TaskManager.push_task(get_task(tree))
+                    TaskManager.push_task(get_task(tree), tree=tree)
             # restore config
             for fnode in old_cfg:
                 setattr(fnode, "mode", old_cfg[fnode]["mode"])
@@ -356,7 +356,7 @@ class Ops(bpy.types.Operator):
                     img.filepath = filepath.resolve().as_posix()
                     img.filepath_raw = img.filepath
                 mat_image_node.image = FSWatcher.to_str(filepath)
-                TaskManager.push_task(get_task(tree))
+                TaskManager.push_task(get_task(tree), tree=tree)
             return {"FINISHED"}
         else:
             if self.alt:
@@ -369,7 +369,7 @@ class Ops(bpy.types.Operator):
                     def pre(cf):
                         bpy.context.scene.frame_set(cf)
                     pre = partial(pre, cf)
-                    TaskManager.push_task(get_task(tree), pre)
+                    TaskManager.push_task(get_task(tree), pre, tree=tree)
             elif bpy.context.scene.sdn.frame_mode == "Batch":
                 batch_dir = bpy.context.scene.sdn.batch_dir
                 select_node = tree.nodes.active
@@ -388,10 +388,10 @@ class Ops(bpy.types.Operator):
                     if file.suffix not in IMG_SUFFIX:
                         continue
                     select_node.image = file.as_posix()
-                    TaskManager.push_task(get_task(tree))
+                    TaskManager.push_task(get_task(tree), tree=tree)
                 select_node.mode, select_node.image = old_mode, old_image
             else:
-                TaskManager.push_task(get_task(tree))
+                TaskManager.push_task(get_task(tree), tree=tree)
         return {"FINISHED"}
 
     def update_nodes_pos(self, event):

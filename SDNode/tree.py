@@ -720,7 +720,7 @@ def rtnode_reg_diff():
     _, node_clss, _ = NodeParser().parse(diff=True)
     if not node_clss:
         return
-    logger.debug(f"变更节点: {[c.bl_label for c in node_clss]}")
+    logger.info(f"{_T('Changed Node')}: {[c.bl_label for c in node_clss]}")
     clear_nodes_data_cache()
     clss_map = {}
     for c in clss:

@@ -843,7 +843,7 @@ def get_image_path(data):
     url_values = urllib.parse.urlencode(data)
     from .manager import TaskManager
     url = "{}/view?{}".format(TaskManager.server.get_url(), url_values)
-    logger.debug(f'requesting {url} for image data')
+    # logger.debug(f'requesting {url} for image data')
     with urllib.request.urlopen(url) as response:
         img_data = response.read()
         img_path = Path(tempfile.gettempdir()) / data.get('filename', 'preview.png')
