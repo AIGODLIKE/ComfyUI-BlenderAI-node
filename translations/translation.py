@@ -9,7 +9,19 @@ LOCALE_MAP = {
 # 4.0 zh_HANS -> zh_HANS
 # 3.0 zh_HANS -> zh_CN
 LOCALE_MAP_INV = {}
-if bpy.app.version < (4, 0):
+
+def is_zh_HANS_version():
+    try:
+        bpy.context.preferences.view.language = "XXXXX"
+    except TypeError as e:
+        # import re
+        # find_tuple = re.match(r".*?\('(.*?)\'\).*?", str(e))
+        # if find_tuple and "zh_HANS" in find_tuple.group(1):
+        #     return True
+        return "zh_HANS" in str(e)
+    return False
+
+if not is_zh_HANS_version():
     LOCALE_MAP_INV = {
         "zh_HANS": "zh_CN"
     }

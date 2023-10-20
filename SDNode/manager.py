@@ -950,8 +950,7 @@ class TaskManager:
                 content = {"client_id": cid,
                            "prompt": prompt,
                            "extra_data": {
-                               "extra_pnginfo": {"workflow": task.get("workflow")},
-                               "client_id": cid,
+                               "extra_pnginfo": {"workflow": task.get("workflow")}
                            }}
                 data = json.dumps(content).encode()
                 req = request.Request(f"{TaskManager.server.get_url()}/{api}", data=data)
