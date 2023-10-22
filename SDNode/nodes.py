@@ -127,9 +127,11 @@ def get_icon_path(nname):
 
 
 def calc_hash_type(stype):
-    from .blueprints import is_bool_list
+    from .blueprints import is_bool_list, is_number_list
     if is_bool_list(stype):
         hash_type = md5(f"{{True, False}}".encode()).hexdigest()
+    elif is_number_list(stype):
+        hash_type = md5(",".join([str(i) for i in stype]).encode()).hexdigest()
     else:
         hash_type = md5(",".join(stype).encode()).hexdigest()
     return hash_type
@@ -1058,7 +1060,7 @@ class NodeParser:
                                 icon_id = find_icon(nname, inp_name, item)
                                 if icon_id:
                                     ENUM_ITEMS_CACHE[nname][inp_name] = items
-                                items.append((item, item, "", icon_id, len(items)))
+                                items.append((str(item), str(item), "", icon_id, len(items)))
                             return items
                         return wrap
                     prop = bpy.props.EnumProperty(items=get_items(nname, reg_name, inp))

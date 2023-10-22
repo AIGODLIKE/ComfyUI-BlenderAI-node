@@ -40,6 +40,10 @@ def is_bool_list(some_list: list):
         return False
     return isinstance(some_list[0], bool)
 
+def is_number_list(some_list: list):
+    if not some_list:
+        return False
+    return type(some_list[0]) in (int, float)
 
 def draw_prop_with_link(layout, self, prop, swlink, row=True, pre=None, post=None, **kwargs):
     layout = Ops_Swith_Socket.draw_prop(layout, self, prop, row, swlink)
@@ -83,6 +87,20 @@ def setwidth(self: NodeBase, w, count=1):
 class BluePrintBase:
     comfyClass = ""
 
+    def getattr(s, self, prop_name):
+        meta = self.get_meta(prop_name)
+        v = getattr(self, prop_name)
+        if meta and meta[0] and isinstance(meta[0], list):
+            t = type(meta[0][0])
+            if t == bool and isinstance(v, str):
+                return v == "True"
+            return type(meta[0][0])(v)
+        return v
+    
+    def setattr(s, self: NodeBase, prop_name, v):
+        v = type(getattr(self, prop_name))(v)
+        setattr(self, prop_name, v)
+    
     def new_btn_enable(s, self, layout, context):
         return True
 
@@ -100,7 +118,7 @@ class BluePrintBase:
         md = self.get_meta(prop)
         if md and md[0] == "STRING" and len(md) > 1 and isinstance(md[1], dict) and md[1].get("multiline",):
             width = int(self.width) // 7
-            lines = textwrap.wrap(text=str(getattr(self, prop)), width=width)
+            lines = textwrap.wrap(text=str(s.getattr(self, prop)), width=width)
             for line in lines:
                 layout.label(text=line, text_ctxt=self.get_ctxt())
             row = draw_prop_with_link(layout, self, prop, swlink)
@@ -228,7 +246,7 @@ class BluePrintBase:
             if not (default := inp.get("widget", {}).get("config", {}).get("default")):
                 continue
             reg_name = get_reg_name(name)
-            setattr(self, reg_name, default)
+            s.setattr(self, reg_name, default)
 
         s.load_specific(self, data, with_id)
         for inp_name in self.inp_types:
@@ -237,8 +255,7 @@ class BluePrintBase:
             reg_name = get_reg_name(inp_name)
             try:
                 v = data["widgets_values"].pop(0)
-                v = type(getattr(self, reg_name))(v)
-                setattr(self, reg_name, v)
+                s.setattr(self, reg_name, v)
             except TypeError as e:
                 if inp_name in {"seed", "noise_seed"}:
                     setattr(self, reg_name, str(v))
@@ -285,7 +302,7 @@ class BluePrintBase:
         for inp_name in self.inp_types:
             if not self.is_base_type(inp_name):
                 continue
-            widgets_values.append(getattr(self, get_reg_name(inp_name)))
+            widgets_values.append(s.getattr(self, get_reg_name(inp_name)))
         for inp in self.inputs:
             inp_name = inp.name
             reg_name = get_reg_name(inp_name)
@@ -368,20 +385,20 @@ class BluePrintBase:
                     from_node = link.from_node
                     if from_node.bl_idname == "PrimitiveNode":
                         # 添加 widget
-                        inputs[inp_name] = getattr(self, reg_name)
+                        inputs[inp_name] = s.getattr(self, reg_name)
                     else:
                         # 添加 socket
                         inputs[inp_name] = [link.from_node.id, link.from_node.outputs[:].index(link.from_socket)]
                 elif self.get_meta(inp_name):
                     if hasattr(self, reg_name):
                         # 添加 widget
-                        inputs[inp_name] = getattr(self, reg_name)
+                        inputs[inp_name] = s.getattr(self, reg_name)
                     # else:
                     #     # 添加 socket
                     #     inputs[inp_name] = [None]
             else:
                 # 添加 widget
-                inputs[inp_name] = getattr(self, reg_name)
+                inputs[inp_name] = s.getattr(self, reg_name)
         cfg = {
             "inputs": inputs,
             "class_type": self.class_type
@@ -611,7 +628,7 @@ class MultiAreaConditioning(BluePrintBase):
         return False
 
     def load_specific(s, self: NodeBase, data, with_id=True):
-        config = json.loads(getattr(self, "config"))
+        config = json.loads(s.getattr(self, "config"))
         for i in range(2):
             d = data["properties"]["values"][i]
             config[i]["x"] = d[0]
@@ -620,7 +637,7 @@ class MultiAreaConditioning(BluePrintBase):
             config[i]["sdn_height"] = d[3]
             config[i]["strength"] = d[4]
         self["config"] = json.dumps(config)
-        d = data["properties"]["values"][getattr(self, "index")]
+        d = data["properties"]["values"][s.getattr(self, "index")]
         self["x"] = d[0]
         self["y"] = d[1]
         self["sdn_width"] = d[2]
@@ -652,8 +669,8 @@ class MultiAreaConditioning(BluePrintBase):
             widgets_values += [self["resolutionX"],
                                self["resolutionY"],
                                None,
-                               getattr(self, "index"),
-                               *properties["values"][getattr(self, "index")]]
+                               s.getattr(self, "index"),
+                               *properties["values"][s.getattr(self, "index")]]
 
 
 class KSampler(BluePrintBase):
@@ -687,7 +704,7 @@ class KSamplerAdvanced(BluePrintBase):
         tree = self.get_tree()
         if (snode := get_sync_rand_node(tree)) and snode != self:
             return
-        if not getattr(self, "exe_rand") and not bpy.context.scene.sdn.rand_all_seed:
+        if not s.getattr(self, "exe_rand") and not bpy.context.scene.sdn.rand_all_seed:
             return
         self.noise_seed = str(get_fixed_seed())
 
@@ -824,17 +841,17 @@ class PrimitiveNode(BluePrintBase):
             output["name"] = "COMBO" if isinstance(meta_data[0], list) else meta_data[0]
             output["type"] = ",".join(meta_data[0]) if isinstance(meta_data[0], list) else meta_data[0]
             if output["name"] != "COMBO":
-                meta_data[1]["default"] = getattr(node, self.prop)
+                meta_data[1]["default"] = s.getattr(node, self.prop)
             output["widget"] = {"name": self.prop,
                                 "config": meta_data
                                 }
             widgets_values.clear()
-            widgets_values += [getattr(node, self.prop), "fixed"]
+            widgets_values += [s.getattr(node, self.prop), "fixed"]
 
     def serialize_pre_specific(s, self: NodeBase):
         if not self.outputs[0].is_linked:
             return
-        prop = getattr(self.outputs[0].links[0].to_node, get_reg_name(self.prop))
+        prop = s.getattr(self.outputs[0].links[0].to_node, get_reg_name(self.prop))
         for link in self.outputs[0].links[1:]:
             setattr(link.to_node, get_reg_name(link.to_socket.name), prop)
 
