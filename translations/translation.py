@@ -225,6 +225,7 @@ other = {
     "Advanced Setting": "显示高级设置",
     "Batch exec num": "批量执行数",
     "Loop exec": "循环执行",
+    "Show General Setting": "显示启动设置",
     # ops.py
     "No NodeTree Found": "节点树为空",
     "Node Not Found: ": "节点未找到",
@@ -235,8 +236,8 @@ other = {
     "Node<{}>Directory Not Exists!": "节点<{}>的文件夹路径不存在!",
     "Frame <{}> Not Found in <{}> Node Path!": "帧<{}> 在节点<{}>路径中未找到对应!",
     "Frame <{}> Add to Task!": "帧任务<{}>添加成功!",
-    "Launch": "启动/连接 ComfyUI服务",
-    "Restart": "重启ComfyUI",
+    "Launch/Connect ComfyUI": "启动/连接 ComfyUI服务",
+    "Restart ComfyUI": "重启ComfyUI",
     "ClipBoard Content Format Error": "剪切板内容格式错误",
     "Submit Task and with Clear Cache if Alt Pressed": "执行节点树, 如果按下了Alt执行 则 强制执行",
     "ComfyUI not Run,To Run?": "ComfyUI未启动,确定启动?",
@@ -252,6 +253,7 @@ other = {
     # ui.py
     "ClearTask": "清理任务",
     "Cancel": "取消任务",
+    "↓↓ComfyUI Not Launched, Click to Launch↓↓": "↓↓服务未启动, 点击启动↓↓",
     # preference.py
     "Server Type": "服务类型",
     "LocalServer": "本机启动",

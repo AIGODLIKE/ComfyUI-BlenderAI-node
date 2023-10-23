@@ -552,6 +552,7 @@ class LocalServer(Server):
         model_path = pref.model_path
         if not model_path or not Path(model_path).exists():
             logger.error(_T("ComfyUI Path Not Found"))
+            TaskManager.put_error_msg(_T("ComfyUI Path Not Found"))
             return
         logger.debug(f"{_T('Model Path')}: {model_path}")
         python = self.get_python()
@@ -845,7 +846,7 @@ class TaskManager:
     server: Server = FakeServer()
     task_queue = Queue()
     res_queue = Queue()
-    SessionId = {"SessionId": "ComfyUICUP"}
+    SessionId = {"SessionId": "ComfyUICUP" + str(time.time_ns())}
     status = {}
     progress = {}
     executing = {}

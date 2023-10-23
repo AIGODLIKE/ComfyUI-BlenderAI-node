@@ -106,9 +106,9 @@ class Ops(bpy.types.Operator):
         if action == "PresetFromClipBoard":
             desc = _T("Load from ClipBoard")
         elif action == "Launch":
-            desc = _T(action)
+            desc = _T("Launch/Connect ComfyUI")
         elif action == "Restart":
-            desc = _T(action)
+            desc = _T("Restart ComfyUI")
         elif action == "Connect":
             desc = _T("Connect to existing & running ComfyUI server")
         elif action == "Submit":
