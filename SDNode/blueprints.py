@@ -40,10 +40,18 @@ def is_bool_list(some_list: list):
         return False
     return isinstance(some_list[0], bool)
 
+
 def is_number_list(some_list: list):
     if not some_list:
         return False
     return type(some_list[0]) in (int, float)
+
+
+def is_all_str_list(some_list: list):
+    if not some_list:
+        return False
+    return set(type(i) for i in some_list) == {str}
+
 
 def draw_prop_with_link(layout, self, prop, swlink, row=True, pre=None, post=None, **kwargs):
     layout = Ops_Swith_Socket.draw_prop(layout, self, prop, row, swlink)
@@ -94,13 +102,17 @@ class BluePrintBase:
             t = type(meta[0][0])
             if t == bool and isinstance(v, str):
                 return v == "True"
+            if isinstance(v, str):
+                for i in meta[0]:
+                    if str(i) == v:
+                        return i
             return type(meta[0][0])(v)
         return v
-    
+
     def setattr(s, self: NodeBase, prop_name, v):
         v = type(getattr(self, prop_name))(v)
         setattr(self, prop_name, v)
-    
+
     def new_btn_enable(s, self, layout, context):
         return True
 
@@ -190,20 +202,25 @@ class BluePrintBase:
         ...
 
     def pre_filter(s, nname, desc):
+        def log_non_standard(stype, nname, inp):
+            winfo = str(stype)
+            if len(winfo) > 40:
+                winfo = winfo[:40] + "...]"
+            logger.warn(f"{_T('Non-Standard Enum')}: {nname}.{inp} -> {winfo}")
         for k in {"required", "optional"}:
             for inp, inp_desc in desc["input"].get(k, {}).items():
                 stype = deepcopy(inp_desc[0])
                 if not stype:
                     continue
-                if isinstance(stype, list) and is_bool_list(stype):
-                    # 处理 bool 列表
-                    logger.warn(f"{_T('Non-Standard Enum Detected')}: {nname}[{inp}] -> {stype}")
+                if not is_all_str_list(stype):
+                    log_non_standard(stype, nname, inp)
+                # if isinstance(stype, list) and is_bool_list(stype):
+                #     # 处理 bool 列表
+                #     log_non_standard(stype, nname, inp)
                 if not (isinstance(stype, list) and isinstance(stype[0], dict)):
                     continue
                 rep = [sti["content"] for sti in stype if "content" in sti]
                 inp_desc[0] = rep if rep else stype
-                if rep:
-                    logger.warn(f"{_T('Non-Standard Enum Detected')}: {nname}[{inp}] -> {stype}")
 
         return desc
 
@@ -855,6 +872,7 @@ class PrimitiveNode(BluePrintBase):
         for link in self.outputs[0].links[1:]:
             setattr(link.to_node, get_reg_name(link.to_socket.name), prop)
 
+
 def get_image_path(data):
     '''data = {"filename": filename, "subfolder": subfolder, "type": folder_type}'''
     url_values = urllib.parse.urlencode(data)
@@ -938,6 +956,7 @@ class 预览(BluePrintBase):
                 except TypeError:
                     ...
         Timer.put((f, self, img_paths))
+
 
 PreviewImage = 预览
 

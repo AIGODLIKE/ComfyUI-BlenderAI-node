@@ -157,6 +157,7 @@ other = {
     "Server Launch Failed": "服务启动失败, 使用缓存节点信息数据",
     "None Input": "节点输入",
     "Parsing Node Finished!": "解析节点完成!",
+    "Parsing Failed": "解析失败",
     "Render": "渲染",
     "ToImage": "到图像",
     "Pre Function": "预处理",
@@ -174,7 +175,7 @@ other = {
     "Frames Directory": "序列图文件夹",
     "Image num per line": "每行图片数",
     # SDNode/blueprints.py
-    "Non-Standard Enum Detected": "非标准枚举",
+    "Non-Standard Enum": "非标准枚举",
     # SDNode/tree.py
     "Invalid Node Type: {}": "检查到无效的节点: {}",
     "ParseNode Time:": "解析节点耗时:",

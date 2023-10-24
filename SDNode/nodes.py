@@ -127,13 +127,19 @@ def get_icon_path(nname):
 
 
 def calc_hash_type(stype):
-    from .blueprints import is_bool_list, is_number_list
+    from .blueprints import is_bool_list, is_number_list, is_all_str_list
     if is_bool_list(stype):
         hash_type = md5(f"{{True, False}}".encode()).hexdigest()
-    elif is_number_list(stype):
+    elif not is_all_str_list(stype):
         hash_type = md5(",".join([str(i) for i in stype]).encode()).hexdigest()
     else:
-        hash_type = md5(",".join(stype).encode()).hexdigest()
+        try:
+            hash_type = md5(",".join(stype).encode()).hexdigest()
+        except TypeError:
+            winfo = str(stype)
+            if len(winfo) > 100:
+                winfo = winfo[:40] + "......"
+            raise TypeError(f"{_T('Non-Standard Enum')} -> {winfo}")
     return hash_type
 
 
@@ -822,9 +828,9 @@ class NodeParser:
             self.SOCKET_TYPE.clear()
             self.load_internal()
         # self.CACHED_OBJECT_INFO.update(deepcopy(self.ori_object_info))
-        nodetree_desc = self._get_nt_desc()
-        node_clss = self._parse_node_clss()
         socket_clss = self._parse_sockets_clss()
+        node_clss = self._parse_node_clss()
+        nodetree_desc = self._get_nt_desc()
         if not diff:
             logger.warn(_T("Parsing Node Finished!"))
         return nodetree_desc, node_clss, socket_clss
@@ -835,14 +841,24 @@ class NodeParser:
             bp = get_blueprints(name)
             desc = bp.pre_filter(name, desc)
         _desc = {}
-        for name, desc in self.object_info.items():
+        def _parse(name, desc, _desc):
             for index, out_type in enumerate(desc.get("output", [])):
                 desc["output"][index] = [out_type, out_type]
-            for index, out_name in enumerate(desc.get("output_name", [])):
+            output_name = desc.get("output_name", [])
+            if isinstance(output_name, str):
+                output_name = [output_name]
+            for index, out_name in enumerate(output_name):
                 if not out_name:
                     continue
                 desc["output"][index][1] = out_name
             _desc[name] = desc
+        for name in list(self.object_info.keys()):
+            desc = self.object_info[name]
+            try:
+                _parse(name, desc, _desc)
+            except Exception as e:
+                logger.error(f"{_T('Parsing Failed')}: {name} -> {e}")
+                self.object_info.pop(name)
         return _desc
 
     def _get_nt_desc(self):
@@ -862,8 +878,7 @@ class NodeParser:
 
     def _get_socket_desc(self):
         _desc = {"*", }  # Enum/Int/Float/String/Bool 不需要socket
-        for name, desc in self.object_info.items():
-            self.SOCKET_TYPE[name] = {}
+        def _parse(name, desc, _desc):
             for inp_channel in {"required", "optional"}:
                 for inp, inp_desc in desc["input"].get(inp_channel, {}).items():
                     stype = inp_desc[0]
@@ -890,6 +905,14 @@ class NodeParser:
                 else:
                     _desc.add(out_type[0])
                     # self.SOCKET_TYPE[name][inp] = inp_desc[0]
+        for name in list(self.object_info.keys()):
+            desc = self.object_info[name]
+            self.SOCKET_TYPE[name] = {}
+            try:
+                _parse(name, desc, _desc)
+            except Exception as e:
+                logger.error(f"{_T('Parsing Failed')}: {name} -> {e}")
+                self.object_info.pop(name)
         return _desc
 
     def _parse_sockets_clss(self):
