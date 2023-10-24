@@ -474,8 +474,8 @@ class Comfyui_Swapper(bpy.types.Operator):
                 continue
             if nd.hide:
                 continue
-            if not [sk for sk in nd.outputs if not sk.hide and sk.enabled]:
-                continue
+            # if not [sk for sk in nd.outputs if not sk.hide and sk.enabled]:
+            #     continue
             list_fgSksIn, list_fgSksOut = GetNearestSockets(nd, callPos)
             fgSkOut = list_fgSksOut[0] if list_fgSksOut else None
             fgSkIn = list_fgSksIn[0] if list_fgSksIn else None
