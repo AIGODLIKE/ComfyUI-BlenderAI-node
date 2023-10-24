@@ -113,6 +113,8 @@ class Ops(bpy.types.Operator):
             desc = _T("Connect to existing & running ComfyUI server")
         elif action == "Submit":
             desc = _T("Submit Task and with Clear Cache if Alt Pressed")
+        elif action == "Close":
+            desc = _T("Close/Disconnect ComfyUI")
         return desc
 
     def draw(self, context):
@@ -419,6 +421,20 @@ class Ops(bpy.types.Operator):
             rtnode_reg()
             CFNodeTree.instance = getattr(bpy.context.space_data, "edit_tree", None)
             TaskManager.start_polling()
+
+    def Close(self):
+        if tree := getattr(bpy.context.space_data, "edit_tree", None):
+            # 恢复节点颜色
+            for n in tree.nodes:
+                if not n.label.endswith(("-EXEC", "-ERROR")):
+                    continue
+                n.use_custom_color = False
+                n.label = ""
+        TaskManager.close_server()
+        # hack fix tree update crash
+        tree = getattr(bpy.context.space_data, "edit_tree", None)
+        from .SDNode.tree import CFNodeTree
+        CFNodeTree.instance = tree
 
     def Restart(self):
         TaskManager.restart_server()

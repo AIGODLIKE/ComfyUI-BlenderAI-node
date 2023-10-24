@@ -30,7 +30,13 @@ class Panel(bpy.types.Panel):
         if platform.system() != "Darwin":
             row.operator("wm.console_toggle", text="", icon="CONSOLE", text_ctxt=ctxt)
         # row.prop(sdn, "restart_webui", text="", icon="RECOVER_LAST")
-        row.operator(Ops.bl_idname, text="", icon="QUIT", text_ctxt=ctxt).action = "Launch"
+        if TaskManager.server == FakeServer._instance:
+            row.operator(Ops.bl_idname, text="", icon="QUIT", text_ctxt=ctxt).action = "Launch"
+        else:
+            row.alert = True
+            row.operator(Ops.bl_idname, text="", icon="QUIT", text_ctxt=ctxt).action = "Close"
+            row.alert = False
+
         row.operator(Fetch_Node_Status.bl_idname, text="", icon="FILE_REFRESH", text_ctxt=ctxt)
         row.operator(Ops.bl_idname, text="", icon="RECOVER_LAST", text_ctxt=ctxt).action = "Restart"
         row.prop(sdn, "open_webui", text="", icon="URL", text_ctxt=ctxt)

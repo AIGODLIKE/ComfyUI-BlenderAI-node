@@ -142,6 +142,11 @@ other = {
     "Executing Node": "正在执行节点",
     "Execution Cached": "执行缓存",
     "got response": "获取响应",
+    "Remote Server Closed": "远程服务已关闭",
+    "Proc Task Thread Exit": "任务处理线程关闭",
+    "Poll Result Thread Exit": "响应轮询线程关闭",
+    "Poll Task Thread Exit": "任务轮询线程关闭",
+    "STDOUT Listen Thread Exit": "输出监听线程关闭",
     # SDNode/node_process.py
     "Executing": "执行中",
     # SDNode/nodes.py
@@ -238,6 +243,7 @@ other = {
     "Frame <{}> Not Found in <{}> Node Path!": "帧<{}> 在节点<{}>路径中未找到对应!",
     "Frame <{}> Add to Task!": "帧任务<{}>添加成功!",
     "Launch/Connect ComfyUI": "启动/连接 ComfyUI服务",
+    "Close/Disconnect ComfyUI": "关闭/断开 ComfyUI服务",
     "Restart ComfyUI": "重启ComfyUI",
     "ClipBoard Content Format Error": "剪切板内容格式错误",
     "Submit Task and with Clear Cache if Alt Pressed": "执行节点树, 如果按下了Alt执行 则 强制执行",

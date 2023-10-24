@@ -23,7 +23,7 @@ from ..utils import rmtree as rt, logger, _T, PkgInstaller, FSWatcher
 from ..timer import Timer
 from ..preference import get_pref
 from .history import History
-
+from .websocket import WebSocketApp
 
 def get_ip():
     return TaskManager.server.get_ip()
@@ -110,17 +110,21 @@ class Task:
         if not self.tree:
             return False
         try:
-            dir(self.tree)
+            if self.tree.id_data != self.tree:
+                raise ReferenceError
         except ReferenceError:
+            return False
+        except Exception:
+            import traceback
+            traceback.print_exc()
             return False
         return True
 
     def set_finished(self):
         self.is_finished = True
-        if not self.is_tree_valid():
-            return
-
         def f(self: Task):
+            if not self.is_tree_valid():
+                return
             for n in self.tree.nodes:
                 if not n.label.endswith("-EXEC"):
                     continue
@@ -130,11 +134,11 @@ class Task:
 
     def set_executing_node_id(self, node_id):
         self.executing_node_id = node_id
-        if not self.is_tree_valid():
-            return
-        self.process = {}
 
         def f(self: Task):
+            if not self.is_tree_valid():
+                return
+            self.process = {}
             if self.executing_node:
                 self.executing_node.use_custom_color = False
                 self.executing_node.label = ""
@@ -155,13 +159,15 @@ class Task:
         """
         process: {'value': 20, 'max': 20}
         """
-        if not self.is_tree_valid():
-            return
-        if not node_id:
-            node_id = self.executing_node_id
-        if not self.executing_node:
-            return
-        self.process = process
+        # if not node_id:
+        #     node_id = self.executing_node_id
+        def f(self: Task):
+            if not self.is_tree_valid():
+                return
+            if not self.executing_node:
+                return
+            self.process = process
+        Timer.put((f, self))
         # self.tree.display_process()
 
 
@@ -531,7 +537,10 @@ class RemoteServer(Server):
 
     def is_launched(self) -> bool:
         return self.server_connected
-
+    
+    def close(self):
+        self.server_connected = False
+        logger.warn(_T("Remote Server Closed"))
 
 class LocalServer(Server):
     def __init__(self) -> None:
@@ -838,7 +847,7 @@ class LocalServer(Server):
             if not proc:
                 logger.info(line)
         self.stdout_listen_exited = True
-        logger.debug("STDOUT Listen Thread Exit")
+        logger.debug(_T("STDOUT Listen Thread Exit"))
 
 
 class TaskManager:
@@ -855,6 +864,7 @@ class TaskManager:
     error_msg = []
     progress_bar = 0
     executer = ThreadPoolExecutor(max_workers=1)
+    ws:WebSocketApp = None
 
     def __new__(cls, *args, **kw):
         if cls._instance is None:
@@ -926,11 +936,18 @@ class TaskManager:
         Thread(target=TaskManager.poll_task, daemon=True).start()
         Thread(target=TaskManager.proc_res, daemon=True).start()
 
-    def restart_server():
+    def restart_server(fake=False):
         TaskManager.clear_all()
         TaskManager.server.close()
-        TaskManager.run_server()
+        TaskManager.run_server(fake=fake)
 
+    def close_server():
+        if TaskManager.ws:
+            TaskManager.ws.close()
+            TaskManager.ws = None
+        TaskManager.cur_task = None
+        TaskManager.restart_server(fake=True)
+        
     def push_task(task, pre=None, post=None, tree=None):
         logger.debug(_T('Add Task'))
         if not TaskManager.is_launched():
@@ -972,6 +989,7 @@ class TaskManager:
         TaskManager.interrupt()
         while not TaskManager.task_queue.empty():
             TaskManager.task_queue.get()
+        TaskManager.progress = {}
 
     @staticmethod
     def poll_task():
@@ -987,7 +1005,7 @@ class TaskManager:
             logger.debug(_T("Submit Task"))
             TaskManager.cur_task = task
             TaskManager.submit(task)
-        logger.debug("Poll Task Thread Exit")
+        logger.debug(_T("Poll Task Thread Exit"))
 
     def query_server_task():
         if not TaskManager.is_launched():
@@ -1083,13 +1101,12 @@ class TaskManager:
             prompt = task.task["prompt"]
             if node in prompt:
                 prompt[node][2](task, res)
-        logger.debug("Proc Task Thread Exit")
+        logger.debug(_T("Proc Task Thread Exit"))
 
     @staticmethod
     def poll_res():
         tm = TaskManager
         SessionId = TaskManager.SessionId
-        from .websocket import WebSocketApp
 
         def on_message(ws, message):
             msg = json.loads(message)
@@ -1171,10 +1188,12 @@ class TaskManager:
                 ...  # pass
             else:
                 logger.error(message)
-
+        
         ws = WebSocketApp(f"ws://{get_ip()}:{get_port()}/ws?clientId={SessionId['SessionId']}", on_message=on_message)
+        TaskManager.ws = ws
         ws.run_forever()
-        logger.debug("Poll Result Thread Exit")
+        logger.debug(_T("Poll Result Thread Exit"))
+        TaskManager.ws = None
 
 
 def removetemp():
