@@ -761,7 +761,7 @@ class NodeParser:
             "name": "PrimitiveNode",
             "display_name": "Primitive",
             "description": "",
-            "category": "Utils",
+            "category": "utils",
             "output_node": False
         }
         self.object_info["Note"] = {
@@ -781,7 +781,7 @@ class NodeParser:
             "name": "Note",
             "display_name": "Note",
             "description": "",
-            "category": "Utils",
+            "category": "utils",
             "output_node": False
         }
 

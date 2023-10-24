@@ -703,7 +703,7 @@ def draw_intern_node_search(self, context):
         layout.operator("sdn.node_search", text="Search", text_ctxt=ctxt, icon="VIEWZOOM")
 
 def set_draw_intern(reg):
-    NODE_MT_Utils = getattr(bpy.types, gen_cat_id("Utils"), None)
+    NODE_MT_Utils = getattr(bpy.types, gen_cat_id("utils"), None)
     if not NODE_MT_Utils:
         return
     # bpy.types.NODE_MT_Utils.draw._draw_funcs
