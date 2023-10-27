@@ -307,6 +307,12 @@ other = {
     "-Good friends exploring in the AI world (alphabetical order)": "-在AI世界探索的好朋友们(首字母排序)",
     "\"Thank you, these adventurers who are exploring and sharing their experience in the AI field, hurry up and follow them\"": "“感谢，这些在AI领域探索并分享经验的冒险者，快去关注啦～”",
     "Stencil Offset Size": "镂板偏移大小",
+    "Drag Link Result Count": "拖拽连接显示行列数",
+    "Drag Link Result Count Column": "列数",
+    "Drag Link Result Count Row": "行数",
+    "Drag Link Result Page Next": "下一页",
+    "Drag Link Result Page Prev": "上一页",
+    "Drag Link Result Page Current": "当前页",
     # MLT
     " Prompts": "提示词",
     "MLT": "多行文本",

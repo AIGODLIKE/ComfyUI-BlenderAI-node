@@ -19,8 +19,8 @@ class AddonPreference(bpy.types.AddonPreferences):
                                         name="Server Type")  # --server_type
     model_path: bpy.props.StringProperty(subtype="DIR_PATH", name="ComfyUI Path",
                                          default=str(Path(__file__).parent / "ComfyUI"))
-    python_path: bpy.props.StringProperty(subtype="FILE_PATH", 
-                                          name="Python Path", 
+    python_path: bpy.props.StringProperty(subtype="FILE_PATH",
+                                          name="Python Path",
                                           description="Select python dir or python.exe")
     page: bpy.props.EnumProperty(items=[("通用", "General", "", "COLLAPSEMENU", 0),
                                         ("常用路径", "Common Path", "", "URL", 1),
@@ -45,6 +45,40 @@ class AddonPreference(bpy.types.AddonPreferences):
     fixed_preview_image_size: bpy.props.BoolProperty(default=False, name="Fixed Preview Image Size")
     preview_image_size: bpy.props.IntProperty(default=256, min=64, max=8192, name="Preview Image Size")
     stencil_offset_size_xy: bpy.props.IntVectorProperty(default=(0, 18), size=2, min=-100, max=100, name="Stencil Offset Size")
+    drag_link_result_count_col: bpy.props.IntProperty(default=4, min=1, max=10, name="Drag Link Result Count Column")
+    drag_link_result_count_row: bpy.props.IntProperty(default=10, min=1, max=100, name="Drag Link Result Count Row")
+    count_page_total: bpy.props.IntProperty(default=0, min=0, name="Drag Link Result Page Total")
+
+    count_page_current: bpy.props.IntProperty(default=0, min=0, name="Drag Link Result Page Current")
+
+    def update_count_page_next(self, context):
+        if self.count_page_next:
+            self.count_page_next = False
+            self.count_page_current += 1
+            self.count_page_current = min(self.count_page_current, self.count_page_total)
+            bpy.ops.sdn.mouse_pos_rec("INVOKE_DEFAULT", action="ORI")
+            from .Linker.linker import P
+            bpy.context.window.cursor_warp(P.x, P.y)
+            bpy.ops.comfy.swapper("INVOKE_DEFAULT", action="DRAW")
+            bpy.context.window.cursor_warp(P.ori_x, P.ori_y)
+
+    count_page_next: bpy.props.BoolProperty(default=False,
+                                            name="Drag Link Result Page Next",
+                                            update=update_count_page_next)
+
+    def update_count_page_prev(self, context):
+        if self.count_page_prev:
+            self.count_page_prev = False
+            self.count_page_current -= 1
+            bpy.ops.sdn.mouse_pos_rec("INVOKE_DEFAULT", action="ORI")
+            from .Linker.linker import P
+            bpy.context.window.cursor_warp(P.x, P.y)
+            bpy.ops.comfy.swapper("INVOKE_DEFAULT", action="DRAW")
+            bpy.context.window.cursor_warp(P.ori_x, P.ori_y)
+    count_page_prev: bpy.props.BoolProperty(default=False,
+                                            name="Drag Link Result Page Prev",
+                                            update=update_count_page_prev)
+
     def get_cuda_list():
         """
         借助nvidia-smi获取CUDA版本列表
@@ -61,10 +95,11 @@ class AddonPreference(bpy.types.AddonPreferences):
                     continue
                 items.append((m.group(1), m.group(2), "", len(items),))
             return items
-        except:
+        except BaseException:
             return []
-        
+
     cuda: bpy.props.EnumProperty(name="cuda", items=get_cuda_list())
+
     def ip_check(self, context):
         """检查IP地址是否合法"""
         ip = self.ip.split(".")
@@ -131,6 +166,10 @@ class AddonPreference(bpy.types.AddonPreferences):
         row = layout.row(align=True)
         row.prop(self, "fixed_preview_image_size", toggle=True, text_ctxt=ctxt)
         row.prop(self, "preview_image_size", text_ctxt=ctxt)
+        row = layout.row(align=True)
+        row.label(text="Drag Link Result Count", text_ctxt=ctxt)
+        row.prop(self, "drag_link_result_count_col", text="", text_ctxt=ctxt)
+        row.prop(self, "drag_link_result_count_row", text="", text_ctxt=ctxt)
         if self.server_type == "Local":
             row = layout.row(align=True)
             row.prop(self, "auto_launch", toggle=True, text_ctxt=ctxt)

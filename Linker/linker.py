@@ -1,4 +1,5 @@
 # reference: https://github.com/ugorek000/VoronoiLinker
+import typing
 import bpy
 import blf
 import gpu
@@ -10,6 +11,7 @@ from bpy.types import Context
 from ..translations.translation import ctxt
 from ..SDNode.nodes import NodeBase, calc_hash_type, ctxt
 from ..utils import _T2
+from ..preference import get_pref
 
 SEARCH_DICT = {
     "LoaderMenu": [
@@ -279,9 +281,9 @@ def PreviewerDrawCallback(self, context):
     if StartDrawCallbackStencil(self, context):
         return
     cusorPos = context.space_data.cursor_location
-    if not self.foundGoalSkOut:
+    if not P.foundGoalSkOut:
         return
-    DrawToolOftenStencil(cusorPos, [self.foundGoalSkOut], isLineToCursor=True, textSideFlip=True, isDrawMarkersMoreTharOne=True)
+    DrawToolOftenStencil(cusorPos, [P.foundGoalSkOut], isLineToCursor=True, textSideFlip=True, isDrawMarkersMoreTharOne=True)
 
 
 def UiScale():
@@ -377,15 +379,63 @@ def GetNearestSockets(nd, callPos):
     return list_fgSksIn, list_fgSksOut
 
 
-def ToolInvokeStencilPrepare(self, context, f):
-    context.area.tag_redraw()
-    self.handle = bpy.types.SpaceNodeEditor.draw_handler_add(f, (self, context), 'WINDOW', 'POST_PIXEL')
-    context.window_manager.modal_handler_add(self)
+class DRAG_LINK_PT_PANEL(bpy.types.Panel):
+    bl_label = ""
+    bl_space_type = "VIEW_3D"
+    bl_region_type = "UI"
+
+    @classmethod
+    def poll(cls, context: Context):
+        return hasattr(context.space_data, "edit_tree")
+
+    def draw(self, context: Context):
+        DRAG_LINK_MT_NODE_PIE.draw(self, context)
 
 
 class DRAG_LINK_MT_NODE_PIE(bpy.types.Menu):
     # label is displayed at the center of the pie menu.
     bl_label = ""
+    sb_list = []
+
+    @classmethod
+    def poll(cls, context: Context):
+        return hasattr(context.space_data, "edit_tree")
+
+    @staticmethod
+    def update_sb_list():
+        def find_node_by_type(sb):
+            ft = bpy.context.scene.sdn.linker_socket
+            is_out = bpy.context.scene.sdn.linker_socket_out
+            if is_out:
+                for inp_name in sb.inp_types:
+                    inp = sb.inp_types[inp_name]
+                    if not inp:
+                        continue
+                    socket = inp[0]
+                    if isinstance(inp[0], list):
+                        socket = calc_hash_type(inp[0])
+                        continue
+                    if socket in {"ENUM", "INT", "FLOAT", "STRING", "BOOLEAN"}:
+                        continue
+                    if socket == ft:
+                        return True
+            else:
+                for out_type, _ in sb.out_types:
+                    if out_type == ft:
+                        return True
+            return False
+        sb_list = [sb for sb in NodeBase.__subclasses__() if find_node_by_type(sb)]
+        DRAG_LINK_MT_NODE_PIE.sb_list = sb_list
+
+    @staticmethod
+    def draw_prepare():
+        bpy.ops.sdn.mouse_pos_rec("INVOKE_DEFAULT")
+        DRAG_LINK_MT_NODE_PIE.update_sb_list()
+        pref = get_pref()
+        pref.count_page_current = 0
+        c = pref.drag_link_result_count_col
+        r = pref.drag_link_result_count_row
+        pref.count_page_total = len(DRAG_LINK_MT_NODE_PIE.sb_list) // (c * r)
 
     def draw(self, context):
         layout = self.layout
@@ -414,50 +464,65 @@ class DRAG_LINK_MT_NODE_PIE(bpy.types.Menu):
         pie = layout.menu_pie()
         col = pie.column()
         box = col.box()
-        box.separator(factor=0.02)
+        box.column()
         br = box.row()
-        br.scale_y = 0.25
-        br.alignment = 'CENTER'
+        br.scale_y = 0.5
+        br.alignment = "CENTER"
         br.label(text="Linker")
+        box.column()
+
+        pref = get_pref()
+        row = box.box().row(align=True)
+        r1 = row.split(factor=0.15, align=True)
+        r1.scale_y = 1.5
+        # 15 70 15
+        left = r1.column()
+        left.prop(pref, "count_page_prev", text="", icon="TRIA_LEFT")
+        left.enabled = pref.count_page_current > 0
+        r2 = r1.split(factor=70 / 85, align=True)
+        center = r2.row(align=True)
+        center.alignment = "CENTER"
+        center.alert = True
+        center.label(text=f"{_T2('Drag Link Result Page Current')} {pref.count_page_current+1}")
+        right = r2.column()
+        right.prop(pref, "count_page_next", text="", icon="TRIA_RIGHT")
+        right.enabled = pref.count_page_current < pref.count_page_total
+        
+        # row = box.row()
+        # row.label(text="Drag Link Result Count", text_ctxt=ctxt)
+        # row.prop(pref, "drag_link_result_count_col", text="", text_ctxt=ctxt)
+        # row.prop(pref, "drag_link_result_count_row", text="", text_ctxt=ctxt)
+
         col = box.column()
         # row.operator('comfy.node_search', text='', icon='VIEWZOOM')
-
-        def find_node_by_type(sb):
-            ft = bpy.context.scene.sdn.linker_socket
-            is_out = bpy.context.scene.sdn.linker_socket_out
-            if is_out:
-                for inp_name in sb.inp_types:
-                    inp = sb.inp_types[inp_name]
-                    if not inp:
-                        continue
-                    socket = inp[0]
-                    if isinstance(inp[0], list):
-                        socket = calc_hash_type(inp[0])
-                        continue
-                    if socket in {"ENUM", "INT", "FLOAT", "STRING", "BOOLEAN"}:
-                        continue
-                    if socket == ft:
-                        return True
-            else:
-                for out_type, _ in sb.out_types:
-                    if out_type == ft:
-                        return True
-            return False
-        sb_list = [sb for sb in NodeBase.__subclasses__() if find_node_by_type(sb)]
-        lnum = min(4, len(sb_list))
-        for count, sb in enumerate(sb_list):
-            if count % lnum == 0:
-                fcol = col.column_flow(columns=lnum, align=True)
+        c = pref.drag_link_result_count_col
+        r = pref.drag_link_result_count_row
+        p = pref.count_page_current
+        range_start, range_end = p * c * r, (p + 1) * c * r
+        sb_list = DRAG_LINK_MT_NODE_PIE.sb_list
+        for count, sb in enumerate(sb_list[range_start: range_end]):
+            if count % c == 0:
+                fcol = col.column_flow(columns=c, align=True)
                 fcol.scale_y = 1.6
-                fcol.ui_units_x = lnum * 7
+                fcol.ui_units_x = c * 7
             op = fcol.operator(DragLinkOps.bl_idname, text=_T2(sb.class_type), text_ctxt=ctxt)
             op.create_type = sb.class_type
 
 
+class P:
+    x = 0
+    y = 0
+    ori_x = 0
+    ori_y = 0
+    foundGoalSkOut = None
+
+
 class Comfyui_Swapper(bpy.types.Operator):
-    bl_idname = 'comfy.swapper'
+    bl_idname = "comfy.swapper"
     bl_label = "Swapper"
-    bl_options = {'UNDO'}
+    bl_options = {'REGISTER', 'UNDO'}
+
+    action: bpy.props.StringProperty()
 
     @classmethod
     def poll(cls, context):
@@ -465,7 +530,7 @@ class Comfyui_Swapper(bpy.types.Operator):
         return context.space_data.tree_type == TREE_TYPE
 
     def NextAssessment(self, context):
-        self.foundGoalSkOut = None
+        P.foundGoalSkOut = None
         callPos = context.space_data.cursor_location
 
         for li in GetNearestNodes(context.space_data.edit_tree.nodes, callPos):
@@ -474,27 +539,35 @@ class Comfyui_Swapper(bpy.types.Operator):
                 continue
             if nd.hide:
                 continue
-            # if not [sk for sk in nd.outputs if not sk.hide and sk.enabled]:
-            #     continue
             list_fgSksIn, list_fgSksOut = GetNearestSockets(nd, callPos)
             fgSkOut = list_fgSksOut[0] if list_fgSksOut else None
             fgSkIn = list_fgSksIn[0] if list_fgSksIn else None
             if not fgSkOut:
-                self.foundGoalSkOut = fgSkIn
+                P.foundGoalSkOut = fgSkIn
             elif not fgSkIn:
-                self.foundGoalSkOut = fgSkOut
+                P.foundGoalSkOut = fgSkOut
             else:
-                self.foundGoalSkOut = fgSkOut if fgSkOut.dist < fgSkIn.dist else fgSkIn
-            if self.foundGoalSkOut:
+                P.foundGoalSkOut = fgSkOut if fgSkOut.dist < fgSkIn.dist else fgSkIn
+            if P.foundGoalSkOut:
                 break
 
     def invoke(self, context, event):
+        if self.action == "DRAW":
+            bpy.context.window_manager.popup_menu_pie(event, DRAG_LINK_MT_NODE_PIE.draw)
+            return {"FINISHED"}
+        P.foundGoalSkOut = None
         self.keyType = GetOpKey(Comfyui_Swapper.bl_idname)
         if not context.space_data.edit_tree:
             return {'FINISHED'}
         Comfyui_Swapper.NextAssessment(self, context)
-        ToolInvokeStencilPrepare(self, context, PreviewerDrawCallback)
+        context.area.tag_redraw()
+        f = PreviewerDrawCallback
+        self.handle = bpy.types.SpaceNodeEditor.draw_handler_add(f, (self, context), 'WINDOW', 'POST_PIXEL')
+        context.window_manager.modal_handler_add(self)
         return {'RUNNING_MODAL'}
+
+    def execute(self, context: Context):
+        return {"FINISHED"}
 
     def modal(self, context, event):
         context.area.tag_redraw()
@@ -502,40 +575,58 @@ class Comfyui_Swapper(bpy.types.Operator):
             case 'MOUSEMOVE':
                 if context.space_data.edit_tree:
                     Comfyui_Swapper.NextAssessment(self, context)
-            case self.keyType | 'ESC':
+            case "ESC":
+                return {"FINISHED"}
+            case self.keyType:
                 if event.value != 'RELEASE':
-                    return {'RUNNING_MODAL'}
+                    return {"RUNNING_MODAL"}
                 bpy.types.SpaceNodeEditor.draw_handler_remove(self.handle, 'WINDOW')
                 if not context.space_data.edit_tree:
-                    return {'FINISHED'}
-                if self.foundGoalSkOut:
-                    DoPreview(context, self.foundGoalSkOut.tg)
-                    # print(self.foundGoalSkOut.boxHeiBou)
-                    # print(self.foundGoalSkOut.dist)
-                    # print(self.foundGoalSkOut.name)
-                    # print(self.foundGoalSkOut.pos)
-                    # print(self.foundGoalSkOut.tg)
-                    # print(self.foundGoalSkOut.tg.name)
-                    # print(self.foundGoalSkOut.tg.type)
-                    # print(self.foundGoalSkOut.tg.bl_idname)
-                    # print(type(self.foundGoalSkOut.tg))
+                    return {"FINISHED"}
+                if P.foundGoalSkOut:
+                    DoPreview(context, P.foundGoalSkOut.tg)
                     try:
                         # scene_node_pie = bpy.context.scene.node_pie
                         # scene_node_pie.vo_socket = self.foundGoalSkOut.tg.name
-                        tg = self.foundGoalSkOut.tg
+                        tg = P.foundGoalSkOut.tg
                         bpy.context.scene.sdn.linker_node = context.space_data.edit_tree.nodes.active.name
                         bpy.context.scene.sdn.linker_socket = tg.bl_idname
                         bpy.context.scene.sdn.linker_socket_out = tg.is_output
                         bpy.context.scene.sdn.linker_socket_index = tg.index
                         bpy.context.scene.sdn.linker_search_content = ""
-                        bpy.ops.wm.call_menu_pie(name="DRAG_LINK_MT_NODE_PIE")
+                        # 计算结果中所有的 符合node
+                        DRAG_LINK_MT_NODE_PIE.draw_prepare()
+                        bpy.ops.comfy.swapper("INVOKE_DEFAULT", action="DRAW")
+                        # res = bpy.context.window_manager.invoke_props_dialog(self, width=400)
+                        # print(res)
+                        # return res
+                        # bpy.context.window_manager.popup_menu_pie(event, DRAG_LINK_MT_NODE_PIE.draw)
+                        # bpy.ops.wm.call_panel(name="DRAG_LINK_PT_PANEL", keep_open=False)
+                        # bpy.ops.wm.call_menu_pie(name="DRAG_LINK_MT_NODE_PIE", keep_open=False)
                         # bpy.ops.wm.call_menu_pie(name="COMFY_MT_NODE_PIE")
                         # bpy.ops.wm.call_menu_pie(name="COMFY_MT_NODE_PIE_VO")
                     except Exception as e:
                         import traceback
                         traceback.print_exc()
-                return {'FINISHED'}
+                return {"FINISHED"}
         return {'RUNNING_MODAL'}
+
+
+class MousePosRec(bpy.types.Operator):
+    bl_idname = "sdn.mouse_pos_rec"
+    bl_label = "Mouse Pos Rec"
+    bl_options = {'REGISTER', 'UNDO'}
+    action: bpy.props.StringProperty()
+
+    def invoke(self, context, event):
+        if self.action == "ORI":
+            P.ori_x = event.mouse_x
+            P.ori_y = event.mouse_y
+        else:
+            P.x = event.mouse_x
+            P.y = event.mouse_y
+        self.action = ""
+        return {"FINISHED"}
 
 
 class DragLinkOps(bpy.types.Operator):
@@ -547,7 +638,6 @@ class DragLinkOps(bpy.types.Operator):
     create_type: bpy.props.StringProperty()
 
     def execute(self, context: bpy.types.Context):
-        self.select_nodes = []
         self.init_pos = context.space_data.cursor_location.copy()
 
         n = bpy.context.scene.sdn.linker_node
@@ -561,8 +651,11 @@ class DragLinkOps(bpy.types.Operator):
         if not node:
             return {"FINISHED"}
         new_node = tree.nodes.new(self.create_type)
-        self.select_nodes = [new_node]
-        self.select_nodes[0].location = self.init_pos
+        bpy.ops.node.select_all(action='DESELECT')
+        new_node.select = True
+        self.select_node = new_node
+        tree.nodes.active = new_node
+        self.select_node.location = self.init_pos
         self.init_node_pos = self.init_pos
         find_socket = None
         if is_out:
@@ -587,10 +680,10 @@ class DragLinkOps(bpy.types.Operator):
         return {"RUNNING_MODAL"}
 
     def modal(self, context, event: bpy.types.Event):
-        if not self.select_nodes:
+        if not self.select_node:
             return {"FINISHED"}
         if event.type == "MOUSEMOVE":
-            self.update_nodes_pos(event)
+            self.update_node_pos(event)
 
         # exit
         if event.value == "PRESS" and event.type in {"ESC", "LEFTMOUSE", "ENTER"}:
@@ -599,14 +692,13 @@ class DragLinkOps(bpy.types.Operator):
             from ..ops import get_tree
             tree = get_tree()
             if tree:
-                tree.safe_remove_nodes(self.select_nodes[:])
+                tree.safe_remove_nodes([self.select_node])
             return {"CANCELLED"}
 
         return {"RUNNING_MODAL"}
 
-    def update_nodes_pos(self, event):
-        for n in self.select_nodes:
-            n.location = self.init_node_pos + bpy.context.space_data.cursor_location - self.init_pos
+    def update_node_pos(self, event):
+        self.select_node.location = self.init_node_pos + bpy.context.space_data.cursor_location - self.init_pos
 
 
 list_addonKeymaps = []
@@ -614,6 +706,8 @@ list_addonKeymaps = []
 
 def linker_register():
     bpy.utils.register_class(Comfyui_Swapper)
+    bpy.utils.register_class(MousePosRec)
+    bpy.utils.register_class(DRAG_LINK_PT_PANEL)
     bpy.utils.register_class(DRAG_LINK_MT_NODE_PIE)
     bpy.utils.register_class(DragLinkOps)
     blId, key, shift, ctrl, alt = Comfyui_Swapper.bl_idname, 'R', False, False, False
@@ -624,6 +718,8 @@ def linker_register():
 def linker_unregister():
     try:
         bpy.utils.unregister_class(Comfyui_Swapper)
+        bpy.utils.unregister_class(MousePosRec)
+        bpy.utils.unregister_class(DRAG_LINK_PT_PANEL)
         bpy.utils.unregister_class(DRAG_LINK_MT_NODE_PIE)
         bpy.utils.unregister_class(DragLinkOps)
         for li in list_addonKeymaps:
