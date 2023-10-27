@@ -146,11 +146,6 @@ class Prop(bpy.types.PropertyGroup):
     batch_count: bpy.props.IntProperty(default=1, min=1, name="Batch exec num")
     loop_exec: bpy.props.BoolProperty(default=False, name="Loop exec")
     render_layer: bpy.props.CollectionProperty(type=RenderLayerString)
-    linker_node: bpy.props.StringProperty(name="Linker Node Name")
-    linker_socket: bpy.props.StringProperty(name="Linker Socket Name")
-    linker_socket_out: bpy.props.BoolProperty(default=False, name="Linker Socket Out")
-    linker_socket_index: bpy.props.IntProperty(name="Linker Socket Index")
-    linker_search_content: bpy.props.StringProperty(name="Linker Search Content")
     show_pref_general: bpy.props.BoolProperty(default=False, name="General Setting", description="Show General Setting")
 
 
