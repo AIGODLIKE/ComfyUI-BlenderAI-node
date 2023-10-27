@@ -1,4 +1,28 @@
 {
+    "LoadVideo": {
+        "title": "加载视频",
+        "widgets": {
+            "video": "视频",
+            "choose file to upload": "选择文件上传",
+            "frame_start": "起始帧",
+            "frame_limit": "帧数限制"
+        },
+        "outputs": {
+            "frames": "帧",
+            "frame_count": "帧数"
+        }
+    },
+    "ImageSizeAndBatchSize": {
+        "title": "图像尺寸与批次大小",
+        "inputs": {
+            "image": "图像"
+        },
+        "outputs": {
+            "width": "宽度",
+            "height": "高度",
+            "batch_size": "批次大小"
+        }
+    },
     "AnimateDiffLoader": {
         "title": "动态扩散加载器",
         "inputs": {
@@ -31,6 +55,32 @@
             "LATENT": "Latent"
         }
     },
+    "AnimateDiffLoraLoader": {
+        "title": "动态LoRA加载器",
+        "inputs": {
+            "lora_stack": "LoRA堆"
+        },
+        "widgets": {
+            "lora_name": "LoRA名称",
+            "alpha": "Alpha"
+        },
+        "outputs": {
+            "MOTION_LORA_STACK": "动态LoRA堆"
+        }
+    },
+    "AnimateDiffSlidingWindowOptions":{
+        "title": "动态滑动窗口",
+        "widgets": {
+            "context_length": "上下文帧长度",
+            "context_stride": "上下文帧步长",
+            "context_overlap": "上下文帧重叠",
+            "context_schedule": "上下文调度",
+            "closed_loop": "闭合循环"
+        },
+        "outputs": {
+            "SLIDING_WINDOW_OPTS": "滑动窗口"
+        }
+    },
     "AnimateDiffUnload": {
         "title": "卸载动态扩散",
         "inputs": {
@@ -60,7 +110,9 @@
             "save_image": "是否保存",
                 "Enabled": "是",
                 "Disabled": "否",
-            "filename_prefix": "文件名前缀"
+            "filename_prefix": "文件名前缀",
+            "format": "格式",
+            "pingpong": "Ping-Pong"
         }
     },
     "AnimateDiffSampler": {
