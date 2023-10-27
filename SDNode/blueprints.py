@@ -322,9 +322,8 @@ class BluePrintBase:
             widgets_values.append(s.getattr(self, get_reg_name(inp_name)))
         for inp in self.inputs:
             inp_name = inp.name
-            reg_name = get_reg_name(inp_name)
             ori_name = get_ori_name(inp_name)
-            md = self.get_meta(reg_name)
+            md = self.get_meta(ori_name)
             inp_info = {"name": ori_name,
                         "type": inp.bl_idname,
                         "link": None}
