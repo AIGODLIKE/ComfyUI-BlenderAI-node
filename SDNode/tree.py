@@ -3,6 +3,7 @@ import typing
 import time
 import sys
 import traceback
+from hashlib import md5
 from string import ascii_letters
 from pathlib import Path
 from bpy.app.translations import pgettext
@@ -606,25 +607,28 @@ def reg_nodetree(identifier, cat_list, sub=False):
     _node_categories[identifier] = (cat_list, draw_add_menu, menu_types)
 
 
-def load_node(nodetree_desc, root=""):
+def load_node(nodetree_desc, root="", proot=""):
     node_cat = []
     for cat, nodes in nodetree_desc.items():
         ocat = cat
         rep_chars = [" ", "-", "(", ")", "[", "]", "{", "}", ",", ".", ":", ";", "'", '"', "/", "\\", "|", "?", "*", "<", ">", "=", "+", "&", "^", "%", "$", "#", "@", "!", "`", "~"]
         for c in rep_chars:
             cat = cat.replace(c, "_")
-        # cat = cat.replace(" ", "_").replace("-", "_")
+        # 替换所有非ascii字符为X
+        cat = "".join([c if c in ascii_letters else "X" for c in cat])
         if cat and cat[-1] not in ascii_letters:
             cat = cat[:-1] + "z"
         items = []
         menus = []
         for item in nodes["items"]:
             items.append(NodeItem(item))
-        menus.extend(load_node(nodes.get("menus", {}), root=cat))
-        cat_id = f"{root}_{cat}"
+        menus.extend(load_node(nodes.get("menus", {}), root=cat, proot=f"{proot}/{ocat}"))
+        hash_root = md5(proot.encode()).hexdigest()[:5]
+        if not root:
+            cat_id = cat
+        else:
+            cat_id = f"{root}_{cat}_{hash_root}"
         if len(cat_id) > 50:
-            from hashlib import md5
-            hash_root = md5(root.encode()).hexdigest()[:5]
             cat_id = f"{cat}_{hash_root}"
         cfn_cat = CFNodeCategory(cat_id, name=ocat, items=items, menus=menus)
         node_cat.append(cfn_cat)
@@ -670,6 +674,7 @@ def reg_node_reroute():
     bpy.types.NodeReroute.out_types = []
     bpy.types.NodeFrame.class_type = "NodeFrame"
 
+
 def update_tree_handler():
     try:
         if CFNodeTree.instance:
@@ -694,6 +699,7 @@ def draw_intern(self, context):
     props.type = "NodeReroute"
     props.use_transform = True
 
+
 def draw_intern_node_search(self, context):
     if bpy.app.version <= (3, 6):
         return
@@ -701,6 +707,7 @@ def draw_intern_node_search(self, context):
     if hasattr(bpy.ops.sdn, "node_search"):
         layout.operator_context = "INVOKE_DEFAULT"
         layout.operator("sdn.node_search", text="Search", text_ctxt=ctxt, icon="VIEWZOOM")
+
 
 def set_draw_intern(reg):
     NODE_MT_Utils = getattr(bpy.types, gen_cat_id("utils"), None)
@@ -771,6 +778,7 @@ def rtnode_unreg():
 def cb(path):
     FSWatcher.consume_change(path)
     Timer.put(rtnode_reg_diff)
+
 
 NodeParser.DIFF_PATH.write_text("{}")
 FSWatcher.register(NodeParser.DIFF_PATH, cb)
