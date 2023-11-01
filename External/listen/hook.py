@@ -8,6 +8,7 @@ from array import array as Array
 from threading import Thread
 from time import sleep
 from ...timer import Timer
+from ...utils import _T
 
 
 def set_hook(action):
@@ -78,16 +79,21 @@ if is_support():
     set_hook(1)
 
 
-CACHED_DPFILES = []
+CACHED_DPFILES: list[Path] = []
 
 
 def pop_menu(self, context):
     layout: bpy.types.UILayout = self.layout
     for file in CACHED_DPFILES:
-        filename = file.name
-        file = file.as_posix()
-        op = layout.operator("sdn.popup_load", text=f"导入 {filename}", icon="IMPORT")
-        op.filepath = file
+        name = file.name
+        itype = ""
+        if file.suffix.lower() == ".csv":
+            itype = _T("BatchTaskTable")
+        else:
+            itype = _T("NodeTree")
+        info = _T("Import [{}] as {}?").format(name, itype)
+        op = layout.operator("sdn.popup_load", text=info, icon="IMPORT")
+        op.filepath = file.as_posix()
 
 
 def track():

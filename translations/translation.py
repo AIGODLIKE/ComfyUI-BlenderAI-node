@@ -328,7 +328,11 @@ other = {
     "IMAGE": "图像",
     # Internal
     "NodeReroute": "转接点",
-    "NodeFrame": "框"
+    "NodeFrame": "框",
+    # External/listen/hook
+    "Import [{}] as {}?": "导入 [{}] 为{}?",
+    "BatchTaskTable": "任务表",
+    "NodeTree": "节点树"
 }
 
 LANG_TEXT = {
