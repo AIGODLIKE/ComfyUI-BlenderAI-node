@@ -845,6 +845,8 @@ class Sync_Stencil_Image(bpy.types.Operator):
 
 
 def menu_sync_stencil_image(self, context):
+    if context.space_data.type != "VIEW_3D":
+        return
     if context.area in Sync_Stencil_Image.areas:
         col = self.layout.column()
         col.alert = True

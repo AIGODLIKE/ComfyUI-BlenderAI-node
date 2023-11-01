@@ -703,6 +703,8 @@ def draw_intern(self, context):
 def draw_intern_node_search(self, context):
     if bpy.app.version <= (3, 6):
         return
+    if context.space_data.tree_type != TREE_TYPE:
+        return
     layout: bpy.types.UILayout = self.layout
     if hasattr(bpy.ops.sdn, "node_search"):
         layout.operator_context = "INVOKE_DEFAULT"
