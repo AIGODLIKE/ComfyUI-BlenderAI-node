@@ -66,36 +66,6 @@ class Ops(bpy.types.Operator):
     alt: bpy.props.BoolProperty(default=False)
     is_advanced_enable = False
 
-    def import_bookmark_set(self, value):
-        path = Path(value)
-        if not path.exists() or path.suffix.lower() not in {".png", ".json"}:
-            logger.error(_T("Image not found or format error(png/json)"))
-            logger.error(str(path))
-            logger.error(path.cwd())
-            return
-        data = None
-        if path.suffix.lower() == ".png":
-            odata = PngParse.read_text_chunk(value)
-            data = odata.get("workflow")
-            if not data:
-                logger.error(_T("Load Preset from Image Error -> MetaData Not Found in") + " " + str(odata))
-                return
-        elif path.suffix.lower() == ".json":
-            data = path.read_text()
-
-        tree = get_tree(current=True)
-        if not tree:
-            bpy.ops.node.new_node_tree(type=TREE_TYPE, name="NodeTree")
-            tree = get_tree(current=True)
-        if not tree:
-            return
-        data = json.loads(data)
-        if "workflow" in data:
-            data = data["workflow"]
-        tree.load_json(data)
-
-    import_bookmark: bpy.props.StringProperty(name="Preset Bookmark", default=str(Path.cwd()), subtype="FILE_PATH", set=import_bookmark_set)
-
     @classmethod
     def description(cls, context: bpy.types.Context,
                     properties: bpy.types.OperatorProperties) -> str:
@@ -144,7 +114,7 @@ class Ops(bpy.types.Operator):
             layout.label(text="Click Outside to Cancel!", icon="ERROR", text_ctxt=ctxt)
         if self.action == "PresetFromBookmark":
             layout.label(text="Click Folder Icon to Select Bookmark:", text_ctxt=ctxt)
-            layout.prop(self, "import_bookmark", text_ctxt=ctxt)
+            layout.prop(bpy.context.scene.sdn, "import_bookmark", text_ctxt=ctxt)
 
     def invoke(self, context, event: bpy.types.Event):
         wm = bpy.context.window_manager
@@ -641,6 +611,19 @@ class Load_History(bpy.types.Operator):
         tree.load_json(data)
         return {"FINISHED"}
 
+class Popup_Load(bpy.types.Operator):
+    bl_idname = "sdn.popup_load"
+    bl_label = "Popup Load"
+    bl_description = "Popup Load"
+    filepath: bpy.props.StringProperty()
+
+    def execute(self, context):
+        file = Path(self.filepath)
+        if file.suffix == ".csv":
+            bpy.ops.sdn.load_batch("EXEC_DEFAULT", filepath=file.as_posix())
+        elif file.suffix in {".png", ".json"}:
+            bpy.context.scene.sdn.import_bookmark = file.as_posix()
+        return {"FINISHED"}
 
 class Copy_Tree(bpy.types.Operator):
     bl_idname = "sdn.copy_tree"

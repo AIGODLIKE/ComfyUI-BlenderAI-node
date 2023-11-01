@@ -188,7 +188,6 @@ other = {
     # SDNode/utils.py
     "Gen Mask": "遮罩生成",
     # __init__.py
-    "Image not found or format error(png/json)": "魔法图鉴不存在或格式不正确(仅png/json)",
     "Execute Node Tree": "运行节点树",
     "Stop Loop": "终止循环",
     "Node Tree": "节点树",
@@ -220,7 +219,6 @@ other = {
     "Launch ComfyUI": "打开ComfyUI",
     "Random All": "随机所有",
     "Preset Name": "法典烙印",
-    "Load Preset from Image Error -> MetaData Not Found in": "从图鉴加载失败, 元数据为",
     # prop.py
     "Frame Mode": "渲染模式",
     "SingleFrame": "单帧",
@@ -232,6 +230,8 @@ other = {
     "Batch exec num": "批量执行数",
     "Loop exec": "循环执行",
     "Show General Setting": "显示启动设置",
+    "Image not found or format error(png/json)": "魔法图鉴不存在或格式不正确(仅png/json)",
+    "Load Preset from Image Error -> MetaData Not Found in": "从图鉴加载失败, 元数据为",
     # ops.py
     "No NodeTree Found": "节点树为空",
     "Node Not Found: ": "节点未找到",
