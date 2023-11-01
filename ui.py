@@ -4,9 +4,9 @@ from bl_ui.properties_paint_common import UnifiedPaintPanel
 from bpy.types import Context
 from .ops import Ops, Load_History, Copy_Tree, Load_Batch, Fetch_Node_Status
 from .translations import ctxt
-from .SDNode import TaskManager
+from .SDNode import TaskManager, FakeServer
 from .SDNode.tree import TREE_TYPE
-from .preference import get_pref
+from .preference import get_pref, AddonPreference
 from .utils import get_addon_name, _T
 
 
@@ -30,8 +30,14 @@ class Panel(bpy.types.Panel):
         if platform.system() != "Darwin":
             row.operator("wm.console_toggle", text="", icon="CONSOLE", text_ctxt=ctxt)
         # row.prop(sdn, "restart_webui", text="", icon="RECOVER_LAST")
-        row.operator(Ops.bl_idname, text="", icon="QUIT", text_ctxt=ctxt).action = "Launch"
-        row.operator(Fetch_Node_Status.bl_idname, text="", icon="FILE_REFRESH" , text_ctxt=ctxt)
+        if TaskManager.server == FakeServer._instance:
+            row.operator(Ops.bl_idname, text="", icon="QUIT", text_ctxt=ctxt).action = "Launch"
+        else:
+            row.alert = True
+            row.operator(Ops.bl_idname, text="", icon="QUIT", text_ctxt=ctxt).action = "Close"
+            row.alert = False
+
+        row.operator(Fetch_Node_Status.bl_idname, text="", icon="FILE_REFRESH", text_ctxt=ctxt)
         row.operator(Ops.bl_idname, text="", icon="RECOVER_LAST", text_ctxt=ctxt).action = "Restart"
         row.prop(sdn, "open_webui", text="", icon="URL", text_ctxt=ctxt)
 
@@ -42,6 +48,19 @@ class Panel(bpy.types.Panel):
         row1 = col.row(align=True)
         row1.alert = True
         row1.scale_y = 2
+        if TaskManager.server == FakeServer._instance:
+            row = layout.row()
+            row.alignment = "CENTER"
+            row.label(text="↓↓ComfyUI Not Launched, Click to Launch↓↓")
+            row = layout.row(align=True)
+            row.alert = True
+            row.scale_y = 2
+            row.operator(Ops.bl_idname, text="Launch/Connect ComfyUI", icon="PLAY").action = "Launch"
+            row.prop(bpy.context.scene.sdn, "show_pref_general", text="", icon="PREFERENCES")
+            if bpy.context.scene.sdn.show_pref_general:
+                AddonPreference.draw_general(get_pref(), layout.box())
+            self.show_error(layout)
+            return
         if Ops.is_advanced_enable:
             row1.operator(Ops.bl_idname, text="Stop Loop", icon="PAUSE").action = "StopLoop"
         else:
@@ -52,6 +71,7 @@ class Panel(bpy.types.Panel):
             adv_col.prop(bpy.context.scene.sdn, "loop_exec", text_ctxt=ctxt, toggle=True)
             if not bpy.context.scene.sdn.loop_exec:
                 adv_col.prop(bpy.context.scene.sdn, "batch_count", text_ctxt=ctxt)
+
         row = col.row(align=True)
         row.scale_y = 1.3
         row.operator(Ops.bl_idname, text="Cancel", icon="CANCEL").action = "Cancel"
@@ -98,6 +118,18 @@ class Panel(bpy.types.Panel):
         if len(sce.sdn_history_item) == 0:
             return
         layout.template_list("HISTORY_UL_UIList", "", sce, "sdn_history_item", sce, "sdn_history_item_index")
+        # self.debug_draw()
+
+    def debug_draw(self):
+        rv3d = bpy.context.space_data.region_3d
+        self.layout.prop(rv3d, "view_camera_offset")
+        self.layout.prop(rv3d, "view_camera_zoom")
+
+        self.layout.prop(rv3d, "view_distance")
+        self.layout.prop(rv3d, "view_location")
+        self.layout.prop(rv3d, "view_matrix")
+        self.layout.prop(rv3d, "view_perspective")
+        self.layout.prop(rv3d, "window_matrix")
 
     def show_progress(self, layout: bpy.types.UILayout):
         layout = layout.box()
@@ -121,18 +153,20 @@ class Panel(bpy.types.Panel):
             row = layout.row()
             row.alignment = "CENTER"
             row.label(text=content[:134], text_ctxt=ctxt)
-
-        for error_msg in TaskManager.get_error_msg():
-            row = layout.row()
-            row.alert = True
-            row.label(text=error_msg, icon="ERROR", text_ctxt=ctxt)
+        self.show_error(layout)
         if TaskManager.get_error_msg():
             row = layout.box().row()
             row.alignment = "CENTER"
             row.alert = True
             row.label(text="Adjust node tree and try again", text_ctxt=ctxt)
 
+    def show_error(self, layout):
+        for error_msg in TaskManager.get_error_msg():
+            row = layout.row()
+            row.alert = True
+            row.label(text=error_msg, icon="ERROR", text_ctxt=ctxt)
 
+            
 class HistoryItem(bpy.types.PropertyGroup):
     name: bpy.props.StringProperty(default="")
 

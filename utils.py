@@ -43,6 +43,11 @@ def _T(word):
     Timer.put((f, word))
     return LANG_TEXT.get(locale, {}).get(word, word)
 
+def _T2(word):
+    import bpy
+    from .translations.translation import REPLACE_DICT
+    locale = bpy.context.preferences.view.language
+    return REPLACE_DICT.get(locale, {}).get(word, word)
 
 def update_screen():
     try:

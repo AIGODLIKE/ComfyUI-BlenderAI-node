@@ -66,36 +66,6 @@ class Ops(bpy.types.Operator):
     alt: bpy.props.BoolProperty(default=False)
     is_advanced_enable = False
 
-    def import_bookmark_set(self, value):
-        path = Path(value)
-        if not path.exists() or path.suffix.lower() not in {".png", ".json"}:
-            logger.error(_T("Image not found or format error(png/json)"))
-            logger.error(str(path))
-            logger.error(path.cwd())
-            return
-        data = None
-        if path.suffix.lower() == ".png":
-            odata = PngParse.read_text_chunk(value)
-            data = odata.get("workflow")
-            if not data:
-                logger.error(_T("Load Preset from Image Error -> MetaData Not Found in") + " " + str(odata))
-                return
-        elif path.suffix.lower() == ".json":
-            data = path.read_text()
-
-        tree = get_tree(current=True)
-        if not tree:
-            bpy.ops.node.new_node_tree(type=TREE_TYPE, name="NodeTree")
-            tree = get_tree(current=True)
-        if not tree:
-            return
-        data = json.loads(data)
-        if "workflow" in data:
-            data = data["workflow"]
-        tree.load_json(data)
-
-    import_bookmark: bpy.props.StringProperty(name="Preset Bookmark", default=str(Path.cwd()), subtype="FILE_PATH", set=import_bookmark_set)
-
     @classmethod
     def description(cls, context: bpy.types.Context,
                     properties: bpy.types.OperatorProperties) -> str:
@@ -106,11 +76,15 @@ class Ops(bpy.types.Operator):
         if action == "PresetFromClipBoard":
             desc = _T("Load from ClipBoard")
         elif action == "Launch":
-            desc = _T(action)
+            desc = _T("Launch/Connect ComfyUI")
         elif action == "Restart":
-            desc = _T(action)
+            desc = _T("Restart ComfyUI")
+        elif action == "Connect":
+            desc = _T("Connect to existing & running ComfyUI server")
         elif action == "Submit":
             desc = _T("Submit Task and with Clear Cache if Alt Pressed")
+        elif action == "Close":
+            desc = _T("Close/Disconnect ComfyUI")
         return desc
 
     def draw(self, context):
@@ -140,7 +114,7 @@ class Ops(bpy.types.Operator):
             layout.label(text="Click Outside to Cancel!", icon="ERROR", text_ctxt=ctxt)
         if self.action == "PresetFromBookmark":
             layout.label(text="Click Folder Icon to Select Bookmark:", text_ctxt=ctxt)
-            layout.prop(self, "import_bookmark", text_ctxt=ctxt)
+            layout.prop(bpy.context.scene.sdn, "import_bookmark", text_ctxt=ctxt)
 
     def invoke(self, context, event: bpy.types.Event):
         wm = bpy.context.window_manager
@@ -209,16 +183,18 @@ class Ops(bpy.types.Operator):
         if self.nt_name:
             tree = bpy.data.node_groups.get(self.nt_name, None)
             self.nt_name = ""
+
         def reset_error_mark(tree):
             if not tree:
                 return
             from mathutils import Color
             for n in tree.nodes:
-                if not n.label.endswith("-ERROR") or n.color != Color((1,0,0)):
+                if not n.label.endswith(("-ERROR", "-EXEC")) or n.color != Color((1, 0, 0)):
                     continue
                 n.use_custom_color = False
                 n.label = ""
         reset_error_mark(tree)
+
         def get_task(tree):
             prompt = tree.serialize()
             workflow = tree.save_json()
@@ -277,7 +253,7 @@ class Ops(bpy.types.Operator):
                     # logger.debug(f"F {frame}: {fnode.image}")
                 else:
                     logger.debug(_T("Frame Task <{}> Added!").format(frame))
-                    TaskManager.push_task(get_task(tree))
+                    TaskManager.push_task(get_task(tree), tree=tree)
             # restore config
             for fnode in old_cfg:
                 setattr(fnode, "mode", old_cfg[fnode]["mode"])
@@ -352,7 +328,7 @@ class Ops(bpy.types.Operator):
                     img.filepath = filepath.resolve().as_posix()
                     img.filepath_raw = img.filepath
                 mat_image_node.image = FSWatcher.to_str(filepath)
-                TaskManager.push_task(get_task(tree))
+                TaskManager.push_task(get_task(tree), tree=tree)
             return {"FINISHED"}
         else:
             if self.alt:
@@ -365,7 +341,7 @@ class Ops(bpy.types.Operator):
                     def pre(cf):
                         bpy.context.scene.frame_set(cf)
                     pre = partial(pre, cf)
-                    TaskManager.push_task(get_task(tree), pre)
+                    TaskManager.push_task(get_task(tree), pre, tree=tree)
             elif bpy.context.scene.sdn.frame_mode == "Batch":
                 batch_dir = bpy.context.scene.sdn.batch_dir
                 select_node = tree.nodes.active
@@ -384,10 +360,10 @@ class Ops(bpy.types.Operator):
                     if file.suffix not in IMG_SUFFIX:
                         continue
                     select_node.image = file.as_posix()
-                    TaskManager.push_task(get_task(tree))
+                    TaskManager.push_task(get_task(tree), tree=tree)
                 select_node.mode, select_node.image = old_mode, old_image
             else:
-                TaskManager.push_task(get_task(tree))
+                TaskManager.push_task(get_task(tree), tree=tree)
         return {"FINISHED"}
 
     def update_nodes_pos(self, event):
@@ -404,6 +380,31 @@ class Ops(bpy.types.Operator):
         if not TaskManager.is_launched():
             self.Launch()
         self.submit()
+
+    def Connect(self):
+        TaskManager.connect_existing = not TaskManager.connect_existing
+        if TaskManager.connect_existing:
+            TaskManager.launch_ip = get_pref().ip
+            TaskManager.launch_port = get_pref().port
+            TaskManager.launch_url = f"http://{get_pref().ip}:{get_pref().port}"
+            rtnode_unreg()
+            rtnode_reg()
+            CFNodeTree.instance = getattr(bpy.context.space_data, "edit_tree", None)
+            TaskManager.start_polling()
+
+    def Close(self):
+        if tree := getattr(bpy.context.space_data, "edit_tree", None):
+            # 恢复节点颜色
+            for n in tree.nodes:
+                if not n.label.endswith(("-EXEC", "-ERROR")):
+                    continue
+                n.use_custom_color = False
+                n.label = ""
+        TaskManager.close_server()
+        # hack fix tree update crash
+        tree = getattr(bpy.context.space_data, "edit_tree", None)
+        from .SDNode.tree import CFNodeTree
+        CFNodeTree.instance = tree
 
     def Restart(self):
         TaskManager.restart_server()
@@ -508,6 +509,9 @@ class Ops(bpy.types.Operator):
         try:
             data = bpy.context.window_manager.clipboard
             data = json.loads(data)
+            if not isinstance(data, dict):
+                self.report({"ERROR"}, _T("ClipBoard Content Format Error"))
+                return
             if "workflow" in data:
                 data = data["workflow"]
             tree = self.ensure_tree()
@@ -607,6 +611,19 @@ class Load_History(bpy.types.Operator):
         tree.load_json(data)
         return {"FINISHED"}
 
+class Popup_Load(bpy.types.Operator):
+    bl_idname = "sdn.popup_load"
+    bl_label = "Popup Load"
+    bl_description = "Popup Load"
+    filepath: bpy.props.StringProperty()
+
+    def execute(self, context):
+        file = Path(self.filepath)
+        if file.suffix == ".csv":
+            bpy.ops.sdn.load_batch("EXEC_DEFAULT", filepath=file.as_posix())
+        elif file.suffix in {".png", ".json"}:
+            bpy.context.scene.sdn.import_bookmark = file.as_posix()
+        return {"FINISHED"}
 
 class Copy_Tree(bpy.types.Operator):
     bl_idname = "sdn.copy_tree"
@@ -714,6 +731,7 @@ class Fetch_Node_Status(bpy.types.Operator):
         # t0 = time.time()
         # rtnode_reg_diff()
         # logger.info(_T("RegNodeDiff Time:") + f" {time.time()-t0:.2f}s")
+        Timer.clear()
         t1 = time.time()
         rtnode_unreg()
         t2 = time.time()
@@ -724,6 +742,32 @@ class Fetch_Node_Status(bpy.types.Operator):
         t4 = time.time()
         logger.info(_T("RegNode Time:") + f" {t4-t3:.2f}s")
         CFNodeTree.instance = getattr(bpy.context.space_data, "edit_tree", None)
+        return {"FINISHED"}
+
+
+class NodeSearch(bpy.types.Operator):
+    bl_idname = "sdn.node_search"
+    bl_label = "Node Search"
+    bl_options = {"REGISTER"}
+    bl_property = "item"
+
+    def node_items(self, context):
+        from .SDNode.tree import NodeBase
+        from .utils import _T2
+        return [(sb.class_type, _T2(sb.class_type), "") for sb in NodeBase.__subclasses__()]
+    item: bpy.props.EnumProperty(items=node_items)
+
+    def invoke(self, context, event):
+        context.window_manager.invoke_search_popup(self)
+        return {"CANCELLED"}
+
+    def execute(self, context):
+        try:
+            bpy.ops.node.add_node(use_transform=True, settings=[], type=self.item)
+        except BaseException:
+            self.report({'WARNING'}, f"未定义的节点 > {self.item}")
+
+        bpy.ops.node.translate_attach("INVOKE_DEFAULT")
         return {"FINISHED"}
 
 
@@ -801,6 +845,8 @@ class Sync_Stencil_Image(bpy.types.Operator):
 
 
 def menu_sync_stencil_image(self, context):
+    if context.space_data.type != "VIEW_3D":
+        return
     if context.area in Sync_Stencil_Image.areas:
         col = self.layout.column()
         col.alert = True

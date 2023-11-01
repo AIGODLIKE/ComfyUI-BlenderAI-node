@@ -377,6 +377,20 @@
             "SEGS": "Seg"
         }
     },
+    "ImpactSEGSPicker": {
+        "title": "Seg选择",
+        "inputs": {
+            "segs": "Seg",
+            "fallback_image_opt": "备用图像"
+        },
+        "widgets": {
+            "picks": "选择",
+            "pick": "选择"
+        },
+        "outputs": {
+            "SEGS": "Seg"
+        }
+    },
     "ReencodeLatent": {
         "title": "重编码Latent",
         "inputs": {
@@ -411,7 +425,7 @@
         }
     },
     "ImpactImageBatchToImageList": {
-        "title": "图像组到图像列表",
+        "title": "图像批次到图像列表",
         "inputs": {
             "image": "图像"
         },
@@ -426,6 +440,33 @@
         },
         "outputs": {
             "IMAGE": "图像"
+        }
+    },
+    "ImpactMakeImageBatch": {
+        "title": "制作图像批次",
+        "inputs": {
+            "image1": "图像"
+        },
+        "outputs": {
+            "IMAGE": "图像"
+        }
+    },
+    "ImpactCombineConditionings": {
+        "title": "合并条件",
+        "inputs": {
+            "conditioning1": "条件1",
+            "conditioning2": "条件2",
+            "conditioning3": "条件3",
+            "conditioning4": "条件4",
+            "conditioning5": "条件5",
+            "conditioning6": "条件6",
+            "conditioning7": "条件7",
+            "conditioning8": "条件8",
+            "conditioning9": "条件9",
+            "conditioning10": "条件10"
+        },
+        "outputs": {
+            "CONDITIONING": "条件"
         }
     },
     "ImpactSEGSLabelFilter": {
@@ -639,6 +680,15 @@
             "MASKS": "遮罩组"
         }
     },
+    "ImageListToImageBatch": {
+        "title": "图像列表到图像批次",
+        "inputs": {
+            "images": "图像"
+        },
+        "outputs": {
+            "IMAGE": "图像"
+        }
+    },
     "SegsToCombinedMask": {
         "title": "Seg到遮罩",
         "inputs": {
@@ -834,6 +884,12 @@
                 "randomize": "随机",
             "strength": "强度"
         },
+        "outputs": {
+            "DETAILER_HOOK": "细化约束"
+        }
+    },
+    "CoreMLDetailerHookProvider": {
+        "title": "CoreML细化约束器",
         "outputs": {
             "DETAILER_HOOK": "细化约束"
         }
@@ -1947,7 +2003,7 @@
         }
     },
     "RegionalSampler": {
-        "title": "区域采样",
+        "title": "区域采样器",
         "inputs": {
             "samples": "Latent",
             "base_sampler": "K采样器(高级)",
@@ -1962,7 +2018,36 @@
                 "randomize": "随机",
             "steps": "步数",
             "denoise": "降噪",
+            "restore_latent": "临时Latent",
             "overlap_factor": "覆盖系数"
+        },
+        "outputs": {
+            "LATENT": "Latent"
+        }
+    },
+    "RegionalSamplerAdvanced": {
+        "title": "区域采样器(高级)",
+        "inputs": {
+            "samples": "Latent",
+            "latent_image": "Latent",
+            "base_sampler": "K采样器(高级)",
+            "regional_prompts": "区域提示词"
+        },
+        "widgets": {
+            "add_noise": "添加噪波",
+            "seed": "随机种",
+            "noise_seed": "随机种",
+            "control_after_generate": "运行后操作",
+                "fixed": "固定",
+                "increment": "增加",
+                "decrement": "减少",
+                "randomize": "随机",
+            "steps": "步数",
+            "start_at_step": "开始降噪步数",
+            "end_at_step": "结束降噪步数",
+            "overlap_factor": "覆盖系数",
+            "restore_latent": "临时Latent",
+            "return_with_leftover_noise": "返回噪波"
         },
         "outputs": {
             "LATENT": "Latent"
@@ -1993,6 +2078,60 @@
         },
         "outputs": {
             "INT": "整数"
+        }
+    },
+    "ImpactQueueTrigger": {
+        "title": "队列触发器",
+        "inputs": {
+            "signal": "信号"
+        },
+        "widgets": {
+            "mode": "模式"
+        },
+        "outputs": {
+            "signal_opt": "信号"
+        }
+    },
+    "ImpactSetWidgetValue": {
+        "title": "设置组件值",
+        "inputs": {
+            "signal": "信号"
+        },
+        "widgets": {
+            "node_id": "节点ID",
+            "widget_name": "组件名称",
+            "boolean_value": "布尔",
+            "int_value": "整数",
+            "float_value": "浮点",
+            "string_value": "字符串"
+        },
+        "outputs": {
+            "signal_opt": "信号"
+        }
+    },
+    "ImpactNodeSetMuteState": {
+        "title": "停用节点",
+        "inputs": {
+            "signal": "信号"
+        },
+        "widgets": {
+            "node_id": "节点ID",
+            "set_state": "状态"
+        },
+        "outputs": {
+            "signal_opt": "信号"
+        }
+    },
+    "ImpactControlBridge": {
+        "title": "控制桥接",
+        "inputs": {
+            "value": "值"
+        },
+        "widgets": {
+            "mode": "模式"
+        },
+        "outputs": {
+            "value": "值"
         }
     },
 

@@ -2,6 +2,12 @@
     "PromptGenerator": {
         "title": "提示词生成",
         "widgets": {
+            "seed": "随机种",
+            "control_after_generate": "运行后操作",
+                "fixed": "固定",
+                "increment": "增加",
+                "decrement": "减少",
+                "randomize": "随机",
             "subject": "主体",
             "artform": "艺术形式",
                 "photography": "照片",
@@ -31,6 +37,25 @@
                 "fashion portrait": "时尚肖像",
                 "high key portrait": "高调肖像",
                 "low key portrait": "低调肖像",
+                "front view": "正视图",
+                "bilaterally symmetrical": "两侧对称",
+                "side view": "侧视图",
+                "back view": "后视图",
+                "from above": "俯视",
+                "from below": "仰视",
+                "from behind": "从后面",
+                "wide angle view": "广角",
+                "fisheyes view": "鱼眼",
+                "macro view": "微距",
+                "overhead shot": "俯拍",
+                "top down": "自上而下",
+                "bird’s eye view": "鸟瞰",
+                "high angle": "高角度",
+                "slightly above": "略高于",
+                "straight on": "直视",
+                "hero view": "英雄视角",
+                "low view": "低视角",
+                "selfie": "自拍",
             "default_tags": "标签",
                 "man": "男性",
                 "woman": "女性",
@@ -468,7 +493,9 @@
             "lighting": "光源"
         },
         "outputs": {
-            "STRING": "字符串"
+            "STRING": "字符串",
+            "prompt": "提示词",
+            "seed": "随机种"
         }
     },
     "CSL": {

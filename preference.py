@@ -13,11 +13,14 @@ class AddonPreference(bpy.types.AddonPreferences):
 
     popup_scale: bpy.props.IntProperty(default=5, min=1, max=100, name="Preview Image Size")
     enable_hq_preview: bpy.props.BoolProperty(default=True, name="Enable High Quality Preview Image")
-
+    server_type: bpy.props.EnumProperty(items=[("Local", "LocalServer", "", "LOCKVIEW_ON", 0),
+                                               ("Remote", "RemoteServer", "", "WORLD_DATA", 1)
+                                               ],
+                                        name="Server Type")  # --server_type
     model_path: bpy.props.StringProperty(subtype="DIR_PATH", name="ComfyUI Path",
                                          default=str(Path(__file__).parent / "ComfyUI"))
-    python_path: bpy.props.StringProperty(subtype="FILE_PATH", 
-                                          name="Python Path", 
+    python_path: bpy.props.StringProperty(subtype="FILE_PATH",
+                                          name="Python Path",
                                           description="Select python dir or python.exe")
     page: bpy.props.EnumProperty(items=[("通用", "General", "", "COLLAPSEMENU", 0),
                                         ("常用路径", "Common Path", "", "URL", 1),
@@ -42,6 +45,40 @@ class AddonPreference(bpy.types.AddonPreferences):
     fixed_preview_image_size: bpy.props.BoolProperty(default=False, name="Fixed Preview Image Size")
     preview_image_size: bpy.props.IntProperty(default=256, min=64, max=8192, name="Preview Image Size")
     stencil_offset_size_xy: bpy.props.IntVectorProperty(default=(0, 18), size=2, min=-100, max=100, name="Stencil Offset Size")
+    drag_link_result_count_col: bpy.props.IntProperty(default=4, min=1, max=10, name="Drag Link Result Count Column")
+    drag_link_result_count_row: bpy.props.IntProperty(default=10, min=1, max=100, name="Drag Link Result Count Row")
+    count_page_total: bpy.props.IntProperty(default=0, min=0, name="Drag Link Result Page Total")
+
+    count_page_current: bpy.props.IntProperty(default=0, min=0, name="Drag Link Result Page Current")
+
+    def update_count_page_next(self, context):
+        if self.count_page_next:
+            self.count_page_next = False
+            self.count_page_current += 1
+            self.count_page_current = min(self.count_page_current, self.count_page_total)
+            bpy.ops.sdn.mouse_pos_rec("INVOKE_DEFAULT", action="ORI")
+            from .Linker.linker import P
+            bpy.context.window.cursor_warp(P.x, P.y)
+            bpy.ops.comfy.swapper("INVOKE_DEFAULT", action="DRAW")
+            bpy.context.window.cursor_warp(P.ori_x, P.ori_y)
+
+    count_page_next: bpy.props.BoolProperty(default=False,
+                                            name="Drag Link Result Page Next",
+                                            update=update_count_page_next)
+
+    def update_count_page_prev(self, context):
+        if self.count_page_prev:
+            self.count_page_prev = False
+            self.count_page_current -= 1
+            bpy.ops.sdn.mouse_pos_rec("INVOKE_DEFAULT", action="ORI")
+            from .Linker.linker import P
+            bpy.context.window.cursor_warp(P.x, P.y)
+            bpy.ops.comfy.swapper("INVOKE_DEFAULT", action="DRAW")
+            bpy.context.window.cursor_warp(P.ori_x, P.ori_y)
+    count_page_prev: bpy.props.BoolProperty(default=False,
+                                            name="Drag Link Result Page Prev",
+                                            update=update_count_page_prev)
+
     def get_cuda_list():
         """
         借助nvidia-smi获取CUDA版本列表
@@ -58,10 +95,11 @@ class AddonPreference(bpy.types.AddonPreferences):
                     continue
                 items.append((m.group(1), m.group(2), "", len(items),))
             return items
-        except:
+        except BaseException:
             return []
-        
+
     cuda: bpy.props.EnumProperty(name="cuda", items=get_cuda_list())
+
     def ip_check(self, context):
         """检查IP地址是否合法"""
         ip = self.ip.split(".")
@@ -109,26 +147,34 @@ class AddonPreference(bpy.types.AddonPreferences):
                                       update=update_open_dir4)
 
     def draw_general(self, layout: bpy.types.UILayout):
-        layout.prop(self, "model_path", text_ctxt=ctxt)
-        layout.prop(self, "python_path", text_ctxt=ctxt)
-        layout.prop(self, "mem_level", text_ctxt=ctxt)
+        row = layout.row()
+        row.prop(self, "server_type", text_ctxt=ctxt)
+        if self.server_type == "Local":
+            layout.prop(self, "model_path", text_ctxt=ctxt)
+            layout.prop(self, "python_path", text_ctxt=ctxt)
+            layout.prop(self, "with_webui_model")
+            layout.prop(self, "with_comfyui_model")
+            layout.prop(self, "cuda")
+            layout.prop(self, "mem_level", text_ctxt=ctxt)
         row = layout.row(align=True)
         row.prop(self, "stencil_offset_size_xy", text_ctxt=ctxt)
         row.prop(self, "popup_scale", text_ctxt=ctxt)
         row.prop(self, "enable_hq_preview", text="", icon="IMAGE_BACKGROUND", text_ctxt=ctxt)
-        layout.prop(self, "with_webui_model")
-        layout.prop(self, "with_comfyui_model")
         row = layout.row(align=True)
         row.prop(self, "ip")
         row.prop(self, "port")
-        layout.prop(self, "cuda")
         row = layout.row(align=True)
         row.prop(self, "fixed_preview_image_size", toggle=True, text_ctxt=ctxt)
         row.prop(self, "preview_image_size", text_ctxt=ctxt)
         row = layout.row(align=True)
-        row.prop(self, "auto_launch", toggle=True, text_ctxt=ctxt)
-        row.prop(self, "install_deps", toggle=True, text_ctxt=ctxt)
-        row.prop(self, "force_log", toggle=True, text_ctxt=ctxt)
+        row.label(text="Drag Link Result Count", text_ctxt=ctxt)
+        row.prop(self, "drag_link_result_count_col", text="", text_ctxt=ctxt)
+        row.prop(self, "drag_link_result_count_row", text="", text_ctxt=ctxt)
+        if self.server_type == "Local":
+            row = layout.row(align=True)
+            row.prop(self, "auto_launch", toggle=True, text_ctxt=ctxt)
+            row.prop(self, "install_deps", toggle=True, text_ctxt=ctxt)
+            row.prop(self, "force_log", toggle=True, text_ctxt=ctxt)
 
     def draw_website(self, layout: bpy.types.UILayout):
 

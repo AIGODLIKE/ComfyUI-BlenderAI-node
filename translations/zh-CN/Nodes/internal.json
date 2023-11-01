@@ -66,6 +66,132 @@
             "LATENT": "Latent"
         }
     },
+    "SamplerCustom": {
+        "title": "自定义采样器",
+        "inputs": {
+            "model": "模型",
+            "positive": "正面提示词",
+            "negative": "负面提示词",
+            "sampler": "采样器",
+            "sigmas": "Sigmas",
+            "latent_image": "Latent"
+        },
+        "widgets": {
+            "add_noise": "添加噪波",
+            "noise_seed": "随机种",
+            "control_after_generate": "运行后操作",
+            "cfg": "CFG"
+        },
+        "outputs": {
+            "output": "输出",
+            "denoised_output": "降噪输出"
+        }
+    },
+    "KarrasScheduler": {
+        "title": "Karras调度器",
+        "widgets": {
+            "steps": "步数",
+            "sigma_max": "最大Sigma",
+            "sigma_min": "最小Sigma",
+            "rho": "rho"
+        },
+        "outputs": {
+            "SIGMAS": "Sigmas"
+        }
+    },
+    "ExponentialScheduler": {
+        "title": "Exponential调度器",
+        "widgets": {
+            "steps": "步数",
+            "sigma_max": "最大Sigma",
+            "sigma_min": "最小Sigma"
+        },
+        "outputs": {
+            "SIGMAS": "Sigmas"
+        }
+    },
+    "PolyexponentialScheduler": {
+        "title": "Polyexponential调度器",
+        "widgets": {
+            "steps": "步数",
+            "sigma_max": "最大Sigma",
+            "sigma_min": "最小Sigma",
+            "rho": "rho"
+        },
+        "outputs": {
+            "SIGMAS": "Sigmas"
+        }
+    },
+    "VPScheduler": {
+        "title": "VP调度器",
+        "widgets": {
+            "steps": "步数",
+            "beta_d": "beta_D",
+            "beta_min": "beta_min",
+            "eps_s": "eps_s"
+        },
+        "outputs": {
+            "SIGMAS": "Sigmas"
+        }
+    },
+    "KSamplerSelect": {
+        "title": "K采样器选择",
+        "widgets": {
+            "sampler_name": "采样器"
+        },
+        "outputs": {
+            "SAMPLER": "采样器"
+        }
+    },
+    "SamplerDPMPP_2M_SDE": {
+        "title": "DPMPP_2M_SDE采样器",
+        "widgets": {
+            "solver_type": "类型",
+            "eta": "eta",
+            "s_noise": "s_noise",
+            "noise_device": "设备"
+        },
+        "outputs": {
+            "SAMPLER": "采样器"
+        }
+    },
+    "SamplerDPMPP_SDE": {
+        "title": "DPMPP_SDE采样器",
+        "widgets": {
+            "eta": "eta",
+            "s_noise": "s_noise",
+            "r": "r",
+            "noise_device": "设备"
+        },
+        "outputs": {
+            "SAMPLER": "采样器"
+        }
+    },
+    "BasicScheduler": {
+        "title": "基础调度器",
+        "inputs": {
+            "model": "模型"
+        },
+        "widgets": {
+            "scheduler": "调度器",
+            "steps": "步数"
+        },
+        "outputs": {
+            "SIGMAS": "Sigmas"
+        }
+    },
+    "SplitSigmas": {
+        "title": "分离Sigmas",
+        "inputs": {
+            "sigmas": "Sigmas"
+        },
+        "widgets": {
+            "step": "步数"
+        },
+        "outputs": {
+            "SIGMAS": "Sigmas"
+        }
+    },
 
 
 
@@ -535,7 +661,7 @@
     "LatentMultiply": {
         "title": "Latent相乘",
         "inputs": {
-            "samples1": "Latent"
+            "samples": "Latent"
         },
         "widgets": {
             "multiplier": "系数"
@@ -891,6 +1017,42 @@
 
 
 
+    "PorterDuffImageComposite": {
+        "title": "Porter-Duff图像合成",
+        "inputs": {
+            "source": "源图像",
+            "source_alpha": "源Alpha",
+            "destination": "目标图像",
+            "destination_alpha": "目标Alpha"
+        },
+        "widgets": {
+            "mode": "模式"
+        },
+        "outputs": {
+            "IMAGE": "图像",
+            "MASK": "遮罩"
+        }
+    },
+    "SplitImageWithAlpha": {
+        "title": "分离图像Alpha",
+        "inputs": {
+            "image": "图像"
+        },
+        "outputs": {
+            "IMAGE": "图像",
+            "MASK": "遮罩"
+        }
+    },
+    "JoinImageWithAlpha": {
+        "title": "合并图像Alpha",
+        "inputs": {
+            "image": "图像",
+            "alpha": "透明遮罩"
+        },
+        "outputs": {
+            "IMAGE": "图像"
+        }
+    },
     "LoadImageMask": {
         "title": "加载图像遮罩",
         "widgets": {
@@ -1111,6 +1273,33 @@
             "MODEL": "模型"
         }
     },
+    "FreeU_V2": {
+        "title": "FreeU_V2模型重加权",
+        "inputs": {
+            "model": "模型"
+        },
+        "widgets": {
+            "b1": "B1",
+            "b2": "B2",
+            "s1": "S1",
+            "s2": "S2"
+        },
+        "outputs": {
+            "MODEL": "模型"
+        }
+    },
+    "HyperTile": {
+        "title": "超分块",
+        "inputs":{ 
+            "model": "模型"
+        },
+        "widgets": {
+            "tile_size": "分块尺寸",
+            "swap_size": "分割尺寸",
+            "max_depth": "最大深度",
+            "scale_depth": "缩放深度"
+        }
+    },
 
 
 
@@ -1202,8 +1391,8 @@
             "crop_h": "裁剪高度",
             "target_width": "目标宽度",
             "target_height": "目标高度",
-            "text_g": "ViT-bigG文本",
-            "text_l": "ViT-L文本"
+            "text_g": "G文本",
+            "text_l": "L文本"
         },
         "outputs": {
             "CONDITIONING": "条件"
@@ -1270,6 +1459,15 @@
             "ratio": "比率"
         },
         "outputs": {
+        }
+    },
+    "VAESave": {
+        "title": "保存VAE",
+        "inputs": {
+            "VAE": "VAE"
+        },
+        "widgets": {
+            "filename_prefix": "文件名前缀"
         }
     },
     "ModelMergeBlockNumber": {

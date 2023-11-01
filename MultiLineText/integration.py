@@ -336,6 +336,8 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
         node = tree.nodes.active
         if not node:
             return
+        if node.bl_idname == "NodeFrame":
+            return
         return node
 
     def draw_call(self, context: bpy.types.Context):
