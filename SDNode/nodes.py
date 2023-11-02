@@ -791,6 +791,12 @@ class NodeParser:
             self.ori_object_info.update(json.load(self.INTERNAL_PATH.open("r")))
         if self.PATH.exists():
             self.ori_object_info.update(json.load(self.PATH.open("r")))
+        from .manager import TaskManager, FakeServer
+        if TaskManager.server != FakeServer._instance:
+            self._fetch_object_from_server()
+        return self.ori_object_info
+
+    def _fetch_object_from_server(self):
         try:
             import requests
             from urllib3.util import Timeout
@@ -809,7 +815,6 @@ class NodeParser:
             logger.warn(_T("Server Launch Failed"))
         except ModuleNotFoundError:
             logger.error(f"Module: requests import error!")
-        return self.ori_object_info
 
     def find_diff(self):
         # 获取差异object_info
@@ -841,6 +846,7 @@ class NodeParser:
             bp = get_blueprints(name)
             desc = bp.pre_filter(name, desc)
         _desc = {}
+
         def _parse(name, desc, _desc):
             for index, out_type in enumerate(desc.get("output", [])):
                 desc["output"][index] = [out_type, out_type]
@@ -878,6 +884,7 @@ class NodeParser:
 
     def _get_socket_desc(self):
         _desc = {"*", }  # Enum/Int/Float/String/Bool 不需要socket
+
         def _parse(name, desc, _desc):
             for inp_channel in {"required", "optional"}:
                 for inp, inp_desc in desc["input"].get(inp_channel, {}).items():
@@ -923,6 +930,8 @@ class NodeParser:
                 continue
 
             def draw(self, context, layout, node: NodeBase, text):
+                if node.bl_idname == "NodeUndefined":
+                    return
                 prop = get_reg_name(self.name)
                 if self.is_output or not hasattr(node, prop):
                     layout.label(text=self.name, text_ctxt=node.get_ctxt())
@@ -939,8 +948,8 @@ class NodeParser:
             __annotations__ = {"color": color,
                                "index": bpy.props.IntProperty(default=-1),
                                "slot_index": bpy.props.IntProperty(default=-1)}
-            fields = {"draw": draw, 
-                      "bl_label": stype, 
+            fields = {"draw": draw,
+                      "bl_label": stype,
                       "__annotations__": __annotations__,
                       "draw_color_simple_": rand_color
                       }

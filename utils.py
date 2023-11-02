@@ -197,7 +197,7 @@ class Icon(metaclass=MetaIn):
         if p.exists() and p.suffix.lower() in IMG_SUFFIX:
             img = bpy.data.images.load(path)
             Icon.reg_icon_by_pixel(img, path)
-            bpy.data.images.remove(img)
+            Timer.put((bpy.data.images.remove, img)) # 直接使用 bpy.data.images.remove 会导致卡死
 
     def find_image(path):
         img = Icon.PATH2BPY.get(FSWatcher.to_str(path), None)
@@ -490,7 +490,11 @@ class FSWatcher:
     @staticmethod
     def to_str(path: Path):
         p = Path(path)
-        res_str = p.resolve().as_posix()
+        try:
+            res_str = p.resolve().as_posix()
+        except FileNotFoundError as e:
+            res_str = p.as_posix()
+            logger.warn(e)
         # 处理nas路径
         for local_drive, nas_path in FSWatcher.get_nas_mapping().items():
             if not res_str.startswith(nas_path):
