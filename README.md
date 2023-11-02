@@ -18,13 +18,12 @@ Firstly, you need to install a [Blender](https://www.blender.org/download/)(Sugg
 
 2. **Install add-on（ComfyUI BlenderAI node）**
 
-ComfyUI BlenderAI node is a standard Blender add-on. Just download the compressed package and install it like any other add-ons.
-![image](https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/2263fb70-5f85-43a1-a9c3-668620c976f6)
-
-Or you can try
-
-      cd %USERPROFILE%\AppData\Roaming\Blender Foundation\blender\
-      git clone https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node.git
+ComfyUI BlenderAI node is a standard Blender add-on. You can use git to download this addon. Just like that:
+```bash
+cd %USERPROFILE%\AppData\Roaming\Blender Foundation\blender\
+git clone https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node.git
+```
+*Note*: Downloading the zip file directly will cause preview image loss!
 
 
 3. **Settings add-on**
