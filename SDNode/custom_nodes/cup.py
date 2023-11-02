@@ -154,7 +154,7 @@ def update_cached_nodes():
         CACHED_NODES[x] = ni
     if not diff or diff == CACHED_NODES:
         return
-    with HOST_PATH.joinpath("diff_object_info.json").open("w") as fp:
+    with HOST_PATH.joinpath("diff_object_info.json").open("w+") as fp:
         json.dump(diff, fp)
 
 
