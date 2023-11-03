@@ -84,6 +84,29 @@ def VecWorldToRegScale(vec):
     vec = vec * UiScale()
     return Vector(bpy.context.region.view2d.view_to_region(vec.x, vec.y, clip=False))
 
+def DrawLineRect(plt, prb, col1=(1.0, 1.0, 1.0, .75), col2=(1.0, 1.0, 1.0, .75), offset=8.0):
+    """
+        绘制线框矩形
+    """
+    pos1 = plt
+    pos2 = prb
+    #      1
+    #     ----
+    #   |      | 2
+    # 4 |      |
+    #     ----
+    #       3
+    DrawLine((pos1[0], pos1[1] + offset), (pos2[0], pos1[1] + offset), 1, col1, col2)
+    DrawLine((pos2[0] + offset, pos1[1]), (pos2[0] + offset, pos2[1]), 1, col1, col2)
+    DrawLine((pos2[0], pos2[1] - offset), (pos1[0], pos2[1] - offset), 1, col1, col2)
+    DrawLine((pos1[0] - offset, pos2[1]), (pos1[0] - offset, pos1[1]), 1, col1, col2)
+    # 1 /    \ 2
+    #
+    # 4 \    / 3
+    DrawLine((pos1[0] - offset, pos1[1]), (pos1[0], pos1[1] + offset), 1, col1, col2)
+    DrawLine((pos2[0] + offset, pos1[1]), (pos2[0], pos1[1] + offset), 1, col1, col2)
+    DrawLine((pos2[0] + offset, pos2[1]), (pos2[0], pos2[1] - offset), 1, col1, col2)
+    DrawLine((pos1[0] - offset, pos2[1]), (pos1[0], pos2[1] - offset), 1, col1, col2)
 
 def DrawText(pos, ofs, txt, drawCol, fontSizeOverwrite=0):
     fontId = 1
@@ -108,23 +131,12 @@ def DrawText(pos, ofs, txt, drawCol, fontSizeOverwrite=0):
     for cyc in range(gradientResolution):
         DrawRectangle((pos1[0], pos1[1] + cyc * girderHeight), (pos2[0], pos1[1] + cyc * girderHeight + girderHeight), (drawCol[0] / 2, drawCol[1] / 2, drawCol[2] / 2, Fx(cyc / gradientResolution, .2, .05)))
     # Яркая основная обводка:
+    plt = pos1[0], pos2[1]
+    prb = pos2[0], pos1[1]
     col = (drawCol[0]**pw, drawCol[1]**pw, drawCol[2]**pw, 1.0)
-    DrawLine(pos1, (pos2[0], pos1[1]), 1, col, col)
-    DrawLine((pos2[0], pos1[1]), pos2, 1, col, col)
-    DrawLine(pos2, (pos1[0], pos2[1]), 1, col, col)
-    DrawLine((pos1[0], pos2[1]), pos1, 1, col, col)
-    # Мягкая дополнительная обвода, придающая красоты:
+    DrawLineRect(plt, prb, col, col, offset=1.5)
     col = (col[0], col[1], col[2], .375)
-    lineOffset = 2.0
-    DrawLine((pos1[0], pos1[1] - lineOffset), (pos2[0], pos1[1] - lineOffset), 1, col, col)
-    DrawLine((pos2[0] + lineOffset, pos1[1]), (pos2[0] + lineOffset, pos2[1]), 1, col, col)
-    DrawLine((pos2[0], pos2[1] + lineOffset), (pos1[0], pos2[1] + lineOffset), 1, col, col)
-    DrawLine((pos1[0] - lineOffset, pos2[1]), (pos1[0] - lineOffset, pos1[1]), 1, col, col)
-    # Уголки. Их маленький размер -- маскировка под тру-скругление:
-    DrawLine((pos1[0] - lineOffset, pos1[1]), (pos1[0], pos1[1] - lineOffset), 1, col, col)
-    DrawLine((pos2[0] + lineOffset, pos1[1]), (pos2[0], pos1[1] - lineOffset), 1, col, col)
-    DrawLine((pos2[0] + lineOffset, pos2[1]), (pos2[0], pos2[1] + lineOffset), 1, col, col)
-    DrawLine((pos1[0] - lineOffset, pos2[1]), (pos1[0], pos2[1] + lineOffset), 1, col, col)
+    DrawLineRect(plt, prb, col, col, offset=3)
 
     # Сам текст:
     blf.position(fontId, pos[0] + ofs[0] + 3.5, pos[1] + placePosY + txtDim[1] * .3, 0)
@@ -219,10 +231,11 @@ def DrawCircle(pos, rd, col=(1.0, 1.0, 1.0, .75), resolution=54):
     DrawAreaFan(vpos, col)
 
 
-def DrawWidePoint(loc, colfac=Vector((1.0, 1.0, 1.0, 1.0)), resolution=54):
+def DrawWidePoint(loc, colfac=Vector((1.0, 1.0, 1.0, 1.0)), resolution=54, rd=0):
     pos = VecWorldToRegScale(loc)
     loc = Vector((loc.x + 6 * 1 * 1000, loc.y))
-    rd = (VecWorldToRegScale(loc)[0] - pos[0]) / 1000
+    if rd == 0:
+        rd = (VecWorldToRegScale(loc)[0] - pos[0]) / 1000
     col1 = Vector((0.5, 0.5, 0.5, 0.4))
     col2 = col1
     col3 = Vector((1.0, 1.0, 1.0, 1.0))
@@ -238,8 +251,7 @@ def StartDrawCallbackStencil(self, context):
 
 
 def PreviewerDrawCallback(self, context: bpy.types.Context):
-    if StartDrawCallbackStencil(self, context):
-        return
+    StartDrawCallbackStencil(self, context)
     cusorPos = context.space_data.cursor_location
     if not P.foundSocket:
         return
@@ -286,54 +298,79 @@ def GetNearestNodes(nodes: list[bpy.types.Node], callPos):
     return all_nodes
 
 
-def GetFromIoPuts(nd: bpy.types.Node, side, callPos) -> list[Socket]:
-    list_result = []
+def SocketsFromNode(nd: bpy.types.Node, side, callPos) -> list[Socket]:
+    """
+        从Node获取输入输出的Socket列表
+        nd: 节点
+        side: 为1代表out, -1代表in
+    """
+    lstResult = []
     uiScale = UiScale()
     ndLocation = RecrGetNodeFinalLoc(nd).copy()
-    ndDim = Vector(nd.dimensions / UiScale())
+    ndDim = Vector(nd.dimensions / uiScale)
     pixel_size = bpy.context.preferences.system.pixel_size
     widget_unit = round(18.0 * uiScale + 0.002) + (2.0 * pixel_size)
     NODE_ITEM_SPACING_Y = int(0.1 * widget_unit)
     NODE_DYS = int(widget_unit / 2)
     NODE_DY = widget_unit
-    # side == 1 为output socket
-    # side == -1 为input socket
-    if side == 1:  # 为output socket
+    if side == 1:  # out
         ndLocation.y = round(ndLocation.y - NODE_DY / uiScale)
         skLocCarriage = Vector((ndLocation.x + ndDim.x, ndLocation.y - NODE_DYS * 1.4 / uiScale))
-    else:  # 为input socket
-        # skLocCarriage = Vector((ndLocation.x, ndLocation.y - ndDim.y + 16))
+    else:  # in
         skLocCarriage = Vector((ndLocation.x, ndLocation.y - ndDim.y + NODE_DYS * 1.6 / uiScale))
     for sk in nd.outputs if side == 1 else reversed(nd.inputs):
         if not sk.enabled or sk.hide:
             continue
-        goalPos = skLocCarriage.copy()
-        box = (goalPos.y - 11, goalPos.y + 11)
-        list_result.append(Socket(sk,
-                                  (callPos - skLocCarriage).length,
-                                  goalPos,
-                                  box,
-                                  pgettext_iface(sk.name)))
+        pos = skLocCarriage.copy()
+        box = (pos.y - 11, pos.y + 11)
+        dist = (callPos - skLocCarriage).length
+        lstResult.append(Socket(sk, dist, pos, box, pgettext_iface(sk.name)))
         skLocCarriage.y = skLocCarriage.y * uiScale
         skLocCarriage.y -= NODE_DY * side
         skLocCarriage.y -= NODE_ITEM_SPACING_Y * side
         skLocCarriage.y = skLocCarriage.y / uiScale
-    return list_result
+    return lstResult
 
+def GetNodeCenterPos(node):
+    """
+        获取节点正中位置
+    """
+    ndLocation = RecrGetNodeFinalLoc(node).copy()
+    ndDim = Vector(node.dimensions / UiScale())
+    ndDim.x *= -1
+    cPos = ndLocation - ndDim * 0.5
+    return cPos
+
+def GetNodeRBPos(node):
+    """
+        获取节点右下位置
+    """
+    ndLocation = RecrGetNodeFinalLoc(node).copy()
+    ndDim = Vector(node.dimensions / UiScale())
+    ndDim.x *= -1
+    pos = ndLocation - ndDim
+    return pos
+
+def DistToNodeCenter(node, pos):
+    """
+        计算pos到节点正中心的距离
+    """
+    cPos = GetNodeCenterPos(node)
+    return (pos - cPos).length
 
 def GetNearestSockets(nd: bpy.types.Node, callPos):
     list_fgSksIn = []
     list_fgSksOut = []
     if not nd:
         return list_fgSksIn, list_fgSksOut
-    if nd.bl_idname == 'NodeReroute':
+    if nd.bl_idname == "NodeReroute":
         ndLocation = RecrGetNodeFinalLoc(nd)
         len = Vector(callPos - ndLocation).length
         list_fgSksIn.append(Socket(nd.inputs[0], len, ndLocation, (-1, -1), pgettext_iface(nd.inputs[0].name)))
         list_fgSksOut.append(Socket(nd.outputs[0], len, ndLocation, (-1, -1), pgettext_iface(nd.outputs[0].name)))
         return list_fgSksIn, list_fgSksOut
-    list_fgSksIn = GetFromIoPuts(nd, -1, callPos)
-    list_fgSksOut = GetFromIoPuts(nd, 1, callPos)
+    list_fgSksIn = SocketsFromNode(nd, -1, callPos)
+    list_fgSksOut = SocketsFromNode(nd, 1, callPos)
     list_fgSksIn.sort(key=lambda a: a.dist)
     list_fgSksOut.sort(key=lambda a: a.dist)
     return list_fgSksIn, list_fgSksOut
@@ -494,7 +531,7 @@ class Comfyui_Swapper(bpy.types.Operator):
         P.foundSocket = None
         callPos = context.space_data.cursor_location
 
-        for nd, _ in GetNearestNodes(context.space_data.edit_tree.nodes, callPos):
+        for nd, _ in GetNearestNodes(self.tree.nodes, callPos):
             if nd.type in {"FRAME", "REROUTE"}:
                 continue
             if nd.hide:
@@ -512,12 +549,13 @@ class Comfyui_Swapper(bpy.types.Operator):
                 break
 
     def invoke(self, context, event):
+        self.tree: bpy.types.NodeTree = context.space_data.edit_tree
         if self.action == "DRAW":
             bpy.context.window_manager.popup_menu_pie(event, DRAG_LINK_MT_NODE_PIE.draw)
             return {"FINISHED"}
         P.foundSocket = None
-        self.keyType = GetOpKey(Comfyui_Swapper.bl_idname)
-        if not context.space_data.edit_tree:
+        self.keyType = GetOpKey(self.__class__.bl_idname)
+        if not self.tree:
             return {'FINISHED'}
         Comfyui_Swapper.NextAssessment(self, context)
         context.area.tag_redraw()
@@ -533,7 +571,7 @@ class Comfyui_Swapper(bpy.types.Operator):
         context.area.tag_redraw()
         match event.type:
             case 'MOUSEMOVE':
-                if context.space_data.edit_tree:
+                if self.tree:
                     Comfyui_Swapper.NextAssessment(self, context)
             case "ESC":
                 return {"FINISHED"}
@@ -541,7 +579,7 @@ class Comfyui_Swapper(bpy.types.Operator):
                 if event.value != 'RELEASE':
                     return {"RUNNING_MODAL"}
                 bpy.types.SpaceNodeEditor.draw_handler_remove(self.handle, 'WINDOW')
-                if not context.space_data.edit_tree:
+                if not self.tree:
                     return {"FINISHED"}
                 if P.foundSocket:
                     DoPreview(context, P.foundSocket.socket)
@@ -562,6 +600,128 @@ class Comfyui_Swapper(bpy.types.Operator):
                         traceback.print_exc()
                 return {"FINISHED"}
         return {'RUNNING_MODAL'}
+
+
+class Comfyui_Linker(bpy.types.Operator):
+    bl_idname = "comfy.linker"
+    bl_label = "Linker"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    action: bpy.props.StringProperty()
+
+    @classmethod
+    def poll(cls, context):
+        from ..SDNode.tree import TREE_TYPE
+        return context.space_data.tree_type == TREE_TYPE
+
+    def NextAssessment(self, context):
+        callPos = context.space_data.cursor_location
+        for nd, _ in GetNearestNodes(self.tree.nodes, callPos):
+            if nd.type in {"FRAME", "REROUTE"}:
+                continue
+            if nd.hide:
+                continue
+            if nd != self.from_node:
+                self.to_node = nd
+                length = DistToNodeCenter(nd, callPos)
+                if length > 50:
+                    self.to_node = None
+                break
+
+    def find_link_pairs(self):
+        if not self.from_node or not self.to_node:
+            return [], []
+        callPos = bpy.context.space_data.cursor_location
+        find_sockets1 = SocketsFromNode(self.from_node, 1, callPos)
+        find_sockets2 = SocketsFromNode(self.to_node, -1, callPos)
+        find_sockets2.reverse()
+        pair_from = []
+        pair_to = []
+        si1, si2 = 0, 0
+        while si1 < len(find_sockets1) and si2 < len(find_sockets2):
+            s1 = find_sockets1[si1]
+            for s2 in find_sockets2[si2:]:
+                if s2.socket.bl_idname == s1.socket.bl_idname:
+                    pair_from.append(s1)
+                    pair_to.append(s2)
+                    si2 += 1
+                    break
+            si1 += 1
+        return pair_from, pair_to
+
+    def invoke(self, context, event):
+        self.tree: bpy.types.NodeTree = context.space_data.edit_tree
+        if not self.tree:
+            return {'FINISHED'}
+        self.from_node = self.tree.nodes.active
+        self.to_node = None
+        if not self.from_node:
+            return {"FINISHED"}
+        bpy.ops.node.select_all(action="DESELECT")
+        self.from_node.select = True
+        self.keyType = GetOpKey(self.__class__.bl_idname)
+        self.NextAssessment(context)
+        context.area.tag_redraw()
+
+        def f(self: Comfyui_Linker, context: bpy.types.Context):
+            StartDrawCallbackStencil(self, context)
+            callPos = context.space_data.cursor_location
+            pf, pt = self.find_link_pairs()
+            length = 99999
+            if self.to_node:
+                length = DistToNodeCenter(self.to_node, callPos)
+                nd = self.to_node
+                cPos = GetNodeCenterPos(nd)
+                DrawWidePoint(cPos, Vector((0, .7, .7, .75)), rd=40)
+                LT = VecWorldToRegScale(nd.location)
+                RB = VecWorldToRegScale(GetNodeRBPos(nd))
+                col = (0, .7, 0, .75)
+                DrawLineRect(LT, RB, col, col, offset=4)
+            # 距离 0-20: 吸附到socket
+            if pf and pt and length < 20:
+                for s1, s2 in zip(pf, pt):
+                    DrawToolOftenStencil(s2.pos, [s1], isLineToCursor=True, textSideFlip=True)
+                DrawWidePoint(cPos, Vector((.7, .7, 0, 1)), rd=40)
+                # DrawCircle(VecWorldToRegScale(cPos), 20 * UiScale(), (.7, .7, 0, .75))
+                return
+            # 计算中点
+            find_sockets1 = SocketsFromNode(self.from_node, 1, callPos)
+            mid = Vector((0, 0))
+            for socket in find_sockets1:
+                mid += socket.pos
+            mid /= len(find_sockets1)
+            
+            # 距离20-50: 不吸附, 但显示匹配变化
+            if pf and pt and 20 <= length:
+                for socket in pf:
+                    DrawToolOftenStencil(callPos + (socket.pos - mid), [socket], isLineToCursor=True, textSideFlip=True)
+            else:
+                # 没有找到对应的连接:
+                # 绘制多个socket -> socket的 圆圈-直线-圆圈
+                # 绘制socket的高亮
+                # 如果没找到比较近的node
+                for socket in find_sockets1:
+                    DrawToolOftenStencil(callPos + (socket.pos - mid), [socket], isLineToCursor=True, textSideFlip=True)
+
+        self.handle = bpy.types.SpaceNodeEditor.draw_handler_add(f, (self, context), 'WINDOW', 'POST_PIXEL')
+        context.window_manager.modal_handler_add(self)
+        return {'RUNNING_MODAL'}
+
+    def modal(self, context, event):
+        context.area.tag_redraw()
+        if event.type == "LEFTMOUSE":
+            for s1, s2 in zip(*self.find_link_pairs()):
+                self.tree.links.new(s1.socket, s2.socket)
+        match event.type:
+            case "MOUSEMOVE":
+                self.NextAssessment(context)
+            case "ESC" | "LEFTMOUSE" | "RIGHTMOUSE":
+                self.clear()
+                return {"FINISHED"}
+        return {'RUNNING_MODAL'}
+
+    def clear(self):
+        bpy.types.SpaceNodeEditor.draw_handler_remove(self.handle, 'WINDOW')
 
 
 class MousePosRec(bpy.types.Operator):
@@ -645,6 +805,7 @@ list_addonKeymaps = []
 
 def linker_register():
     bpy.utils.register_class(Comfyui_Swapper)
+    bpy.utils.register_class(Comfyui_Linker)
     bpy.utils.register_class(MousePosRec)
     bpy.utils.register_class(DRAG_LINK_PT_PANEL)
     bpy.utils.register_class(DRAG_LINK_MT_NODE_PIE)
@@ -652,11 +813,15 @@ def linker_register():
     blId, key, shift, ctrl, alt = Comfyui_Swapper.bl_idname, 'R', False, False, False
     kmi = newKeyMapNodeEditor.keymap_items.new(idname=blId, type=key, value='PRESS', shift=shift, ctrl=ctrl, alt=alt)
     list_addonKeymaps.append(kmi)
+    blId, key = Comfyui_Linker.bl_idname, "D"
+    kmi = newKeyMapNodeEditor.keymap_items.new(idname=blId, type=key, value='PRESS', shift=shift, ctrl=ctrl, alt=alt)
+    list_addonKeymaps.append(kmi)
 
 
 def linker_unregister():
     try:
         bpy.utils.unregister_class(Comfyui_Swapper)
+        bpy.utils.unregister_class(Comfyui_Linker)
         bpy.utils.unregister_class(MousePosRec)
         bpy.utils.unregister_class(DRAG_LINK_PT_PANEL)
         bpy.utils.unregister_class(DRAG_LINK_MT_NODE_PIE)
