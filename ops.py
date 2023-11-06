@@ -184,7 +184,7 @@ class Ops(bpy.types.Operator):
             tree = bpy.data.node_groups.get(self.nt_name, None)
             self.nt_name = ""
 
-        def reset_error_mark(tree):
+        def reset_error_mark(tree: CFNodeTree):
             if not tree:
                 return
             from mathutils import Color
@@ -195,7 +195,7 @@ class Ops(bpy.types.Operator):
                 n.label = ""
         reset_error_mark(tree)
 
-        def get_task(tree):
+        def get_task(tree: CFNodeTree):
             prompt = tree.serialize()
             workflow = tree.save_json()
             return {"prompt": prompt, "workflow": workflow, "api": "prompt"}
