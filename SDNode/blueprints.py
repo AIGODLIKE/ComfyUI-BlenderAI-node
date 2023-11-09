@@ -92,6 +92,14 @@ def setwidth(self: NodeBase, w, count=1):
     return sw
 
 
+def link_get(d: dict, path: str):
+    if not path:
+        return d
+    for p in path.split("."):
+        d = d.get(p, {})
+    return d
+
+
 class BluePrintBase:
     comfyClass = ""
 
@@ -872,7 +880,7 @@ class PrimitiveNode(BluePrintBase):
             setattr(link.to_node, get_reg_name(link.to_socket.name), prop)
 
 
-def get_image_path(data):
+def get_image_path(data, suffix="png") -> Path:
     '''data = {"filename": filename, "subfolder": subfolder, "type": folder_type}'''
     url_values = urllib.parse.urlencode(data)
     from .manager import TaskManager
@@ -880,7 +888,7 @@ def get_image_path(data):
     # logger.debug(f'requesting {url} for image data')
     with urllib.request.urlopen(url) as response:
         img_data = response.read()
-        img_path = Path(tempfile.gettempdir()) / data.get('filename', 'preview.png')
+        img_path = Path(tempfile.gettempdir()) / data.get('filename', f'preview.{suffix}')
         with open(img_path, "wb") as f:
             f.write(img_data)
         return img_path
@@ -1200,6 +1208,75 @@ class 材质图(BluePrintBase):
             elif self.mode == "Collection":
                 layout.prop(self, "collection", text="")
         return True
+
+
+class AnimateDiffCombine(BluePrintBase):
+    comfyClass = "AnimateDiffCombine"
+    PREV = bpy.utils.previews.new()
+    PLAYERS = {}
+
+    def draw_button(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True):
+        if prop == "prev_name":
+            prev = s.PREV.get(self.prev_name, None)
+            if not prev:
+                return
+            scale = min(max(prev.image_size), self.width) // 20
+            scale = min(scale, 100)
+            layout.template_icon(icon_value=prev.icon_id, scale=scale)
+            return True
+        super().draw_button(self, context, layout, prop, swlink)
+
+    def post_fn(s, self: NodeBase, t: Task, result):
+        """
+        result : {'node': '11', 'output': {'videos': [{'filename': 'img.gif', 'subfolder': '', 'type': 'output', 'format': 'image/gif'}]}, 'prompt_id': ''}
+        """
+        from .plugins import gifplayer
+        logger.debug(f"{self.class_type}{_T('Post Function')}->{result}")
+        # img_paths = link_get(result, "output.videos")
+        img_paths = result.get("output", {}).get("videos", [])
+        if not img_paths:
+            logger.error(f'response is {result}, cannot find images in it')
+            return
+        logger.warn(f"{_T('Load Preview Image')}: {img_paths}")
+
+        def f(self, img_paths: list[dict]):
+            """
+            img_paths: [{'filename': 'img.gif', 'subfolder': '', 'type': 'output', 'format': 'image/gif'}, ...]
+            """
+            # self.prev.clear()
+            for data in img_paths:
+                img_path = get_image_path(data, suffix="gif").as_posix()
+                # 和上次的相同则不管
+                if img_path == self.prev_name:
+                    return
+                # 和上次不同, 先清理上次的结果
+                if img_path in s.PLAYERS:
+                    player = s.PLAYERS.pop(img_path)
+                    player.pause()
+                    del player
+                    prev = s.PREV[img_path]
+                else:
+                    prev = s.PREV.new(img_path)
+                self.prev_name = img_path
+                player = gifplayer.GifPlayer(prev, img_path)
+                s.PLAYERS[img_path] = player
+                player.auto_play()
+                break
+                if not img_path:
+                    continue
+                img_path = Path(img_path).as_posix()
+                if not Path(img_path).exists():
+                    continue
+                try:
+                    p = self.prev.add()
+                    p.image = bpy.data.images.load(img_path)
+                except TypeError:
+                    ...
+        Timer.put((f, self, img_paths))
+
+    def spec_extra_properties(s, properties, nname, ndesc):
+        prop = bpy.props.StringProperty()
+        properties["prev_name"] = prop
 
 
 @lru_cache(maxsize=1024)

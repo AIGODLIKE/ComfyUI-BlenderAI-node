@@ -332,7 +332,9 @@ other = {
     # External/listen/hook
     "Import [{}] as {}?": "导入 [{}] 为{}?",
     "BatchTaskTable": "任务表",
-    "NodeTree": "节点树"
+    "NodeTree": "节点树",
+    # hook
+    "Find Drag file": "发现拖拽文件",
 }
 
 LANG_TEXT = {

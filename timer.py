@@ -44,7 +44,7 @@ class Timer:
                 logger.error(f"{type(e).__name__}: {e}")
             except KeyboardInterrupt:
                 ...
-        return 0.1
+        return 0.016666666666666666
 
     @staticmethod
     def clear():

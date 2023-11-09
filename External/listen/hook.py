@@ -77,6 +77,7 @@ if is_support():
     def clear_dragfiles():
         dll.clear_dragfiles()
     set_hook(1)
+    # dll.set_debug(True)
 
 
 CACHED_DPFILES: list[Path] = []
