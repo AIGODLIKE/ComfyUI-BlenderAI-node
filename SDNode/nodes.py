@@ -909,6 +909,8 @@ class NodeParser:
                     _desc.add(hash_type)
                     SOCKET_HASH_MAP[hash_type] = "ENUM"
                     # self.SOCKET_TYPE[name][inp] = hash_type
+                elif isinstance(out_type, str):
+                    _desc.add(out_type)
                 else:
                     _desc.add(out_type[0])
                     # self.SOCKET_TYPE[name][inp] = inp_desc[0]
