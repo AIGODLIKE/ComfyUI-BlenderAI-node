@@ -11,16 +11,6 @@ from ...kclogger import logger
 rt = get_lua_runtime()
 imglib = rt.load_dll("image")
 
-# gif = "C:/Users/KC/Desktop/中文.gif"
-# gif = "C:/Users/KC/Desktop/R.gif"
-# gif = "C:/Users/KC/Desktop/B.gif"
-# f, w, h, c, d = imglib.test(gif)
-# logger.info("Image Read Test")
-# logger.info([f, w, h, c, list(d.values())])
-
-# PREV = bpy.utils.previews.new()
-# TEST = PREV.new("test")
-
 
 def read_frame_to_preview(gif, p: bpy.types.ImagePreview, frame):
     f, w, h, c, d = imglib.cache_gif(gif)
@@ -43,9 +33,13 @@ class GifPlayer:
         self.prev.image_size = (w, h)
         self.cframe = 0
         self.playing = False
+        if not Path(self.gif).exists():
+            return
         imglib.read_frame(self.gif, 0, self.prev.as_pointer())
 
     def next_frame(self):
+        if not Path(self.gif).exists():
+            return
         self.cframe = (self.cframe + 1) % self.frames
         try:
             ptr = self.prev.as_pointer()
@@ -78,5 +72,19 @@ class GifPlayer:
         self.destroy()
 
 
-# gifplayer = GifPlayer(TEST, gif)
-# gifplayer.auto_play()
+PREV = bpy.utils.previews.new()
+TEST = PREV.new("IMG_LIB_TEST")
+gif_test = ["C:/Users/KC/Desktop/B.gif", "/Volumes/CDownload/B.gif"]
+gif = ""
+for g in gif_test:
+    if not Path(g).exists():
+        continue
+    gif = g
+gifplayer = GifPlayer(TEST, gif)
+
+
+def test():
+    f, w, h, c, d = imglib.cache_gif(gif)
+    logger.info("Image Read Test")
+    logger.info([f, w, h, c, list(d.values())])
+    gifplayer.auto_play()
