@@ -1,0 +1,614 @@
+{
+  "last_node_id": 15,
+  "last_link_id": 14,
+  "nodes": [
+    {
+      "id": 8,
+      "type": "VAEDecode",
+      "pos": [
+        1176.4676513671875,
+        867.5911865234375
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 11,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 5
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 7
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            6
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "VAE解码",
+      "properties": {},
+      "widgets_values": []
+    },
+    {
+      "id": 3,
+      "type": "KSampler",
+      "pos": [
+        904.2295532226562,
+        529.2134399414062
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 3
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 10
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 1
+        },
+        {
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 4
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            5
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "K采样器",
+      "properties": {},
+      "widgets_values": [
+        "123456789",
+        "fixed",
+        20,
+        8.0,
+        "euler",
+        "karras",
+        1.0
+      ]
+    },
+    {
+      "id": 7,
+      "type": "EmptyLatentImage",
+      "pos": [
+        551.8596801757812,
+        980.4288940429688
+      ],
+      "size": {
+        "0": 512.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            4
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "空Latent图像",
+      "properties": {},
+      "widgets_values": [
+        512,
+        512,
+        1
+      ]
+    },
+    {
+      "id": 4,
+      "type": "CheckpointLoaderSimple",
+      "pos": [
+        -109.54988861083984,
+        706.24267578125
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            3
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            0,
+            2
+          ],
+          "slot_index": 1
+        },
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "links": [],
+          "slot_index": 2
+        }
+      ],
+      "title": "Checkpoint简易加载器",
+      "properties": {},
+      "widgets_values": [
+        "AIGODLIKE华丽_4000.ckpt"
+      ]
+    },
+    {
+      "id": 14,
+      "type": "ControlNetApply",
+      "pos": [
+        622.5785522460938,
+        816.0228271484375
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "conditioning",
+          "type": "CONDITIONING",
+          "link": 9
+        },
+        {
+          "name": "control_net",
+          "type": "CONTROL_NET",
+          "link": 8
+        },
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 11
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            10
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "ControlNet应用",
+      "properties": {},
+      "widgets_values": [
+        1.0
+      ]
+    },
+    {
+      "id": 9,
+      "type": "PreviewImage",
+      "pos": [
+        1476.2161865234375,
+        602.52978515625
+      ],
+      "size": {
+        "0": 512.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 12,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 6
+        }
+      ],
+      "outputs": [],
+      "title": "预览(Blender专用)",
+      "properties": {},
+      "widgets_values": []
+    },
+    {
+      "id": 15,
+      "type": "PreviewImage",
+      "pos": [
+        556.8773803710938,
+        1224.972900390625
+      ],
+      "size": {
+        "0": 512.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 13
+        }
+      ],
+      "outputs": [],
+      "title": "预览(Blender专用-预处理)",
+      "properties": {},
+      "widgets_values": []
+    },
+    {
+      "id": 5,
+      "type": "CLIPTextEncode",
+      "pos": [
+        283.73883056640625,
+        801.044921875
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 0
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            9
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "CLIP文本编码器(正)",
+      "properties": {},
+      "widgets_values": [
+        "1girl, bangs, blue_eyes, blue_hair, hair_ornament, halo, looking_at_viewer, multicolored_hair, open_mouth, simple_background, solo, streaked_hair, teeth, virtual_youtuber, white_hair"
+      ]
+    },
+    {
+      "id": 6,
+      "type": "CLIPTextEncode",
+      "pos": [
+        290.5751037597656,
+        1241.2667236328125
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            1
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "CLIP文本编码器(反)",
+      "properties": {},
+      "widgets_values": [
+        "embedding:EasyNegative"
+      ]
+    },
+    {
+      "id": 11,
+      "type": "MiDaS-DepthMapPreprocessor",
+      "pos": [
+        289.676025390625,
+        1091.2587890625
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 12
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            11,
+            13
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "MiDaS-DepthMap(深度映射)预处理器",
+      "properties": {},
+      "widgets_values": [
+        6.2831854820251465,
+        0.05000000074505806,
+        512
+      ]
+    },
+    {
+      "id": 13,
+      "type": "ControlNetLoader",
+      "pos": [
+        282.1817626953125,
+        592.274658203125
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "CONTROL_NET",
+          "type": "CONTROL_NET",
+          "links": [
+            8
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "ControlNet加载器",
+      "properties": {},
+      "widgets_values": [
+        "control_v11p_sd15_depth.pth"
+      ]
+    },
+    {
+      "id": 12,
+      "type": "输入图像",
+      "pos": [
+        -399.2138366699219,
+        1010.534912109375
+      ],
+      "size": {
+        "0": 512.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            12
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": [],
+          "slot_index": 1
+        }
+      ],
+      "title": "输入图像",
+      "properties": {},
+      "widgets_values": [
+        "",
+        "输入"
+      ]
+    },
+    {
+      "id": 10,
+      "type": "VAELoader",
+      "pos": [
+        650.0415649414062,
+        489.6914367675781
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "links": [
+            7
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "VAE加载器",
+      "properties": {},
+      "widgets_values": [
+        "pastel-waifu-diffusion.vae.pt"
+      ]
+    }
+  ],
+  "links": [
+    [
+      0,
+      4,
+      1,
+      5,
+      0,
+      "CLIPTextEncode"
+    ],
+    [
+      1,
+      6,
+      0,
+      3,
+      2,
+      "KSampler"
+    ],
+    [
+      2,
+      4,
+      1,
+      6,
+      0,
+      "CLIPTextEncode"
+    ],
+    [
+      3,
+      4,
+      0,
+      3,
+      0,
+      "KSampler"
+    ],
+    [
+      4,
+      7,
+      0,
+      3,
+      3,
+      "KSampler"
+    ],
+    [
+      5,
+      3,
+      0,
+      8,
+      0,
+      "VAEDecode"
+    ],
+    [
+      6,
+      8,
+      0,
+      9,
+      0,
+      "预览"
+    ],
+    [
+      7,
+      10,
+      0,
+      8,
+      1,
+      "VAEDecode"
+    ],
+    [
+      8,
+      13,
+      0,
+      14,
+      1,
+      "ControlNetApply"
+    ],
+    [
+      9,
+      5,
+      0,
+      14,
+      0,
+      "ControlNetApply"
+    ],
+    [
+      10,
+      14,
+      0,
+      3,
+      1,
+      "KSampler"
+    ],
+    [
+      11,
+      11,
+      0,
+      14,
+      2,
+      "ControlNetApply"
+    ],
+    [
+      12,
+      12,
+      0,
+      11,
+      0,
+      "MiDaS-DepthMapPreprocessor"
+    ],
+    [
+      13,
+      11,
+      0,
+      15,
+      0,
+      "预览"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {},
+  "version": 0.4
+}
