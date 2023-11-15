@@ -25,6 +25,7 @@ from ..preference import get_pref
 from .history import History
 from .websocket import WebSocketApp
 
+
 def get_ip():
     return TaskManager.server.get_ip()
 
@@ -122,6 +123,7 @@ class Task:
 
     def set_finished(self):
         self.is_finished = True
+
         def f(self: Task):
             if not self.is_tree_valid():
                 return
@@ -161,6 +163,7 @@ class Task:
         """
         # if not node_id:
         #     node_id = self.executing_node_id
+
         def f(self: Task):
             if not self.is_tree_valid():
                 return
@@ -186,6 +189,11 @@ class TaskErrPaser:
             if self.WITH_PRINT:
                 print(info)
             return []
+
+        def TypeError(self, info):
+            if self.WITH_PRINT:
+                print(info)
+            return [info["message"]]
 
         def __print__(self, info):
             msg = _T(info["message"]).strip()
@@ -386,11 +394,16 @@ class TaskErrPaser:
         except BaseException:
             self.error_info = {}
 
-    def parse(self, e: request.HTTPError):
-        self.decode_info(e)
+    def parse(self, e):
+        if isinstance(e, request.HTTPError):
+            self.decode_info(e)
+        elif isinstance(e, dict()):
+            self.error_info = e
         if not self.error_info:
             return
+        print("----------------")
         print(self.error_info)
+        print("----------------")
         self.error_parse()
         self.node_error_parse()
 
@@ -537,10 +550,11 @@ class RemoteServer(Server):
 
     def is_launched(self) -> bool:
         return self.server_connected
-    
+
     def close(self):
         self.server_connected = False
         logger.warn(_T("Remote Server Closed"))
+
 
 class LocalServer(Server):
     def __init__(self) -> None:
@@ -864,7 +878,7 @@ class TaskManager:
     error_msg = []
     progress_bar = 0
     executer = ThreadPoolExecutor(max_workers=1)
-    ws:WebSocketApp = None
+    ws: WebSocketApp = None
 
     def __new__(cls, *args, **kw):
         if cls._instance is None:
@@ -947,7 +961,7 @@ class TaskManager:
             TaskManager.ws = None
         TaskManager.cur_task = None
         TaskManager.restart_server(fake=True)
-        
+
     def push_task(task, pre=None, post=None, tree=None):
         logger.debug(_T('Add Task'))
         if not TaskManager.is_launched():
@@ -1122,6 +1136,8 @@ class TaskManager:
                 logger.debug(f"{_T('Execution Cached')}: {data.get('nodes', '')}")
             elif mtype == "status":
                 ...
+            elif mtype == "execution_error":
+                ...
             elif mtype != 'progress':
                 logger.debug(f'{_T("got response")}: {message}')
 
@@ -1170,7 +1186,26 @@ class TaskManager:
                 tm.push_res(data)
                 logger.warn(f"{_T('Ran Node')}: {data['node']}", )
             elif mtype == "execution_error":
-                logger.error(data.get("message"))
+                _msg = data.get("message", None)
+                if not _msg:
+                    _msg = data.get("exception_message", None)
+                    node_id = data.get("node_id", None)
+                    etype = data.get("exception_type", None)
+                    ['prompt_id', 'node_id', 'node_type', 'executed', 'exception_message', 'exception_type', 'traceback', 'current_inputs', 'current_outputs']
+                    # _msg = msg.get("data", None)
+                    # print(_msg.keys())
+                    trace = data.get("traceback", None)
+                    if trace and isinstance(trace, list):
+                        trace = "\n" + "".join([str(t) for t in trace])
+                        logger.error(trace)
+                    err_parser = TaskErrPaser()
+                    node_error = {"errors": [{"type": etype,
+                                              "message": _msg}],
+                                  }
+                    err_parser.error_info = {"node_errors": {node_id: node_error}}
+                    Timer.put(err_parser.node_error_parse)
+                logger.error(_msg)
+
             elif mtype == "execution_start":
                 ...
             elif mtype == "execution_interrupted":
@@ -1188,7 +1223,7 @@ class TaskManager:
                 ...  # pass
             else:
                 logger.error(message)
-        
+
         ws = WebSocketApp(f"ws://{get_ip()}:{get_port()}/ws?clientId={SessionId['SessionId']}", on_message=on_message)
         TaskManager.ws = ws
         ws.run_forever()
