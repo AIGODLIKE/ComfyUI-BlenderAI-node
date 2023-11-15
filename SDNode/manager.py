@@ -16,7 +16,7 @@ from shutil import rmtree
 from urllib import request
 from urllib.error import URLError
 from threading import Thread
-from subprocess import Popen, PIPE
+from subprocess import Popen, PIPE, STDOUT, DEVNULL
 from pathlib import Path
 from queue import Queue
 from ..utils import rmtree as rt, logger, _T, PkgInstaller, FSWatcher
@@ -620,7 +620,7 @@ class LocalServer(Server):
         # logger.debug(" ".join(args))
         import bpy
         if bpy.app.version >= (3, 6):
-            p = Popen(args, stdout=PIPE, cwd=Path(model_path).resolve().as_posix())
+            p = Popen(args, stdout=PIPE, stderr=PIPE, cwd=Path(model_path).resolve().as_posix())
         else:
             p = Popen(args, stdout=PIPE, cwd=Path(model_path).resolve().as_posix())
         self.child = p
@@ -1171,9 +1171,10 @@ class TaskManager:
                 TaskManager.progress_bar = v
                 cf = "\033[92m" + "█" * v + "\033[0m"
                 cp = "\033[32m" + "░" * (m - v) + "\033[0m"
-                content = f"\r{v*100/m:3.0f}% " + cf + cp + f" {v}/{m}"
-                sys.stdout.write(content)
-                sys.stdout.flush()
+                content = f"{v*100/m:3.0f}% " + cf + cp + f" {v}/{m}"
+                logger.info(content+"\r", extra={"same_line": True})
+                # sys.stdout.write(content)
+                # sys.stdout.flush()
                 if tm.cur_task:
                     tm.cur_task.set_process(data)
 
