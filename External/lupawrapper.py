@@ -93,7 +93,10 @@ class LuaRuntime:
         if dll_name in self.dll:
             return self.dll[dll_name][0]
         L = self.L
-        dll, name = L.require(dll_name)
+        if system() == 'Windows' or dll_name.startswith("lib"):
+            dll, name = L.require(dll_name)
+        else:
+            dll, name = L.require("lib" + dll_name)
         self.dll[dll_name] = dll, name
         return dll
 
@@ -127,6 +130,8 @@ class Logger:
 
     def __init__(self, rt: LuaRuntime, name="") -> None:
         self.rt = rt
+        if not name:
+            name = " " # logger名不能为空
         self.name = name
         self.liblogger = rt.load_dll("logger")
         self._logger = self.liblogger.get_logger(name)
