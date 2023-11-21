@@ -1,6 +1,7 @@
 import struct
 import queue
 import platform
+import time
 from pathlib import Path
 from threading import Thread
 from functools import lru_cache
@@ -11,6 +12,7 @@ from .timer import Timer
 from .datas import IMG_SUFFIX
 translation = {}
 
+
 def rmtree(path: Path):
     if path.is_file():
         path.unlink()
@@ -18,9 +20,10 @@ def rmtree(path: Path):
         for child in path.iterdir():
             rmtree(child)
         try:
-            path.rmdir() # nas 的共享盘可能会有残留
-        except:
+            path.rmdir()  # nas 的共享盘可能会有残留
+        except BaseException:
             ...
+
 
 def get_version():
     from . import bl_info
@@ -38,16 +41,19 @@ def _T(word):
     culture = translation.setdefault(locale, {})
     if t := culture.get(word):
         return t
+
     def f(word):
         culture[word] = pgettext(word)
     Timer.put((f, word))
     return LANG_TEXT.get(locale, {}).get(word, word)
+
 
 def _T2(word):
     import bpy
     from .translations.translation import REPLACE_DICT
     locale = bpy.context.preferences.view.language
     return REPLACE_DICT.get(locale, {}).get(word, word)
+
 
 def update_screen():
     try:
@@ -197,7 +203,7 @@ class Icon(metaclass=MetaIn):
         if p.exists() and p.suffix.lower() in IMG_SUFFIX:
             img = bpy.data.images.load(path)
             Icon.reg_icon_by_pixel(img, path)
-            Timer.put((bpy.data.images.remove, img)) # 直接使用 bpy.data.images.remove 会导致卡死
+            Timer.put((bpy.data.images.remove, img))  # 直接使用 bpy.data.images.remove 会导致卡死
 
     def find_image(path):
         img = Icon.PATH2BPY.get(FSWatcher.to_str(path), None)
@@ -445,6 +451,8 @@ class FSWatcher:
             for path, changed in FSWatcher._watcher_path.items():
                 if changed:
                     continue
+                if not path.exists():
+                    continue
                 mtime = path.stat().st_mtime_ns
                 if FSWatcher._watcher_stat.get(path, None) == mtime:
                     continue
@@ -507,5 +515,24 @@ class FSWatcher:
     def to_path(path: Path):
         return Path(path)
 
+
+class ScopeTimer:
+    def __init__(self, name: str):
+        self.name = name
+        self.time_start = time.time()
+
+    def __del__(self):
+        print(f"{self.name} cost {time.time() - self.time_start}s")
+
+class CtxTimer:
+    def __init__(self, name: str):
+        self.name = name
+        self.time_start = time.time()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        print(f"{self.name} cost {time.time() - self.time_start}s")
 
 FSWatcher.init()

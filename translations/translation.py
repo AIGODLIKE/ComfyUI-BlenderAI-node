@@ -313,6 +313,12 @@ other = {
     "Drag Link Result Page Next": "下一页",
     "Drag Link Result Page Prev": "上一页",
     "Drag Link Result Page Current": "当前页",
+    "Custom Presets": "自定义预设",
+    "Is Enabled?": "是否启用?",
+    "Add Custom Presets Dir": "添加自定义预设路径",
+    "Custom Preset Path already exists": "自定义预设路径已存在",
+    "Init Custom Preset Path": "初始化自定义预设路径", 
+    "Create presets/groups dir if not exists": "没有presets/groups文件夹则创建",
     # MLT
     " Prompts": "提示词",
     "MLT": "多行文本",

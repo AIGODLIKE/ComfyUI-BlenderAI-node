@@ -17,7 +17,7 @@ from .MultiLineText import EnableMLT
 from .translations import translations_dict
 from .utils import Icon
 from .timer import timer_reg, timer_unreg
-from .preference import AddonPreference
+from .preference import pref_register, pref_unregister
 from .ops import Ops, Ops_Mask, Load_History, Popup_Load, Copy_Tree, Load_Batch, Fetch_Node_Status,  Sync_Stencil_Image, NodeSearch
 from .ui import Panel, HISTORY_UL_UIList, HistoryItem
 from .SDNode.history import History
@@ -43,8 +43,8 @@ def dump_info():
         print(f'Blender {os.getpid()} PID', file=sys.stderr)
 
 def register():
-    bpy.utils.register_class(AddonPreference)
-    if "-b" in sys.argv or "--background" in sys.argv:
+    pref_register()
+    if bpy.app.background:
         dump_info()
         return
     bpy.app.translations.register(__name__, translations_dict)
@@ -59,8 +59,8 @@ def register():
     linker_register()
     
 def unregister():
-    bpy.utils.unregister_class(AddonPreference)
-    if "-b" in sys.argv or "--background" in sys.argv:
+    pref_unregister()
+    if bpy.app.background:
         return
     bpy.app.translations.unregister(__name__)
     unreg()

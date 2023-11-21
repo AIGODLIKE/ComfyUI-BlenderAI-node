@@ -4,7 +4,8 @@ import os
 import json
 from pathlib import Path
 
-from .utils import Icon, FSWatcher
+from .preference import get_pref
+from .utils import Icon, FSWatcher, ScopeTimer
 from .datas import PRESETS_DIR, PROP_CACHE, GROUPS_DIR, IMG_SUFFIX
 
 FSWatcher.register(PRESETS_DIR)
@@ -19,24 +20,49 @@ class Prop(bpy.types.PropertyGroup):
     cache = PROP_CACHE
 
     def mark_dirty():
+        Prop.cache["presets_dir"].clear()
+        Prop.cache["groups_dir"].clear()
         Prop.cache["presets"].clear()
         Prop.cache["groups"].clear()
 
-    def presets_dir_items(self, context):
+    def update_prop_cache(search_dir: list[Path], t="presets"):
         items = []
-        if not Prop.cache["presets_dir"] or FSWatcher.consume_change(PRESETS_DIR):
-            for file in PRESETS_DIR.iterdir():
-                if file.is_file():
+        for item in get_pref().pref_dirs:
+            if not item.enabled:
+                continue
+            dirpath = Path(item.path).joinpath(t)
+            if not dirpath.exists() or not dirpath.is_dir():
+                continue
+            search_dir.append(dirpath)
+        changed = [FSWatcher.consume_change(dp) for dp in search_dir]
+        if Prop.cache[f"{t}_dir"] and not any(changed):  # 没有改变
+            return
+        # 有改变
+        for dirpath in search_dir:
+            for p in dirpath.iterdir():
+                if p.is_file():
                     continue
-                items.append((str(file), file.name, "", len(items)))
-            Prop.cache["presets_dir"].clear()
-            Prop.cache["presets_dir"].extend(items)
+                FSWatcher.register(p)
+                if dirpath.parent.name == __package__:
+                    dpn = "*"
+                else:
+                    dpn = f"[{dirpath.parent.name}]"
+                abspath = dirpath.parent.resolve().as_posix()
+                fpath = p.resolve().as_posix()
+                items.append((fpath, f"{p.name} {dpn}", abspath, len(items)))
+        if items:
+            Prop.cache[f"{t}_dir"].clear()
+            Prop.cache[f"{t}_dir"].extend(items)
+
+    def presets_dir_items(self, context):
+        # t = ScopeTimer("presets_dir_items")
+        Prop.update_prop_cache([PRESETS_DIR], "presets")
         return Prop.cache["presets_dir"]
     presets_dir: bpy.props.EnumProperty(items=presets_dir_items, name="Presets Directory")
 
     def presets_items(self, context):
         pd = FSWatcher.to_path(self.presets_dir)
-        if Prop.cache["presets"].get(pd):
+        if Prop.cache["presets"].get(pd) and not FSWatcher.consume_change(pd):
             return Prop.cache["presets"][pd]
         items = []
         if not pd.exists():
@@ -62,20 +88,14 @@ class Prop(bpy.types.PropertyGroup):
     open_presets_dir: bpy.props.BoolProperty(default=False, name="Open NodeGroup Presets Folder", update=update_open_presets_dir)
 
     def groups_dir_items(self, context):
-        items = []
-        if not Prop.cache["groups_dir"] or FSWatcher.consume_change(GROUPS_DIR):
-            for file in GROUPS_DIR.iterdir():
-                if file.is_file():
-                    continue
-                items.append((str(file), file.name, "", len(items)))
-            Prop.cache["groups_dir"].clear()
-            Prop.cache["groups_dir"].extend(items)
+        Prop.update_prop_cache([PRESETS_DIR], "groups")
         return Prop.cache["groups_dir"]
+
     groups_dir: bpy.props.EnumProperty(items=groups_dir_items, name="Groups Directory")
 
     def groups_items(self, context):
         gd = FSWatcher.to_path(self.groups_dir)
-        if Prop.cache["groups"].get(gd):
+        if Prop.cache["groups"].get(gd) and not FSWatcher.consume_change(gd):
             return Prop.cache["groups"][gd]
         items = []
         if not gd.exists():
@@ -148,11 +168,12 @@ class Prop(bpy.types.PropertyGroup):
     loop_exec: bpy.props.BoolProperty(default=False, name="Loop exec")
     render_layer: bpy.props.CollectionProperty(type=RenderLayerString)
     show_pref_general: bpy.props.BoolProperty(default=False, name="General Setting", description="Show General Setting")
+
     def import_bookmark_set(self, value):
         from .kclogger import logger
         from .utils import PngParse, _T
         from .SDNode.tree import get_tree, TREE_TYPE
-        
+
         path = Path(value)
         if not path.exists() or path.suffix.lower() not in {".png", ".json"}:
             logger.error(_T("Image not found or format error(png/json)"))
@@ -193,8 +214,9 @@ def render_layer_update():
                 continue
             item = bpy.context.scene.sdn.render_layer.add()
             item.name = node.name
-    except:
+    except BaseException:
         ...
     return 1
+
 
 bpy.app.timers.register(render_layer_update, persistent=True)

@@ -3,8 +3,111 @@ import bpy
 import os
 from pathlib import Path
 
-from .utils import Icon, _T
+from .utils import Icon, _T, FSWatcher
 from .translations import ctxt
+from .kclogger import logger
+
+
+def dir_cb_test(path):
+    return
+    logger.info(f"{path} changed")
+
+
+class PresetsDirDesc(bpy.types.PropertyGroup):
+    def path_set(self, path):
+        """检查路径是否合法"""
+        if not path or path == self.path:
+            return
+        if not os.path.exists(path) or not os.path.isdir(path):
+            return
+        # 路径不能已经存在于pref_dirs中
+        pref = get_pref()
+        for item in pref.pref_dirs:
+            if item.path != path:
+                continue
+
+            def error_draw(self, context):
+                self.layout.label(text="Custom Preset Path already exists", text_ctxt=ctxt)
+            bpy.context.window_manager.popup_menu(error_draw, title=_T("Error"), icon="ERROR")
+            return
+
+        self["path"] = path
+        if pref.pref_dirs_init:
+            # 创建presets/groups目录
+            Path(path).joinpath("presets").mkdir(parents=True, exist_ok=True)
+            Path(path).joinpath("groups").mkdir(parents=True, exist_ok=True)
+        if self.enabled:
+            FSWatcher.register(Path(path).joinpath("presets"), dir_cb_test)
+            FSWatcher.register(Path(path).joinpath("groups"), dir_cb_test)
+
+    def path_get(self):
+        if "path" not in self:
+            return ""
+        return self["path"]
+    path: bpy.props.StringProperty(name="Path", subtype="DIR_PATH", set=path_set, get=path_get)
+    def update_enabled(self, context):
+        p = Path(self.path)
+        if self.enabled:
+            FSWatcher.register(p.joinpath("presets"), dir_cb_test)
+            FSWatcher.register(p.joinpath("groups"), dir_cb_test)
+        else:
+            FSWatcher.unregister(p.joinpath("presets"))
+            FSWatcher.unregister(p.joinpath("groups"))
+        from .prop import Prop
+        Prop.mark_dirty()
+    enabled: bpy.props.BoolProperty(name="Is Enabled?", default=True, update=update_enabled)
+
+
+class PresetsDirEdit(bpy.types.Operator):
+    bl_idname = "sdn.presets_dir_edit"
+    bl_label = "Edit Presets Dir"
+    bl_description = "Edit Presets Dir"
+    bl_options = {"REGISTER", "UNDO"}
+
+    action: bpy.props.EnumProperty(items=[("ADD", "Add", "", "ADD", 0),
+                                          ("REMOVE", "Remove", "", "REMOVE", 1)
+                                          ],
+                                   name="Action", options={"HIDDEN"})
+    index: bpy.props.IntProperty(name="Index")
+
+    directory: bpy.props.StringProperty(subtype="DIR_PATH")
+
+    def invoke(self, context, event):
+        if self.action == "ADD":
+            # 弹出文件夹选择框
+            wm = bpy.context.window_manager
+            wm.fileselect_add(self)
+            return {"RUNNING_MODAL"}
+        return self.execute(context)
+
+    def execute(self, context):
+        pref = get_pref()
+        if self.action == "ADD":
+            # 判断路径是否已经存在
+            for item in pref.pref_dirs:
+                if item.path != self.directory:
+                    continue
+
+                def error_draw(self, context):
+                    self.layout.label(text="Custom Preset Path already exists", text_ctxt=ctxt)
+                # 弹出一个面板
+                bpy.context.window_manager.popup_menu(error_draw, title=_T("Error"), icon="ERROR")
+                self.report({"ERROR"}, _T("Custom Preset Path already exists"))
+                return {"CANCELLED"}
+            item = pref.pref_dirs.add()
+            item.path = self.directory
+            p = Path(item.path)
+            if pref.pref_dirs_init:
+                # 创建presets/groups目录
+                p.joinpath("presets").mkdir(parents=True, exist_ok=True)
+                p.joinpath("groups").mkdir(parents=True, exist_ok=True)
+            FSWatcher.register(p.joinpath("presets"), dir_cb_test)
+            FSWatcher.register(p.joinpath("groups"), dir_cb_test)
+        elif self.action == "REMOVE":
+            pref.pref_dirs.remove(self.index)
+            FSWatcher.unregister(Path(self.directory).joinpath("presets"))
+            FSWatcher.unregister(Path(self.directory).joinpath("groups"))
+        return {"FINISHED"}
 
 
 class AddonPreference(bpy.types.AddonPreferences):
@@ -117,6 +220,9 @@ class AddonPreference(bpy.types.AddonPreferences):
                                  update=ip_check)
     port: bpy.props.IntProperty(default=8189, min=1000, max=65535, name="Port", description="Service Port")
 
+    pref_dirs: bpy.props.CollectionProperty(type=PresetsDirDesc, name="Custom Presets", description="Custom Presets")
+    pref_dirs_init: bpy.props.BoolProperty(default=True, name="Init Custom Preset Path", description="Create presets/groups dir if not exists")
+
     def update_open_dir1(self, context):
         if self.open_dir1:
             self.open_dir1 = False
@@ -145,6 +251,22 @@ class AddonPreference(bpy.types.AddonPreferences):
     open_dir4: bpy.props.BoolProperty(default=False,
                                       name="Open Cache Folder",
                                       update=update_open_dir4)
+
+    def draw_custom_presets(self, layout: bpy.types.UILayout):
+        box = layout.box()
+        box.label(text="Custom Presets", text_ctxt=ctxt)
+        header = box.row(align=True)
+        header.operator(PresetsDirEdit.bl_idname, text="Add Custom Presets Dir", icon="ADD", text_ctxt=ctxt).action = "ADD"
+        header.prop(self, "pref_dirs_init", text="", icon="FILE_REFRESH", text_ctxt=ctxt)
+        col = box.column(align=True)
+        col.scale_y = 1.1
+        for i, item in enumerate(self.pref_dirs):
+            row = col.row(align=True)
+            row.prop(item, "enabled", text="", icon="CHECKBOX_HLT", text_ctxt=ctxt)
+            row.prop(item, "path", text="", text_ctxt=ctxt)
+            op = row.operator(PresetsDirEdit.bl_idname, icon="REMOVE", text="", text_ctxt=ctxt)
+            op.action = "REMOVE"
+            op.index = i
 
     def draw_general(self, layout: bpy.types.UILayout):
         row = layout.row()
@@ -175,6 +297,7 @@ class AddonPreference(bpy.types.AddonPreferences):
             row.prop(self, "auto_launch", toggle=True, text_ctxt=ctxt)
             row.prop(self, "install_deps", toggle=True, text_ctxt=ctxt)
             row.prop(self, "force_log", toggle=True, text_ctxt=ctxt)
+        self.draw_custom_presets(layout)
 
     def draw_website(self, layout: bpy.types.UILayout):
 
@@ -219,3 +342,33 @@ class AddonPreference(bpy.types.AddonPreferences):
 def get_pref():
     import bpy
     return bpy.context.preferences.addons[__package__].preferences
+
+
+@bpy.app.handlers.persistent
+def pref_dirs_init(_):
+    # 将pref_dirs 添加到 FSWatcher
+    pref = get_pref()
+
+    for item in pref.pref_dirs:
+        logger.info(f"FS Register -> {item.path}")
+        p = Path(item.path)
+        if pref.pref_dirs_init:
+            # 创建presets/groups目录
+            p.joinpath("presets").mkdir(parents=True, exist_ok=True)
+            p.joinpath("groups").mkdir(parents=True, exist_ok=True)
+        FSWatcher.register(p.joinpath("presets"), dir_cb_test)
+        FSWatcher.register(p.joinpath("groups"), dir_cb_test)
+
+
+clss = [PresetsDirDesc, PresetsDirEdit, AddonPreference]
+reg, unreg = bpy.utils.register_classes_factory(clss)
+
+
+def pref_register():
+    bpy.app.handlers.load_post.append(pref_dirs_init)
+    reg()
+
+
+def pref_unregister():
+    unreg()
+    bpy.app.handlers.load_post.remove(pref_dirs_init)
