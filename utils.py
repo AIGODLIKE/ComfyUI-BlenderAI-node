@@ -448,7 +448,8 @@ class FSWatcher:
         """
         import time
         while FSWatcher._running:
-            for path, changed in FSWatcher._watcher_path.items():
+            # list() avoid changed while iterating
+            for path, changed in list(FSWatcher._watcher_path.items()):
                 if changed:
                     continue
                 if not path.exists():
@@ -517,22 +518,26 @@ class FSWatcher:
 
 
 class ScopeTimer:
-    def __init__(self, name: str):
+    def __init__(self, name: str = "", prt=print):
         self.name = name
         self.time_start = time.time()
+        self.echo = prt
 
     def __del__(self):
-        print(f"{self.name} cost {time.time() - self.time_start}s")
+        self.echo(f"{self.name} cost {time.time() - self.time_start:.4f}s")
+
 
 class CtxTimer:
-    def __init__(self, name: str):
+    def __init__(self, name: str = "", prt=print):
         self.name = name
         self.time_start = time.time()
+        self.echo = prt
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        print(f"{self.name} cost {time.time() - self.time_start}s")
+        self.echo(f"{self.name} cost {time.time() - self.time_start:.4f}s")
+
 
 FSWatcher.init()

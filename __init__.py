@@ -8,6 +8,8 @@ bl_info = {
     'doc_url': "https://shimo.im/docs/Ee32m0w80rfLp4A2"
 }
 
+import time
+ts = time.time()
 import bpy
 import sys
 import traceback
@@ -18,22 +20,19 @@ from .translations import translations_dict
 from .utils import Icon
 from .timer import timer_reg, timer_unreg
 from .preference import pref_register, pref_unregister
-from .ops import Ops, Ops_Mask, Load_History, Popup_Load, Copy_Tree, Load_Batch, Fetch_Node_Status,  Sync_Stencil_Image, NodeSearch
+from .ops import Ops, Ops_Mask, Load_History, Popup_Load, Copy_Tree, Load_Batch, Fetch_Node_Status, Sync_Stencil_Image, NodeSearch
 from .ui import Panel, HISTORY_UL_UIList, HistoryItem
 from .SDNode.history import History
 from .prop import RenderLayerString, Prop
 from .Linker import linker_register, linker_unregister
-try:
-    from .hook import hook
-    hook.hook_init()
-except:
-    ...
-    # traceback.print_exc()
+from .hook import use_hook
 clss = [Panel, Ops, RenderLayerString, Prop, HISTORY_UL_UIList, HistoryItem, Ops_Mask, Load_History, Popup_Load, Copy_Tree, Load_Batch, Fetch_Node_Status, Sync_Stencil_Image, NodeSearch, EnableMLT]
 reg, unreg = bpy.utils.register_classes_factory(clss)
 
+
 def dump_info():
-    import json, os
+    import json
+    import os
     from .preference import get_pref
     if "--get-blender-ai-node-info" in sys.argv:
         model_path = getattr(get_pref(), 'model_path')
@@ -41,6 +40,7 @@ def dump_info():
         sys.stderr.write(f"BlenderComfyUIInfo: {json.dumps(info)} BlenderComfyUIend")
         sys.stderr.flush()
         print(f'Blender {os.getpid()} PID', file=sys.stderr)
+
 
 def register():
     pref_register()
@@ -57,7 +57,10 @@ def register():
     bpy.types.Scene.sdn_history_item_index = bpy.props.IntProperty(default=0)
     History.register_timer()
     linker_register()
-    
+    use_hook()
+    print(f"{__package__} register {time.time() - ts:.4f}s")
+
+
 def unregister():
     pref_unregister()
     if bpy.app.background:
@@ -71,6 +74,7 @@ def unregister():
     del bpy.types.Scene.sdn_history_item_index
     modules_update()
     linker_unregister()
+
 
 def modules_update():
     from .kclogger import close_logger

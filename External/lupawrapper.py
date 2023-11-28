@@ -6,42 +6,58 @@ from pathlib import Path
 from platform import system
 sys.path.append(Path(__file__).parent.joinpath("lupa").as_posix())
 
+DEFAULT_RT = "lua54"
+DEFAULT_RT = "luajit"
+
 
 class LuaRuntime:
     __RT_DICT__ = {}
+    DEBUG = False
 
     @staticmethod
-    def get_lua_runtime(name="", rt="lua54") -> LuaRuntime:
+    def get_lua_runtime(name="", rt=DEFAULT_RT) -> LuaRuntime:
         if name not in LuaRuntime.__RT_DICT__:
             try:
                 rt = LuaRuntime(name, rt)
-                def_path = Path(__file__).parent.joinpath("lualib").as_posix()
-                rt.add_dll_path(def_path)
             except Exception:
                 import traceback
                 traceback.print_exc()
         return LuaRuntime.__RT_DICT__.get(name, None)
 
-    def __new__(cls: LuaRuntime, name="", rt="lua54") -> LuaRuntime:
+    def __new__(cls: LuaRuntime, name="", rt=DEFAULT_RT) -> LuaRuntime:
         if name not in LuaRuntime.__RT_DICT__:
             rt = super().__new__(cls)
             cls.__RT_DICT__[name] = rt
         return LuaRuntime.__RT_DICT__[name]
 
-    def __init__(self, name="", rt="lua54") -> None:
+    def __init__(self, name="", rt=DEFAULT_RT) -> None:
         # 如果已经注册过了，就不再注册
         if getattr(self, "initialized", None):
             return
-        lupa = importlib.import_module(f"lupa.{rt}")
+        try:
+            lupa = importlib.import_module(f"lupa.{rt}")
+        except BaseException:
+            rt = DEFAULT_RT
+            lupa = importlib.import_module("lupa.lua54")
         self.name = name
         self.rt = rt
         self.L = lupa.LuaRuntime()
         self.globals = self.L.globals()
-        dll_path = Path(__file__).parent
         self.dll = {}
         self.cdll_path = set()
-        self.add_dll_path(dll_path)
+        p1 = Path(__file__).parent
+        p2 = Path(__file__).parent.joinpath("lualib").as_posix()
+        self.add_dll_path(p1)
+        self.add_dll_path(p2)
         self.initialized = True
+        self._debug()
+
+    def _debug(self):
+        l = self.get_logger()
+        if LuaRuntime.DEBUG:
+            l.set_global_level(l.Level.TRACE)
+        else:
+            l.set_global_level(l.Level.INFO)
 
     def __del__(self):
         self.__RT_DICT__.pop(self.name, None)
@@ -94,9 +110,13 @@ class LuaRuntime:
             return self.dll[dll_name][0]
         L = self.L
         if system() == 'Windows' or dll_name.startswith("lib"):
-            dll, name = L.require(dll_name)
+            res = L.require(dll_name)
         else:
-            dll, name = L.require("lib" + dll_name)
+            res = L.require("lib" + dll_name)
+        if self.rt == "luajit":
+            dll, name = res, dll_name
+        else:
+            dll, name = res
         self.dll[dll_name] = dll, name
         return dll
 
@@ -105,6 +125,10 @@ class LuaRuntime:
 
     def get_logger(self, name=""):
         return Logger(self, name)
+
+    @staticmethod
+    def get_rt_dict():
+        return LuaRuntime.__RT_DICT__
 
 
 class Logger:
@@ -131,7 +155,7 @@ class Logger:
     def __init__(self, rt: LuaRuntime, name="") -> None:
         self.rt = rt
         if not name:
-            name = " " # logger名不能为空
+            name = " "  # logger名不能为空
         self.name = name
         self.liblogger = rt.load_dll("logger")
         self._logger = self.liblogger.get_logger(name)

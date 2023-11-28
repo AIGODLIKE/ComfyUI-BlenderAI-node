@@ -3,28 +3,28 @@ from threading import Thread
 from pathlib import Path
 from time import sleep
 from ...External.lupawrapper import get_lua_runtime
-from ...utils import update_screen
+from ...utils import update_screen, CtxTimer, ScopeTimer
 from ...timer import Timer
 from ...kclogger import logger
 
 
-rt = get_lua_runtime()
+rt = get_lua_runtime("AnimatedImage")
 imglib = rt.load_dll("image")
 
 
 def read_frame_to_preview(gif, p: bpy.types.ImagePreview, frame):
-    f, w, h, c, d = imglib.cache_gif(gif)
+    f, w, h, c, d = imglib.cache_animated_image(gif)
     p.icon_size = (32, 32)
     p.image_size = (w, h)
     imglib.read_frame(gif, frame, p.as_pointer())
 
 
-class GifPlayer:
+class AnimatedImagePlayer:
     def __init__(self, prev: bpy.types.ImagePreview, gif: str, destroycb=None) -> None:
         self.prev = prev
         self.destroy = destroycb
         self.gif = gif
-        f, w, h, c, d = imglib.cache_gif(self.gif)
+        f, w, h, c, d = imglib.cache_animated_image(self.gif)
         self.w = w
         self.h = h
         self.delays = list(d.values())
@@ -61,9 +61,11 @@ class GifPlayer:
     def auto_play_ex(self):
         while self.playing:
             delay = self.delays[self.cframe]
-            if delay < 5:
-                delay = 100
-            sleep(delay / 1000)
+            sleep(delay)
+            # gif的算法, 但目前使用的直接读取每一帧的延迟
+            # if delay < 5:
+            #     delay = 100
+            # sleep(delay / 1000)
             Timer.put(self.next_frame)
 
     def __del__(self):
@@ -80,11 +82,12 @@ for g in gif_test:
     if not Path(g).exists():
         continue
     gif = g
-gifplayer = GifPlayer(TEST, gif)
 
 
 def test():
-    f, w, h, c, d = imglib.cache_gif(gif)
+    t = ScopeTimer("Cache 2000x2000")
+    gifplayer = AnimatedImagePlayer(TEST, gif)
+    f, w, h, c, d = imglib.cache_animated_image(gif)
     logger.info("Image Read Test")
     logger.info([f, w, h, c, list(d.values())])
     gifplayer.auto_play()

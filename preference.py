@@ -45,6 +45,7 @@ class PresetsDirDesc(bpy.types.PropertyGroup):
             return ""
         return self["path"]
     path: bpy.props.StringProperty(name="Path", subtype="DIR_PATH", set=path_set, get=path_get)
+
     def update_enabled(self, context):
         p = Path(self.path)
         if self.enabled:
@@ -114,6 +115,9 @@ class AddonPreference(bpy.types.AddonPreferences):
     bl_idname = __package__
     bl_translation_context = ctxt
 
+    def update_debug(self, context):
+        use_debug()
+    debug: bpy.props.BoolProperty(default=False, name="Debug", update=update_debug)
     popup_scale: bpy.props.IntProperty(default=5, min=1, max=100, name="Preview Image Size")
     enable_hq_preview: bpy.props.BoolProperty(default=True, name="Enable High Quality Preview Image")
     server_type: bpy.props.EnumProperty(items=[("Local", "LocalServer", "", "LOCKVIEW_ON", 0),
@@ -298,6 +302,7 @@ class AddonPreference(bpy.types.AddonPreferences):
             row.prop(self, "install_deps", toggle=True, text_ctxt=ctxt)
             row.prop(self, "force_log", toggle=True, text_ctxt=ctxt)
         self.draw_custom_presets(layout)
+        layout.prop(self, "debug", toggle=True, text_ctxt=ctxt)
 
     def draw_website(self, layout: bpy.types.UILayout):
 
@@ -364,9 +369,29 @@ clss = [PresetsDirDesc, PresetsDirEdit, AddonPreference]
 reg, unreg = bpy.utils.register_classes_factory(clss)
 
 
+def use_debug():
+    pref = get_pref()
+    try:
+        from .External.lupawrapper import LuaRuntime
+        LuaRuntime.DEBUG = pref.debug
+        for rt in LuaRuntime.get_rt_dict().values():
+            liblogger = rt.load_dll("logger")
+            if pref.debug:
+                liblogger.set_global_level(0)
+                print("Enable")
+            else:
+                liblogger.set_global_level(-1)
+                print("Close")
+            break
+    except Exception:
+        import traceback
+        traceback.print_exc()
+
+
 def pref_register():
     bpy.app.handlers.load_post.append(pref_dirs_init)
     reg()
+    use_debug()
 
 
 def pref_unregister():

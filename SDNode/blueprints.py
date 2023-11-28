@@ -12,6 +12,7 @@ from pathlib import Path
 from copy import deepcopy
 from bpy.types import Context, UILayout
 from .utils import gen_mask
+from .plugins import animatedimageplayer
 from .nodes import NodeBase, Ops_Add_SaveImage, Ops_Link_Mask, Ops_Active_Tex, Set_Render_Res, Ops_Swith_Socket
 from .nodes import name2path, get_icon_path, Images
 from ..SDNode.manager import Task
@@ -20,7 +21,6 @@ from ..preference import get_pref
 from ..kclogger import logger
 from ..utils import _T, Icon, update_screen
 from ..translations import ctxt, get_reg_name, get_ori_name
-
 
 def get_sync_rand_node(tree):
     for node in tree.get_nodes():
@@ -1229,7 +1229,6 @@ class AnimateDiffCombine(BluePrintBase):
         """
         result : {'node': '11', 'output': {'videos': [{'filename': 'img.gif', 'subfolder': '', 'type': 'output', 'format': 'image/gif'}]}, 'prompt_id': ''}
         """
-        from .plugins import gifplayer
         logger.debug(f"{self.class_type}{_T('Post Function')}->{result}")
         # img_paths = link_get(result, "output.videos")
         img_paths = result.get("output", {}).get("videos", [])
@@ -1257,7 +1256,7 @@ class AnimateDiffCombine(BluePrintBase):
                 else:
                     prev = s.PREV.new(img_path)
                 self.prev_name = img_path
-                player = gifplayer.GifPlayer(prev, img_path)
+                player = animatedimageplayer.AnimatedImagePlayer(prev, img_path)
                 s.PLAYERS[img_path] = player
                 player.auto_play()
                 break
@@ -1290,7 +1289,6 @@ class VHS_VideoCombine(BluePrintBase):
             {'node': '9', 'output': {'gifs': [{'filename': 'AnimateDiff_00002.webp', 'subfolder': '', 'type': 'output', 'format': 'image/webp'}]}, 'prompt_id': '16091f8f-cbf2-4c90-8b6c-5b3823344ccc'}
             {'node': '9', 'output': {'gifs': [{'filename': 'AnimateDiff_00003.mov', 'subfolder': '', 'type': 'output', 'format': 'video/ProRes'}]}, 'prompt_id': '462c8f2d-7e1b-4003-9a12-36b43bec6743'}
         """
-        from .plugins import gifplayer
         logger.debug(f"{self.class_type}{_T('Post Function')}->{result}")
         # img_paths = link_get(result, "output.videos")
         img_paths = result.get("output", {}).get("gifs", [])
@@ -1321,7 +1319,7 @@ class VHS_VideoCombine(BluePrintBase):
                 else:
                     prev = s.PREV.new(img_path)
                 self.prev_name = img_path
-                player = gifplayer.GifPlayer(prev, img_path)
+                player = animatedimageplayer.AnimatedImagePlayer(prev, img_path)
                 s.PLAYERS[img_path] = player
                 player.auto_play()
                 break
@@ -1331,6 +1329,62 @@ class VHS_VideoCombine(BluePrintBase):
         prop = bpy.props.StringProperty()
         properties["prev_name"] = prop
 
+class SaveAnimatedPNG(BluePrintBase):
+    comfyClass = "SaveAnimatedPNG"
+    PREV = bpy.utils.previews.new()
+    PLAYERS = {}
+
+    def draw_button(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True):
+        if prop == "prev_name":
+            prev = s.PREV.get(self.prev_name, None)
+            if prev:
+                scale = min(max(prev.image_size), self.width) // 20
+                scale = min(scale, 100)
+                layout.template_icon(icon_value=prev.icon_id, scale=scale)
+            return True
+        super().draw_button(self, context, layout, prop, swlink)
+
+    def post_fn(s, self: NodeBase, t: Task, result):
+        
+        logger.debug(f"{self.class_type}{_T('Post Function')}->{result}")
+        # img_paths = link_get(result, "output.videos")
+        img_paths = result.get("output", {}).get("images", [])
+        if not img_paths:
+            logger.error(f'response is {result}, cannot find images in it')
+            return
+        logger.warn(f"{_T('Load Preview Image')}: {img_paths}")
+
+        def f(self, img_paths: list[dict]):
+            """
+                        {'filename': 'img.png', 'subfolder': '', 'type': 'output'}
+            img_paths: [{'filename': 'img.gif', 'subfolder': '', 'type': 'output', 'format': 'image/gif'}, ...]
+            """
+            # self.prev.clear()
+            for data in img_paths:
+                file_type = Path(data.get("filename", "None")).suffix
+                if file_type != ".png":
+                    continue
+                img_path = get_image_path(data, suffix=file_type[1:]).as_posix()
+                # 和上次的相同则不管
+                if img_path == self.prev_name:
+                    return
+                # 和上次不同, 先清理上次的结果
+                if img_path in s.PLAYERS:
+                    player = s.PLAYERS.pop(img_path)
+                    player.pause()
+                    del player
+                    prev = s.PREV[img_path]
+                else:
+                    prev = s.PREV.new(img_path)
+                self.prev_name = img_path
+                player = animatedimageplayer.AnimatedImagePlayer(prev, img_path)
+                s.PLAYERS[img_path] = player
+                player.auto_play()
+                break
+        Timer.put((f, self, img_paths))
+    def spec_extra_properties(s, properties, nname, ndesc):
+        prop = bpy.props.StringProperty()
+        properties["prev_name"] = prop
 
 @lru_cache(maxsize=1024)
 def get_blueprints(comfyClass, default=BluePrintBase) -> BluePrintBase:
