@@ -1120,7 +1120,10 @@ class NodeParser:
                             inp[1]["step"] *= 100
                         prop = bpy.props.FloatProperty(**inp[1])
                 elif proptype == "BOOLEAN":
-                    prop = bpy.props.BoolProperty(**inp[1])
+                    if len(inp) <= 1:
+                        prop = bpy.props.BoolProperty()
+                    else:
+                        prop = bpy.props.BoolProperty(**inp[1])
                 elif proptype == "STRING":
                     {'default': 'ComfyUI', 'multiline': True}
                     subtype = "NONE"
