@@ -37,10 +37,11 @@ class LuaRuntime:
         try:
             lupa = importlib.import_module(f"lupa.{rt}")
         except BaseException:
-            rt = DEFAULT_RT
+            rt = "lua54"
             lupa = importlib.import_module("lupa.lua54")
         self.name = name
         self.rt = rt
+        self.lupa = lupa
         self.L = lupa.LuaRuntime()
         self.globals = self.L.globals()
         self.dll = {}

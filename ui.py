@@ -48,7 +48,7 @@ class Panel(bpy.types.Panel):
         row1 = col.row(align=True)
         row1.alert = True
         row1.scale_y = 2
-        if TaskManager.server == FakeServer._instance:
+        if not get_pref().debug and TaskManager.server == FakeServer._instance:
             row = layout.row()
             row.alignment = "CENTER"
             row.label(text="↓↓ComfyUI Not Launched, Click to Launch↓↓")
