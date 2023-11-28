@@ -76,6 +76,9 @@ def track(rt: LuaRuntime):
 
 def hook_init():
     rt = get_lua_runtime()
-    h = rt.load_dll("luahook")
+    try:
+        h = rt.load_dll("luahook")
+    except rt.lupa.LuaError:
+        return
     h.set_cb(partial(track, rt))
     h.set_hook(True)
