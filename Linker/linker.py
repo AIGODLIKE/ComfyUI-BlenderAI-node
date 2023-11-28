@@ -3,7 +3,7 @@ from __future__ import annotations
 import bpy
 import blf
 import gpu
-import gpu_extras
+from gpu_extras.batch import batch_for_shader
 from bpy.app.translations import pgettext_iface
 from math import sin, pi, cos
 from mathutils import Vector
@@ -149,7 +149,7 @@ def DrawWay(vpos, vcol, wid):
     gpu.state.blend_set('ALPHA')
     gpuLine.bind()
     gpuLine.uniform_float('lineWidth', wid * 2)
-    gpu_extras.batch.batch_for_shader(gpuLine, 'LINE_STRIP', {'pos': vpos, 'color': vcol}).draw(gpuLine)
+    batch_for_shader(gpuLine, 'LINE_STRIP', {'pos': vpos, 'color': vcol}).draw(gpuLine)
 
 
 def DrawLine(pos1, pos2, siz=1, col1=(1.0, 1.0, 1.0, .75), col2=(1.0, 1.0, 1.0, .75)):
@@ -223,7 +223,7 @@ def DrawAreaFan(vpos, col):
     gpu.state.blend_set('ALPHA')
     gpuArea.bind()
     gpuArea.uniform_float('color', col)
-    gpu_extras.batch.batch_for_shader(gpuArea, 'TRI_FAN', {'pos': vpos}).draw(gpuArea)
+    batch_for_shader(gpuArea, 'TRI_FAN', {'pos': vpos}).draw(gpuArea)
 
 
 def DrawCircle(pos, rd, col=(1.0, 1.0, 1.0, .75), resolution=54):
