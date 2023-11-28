@@ -3,8 +3,8 @@ from __future__ import annotations
 import bpy
 import blf
 import gpu
-from gpu_extras.batch import batch_for_shader
 from bpy.app.translations import pgettext_iface
+from bpy.app import background
 from math import sin, pi, cos
 from mathutils import Vector
 from bpy.types import Context
@@ -13,8 +13,10 @@ from ..SDNode.nodes import NodeBase, calc_hash_type, ctxt
 from ..utils import _T2
 from ..preference import get_pref
 
-gpuLine = gpu.shader.from_builtin('POLYLINE_SMOOTH_COLOR')
-gpuArea = gpu.shader.from_builtin('UNIFORM_COLOR')
+if not background:
+    from gpu_extras.batch import batch_for_shader
+    gpuLine = gpu.shader.from_builtin('POLYLINE_SMOOTH_COLOR')
+    gpuArea = gpu.shader.from_builtin('UNIFORM_COLOR')
 
 if "Node Editor" in bpy.context.window_manager.keyconfigs.addon.keymaps:
     newKeyMapNodeEditor = bpy.context.window_manager.keyconfigs.addon.keymaps["Node Editor"]
@@ -84,6 +86,7 @@ def VecWorldToRegScale(vec):
     vec = vec * UiScale()
     return Vector(bpy.context.region.view2d.view_to_region(vec.x, vec.y, clip=False))
 
+
 def DrawLineRect(plt, prb, col1=(1.0, 1.0, 1.0, .75), col2=(1.0, 1.0, 1.0, .75), offset=8.0):
     """
         绘制线框矩形
@@ -107,6 +110,7 @@ def DrawLineRect(plt, prb, col1=(1.0, 1.0, 1.0, .75), col2=(1.0, 1.0, 1.0, .75),
     DrawLine((pos2[0] + offset, pos1[1]), (pos2[0], pos1[1] + offset), 1, col1, col2)
     DrawLine((pos2[0] + offset, pos2[1]), (pos2[0], pos2[1] - offset), 1, col1, col2)
     DrawLine((pos1[0] - offset, pos2[1]), (pos1[0], pos2[1] - offset), 1, col1, col2)
+
 
 def DrawText(pos, ofs, txt, drawCol, fontSizeOverwrite=0):
     fontId = 1
@@ -331,6 +335,7 @@ def SocketsFromNode(nd: bpy.types.Node, side, callPos) -> list[Socket]:
         skLocCarriage.y = skLocCarriage.y / uiScale
     return lstResult
 
+
 def GetNodeCenterPos(node):
     """
         获取节点正中位置
@@ -340,6 +345,7 @@ def GetNodeCenterPos(node):
     ndDim.x *= -1
     cPos = ndLocation - ndDim * 0.5
     return cPos
+
 
 def GetNodeRBPos(node):
     """
@@ -351,12 +357,14 @@ def GetNodeRBPos(node):
     pos = ndLocation - ndDim
     return pos
 
+
 def DistToNodeCenter(node, pos):
     """
         计算pos到节点正中心的距离
     """
     cPos = GetNodeCenterPos(node)
     return (pos - cPos).length
+
 
 def GetNearestSockets(nd: bpy.types.Node, callPos):
     list_fgSksIn = []
@@ -690,7 +698,7 @@ class Comfyui_Linker(bpy.types.Operator):
             for socket in find_sockets1:
                 mid += socket.pos
             mid /= len(find_sockets1)
-            
+
             # 距离20-50: 不吸附, 但显示匹配变化
             if pf and pt and 20 <= length:
                 for socket in pf:

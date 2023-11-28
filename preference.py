@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 
 from .utils import Icon, _T, FSWatcher
+from .External.lupawrapper import toggle_debug
 from .translations import ctxt
 from .kclogger import logger
 
@@ -116,7 +117,7 @@ class AddonPreference(bpy.types.AddonPreferences):
     bl_translation_context = ctxt
 
     def update_debug(self, context):
-        use_debug()
+        toggle_debug(self.debug)
     debug: bpy.props.BoolProperty(default=False, name="Debug", update=update_debug)
     popup_scale: bpy.props.IntProperty(default=5, min=1, max=100, name="Preview Image Size")
     enable_hq_preview: bpy.props.BoolProperty(default=True, name="Enable High Quality Preview Image")
@@ -369,29 +370,11 @@ clss = [PresetsDirDesc, PresetsDirEdit, AddonPreference]
 reg, unreg = bpy.utils.register_classes_factory(clss)
 
 
-def use_debug():
-    pref = get_pref()
-    try:
-        from .External.lupawrapper import LuaRuntime
-        LuaRuntime.DEBUG = pref.debug
-        for rt in LuaRuntime.get_rt_dict().values():
-            liblogger = rt.load_dll("logger")
-            if pref.debug:
-                liblogger.set_global_level(0)
-                print("Enable")
-            else:
-                liblogger.set_global_level(-1)
-                print("Close")
-            break
-    except Exception:
-        import traceback
-        traceback.print_exc()
-
 
 def pref_register():
     bpy.app.handlers.load_post.append(pref_dirs_init)
     reg()
-    use_debug()
+    toggle_debug(get_pref().debug)
 
 
 def pref_unregister():

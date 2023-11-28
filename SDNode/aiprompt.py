@@ -204,7 +204,10 @@ def get_latent_image(tree, ksampler):
 
 def run_forever():
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server.bind((address, port))
+    try:
+        server.bind((address, port))
+    except OSError:
+        return
     server.listen(5)
     while True:
         conn, _ = server.accept()

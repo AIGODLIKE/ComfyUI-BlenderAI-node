@@ -208,6 +208,21 @@ def test():
         traceback.print_exc()
 
 
+def toggle_debug(debug=False):
+    try:
+        LuaRuntime.DEBUG = debug
+        for rt in LuaRuntime.get_rt_dict().values():
+            liblogger = rt.load_dll("logger")
+            if debug:
+                liblogger.set_global_level(0)
+            else:
+                liblogger.set_global_level(-1)
+            break
+    except Exception:
+        import traceback
+        traceback.print_exc()
+
+
 """
 # luapath = Path(__file__).parent.joinpath(f"lualib/{rt}.dll").as_posix()
 # import ctypes

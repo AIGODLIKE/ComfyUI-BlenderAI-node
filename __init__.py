@@ -12,7 +12,6 @@ import time
 ts = time.time()
 import bpy
 import sys
-import traceback
 from .SDNode import rtnode_unreg, TaskManager
 from .MultiLineText import EnableMLT
 
@@ -58,7 +57,7 @@ def register():
     History.register_timer()
     linker_register()
     use_hook()
-    print(f"{__package__} register {time.time() - ts:.4f}s")
+    print(f"{__package__} Launch Time: {time.time() - ts:.4f}s")
 
 
 def unregister():
