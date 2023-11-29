@@ -345,7 +345,7 @@ class AddonPreference(bpy.types.AddonPreferences):
             self.draw_website(box)
 
 
-def get_pref():
+def get_pref() -> AddonPreference:
     import bpy
     return bpy.context.preferences.addons[__package__].preferences
 

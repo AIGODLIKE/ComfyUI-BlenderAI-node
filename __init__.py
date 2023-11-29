@@ -40,8 +40,31 @@ def dump_info():
         sys.stderr.flush()
         print(f'Blender {os.getpid()} PID', file=sys.stderr)
 
+def handler_test():
+    from time import time_ns
+    h = bpy.app.handlers
+    @bpy.app.handlers.persistent
+    def handler1(scene):
+        print("-----------depsgraph_update_post-----------")
+        depsgraph = bpy.context.view_layer.depsgraph
+        for update in depsgraph.updates:
+            print("Datablock updated: ", update.id.name, time_ns())
+        if depsgraph.id_type_updated('MESH'):
+            print("Mesh updated")
+        print("-----------depsgraph_update_post-----------")
+    h.depsgraph_update_post.append(handler1)
+    
+    @bpy.app.handlers.persistent
+    def handler2(scene):
+        print("-----------depsgraph_update_pre-----------")
+        depsgraph = bpy.context.view_layer.depsgraph
+        for update in depsgraph.updates:
+            print("Datablock updated: ", update.id.name, time_ns())
+        print("-----------depsgraph_update_pre-----------")
+    h.depsgraph_update_pre.append(handler2)
 
 def register():
+    handler_test()
     pref_register()
     if bpy.app.background:
         dump_info()

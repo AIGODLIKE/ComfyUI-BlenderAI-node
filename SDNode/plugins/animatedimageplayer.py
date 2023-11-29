@@ -62,10 +62,6 @@ class AnimatedImagePlayer:
         while self.playing:
             delay = self.delays[self.cframe]
             sleep(delay)
-            # gif的算法, 但目前使用的直接读取每一帧的延迟
-            # if delay < 5:
-            #     delay = 100
-            # sleep(delay / 1000)
             Timer.put(self.next_frame)
 
     def __del__(self):

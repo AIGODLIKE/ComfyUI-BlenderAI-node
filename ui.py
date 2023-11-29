@@ -42,25 +42,20 @@ class Panel(bpy.types.Panel):
         row.prop(sdn, "open_webui", text="", icon="URL", text_ctxt=ctxt)
 
     def draw(self, context: bpy.types.Context):
-        scale_popup = get_pref().popup_scale
         layout = self.layout
+        if get_pref().debug:
+            self.show_debug(layout)
+        elif TaskManager.server == FakeServer._instance:
+            self.show_launch_cnn(layout)
+            return
+        self.show_common(layout)
+
+    def show_common(self, layout: bpy.types.UILayout):
+        scale_popup = get_pref().popup_scale
         col = layout.column()
         row1 = col.row(align=True)
         row1.alert = True
         row1.scale_y = 2
-        if not get_pref().debug and TaskManager.server == FakeServer._instance:
-            row = layout.row()
-            row.alignment = "CENTER"
-            row.label(text="↓↓ComfyUI Not Launched, Click to Launch↓↓")
-            row = layout.row(align=True)
-            row.alert = True
-            row.scale_y = 2
-            row.operator(Ops.bl_idname, text="Launch/Connect ComfyUI", icon="PLAY").action = "Launch"
-            row.prop(bpy.context.scene.sdn, "show_pref_general", text="", icon="PREFERENCES")
-            if bpy.context.scene.sdn.show_pref_general:
-                AddonPreference.draw_general(get_pref(), layout.box())
-            self.show_error(layout)
-            return
         if Ops.is_advanced_enable:
             row1.operator(Ops.bl_idname, text="Stop Loop", icon="PAUSE").action = "StopLoop"
         else:
@@ -118,18 +113,34 @@ class Panel(bpy.types.Panel):
         if len(sce.sdn_history_item) == 0:
             return
         layout.template_list("HISTORY_UL_UIList", "", sce, "sdn_history_item", sce, "sdn_history_item_index")
-        # self.debug_draw()
 
-    def debug_draw(self):
+    def show_launch_cnn(self, layout: bpy.types.UILayout):
+        if TaskManager.server != FakeServer._instance:
+            return
+        row = layout.row()
+        row.alignment = "CENTER"
+        row.label(text="↓↓ComfyUI Not Launched, Click to Launch↓↓")
+        row = layout.row(align=True)
+        row.alert = True
+        row.scale_y = 2
+        row.operator(Ops.bl_idname, text="Launch/Connect ComfyUI", icon="PLAY").action = "Launch"
+        row.prop(bpy.context.scene.sdn, "show_pref_general", text="", icon="PREFERENCES")
+        if bpy.context.scene.sdn.show_pref_general:
+            AddonPreference.draw_general(get_pref(), layout.box())
+        self.show_error(layout)
+
+    def show_debug(self, layout: bpy.types.UILayout):
+        self.show_launch_cnn(layout)
+        return
         rv3d = bpy.context.space_data.region_3d
-        self.layout.prop(rv3d, "view_camera_offset")
-        self.layout.prop(rv3d, "view_camera_zoom")
+        layout.prop(rv3d, "view_camera_offset")
+        layout.prop(rv3d, "view_camera_zoom")
 
-        self.layout.prop(rv3d, "view_distance")
-        self.layout.prop(rv3d, "view_location")
-        self.layout.prop(rv3d, "view_matrix")
-        self.layout.prop(rv3d, "view_perspective")
-        self.layout.prop(rv3d, "window_matrix")
+        layout.prop(rv3d, "view_distance")
+        layout.prop(rv3d, "view_location")
+        layout.prop(rv3d, "view_matrix")
+        layout.prop(rv3d, "view_perspective")
+        layout.prop(rv3d, "window_matrix")
 
     def show_progress(self, layout: bpy.types.UILayout):
         layout = layout.box()
@@ -166,7 +177,7 @@ class Panel(bpy.types.Panel):
             row.alert = True
             row.label(text=error_msg, icon="ERROR", text_ctxt=ctxt)
 
-            
+
 class HistoryItem(bpy.types.PropertyGroup):
     name: bpy.props.StringProperty(default="")
 

@@ -294,7 +294,7 @@ class LoadImage:
         return {
             "required": {
                 "image": ("STRING", {"default": ""}),
-                "mode": (["输入", "渲染", "序列图"], ),
+                "mode": (["输入", "渲染", "序列图", "视口"], ),
             },
         }
 
