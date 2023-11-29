@@ -22,6 +22,7 @@ from .preference import pref_register, pref_unregister
 from .ops import Ops, Ops_Mask, Load_History, Popup_Load, Copy_Tree, Load_Batch, Fetch_Node_Status, Sync_Stencil_Image, NodeSearch
 from .ui import Panel, HISTORY_UL_UIList, HistoryItem
 from .SDNode.history import History
+from .SDNode.rt_tracker import reg_tracker
 from .prop import RenderLayerString, Prop
 from .Linker import linker_register, linker_unregister
 from .hook import use_hook
@@ -40,31 +41,8 @@ def dump_info():
         sys.stderr.flush()
         print(f'Blender {os.getpid()} PID', file=sys.stderr)
 
-def handler_test():
-    from time import time_ns
-    h = bpy.app.handlers
-    @bpy.app.handlers.persistent
-    def handler1(scene):
-        print("-----------depsgraph_update_post-----------")
-        depsgraph = bpy.context.view_layer.depsgraph
-        for update in depsgraph.updates:
-            print("Datablock updated: ", update.id.name, time_ns())
-        if depsgraph.id_type_updated('MESH'):
-            print("Mesh updated")
-        print("-----------depsgraph_update_post-----------")
-    h.depsgraph_update_post.append(handler1)
-    
-    @bpy.app.handlers.persistent
-    def handler2(scene):
-        print("-----------depsgraph_update_pre-----------")
-        depsgraph = bpy.context.view_layer.depsgraph
-        for update in depsgraph.updates:
-            print("Datablock updated: ", update.id.name, time_ns())
-        print("-----------depsgraph_update_pre-----------")
-    h.depsgraph_update_pre.append(handler2)
-
 def register():
-    handler_test()
+    reg_tracker()
     pref_register()
     if bpy.app.background:
         dump_info()

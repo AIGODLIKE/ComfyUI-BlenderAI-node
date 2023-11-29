@@ -22,6 +22,7 @@ from ..kclogger import logger
 from ..utils import _T, Icon, update_screen
 from ..translations import ctxt, get_reg_name, get_ori_name
 
+
 def get_sync_rand_node(tree):
     for node in tree.get_nodes():
         # node不是KSampler、KSamplerAdvanced 跳过
@@ -1140,15 +1141,23 @@ class 输入图像(BluePrintBase):
             return True
 
     def pre_fn(s, self: NodeBase):
-        if self.mode != "渲染":
+        if self.mode not in {"渲染", "视口"}:
             return
         if self.disable_render or bpy.context.scene.sdn.disable_render_all:
             return
 
         @Timer.wait_run
         def r():
+            if self.mode == "视口":
+                # 使用临时文件
+                self.image = Path(tempfile.gettempdir()).joinpath("viewport.png").as_posix()
             logger.warn(f"{_T('Render')}->{self.image}")
+            old = bpy.context.scene.render.filepath
             bpy.context.scene.render.filepath = self.image
+            if self.mode == "视口":
+                bpy.ops.render.opengl(write_still=True)
+                bpy.context.scene.render.filepath = old
+                return
             if (cam := bpy.context.scene.camera) and (gpos := cam.get("SD_Mask", [])):
                 try:
                     for gpo in gpos:
@@ -1170,6 +1179,7 @@ class 输入图像(BluePrintBase):
                     nt.nodes.remove(render_layer)
             else:
                 bpy.ops.render.render(write_still=True)
+            bpy.context.scene.render.filepath = old
         r()
 
 
@@ -1329,6 +1339,7 @@ class VHS_VideoCombine(BluePrintBase):
         prop = bpy.props.StringProperty()
         properties["prev_name"] = prop
 
+
 class SaveAnimatedPNG(BluePrintBase):
     comfyClass = "SaveAnimatedPNG"
     PREV = bpy.utils.previews.new()
@@ -1345,7 +1356,7 @@ class SaveAnimatedPNG(BluePrintBase):
         super().draw_button(self, context, layout, prop, swlink)
 
     def post_fn(s, self: NodeBase, t: Task, result):
-        
+
         logger.debug(f"{self.class_type}{_T('Post Function')}->{result}")
         # img_paths = link_get(result, "output.videos")
         img_paths = result.get("output", {}).get("images", [])
@@ -1382,9 +1393,11 @@ class SaveAnimatedPNG(BluePrintBase):
                 player.auto_play()
                 break
         Timer.put((f, self, img_paths))
+
     def spec_extra_properties(s, properties, nname, ndesc):
         prop = bpy.props.StringProperty()
         properties["prev_name"] = prop
+
 
 @lru_cache(maxsize=1024)
 def get_blueprints(comfyClass, default=BluePrintBase) -> BluePrintBase:
