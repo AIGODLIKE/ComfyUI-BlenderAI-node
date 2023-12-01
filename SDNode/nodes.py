@@ -226,8 +226,12 @@ class NodeBase(bpy.types.Node):
 
     def free(self):
         self.pool.discard(self.id)
+        bp = self.get_blueprints()
+        bp.free(self)
 
     def copy(self, node):
+        bp = self.get_blueprints()
+        bp.copy(self, node)
         self.apply_unique_id()
         if hasattr(self, "sync_rand"):
             self.sync_rand = False

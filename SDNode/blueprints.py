@@ -12,7 +12,7 @@ from pathlib import Path
 from copy import deepcopy
 from bpy.types import Context, UILayout
 from .utils import gen_mask
-from .plugins import animatedimageplayer
+from .plugins.animatedimageplayer import AnimatedImagePlayer as AIP
 from .nodes import NodeBase, Ops_Add_SaveImage, Ops_Link_Mask, Ops_Active_Tex, Set_Render_Res, Ops_Swith_Socket
 from .nodes import name2path, get_icon_path, Images
 from ..SDNode.manager import Task
@@ -446,6 +446,12 @@ class BluePrintBase:
 
     def make_serialze(s, self: NodeBase):
         return (self.serialize(), self.pre_fn, self.post_fn)
+
+    def free(s, self: NodeBase):
+        ...
+
+    def copy(s, self: NodeBase, node):
+        ...
 
 
 class WD14Tagger(BluePrintBase):
@@ -1223,7 +1229,7 @@ class 材质图(BluePrintBase):
 class AnimateDiffCombine(BluePrintBase):
     comfyClass = "AnimateDiffCombine"
     PREV = bpy.utils.previews.new()
-    PLAYERS = {}
+    PLAYERS: dict[str, AIP] = {}
 
     def draw_button(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True):
         if prop == "prev_name":
@@ -1260,13 +1266,13 @@ class AnimateDiffCombine(BluePrintBase):
                 # 和上次不同, 先清理上次的结果
                 if img_path in s.PLAYERS:
                     player = s.PLAYERS.pop(img_path)
-                    player.pause()
+                    player.free()
                     del player
                     prev = s.PREV[img_path]
                 else:
                     prev = s.PREV.new(img_path)
                 self.prev_name = img_path
-                player = animatedimageplayer.AnimatedImagePlayer(prev, img_path)
+                player = AIP(prev, img_path)
                 s.PLAYERS[img_path] = player
                 player.auto_play()
                 break
@@ -1276,11 +1282,20 @@ class AnimateDiffCombine(BluePrintBase):
         prop = bpy.props.StringProperty()
         properties["prev_name"] = prop
 
+    def free(s, self: NodeBase):
+        if self.prev_name in s.PLAYERS:
+            player = s.PLAYERS.pop(self.prev_name)
+            player.free()
+            del player
+
+    def copy(s, self: NodeBase, node):
+        self.prev_name = ""
+
 
 class VHS_VideoCombine(BluePrintBase):
     comfyClass = "VHS_VideoCombine"
     PREV = bpy.utils.previews.new()
-    PLAYERS = {}
+    PLAYERS: dict[str, AIP] = {}
 
     def draw_button(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True):
         if prop == "prev_name":
@@ -1323,13 +1338,13 @@ class VHS_VideoCombine(BluePrintBase):
                 # 和上次不同, 先清理上次的结果
                 if img_path in s.PLAYERS:
                     player = s.PLAYERS.pop(img_path)
-                    player.pause()
+                    player.free()
                     del player
                     prev = s.PREV[img_path]
                 else:
                     prev = s.PREV.new(img_path)
                 self.prev_name = img_path
-                player = animatedimageplayer.AnimatedImagePlayer(prev, img_path)
+                player = AIP(prev, img_path)
                 s.PLAYERS[img_path] = player
                 player.auto_play()
                 break
@@ -1339,11 +1354,20 @@ class VHS_VideoCombine(BluePrintBase):
         prop = bpy.props.StringProperty()
         properties["prev_name"] = prop
 
+    def free(s, self: NodeBase):
+        if self.prev_name in s.PLAYERS:
+            player = s.PLAYERS.pop(self.prev_name)
+            player.free()
+            del player
+
+    def copy(s, self: NodeBase, node):
+        self.prev_name = ""
+
 
 class SaveAnimatedPNG(BluePrintBase):
     comfyClass = "SaveAnimatedPNG"
     PREV = bpy.utils.previews.new()
-    PLAYERS = {}
+    PLAYERS: dict[str, AIP] = {}
 
     def draw_button(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True):
         if prop == "prev_name":
@@ -1382,13 +1406,13 @@ class SaveAnimatedPNG(BluePrintBase):
                 # 和上次不同, 先清理上次的结果
                 if img_path in s.PLAYERS:
                     player = s.PLAYERS.pop(img_path)
-                    player.pause()
+                    player.free()
                     del player
                     prev = s.PREV[img_path]
                 else:
                     prev = s.PREV.new(img_path)
                 self.prev_name = img_path
-                player = animatedimageplayer.AnimatedImagePlayer(prev, img_path)
+                player = AIP(prev, img_path)
                 s.PLAYERS[img_path] = player
                 player.auto_play()
                 break
@@ -1398,11 +1422,20 @@ class SaveAnimatedPNG(BluePrintBase):
         prop = bpy.props.StringProperty()
         properties["prev_name"] = prop
 
+    def free(s, self: NodeBase):
+        if self.prev_name in s.PLAYERS:
+            player = s.PLAYERS.pop(self.prev_name)
+            player.free()
+            del player
+
+    def copy(s, self: NodeBase, node):
+        self.prev_name = ""
+
 
 class SaveAnimatedWEBP(BluePrintBase):
     comfyClass = "SaveAnimatedWEBP"
     PREV = bpy.utils.previews.new()
-    PLAYERS = {}
+    PLAYERS: dict[str, AIP] = {}
 
     def draw_button(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True):
         if prop == "prev_name":
@@ -1441,13 +1474,13 @@ class SaveAnimatedWEBP(BluePrintBase):
                 # 和上次不同, 先清理上次的结果
                 if img_path in s.PLAYERS:
                     player = s.PLAYERS.pop(img_path)
-                    player.pause()
+                    player.free()
                     del player
                     prev = s.PREV[img_path]
                 else:
                     prev = s.PREV.new(img_path)
                 self.prev_name = img_path
-                player = animatedimageplayer.AnimatedImagePlayer(prev, img_path)
+                player = AIP(prev, img_path)
                 s.PLAYERS[img_path] = player
                 player.auto_play()
                 break
@@ -1456,6 +1489,15 @@ class SaveAnimatedWEBP(BluePrintBase):
     def spec_extra_properties(s, properties, nname, ndesc):
         prop = bpy.props.StringProperty()
         properties["prev_name"] = prop
+
+    def free(s, self: NodeBase):
+        if self.prev_name in s.PLAYERS:
+            player = s.PLAYERS.pop(self.prev_name)
+            player.free()
+            del player
+
+    def copy(s, self: NodeBase, node):
+        self.prev_name = ""
 
 
 @lru_cache(maxsize=1024)

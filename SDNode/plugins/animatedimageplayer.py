@@ -12,19 +12,19 @@ rt = get_lua_runtime("AnimatedImage")
 imglib = rt.load_dll("image")
 
 
-def read_frame_to_preview(gif, p: bpy.types.ImagePreview, frame):
-    f, w, h, c, d = imglib.cache_animated_image(gif)
+def read_frame_to_preview(imgpath, p: bpy.types.ImagePreview, frame):
+    f, w, h, c, d = imglib.cache_animated_image(imgpath)
     p.icon_size = (32, 32)
     p.image_size = (w, h)
-    imglib.read_frame(gif, frame, p.as_pointer())
+    imglib.read_frame(imgpath, frame, p.as_pointer())
 
 
 class AnimatedImagePlayer:
-    def __init__(self, prev: bpy.types.ImagePreview, gif: str, destroycb=None) -> None:
+    def __init__(self, prev: bpy.types.ImagePreview, imgpath: str, destroycb=None) -> None:
         self.prev = prev
         self.destroy = destroycb
-        self.gif = gif
-        f, w, h, c, d = imglib.cache_animated_image(self.gif)
+        self.imgpath = imgpath
+        f, w, h, c, d = imglib.cache_animated_image(self.imgpath)
         self.w = w
         self.h = h
         self.delays = list(d.values())
@@ -33,17 +33,21 @@ class AnimatedImagePlayer:
         self.prev.image_size = (w, h)
         self.cframe = 0
         self.playing = False
-        if not Path(self.gif).exists():
+        if not Path(self.imgpath).exists():
             return
-        imglib.read_frame(self.gif, 0, self.prev.as_pointer())
+        imglib.read_frame(self.imgpath, 0, self.prev.as_pointer())
 
     def next_frame(self):
-        if not Path(self.gif).exists():
+        if not Path(self.imgpath).exists():
+            return
+        if not self.playing:
+            return
+        if not self.prev:
             return
         self.cframe = (self.cframe + 1) % self.frames
         try:
             ptr = self.prev.as_pointer()
-            imglib.read_frame(self.gif, self.cframe, ptr)
+            imglib.read_frame(self.imgpath, self.cframe, ptr)
             # 更新窗口
             update_screen()
         except Exception as e:
@@ -63,8 +67,15 @@ class AnimatedImagePlayer:
             delay = self.delays[self.cframe]
             sleep(delay)
             Timer.put(self.next_frame)
+        imglib.free_image(self.imgpath)
+        logger.info(f"Freed image: {self.imgpath}")
+
+    def free(self):
+        self.playing = False
+        self.prev = None
 
     def __del__(self):
+        self.free()
         if not self.destroy:
             return
         self.destroy()
