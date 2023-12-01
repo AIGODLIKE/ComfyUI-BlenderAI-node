@@ -1314,9 +1314,9 @@ class VHS_VideoCombine(BluePrintBase):
             # self.prev.clear()
             for data in img_paths:
                 file_type = data.get("format", None)
-                if file_type != "image/gif":
+                if file_type not in {"image/gif", "image/webp"}:
                     continue
-                img_path = get_image_path(data, suffix="gif").as_posix()
+                img_path = get_image_path(data, suffix=file_type.split("/")[1]).as_posix()
                 # 和上次的相同则不管
                 if img_path == self.prev_name:
                     return
@@ -1374,6 +1374,65 @@ class SaveAnimatedPNG(BluePrintBase):
             for data in img_paths:
                 file_type = Path(data.get("filename", "None")).suffix
                 if file_type != ".png":
+                    continue
+                img_path = get_image_path(data, suffix=file_type[1:]).as_posix()
+                # 和上次的相同则不管
+                if img_path == self.prev_name:
+                    return
+                # 和上次不同, 先清理上次的结果
+                if img_path in s.PLAYERS:
+                    player = s.PLAYERS.pop(img_path)
+                    player.pause()
+                    del player
+                    prev = s.PREV[img_path]
+                else:
+                    prev = s.PREV.new(img_path)
+                self.prev_name = img_path
+                player = animatedimageplayer.AnimatedImagePlayer(prev, img_path)
+                s.PLAYERS[img_path] = player
+                player.auto_play()
+                break
+        Timer.put((f, self, img_paths))
+
+    def spec_extra_properties(s, properties, nname, ndesc):
+        prop = bpy.props.StringProperty()
+        properties["prev_name"] = prop
+
+
+class SaveAnimatedWEBP(BluePrintBase):
+    comfyClass = "SaveAnimatedWEBP"
+    PREV = bpy.utils.previews.new()
+    PLAYERS = {}
+
+    def draw_button(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True):
+        if prop == "prev_name":
+            prev = s.PREV.get(self.prev_name, None)
+            if prev:
+                scale = min(max(prev.image_size), self.width) // 20
+                scale = min(scale, 100)
+                layout.template_icon(icon_value=prev.icon_id, scale=scale)
+            return True
+        super().draw_button(self, context, layout, prop, swlink)
+
+    def post_fn(s, self: NodeBase, t: Task, result):
+        logger.debug(f"{self.class_type}{_T('Post Function')}->{result}")
+        # img_paths = link_get(result, "output.videos")
+        img_paths = result.get("output", {}).get("images", [])
+        if not img_paths:
+            logger.error(f'response is {result}, cannot find images in it')
+            return
+        logger.warn(f"{_T('Load Preview Image')}: {img_paths}")
+
+        def f(self, img_paths: list[dict]):
+            """
+                        {'filename': 'img.webp', 'subfolder': '', 'type': 'output'}
+                        {'filename': 'img.png', 'subfolder': '', 'type': 'output'}
+            img_paths: [{'filename': 'img.gif', 'subfolder': '', 'type': 'output', 'format': 'image/gif'}, ...]
+            """
+            # self.prev.clear()
+            for data in img_paths:
+                file_type = Path(data.get("filename", "None")).suffix
+                if file_type != ".webp":
                     continue
                 img_path = get_image_path(data, suffix=file_type[1:]).as_posix()
                 # 和上次的相同则不管
