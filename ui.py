@@ -62,7 +62,13 @@ class Panel(bpy.types.Panel):
         else:
             row1.operator(Ops.bl_idname, text="Execute Node Tree", icon="PLAY").action = "Submit"
         row1.prop(bpy.context.scene.sdn, "advanced_exe", text="", icon="SETTINGS")
-        layout.operator(Tracker_Loop.bl_idname, text="", icon="TIME").action = "START" if not is_looped() else "STOP"
+        if is_looped():
+            icon = "PAUSE"
+            action = "STOP"
+        else:
+            icon = "TIME"
+            action = "START"
+        layout.operator(Tracker_Loop.bl_idname, text="", icon=icon).action = action
         if bpy.context.scene.sdn.advanced_exe:
             adv_col = col.box().column(align=True)
             adv_col.prop(bpy.context.scene.sdn, "loop_exec", text_ctxt=ctxt, toggle=True)

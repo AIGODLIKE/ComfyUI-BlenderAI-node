@@ -620,7 +620,7 @@ class LocalServer(Server):
         # logger.debug(" ".join(args))
         import bpy
         if bpy.app.version >= (3, 6):
-            p = Popen(args, stdout=PIPE, stderr=PIPE, cwd=Path(model_path).resolve().as_posix())
+            p = Popen(args, stdout=PIPE, stderr=STDOUT, cwd=Path(model_path).resolve().as_posix())
         else:
             p = Popen(args, stdout=PIPE, cwd=Path(model_path).resolve().as_posix())
         self.child = p

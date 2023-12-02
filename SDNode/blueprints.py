@@ -384,12 +384,18 @@ class BluePrintBase:
         ...
 
     def serialize_pre(s, self: NodeBase):
+        nseed = ""
         if hasattr(self, "seed"):
+            nseed = "seed"
+        elif hasattr(self, "noise_seed"):
+            nseed = "noise_seed"
+        if nseed:
             tree = self.get_tree()
             if (snode := get_sync_rand_node(tree)) and snode != self:
                 return
-            if not self.exe_rand and not bpy.context.scene.sdn.rand_all_seed:
+            if not s.getattr(self, "exe_rand") and not bpy.context.scene.sdn.rand_all_seed:
                 return
+            s.setattr(self, nseed, str(get_fixed_seed()))
             self.seed = str(get_fixed_seed())
         s.serialize_pre_specific(self)
 
@@ -730,14 +736,6 @@ class KSamplerAdvanced(BluePrintBase):
             return True
         if prop in {"exe_rand", "sync_rand"}:
             return True
-
-    def serialize_pre_specific(s, self: NodeBase):
-        tree = self.get_tree()
-        if (snode := get_sync_rand_node(tree)) and snode != self:
-            return
-        if not s.getattr(self, "exe_rand") and not bpy.context.scene.sdn.rand_all_seed:
-            return
-        self.noise_seed = str(get_fixed_seed())
 
 
 class Mask(BluePrintBase):

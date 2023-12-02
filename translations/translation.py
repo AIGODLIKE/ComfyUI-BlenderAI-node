@@ -319,6 +319,7 @@ other = {
     "Custom Preset Path already exists": "自定义预设路径已存在",
     "Init Custom Preset Path": "初始化自定义预设路径", 
     "Create presets/groups dir if not exists": "没有presets/groups文件夹则创建",
+    "Viewport Track Frequency": "视口实时渲染频率",
     # MLT
     " Prompts": "提示词",
     "MLT": "多行文本",

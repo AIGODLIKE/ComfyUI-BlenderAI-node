@@ -227,6 +227,8 @@ class AddonPreference(bpy.types.AddonPreferences):
 
     pref_dirs: bpy.props.CollectionProperty(type=PresetsDirDesc, name="Custom Presets", description="Custom Presets")
     pref_dirs_init: bpy.props.BoolProperty(default=True, name="Init Custom Preset Path", description="Create presets/groups dir if not exists")
+    
+    rt_track_freq: bpy.props.FloatProperty(default=0.5, min=0.01, name="Viewport Track Frequency")
 
     def update_open_dir1(self, context):
         if self.open_dir1:
@@ -302,6 +304,7 @@ class AddonPreference(bpy.types.AddonPreferences):
             row.prop(self, "auto_launch", toggle=True, text_ctxt=ctxt)
             row.prop(self, "install_deps", toggle=True, text_ctxt=ctxt)
             row.prop(self, "force_log", toggle=True, text_ctxt=ctxt)
+        layout.prop(self, "rt_track_freq", text_ctxt=ctxt)
         self.draw_custom_presets(layout)
         layout.prop(self, "debug", toggle=True, text_ctxt=ctxt)
 

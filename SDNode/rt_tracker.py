@@ -3,7 +3,7 @@ from bpy.types import Scene, Object, Collection, Mesh
 from queue import Queue
 from functools import lru_cache
 from time import time
-
+from ..preference import get_pref
 
 class TrackerStatus:
 
@@ -49,7 +49,7 @@ class TrackerStatus:
 
     def exec(self):
         ct = time()
-        if ct - self.last_time < 1:
+        if ct - self.last_time < get_pref().rt_track_freq:
             return
         tstatus = self.get_status()
         if not tstatus:
@@ -79,7 +79,7 @@ def handler_pre(scene):
 def tracker_timer():
     status = get_tracker_status()
     status.exec()
-    return 0.1
+    return 0.01
 
 
 def is_looped():
