@@ -396,7 +396,6 @@ class BluePrintBase:
             if not s.getattr(self, "exe_rand") and not bpy.context.scene.sdn.rand_all_seed:
                 return
             s.setattr(self, nseed, str(get_fixed_seed()))
-            self.seed = str(get_fixed_seed())
         s.serialize_pre_specific(self)
 
     def serialize_specific(s, self: NodeBase, cfg, execute):
