@@ -88,7 +88,7 @@ class Prop(bpy.types.PropertyGroup):
     open_presets_dir: bpy.props.BoolProperty(default=False, name="Open NodeGroup Presets Folder", update=update_open_presets_dir)
 
     def groups_dir_items(self, context):
-        Prop.update_prop_cache([PRESETS_DIR], "groups")
+        Prop.update_prop_cache([GROUPS_DIR], "groups")
         return Prop.cache["groups_dir"]
 
     groups_dir: bpy.props.EnumProperty(items=groups_dir_items, name="Groups Directory")
