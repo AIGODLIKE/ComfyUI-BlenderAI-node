@@ -339,6 +339,7 @@ LANG_TEXT = {
     get_locale_inv("en_US"): {
         # Blender
         "输入图像": "Input Image",
+        "材质图": "Mat Image",
         "存储": "Save",
         "预览": "Preview",
     },
@@ -405,7 +406,7 @@ def reg_other_translations(translations_dict:dict, replace_dict:dict, locale:str
         translations_dict[locale][(ctxt, word)] = translation
         translations_dict[locale][(None, word)] = translation
         replace_dict[locale][word] = translation
-        
+
 def reg_node_ctxt(translations_dict:dict, replace_dict:dict, locale:str):
     mapped_locale = LOCALE_MAP.get(locale, locale)
     # 处理节点注册, 每个节点提供一个ctxt
@@ -415,7 +416,7 @@ def reg_node_ctxt(translations_dict:dict, replace_dict:dict, locale:str):
         p = Path(__file__).parent.joinpath(mapped_locale.replace("_", "-"), "Nodes")
     if not p.exists():
         return {}
-    
+
     json_data = get_json_data_recursive(p)
 
     if locale not in translations_dict:
@@ -449,7 +450,7 @@ for locale in LANG_TEXT:
     REPLACE_DICT[locale] = {}
     reg_node_ctxt(translations_dict, REPLACE_DICT, locale)
     reg_other_translations(translations_dict, REPLACE_DICT, locale)
-    
+
 def get_ctxt(msgctxt):
     if msgctxt in REG_CTXT:
         return msgctxt
