@@ -348,6 +348,7 @@ LANG_TEXT = {
     get_locale_inv("en_US"): {
         # Blender
         "输入图像": "Input Image",
+        "材质图": "Mat Image",
         "存储": "Save",
         "预览": "Preview",
     },
