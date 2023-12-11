@@ -348,6 +348,16 @@ class MatImage(LoadImage):
         }
 
 
+class Screenshot(LoadImage):
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "image": ("STRING", {"default": ""}),
+            },
+        }
+
+
 class Mask:
     @classmethod
     def INPUT_TYPES(s):
@@ -516,6 +526,7 @@ class OpenPoseCanny(OpenPoseBase):
 NODE_CLASS_MAPPINGS = {
     "输入图像": LoadImage,
     "材质图": MatImage,
+    "截图": Screenshot,
     "Mask": Mask,
     "存储": SaveImage,
     # "导入": ToBlender,
@@ -537,6 +548,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     # Sampling
     "输入图像": "Input Image",
     "材质图": "Mat Image",
+    "截图": "Screenshot",
     "Mask": "Mask",
     "存储": "Save",
     "预览": "Preview",

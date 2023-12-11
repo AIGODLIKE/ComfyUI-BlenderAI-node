@@ -1223,6 +1223,93 @@ class 材质图(BluePrintBase):
         return True
 
 
+class 截图(BluePrintBase):
+    comfyClass = "截图"
+
+    def draw_button(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True):
+        if prop in {"x1", "y1", "x2", "y2"}:
+            return True
+        if prop == "capture":
+            layout.prop(self, prop, text="", icon="CLIPUV_DEHLT", toggle=True, text_ctxt=self.get_ctxt())
+            return True
+        elif prop == "image":
+            if os.path.exists(self.image):
+                def f(self):
+                    Icon.load_icon(self.image)
+                    if not (img := Icon.find_image(self.image)):
+                        return
+                    self.prev = img
+                    w = max(self.prev.size[0], self.prev.size[1])
+                    setwidth(self, w)
+                    update_screen()
+                if Icon.try_mark_image(self.image) or not self.prev:
+                    Timer.put((f, self))
+                elif Icon.find_image(self.image) != self.prev:  # 修复加载A 后加载B图, 再加载A时 不更新
+                    Timer.put((f, self))
+            elif self.prev:
+                def f(self):
+                    self.prev = None
+                    update_screen()
+                Timer.put((f, self))
+            return True
+        elif prop == "prev":
+            if self.prev:
+                Icon.reg_icon_by_pixel(self.prev, self.prev.filepath)
+                icon_id = Icon[self.prev.filepath]
+                row = layout.row(align=True)
+                row.label(text=f"{self.prev.file_format} : [{self.prev.size[0]} x {self.prev.size[1]}]")
+                row.operator(Set_Render_Res.bl_idname, text="", icon="LOOP_FORWARDS").node_name = self.name
+                w = max(self.prev.size[0], self.prev.size[1])
+                w = setwidth(self, w)
+                layout.template_icon(icon_id, scale=w // 20)
+            return True
+        return super().draw_button(self, context, layout, prop, swlink)
+
+    def _capture(s, self: NodeBase):
+        from ..External.mss import mss
+        from ..External.mss.tools import to_png
+        x1, y1, x2, y2 = self.x1, self.y1, self.x2, self.y2
+        # print("GET REGION:", x1, y1, x2, y2)
+        with mss() as sct:
+            monitor = {"top": y1, "left": x1, "width": x2 - x1, "height": y2 - y1}
+            output = "sct-{top}x{left}_{width}x{height}.png".format(**monitor)
+            output = Path(tempfile.gettempdir()).joinpath(output).as_posix()
+            # Grab the data
+            from ..utils import CtxTimer
+            with CtxTimer(f"截图: {output}"):
+                sct_img = sct.grab(monitor)
+            # Save to the picture file
+            with CtxTimer(f"保存截图: {output}"):
+                to_png(sct_img.rgb, sct_img.size, output=output, level=0)
+            self.image = output
+
+    def spec_extra_properties(s, properties, nname, ndesc):
+        def update_capture(self, context):
+            if not self.capture:
+                return
+            self.capture = False
+            from ..External.lupawrapper import get_lua_runtime
+            rt = get_lua_runtime()
+            hk = rt.load_dll("luahook")
+            self.x1, self.y1, self.x2, self.y2 = hk.scrcap()
+            s._capture(self)
+        prop = bpy.props.BoolProperty(default=False, update=update_capture, name="Capture Screen", description="Capture Screen Region")
+        properties["capture"] = prop
+        prop = bpy.props.PointerProperty(type=bpy.types.Image)
+        properties["prev"] = prop
+        prop = bpy.props.IntProperty(default=512, min=0)
+        properties["x1"] = prop
+        properties["y1"] = prop
+        properties["x2"] = prop
+        properties["y2"] = prop
+
+    def pre_fn(s, self: NodeBase):
+        @Timer.wait_run
+        def f():
+            s._capture(self)
+        f()
+
+
 class AnimateDiffCombine(BluePrintBase):
     comfyClass = "AnimateDiffCombine"
     PREV = PrevMgr.new()

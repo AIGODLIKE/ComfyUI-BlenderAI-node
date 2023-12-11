@@ -3318,6 +3318,35 @@
     "category": "Blender",
     "output_node": false
   },
+  "截图": {
+    "input": {
+      "required": {
+        "image": [
+          "STRING",
+          {
+            "default": ""
+          }
+        ]
+      }
+    },
+    "output": [
+      "IMAGE",
+      "MASK"
+    ],
+    "output_is_list": [
+      false,
+      false
+    ],
+    "output_name": [
+      "IMAGE",
+      "MASK"
+    ],
+    "name": "截图",
+    "display_name": "Screenshot",
+    "description": "",
+    "category": "Blender",
+    "output_node": false
+  },
   "Mask": {
     "input": {
       "required": {

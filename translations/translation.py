@@ -181,6 +181,8 @@ other = {
     "Image num per line": "每行图片数",
     # SDNode/blueprints.py
     "Non-Standard Enum": "非标准枚举",
+    "Capture Screen": "截图",
+    "Capture Screen Region": "截图区域",
     # SDNode/tree.py
     "Invalid Node Type: {}": "检查到无效的节点: {}",
     "ParseNode Time:": "解析节点耗时:",
@@ -342,6 +344,7 @@ other = {
     "NodeTree": "节点树",
     # hook
     "Find Drag file": "发现拖拽文件",
+    "Screenshot": "截图",
 }
 
 LANG_TEXT = {
@@ -349,6 +352,7 @@ LANG_TEXT = {
         # Blender
         "输入图像": "Input Image",
         "材质图": "Mat Image",
+        "截图": "Screenshot",
         "存储": "Save",
         "预览": "Preview",
     },
