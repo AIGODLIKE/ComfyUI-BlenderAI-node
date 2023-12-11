@@ -90,14 +90,39 @@ def hex2rgb(hex_val):
     return r, g, b
 
 
+class PrevMgr:
+    __PREV__ = {}
+
+    def new():
+        import bpy.utils.previews
+        import random
+        prev = bpy.utils.previews.new()
+        while (i := random.randint(0, 999999999)) in PrevMgr.__PREV__:
+            continue
+        PrevMgr.__PREV__[i] = prev
+        return prev
+
+    def remove(prev):
+        import bpy.utils.previews
+        bpy.utils.previews.remove(prev)
+
+    def clear():
+        for i in list(PrevMgr.__PREV__):
+            prev = PrevMgr.__PREV__.pop(i)
+            PrevMgr.clear(prev)
+
+
+def __del__():
+    PrevMgr.clear()
+
+
 class MetaIn(type):
     def __contains__(self, name):
         return name in Icon.PREV_DICT
 
 
 class Icon(metaclass=MetaIn):
-    import bpy.utils.previews
-    PREV_DICT = bpy.utils.previews.new()
+    PREV_DICT = PrevMgr.new()
     NONE_IMAGE = ""
     IMG_STATUS = {}
     PIX_STATUS = {}
@@ -538,6 +563,3 @@ class CtxTimer:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.echo(f"{self.name} cost {time.time() - self.time_start:.4f}s")
-
-
-FSWatcher.init()

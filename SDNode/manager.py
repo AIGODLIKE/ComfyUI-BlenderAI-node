@@ -993,11 +993,17 @@ class TaskManager:
     #     return ""
 
     def interrupt():
+        from http.client import RemoteDisconnected
+        import traceback
         req = request.Request(f"{TaskManager.server.get_url()}/interrupt", method="POST")
         try:
             request.urlopen(req)
         except URLError:
             ...
+        except RemoteDisconnected:
+            ...
+        except Exception:
+            traceback.print_exc()
 
     def clear_all():
         TaskManager.interrupt()

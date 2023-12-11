@@ -214,7 +214,7 @@ def render_layer_update():
                 continue
             item = bpy.context.scene.sdn.render_layer.add()
             item.name = node.name
-    except BaseException:
+    except (BaseException, AttributeError):
         ...
     return 1
 

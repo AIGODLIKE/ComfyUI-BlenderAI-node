@@ -3,7 +3,7 @@ from threading import Thread
 from pathlib import Path
 from time import sleep
 from ...External.lupawrapper import get_lua_runtime
-from ...utils import update_screen, CtxTimer, ScopeTimer
+from ...utils import update_screen, CtxTimer, ScopeTimer, PrevMgr
 from ...timer import Timer
 from ...kclogger import logger
 
@@ -81,7 +81,7 @@ class AnimatedImagePlayer:
         self.destroy()
 
 
-PREV = bpy.utils.previews.new()
+PREV = PrevMgr.new()
 TEST = PREV.new("IMG_LIB_TEST")
 gif_test = ["C:/Users/KC/Desktop/B.gif", "/Volumes/CDownload/B.gif"]
 gif = ""

@@ -82,3 +82,12 @@ def hook_init():
         return
     h.set_cb(partial(track, rt))
     h.set_hook(True)
+
+def hook_uninit():
+    rt = get_lua_runtime()
+    try:
+        h = rt.load_dll("luahook")
+    except rt.lupa.LuaError:
+        return
+    h.set_hook(False)
+    h.set_cb(lambda: None)

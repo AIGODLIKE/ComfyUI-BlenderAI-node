@@ -112,7 +112,7 @@ def reg_tracker():
     bpy.utils.register_class(Tracker_Loop)
 
 
-def unregister():
+def unreg_tracker():
     h = bpy.app.handlers
     h.depsgraph_update_pre.remove(handler_pre)
     bpy.utils.unregister_class(Tracker_Loop)

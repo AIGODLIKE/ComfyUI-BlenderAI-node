@@ -19,7 +19,7 @@ from ..SDNode.manager import Task
 from ..timer import Timer
 from ..preference import get_pref
 from ..kclogger import logger
-from ..utils import _T, Icon, update_screen
+from ..utils import _T, Icon, update_screen, PrevMgr
 from ..translations import ctxt, get_reg_name, get_ori_name
 
 
@@ -1225,7 +1225,7 @@ class 材质图(BluePrintBase):
 
 class AnimateDiffCombine(BluePrintBase):
     comfyClass = "AnimateDiffCombine"
-    PREV = bpy.utils.previews.new()
+    PREV = PrevMgr.new()
     PLAYERS: dict[str, AIP] = {}
 
     def draw_button(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True):
@@ -1291,7 +1291,7 @@ class AnimateDiffCombine(BluePrintBase):
 
 class VHS_VideoCombine(BluePrintBase):
     comfyClass = "VHS_VideoCombine"
-    PREV = bpy.utils.previews.new()
+    PREV = PrevMgr.new()
     PLAYERS: dict[str, AIP] = {}
 
     def draw_button(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True):
@@ -1363,7 +1363,7 @@ class VHS_VideoCombine(BluePrintBase):
 
 class SaveAnimatedPNG(BluePrintBase):
     comfyClass = "SaveAnimatedPNG"
-    PREV = bpy.utils.previews.new()
+    PREV = PrevMgr.new()
     PLAYERS: dict[str, AIP] = {}
 
     def draw_button(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True):
@@ -1431,7 +1431,7 @@ class SaveAnimatedPNG(BluePrintBase):
 
 class SaveAnimatedWEBP(BluePrintBase):
     comfyClass = "SaveAnimatedWEBP"
-    PREV = bpy.utils.previews.new()
+    PREV = PrevMgr.new()
     PLAYERS: dict[str, AIP] = {}
 
     def draw_button(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True):

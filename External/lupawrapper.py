@@ -1,13 +1,34 @@
 from __future__ import annotations
 import importlib
 import sys
+import shutil
+from os import environ
 from enum import Enum
 from pathlib import Path
 from platform import system
-sys.path.append(Path(__file__).parent.joinpath("lupa").as_posix())
+__VERSION__ = "1.0"
+SDN = f"SDN-{__VERSION__}"
+RT_ROOT = Path(__file__).parent.joinpath(SDN)
+if system() == "Windows":
+    RT_ROOT = Path(environ["APPDATA"]).joinpath(SDN)
+sys.path.append(RT_ROOT.as_posix())
+sys.path.append(RT_ROOT.joinpath("lupa").as_posix())
 
 DEFAULT_RT = "lua54"
 DEFAULT_RT = "luajit"
+
+
+def cp_lupa():
+    if system() != "Windows":
+        return
+    prent = Path(__file__).parent
+    try:
+        shutil.copytree(prent.joinpath(SDN), RT_ROOT, dirs_exist_ok=True)
+    except Exception:
+        ...
+
+
+cp_lupa()
 
 
 class LuaRuntime:
@@ -46,8 +67,8 @@ class LuaRuntime:
         self.globals = self.L.globals()
         self.dll = {}
         self.cdll_path = set()
-        p1 = Path(__file__).parent
-        p2 = Path(__file__).parent.joinpath("lualib").as_posix()
+        p1 = RT_ROOT
+        p2 = RT_ROOT.joinpath("lualib")
         self.add_dll_path(p1)
         self.add_dll_path(p2)
         self.initialized = True

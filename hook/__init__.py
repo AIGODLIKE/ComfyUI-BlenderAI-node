@@ -1,7 +1,10 @@
-def use_hook():
+def use_hook(action=True):
     try:
         from . import hook
-        hook.hook_init()
+        if action:
+            hook.hook_init()
+        else:
+            hook.hook_uninit()
     except BaseException:
         import traceback
         traceback.print_exc()
