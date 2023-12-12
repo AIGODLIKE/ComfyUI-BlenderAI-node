@@ -322,6 +322,9 @@ other = {
     "Init Custom Preset Path": "初始化自定义预设路径", 
     "Create presets/groups dir if not exists": "没有presets/groups文件夹则创建",
     "Viewport Track Frequency": "视口实时渲染频率",
+    "Use View Context": "使用视口上下文",
+    "If enalbed use scene settings, otherwise use the current 3D view for rt rendering.": """如果启用, 使用场景设置, 否则使用当前3D视图进行实时渲染
+注意: 禁用时,在多开视口时可能会导致渲染结果不匹配相机视角""",
     # MLT
     " Prompts": "提示词",
     "MLT": "多行文本",
