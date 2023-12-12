@@ -1,0 +1,780 @@
+{
+  "last_node_id": 25,
+  "last_link_id": 20,
+  "nodes": [
+    {
+      "id": 7,
+      "type": "CLIPTextEncode",
+      "pos": [
+        352.0,
+        176.0
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 5
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            2
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "CLIPTextEncode",
+      "properties": {},
+      "widgets_values": [
+        "text, watermark"
+      ]
+    },
+    {
+      "id": 20,
+      "type": "CheckpointLoaderSimple",
+      "pos": [
+        58.043128967285156,
+        -122.87265014648438
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            6,
+            7
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            4,
+            5
+          ],
+          "slot_index": 1
+        },
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "links": [],
+          "slot_index": 2
+        }
+      ],
+      "title": "CheckpointLoaderSimple",
+      "properties": {},
+      "widgets_values": [
+        "sd_xl_turbo_1.0_fp16.safetensors"
+      ]
+    },
+    {
+      "id": 8,
+      "type": "VAEDecode",
+      "pos": [
+        1206.396728515625,
+        -120.87323760986328
+      ],
+      "size": {
+        "0": 210.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 13,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 3
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 10
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            9
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "VAEDecode",
+      "properties": {},
+      "widgets_values": []
+    },
+    {
+      "id": 25,
+      "type": "PreviewImage",
+      "pos": [
+        1529.37060546875,
+        -124.89247131347656
+      ],
+      "size": {
+        "0": 256.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 14,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 9
+        }
+      ],
+      "outputs": [],
+      "title": "预览",
+      "properties": {},
+      "widgets_values": []
+    },
+    {
+      "id": 6,
+      "type": "CLIPTextEncode",
+      "pos": [
+        349.281494140625,
+        14.306792259216309
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 4
+        },
+        {
+          "name": "text",
+          "type": "STRING",
+          "link": 18,
+          "widget": {
+            "name": "text",
+            "config": [
+              "STRING",
+              {
+                "multiline": true
+              }
+            ]
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            14
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "CLIPTextEncode.001",
+      "properties": {},
+      "widgets_values": [
+        ""
+      ]
+    },
+    {
+      "id": 10,
+      "type": "VAEEncode",
+      "pos": [
+        412.716064453125,
+        392.653564453125
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "pixels",
+          "type": "IMAGE",
+          "link": 11
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 13
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            12
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "VAE编码",
+      "properties": {},
+      "widgets_values": []
+    },
+    {
+      "id": 3,
+      "type": "VAELoader",
+      "pos": [
+        656.2515258789062,
+        186.59017944335938
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "links": [
+            10,
+            13
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "VAELoader",
+      "properties": {},
+      "widgets_values": [
+        "sdxl_0.9_vae.safetensors"
+      ]
+    },
+    {
+      "id": 13,
+      "type": "SamplerCustom",
+      "pos": [
+        1039.4156494140625,
+        -182.42062377929688
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 12,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 6
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 1
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 2
+        },
+        {
+          "name": "sampler",
+          "type": "SAMPLER",
+          "link": 0
+        },
+        {
+          "name": "sigmas",
+          "type": "SIGMAS",
+          "link": 8
+        },
+        {
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 12
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output",
+          "type": "output",
+          "links": [
+            3
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "denoised_output",
+          "type": "denoised_output",
+          "links": [],
+          "slot_index": 1
+        }
+      ],
+      "title": "SamplerCustom",
+      "properties": {},
+      "widgets_values": [
+        true,
+        "1064534868",
+        "fixed",
+        1.0
+      ]
+    },
+    {
+      "id": 22,
+      "type": "SDTurboScheduler",
+      "pos": [
+        285.06829833984375,
+        -315.2616882324219
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 11,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 7
+        }
+      ],
+      "outputs": [
+        {
+          "name": "SIGMAS",
+          "type": "SIGMAS",
+          "links": [
+            8
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "SDTurboScheduler",
+      "properties": {},
+      "widgets_values": [
+        1
+      ]
+    },
+    {
+      "id": 14,
+      "type": "KSamplerSelect",
+      "pos": [
+        269.9683837890625,
+        -164.67074584960938
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "SAMPLER",
+          "type": "SAMPLER",
+          "links": [
+            0
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "KSamplerSelect",
+      "properties": {},
+      "widgets_values": [
+        "euler_ancestral"
+      ]
+    },
+    {
+      "id": 4,
+      "type": "ControlNetApply",
+      "pos": [
+        800.4898071289062,
+        -323.9798278808594
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 100.0
+      },
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "conditioning",
+          "type": "CONDITIONING",
+          "link": 14
+        },
+        {
+          "name": "control_net",
+          "type": "CONTROL_NET",
+          "link": 15
+        },
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 16
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            1
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "ControlNet应用",
+      "properties": {},
+      "widgets_values": [
+        1.0
+      ]
+    },
+    {
+      "id": 5,
+      "type": "ControlNetLoader",
+      "pos": [
+        373.5477294921875,
+        -544.899658203125
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 100.0
+      },
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "CONTROL_NET",
+          "type": "CONTROL_NET",
+          "links": [
+            15
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "ControlNet加载器",
+      "properties": {},
+      "widgets_values": [
+        "control-lora-canny-rank256.safetensors"
+      ]
+    },
+    {
+      "id": 9,
+      "type": "AIO_Preprocessor",
+      "pos": [
+        379.0385437011719,
+        264.6824951171875
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 100.0
+      },
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 17
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            16
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "Aux集成预处理器",
+      "properties": {},
+      "widgets_values": [
+        "CannyEdgePreprocessor",
+        512
+      ]
+    },
+    {
+      "id": 12,
+      "type": "WD14Tagger|pysssss",
+      "pos": [
+        70.47660827636719,
+        122.04444122314453
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 100.0
+      },
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 19
+        }
+      ],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            18
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "WD14反推提示词",
+      "properties": {},
+      "widgets_values": [
+        "wd-v1-4-moat-tagger-v2",
+        0.3499999940395355,
+        0.8500000238418579,
+        ""
+      ]
+    },
+    {
+      "id": 11,
+      "type": "输入图像",
+      "pos": [
+        63.976051330566406,
+        491.7681884765625
+      ],
+      "size": {
+        "0": 256.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            11,
+            17,
+            19
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": [],
+          "slot_index": 1
+        }
+      ],
+      "title": "输入图像",
+      "properties": {},
+      "widgets_values": [
+        "",
+        "视口"
+      ]
+    }
+  ],
+  "links": [
+    [
+      0,
+      14,
+      0,
+      13,
+      3,
+      "SamplerCustom"
+    ],
+    [
+      1,
+      4,
+      0,
+      13,
+      1,
+      "SamplerCustom"
+    ],
+    [
+      2,
+      7,
+      0,
+      13,
+      2,
+      "SamplerCustom"
+    ],
+    [
+      3,
+      13,
+      0,
+      8,
+      0,
+      "VAEDecode"
+    ],
+    [
+      4,
+      20,
+      1,
+      6,
+      0,
+      "CLIPTextEncode"
+    ],
+    [
+      5,
+      20,
+      1,
+      7,
+      0,
+      "CLIPTextEncode"
+    ],
+    [
+      6,
+      20,
+      0,
+      13,
+      0,
+      "SamplerCustom"
+    ],
+    [
+      7,
+      20,
+      0,
+      22,
+      0,
+      "SDTurboScheduler"
+    ],
+    [
+      8,
+      22,
+      0,
+      13,
+      4,
+      "SamplerCustom"
+    ],
+    [
+      9,
+      8,
+      0,
+      25,
+      0,
+      "预览"
+    ],
+    [
+      10,
+      3,
+      0,
+      8,
+      1,
+      "VAEDecode"
+    ],
+    [
+      11,
+      11,
+      0,
+      10,
+      0,
+      "VAEEncode"
+    ],
+    [
+      12,
+      10,
+      0,
+      13,
+      5,
+      "SamplerCustom"
+    ],
+    [
+      13,
+      3,
+      0,
+      10,
+      1,
+      "VAEEncode"
+    ],
+    [
+      14,
+      6,
+      0,
+      4,
+      0,
+      "ControlNetApply"
+    ],
+    [
+      15,
+      5,
+      0,
+      4,
+      1,
+      "ControlNetApply"
+    ],
+    [
+      16,
+      9,
+      0,
+      4,
+      2,
+      "ControlNetApply"
+    ],
+    [
+      17,
+      11,
+      0,
+      9,
+      0,
+      "AIO_Preprocessor"
+    ],
+    [
+      18,
+      12,
+      0,
+      6,
+      1,
+      "CLIPTextEncode"
+    ],
+    [
+      19,
+      11,
+      0,
+      12,
+      0,
+      "WD14Tagger|pysssss"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {},
+  "version": 0.4
+}

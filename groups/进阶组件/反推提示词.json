@@ -1,0 +1,95 @@
+{
+    "last_node_id": 21,
+    "last_link_id": 2,
+    "nodes": [
+        {
+            "id": 21,
+            "type": "WD14Tagger|pysssss",
+            "pos": [
+                1664.5086669921875,
+                1782.1829833984375
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 100.0
+            },
+            "flags": {},
+            "order": 1,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "image",
+                    "type": "IMAGE",
+                    "link": null
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "STRING",
+                    "type": "STRING",
+                    "links": [
+                        1
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "WD14Tagger|pysssss",
+            "properties": {},
+            "widgets_values": [
+                "wd-v1-4-convnextv2-tagger-v2",
+                0.3499999940395355,
+                0.8500000238418579,
+                ""
+            ]
+        },
+        {
+            "id": 4,
+            "type": "Text to Console",
+            "pos": [
+                1935.91943359375,
+                1777.128173828125
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 100.0
+            },
+            "flags": {},
+            "order": 2,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "text",
+                    "type": "STRING",
+                    "link": 1
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "STRING",
+                    "type": "STRING",
+                    "slot_index": 0
+                }
+            ],
+            "title": "Text to Console",
+            "properties": {},
+            "widgets_values": [
+                "",
+                "Text Output"
+            ]
+        }
+    ],
+    "links": [
+        [
+            1,
+            21,
+            0,
+            4,
+            0,
+            "Text to Console"
+        ]
+    ],
+    "groups": [],
+    "config": {},
+    "extra": {},
+    "version": 0.4
+}

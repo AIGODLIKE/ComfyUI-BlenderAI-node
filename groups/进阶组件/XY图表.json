@@ -3,159 +3,11 @@
     "last_link_id": 9,
     "nodes": [
         {
-            "id": 4,
-            "type": "Efficient Loader",
-            "pos": [
-                1168.8392333984375,
-                1167.1229248046875
-            ],
-            "size": {
-                "0": 200.0,
-                "1": 100.0
-            },
-            "flags": {},
-            "order": 1,
-            "mode": 0,
-            "inputs": [
-                {
-                    "name": "lora_stack",
-                    "type": "LORA_STACK",
-                    "link": null
-                },
-                {
-                    "name": "cnet_stack",
-                    "type": "CONTROL_NET_STACK",
-                    "link": null
-                }
-            ],
-            "outputs": [
-                {
-                    "name": "MODEL",
-                    "type": "MODEL",
-                    "links": [
-                        1
-                    ],
-                    "slot_index": 0
-                },
-                {
-                    "name": "CONDITIONING+",
-                    "type": "CONDITIONING+",
-                    "links": [
-                        2
-                    ],
-                    "slot_index": 1
-                },
-                {
-                    "name": "CONDITIONING-",
-                    "type": "CONDITIONING-",
-                    "links": [
-                        4
-                    ],
-                    "slot_index": 2
-                },
-                {
-                    "name": "LATENT",
-                    "type": "LATENT",
-                    "links": [
-                        3
-                    ],
-                    "slot_index": 3
-                },
-                {
-                    "name": "VAE",
-                    "type": "VAE",
-                    "links": [
-                        5
-                    ],
-                    "slot_index": 4
-                },
-                {
-                    "name": "CLIP",
-                    "type": "CLIP",
-                    "slot_index": 5
-                },
-                {
-                    "name": "DEPENDENCIES",
-                    "type": "DEPENDENCIES",
-                    "links": [
-                        6
-                    ],
-                    "slot_index": 6
-                }
-            ],
-            "title": "效率加载器",
-            "properties": {},
-            "widgets_values": [
-                "Anything_v5PrtRE1.safetensors",
-                "Baked VAE",
-                -1,
-                "None",
-                1.0,
-                1.0,
-                "",
-                "",
-                512,
-                512,
-                1
-            ]
-        },
-        {
-            "id": 7,
-            "type": "XY Plot",
-            "pos": [
-                1473.3287353515625,
-                1581.21240234375
-            ],
-            "size": {
-                "0": 200.0,
-                "1": 100.0
-            },
-            "flags": {},
-            "order": 2,
-            "mode": 0,
-            "inputs": [
-                {
-                    "name": "dependencies",
-                    "type": "DEPENDENCIES",
-                    "link": 6
-                },
-                {
-                    "name": "X",
-                    "type": "XY",
-                    "link": 8
-                },
-                {
-                    "name": "Y",
-                    "type": "XY",
-                    "link": null
-                }
-            ],
-            "outputs": [
-                {
-                    "name": "SCRIPT",
-                    "type": "SCRIPT",
-                    "links": [
-                        0
-                    ],
-                    "slot_index": 0
-                }
-            ],
-            "title": "XY图表",
-            "properties": {},
-            "widgets_values": [
-                0,
-                "False",
-                "Vertical",
-                "True",
-                "Plot"
-            ]
-        },
-        {
             "id": 3,
             "type": "KSampler (Efficient)",
             "pos": [
-                1777.7373046875,
-                1167.1229248046875
+                1124.20556640625,
+                399.589599609375
             ],
             "size": {
                 "0": 200.0,
@@ -168,12 +20,12 @@
                 {
                     "name": "model",
                     "type": "MODEL",
-                    "link": 1
+                    "link": 2
                 },
                 {
                     "name": "positive",
                     "type": "CONDITIONING",
-                    "link": 2
+                    "link": 3
                 },
                 {
                     "name": "negative",
@@ -183,12 +35,12 @@
                 {
                     "name": "latent_image",
                     "type": "LATENT",
-                    "link": 3
+                    "link": 5
                 },
                 {
                     "name": "optional_vae",
                     "type": "VAE",
-                    "link": 5
+                    "link": 6
                 },
                 {
                     "name": "script",
@@ -226,15 +78,14 @@
                     "name": "IMAGE",
                     "type": "IMAGE",
                     "links": [
-                        7
+                        8
                     ],
                     "slot_index": 5
                 }
             ],
-            "title": "K采样器(效率)",
+            "title": "KSampler (Efficient)",
             "properties": {},
             "widgets_values": [
-                "Script",
                 "0",
                 "fixed",
                 20,
@@ -247,11 +98,161 @@
             ]
         },
         {
-            "id": 6,
+            "id": 4,
+            "type": "XY Plot",
+            "pos": [
+                818.86376953125,
+                766.3429565429688
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 100.0
+            },
+            "flags": {},
+            "order": 2,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "dependencies",
+                    "type": "DEPENDENCIES",
+                    "link": 1
+                },
+                {
+                    "name": "X",
+                    "type": "XY",
+                    "link": 7
+                },
+                {
+                    "name": "Y",
+                    "type": "XY",
+                    "link": null
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "SCRIPT",
+                    "type": "SCRIPT",
+                    "links": [
+                        0
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "XY Plot",
+            "properties": {},
+            "widgets_values": [
+                5,
+                "False",
+                "Vertical",
+                "True",
+                "Plot"
+            ]
+        },
+        {
+            "id": 5,
+            "type": "Efficient Loader",
+            "pos": [
+                509.95452880859375,
+                410.10137939453125
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 100.0
+            },
+            "flags": {},
+            "order": 1,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "lora_stack",
+                    "type": "LORA_STACK",
+                    "link": null
+                },
+                {
+                    "name": "cnet_stack",
+                    "type": "CONTROL_NET_STACK",
+                    "link": null
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "MODEL",
+                    "type": "MODEL",
+                    "links": [
+                        2
+                    ],
+                    "slot_index": 0
+                },
+                {
+                    "name": "CONDITIONING+",
+                    "type": "CONDITIONING+",
+                    "links": [
+                        3
+                    ],
+                    "slot_index": 1
+                },
+                {
+                    "name": "CONDITIONING-",
+                    "type": "CONDITIONING-",
+                    "links": [
+                        4
+                    ],
+                    "slot_index": 2
+                },
+                {
+                    "name": "LATENT",
+                    "type": "LATENT",
+                    "links": [
+                        5
+                    ],
+                    "slot_index": 3
+                },
+                {
+                    "name": "VAE",
+                    "type": "VAE",
+                    "links": [
+                        6
+                    ],
+                    "slot_index": 4
+                },
+                {
+                    "name": "CLIP",
+                    "type": "CLIP",
+                    "slot_index": 5
+                },
+                {
+                    "name": "DEPENDENCIES",
+                    "type": "DEPENDENCIES",
+                    "links": [
+                        1
+                    ],
+                    "slot_index": 6
+                }
+            ],
+            "title": "Efficient Loader",
+            "properties": {},
+            "widgets_values": [
+                "Anything_v5PrtRE1.safetensors",
+                "YOZORA.vae.pt",
+                -1,
+                "None",
+                1.0,
+                1.0,
+                "1girl",
+                "blurry",
+                "none",
+                "comfy",
+                512,
+                768,
+                1
+            ]
+        },
+        {
+            "id": 7,
             "type": "XY Input: Seeds++ Batch",
             "pos": [
-                1168.3048095703125,
-                1706.7479248046875
+                511.30120849609375,
+                1028.320068359375
             ],
             "size": {
                 "0": 200.0,
@@ -266,23 +267,23 @@
                     "name": "X or Y",
                     "type": "X or Y",
                     "links": [
-                        8
+                        7
                     ],
                     "slot_index": 0
                 }
             ],
-            "title": "随机种个数",
+            "title": "XY Input: Seeds++ Batch",
             "properties": {},
             "widgets_values": [
-                1
+                2
             ]
         },
         {
-            "id": 5,
-            "type": "预览",
+            "id": 6,
+            "type": "PreviewImage",
             "pos": [
-                2116.5185546875,
-                1168.3848876953125
+                1422.367919921875,
+                403.10546875
             ],
             "size": {
                 "0": 200.0,
@@ -295,7 +296,7 @@
                 {
                     "name": "images",
                     "type": "IMAGE",
-                    "link": 7
+                    "link": 8
                 }
             ],
             "outputs": [],
@@ -307,7 +308,7 @@
     "links": [
         [
             0,
-            7,
+            4,
             0,
             3,
             5,
@@ -315,67 +316,67 @@
         ],
         [
             1,
-            4,
-            0,
-            3,
-            0,
-            "KSampler (Efficient)"
-        ],
-        [
-            2,
-            4,
-            1,
-            3,
-            1,
-            "KSampler (Efficient)"
-        ],
-        [
-            3,
-            4,
-            3,
-            3,
-            3,
-            "KSampler (Efficient)"
-        ],
-        [
-            4,
-            4,
-            2,
-            3,
-            2,
-            "KSampler (Efficient)"
-        ],
-        [
             5,
-            4,
-            4,
-            3,
-            4,
-            "KSampler (Efficient)"
-        ],
-        [
             6,
             4,
-            6,
-            7,
             0,
             "XY Plot"
         ],
         [
-            7,
-            3,
-            5,
+            2,
             5,
             0,
-            "预览"
+            3,
+            0,
+            "KSampler (Efficient)"
+        ],
+        [
+            3,
+            5,
+            1,
+            3,
+            1,
+            "KSampler (Efficient)"
+        ],
+        [
+            4,
+            5,
+            2,
+            3,
+            2,
+            "KSampler (Efficient)"
+        ],
+        [
+            5,
+            5,
+            3,
+            3,
+            3,
+            "KSampler (Efficient)"
+        ],
+        [
+            6,
+            5,
+            4,
+            3,
+            4,
+            "KSampler (Efficient)"
+        ],
+        [
+            7,
+            7,
+            0,
+            4,
+            1,
+            "XY Plot"
         ],
         [
             8,
+            3,
+            5,
             6,
             0,
-            7,
-            1,
-            "XY Plot"
+            "预览"
         ]
     ],
     "groups": [],

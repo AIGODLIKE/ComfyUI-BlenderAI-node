@@ -1,0 +1,467 @@
+{
+  "last_node_id": 19,
+  "last_link_id": 10,
+  "nodes": [
+    {
+      "id": 14,
+      "type": "VAEDecode",
+      "pos": [
+        1276.275390625,
+        328.5574951171875
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 5
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            3
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "VAE解码",
+      "properties": {},
+      "widgets_values": []
+    },
+    {
+      "id": 16,
+      "type": "CLIPTextEncode",
+      "pos": [
+        702.935546875,
+        319.4036865234375
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 0
+        },
+        {
+          "name": "text",
+          "type": "STRING",
+          "link": 9,
+          "widget": {
+            "name": "text",
+            "config": [
+              "STRING",
+              {
+                "multiline": true
+              }
+            ]
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            7
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "CLIP文本编码器",
+      "properties": {},
+      "widgets_values": [
+        "1girl, black hair, twin tail, upper body"
+      ]
+    },
+    {
+      "id": 17,
+      "type": "CLIPTextEncode",
+      "pos": [
+        702.935546875,
+        477.6408386230469
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            6
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "CLIP文本编码器.001",
+      "properties": {},
+      "widgets_values": [
+        "blurry, ugly, text, watermark"
+      ]
+    },
+    {
+      "id": 18,
+      "type": "CheckpointLoaderSimple",
+      "pos": [
+        419.23388671875,
+        325.0003662109375
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            8
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            0,
+            1
+          ],
+          "slot_index": 1
+        },
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "links": [],
+          "slot_index": 2
+        }
+      ],
+      "title": "Checkpoint加载器(简易)",
+      "properties": {},
+      "widgets_values": [
+        "AIGODLIKE华丽_4000.ckpt"
+      ]
+    },
+    {
+      "id": 19,
+      "type": "EmptyLatentImage",
+      "pos": [
+        704.490234375,
+        641.1683349609375
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            4
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "空Latent",
+      "properties": {},
+      "widgets_values": [
+        1024,
+        1024,
+        1
+      ]
+    },
+    {
+      "id": 3,
+      "type": "PreviewImage",
+      "pos": [
+        1572.6917724609375,
+        333.0956115722656
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 3
+        }
+      ],
+      "outputs": [],
+      "title": "预览",
+      "properties": {},
+      "widgets_values": []
+    },
+    {
+      "id": 4,
+      "type": "PromptGenerator",
+      "pos": [
+        413.47442626953125,
+        567.3307495117188
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "prompt",
+          "type": "prompt",
+          "links": [
+            9
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "seed",
+          "type": "seed",
+          "links": [],
+          "slot_index": 1
+        }
+      ],
+      "title": "PromptGenerator",
+      "properties": {},
+      "widgets_values": [
+        "0",
+        "fixed",
+        "",
+        "1girl",
+        "random",
+        "random",
+        "a woman",
+        "random",
+        "random",
+        "disabled",
+        "disabled",
+        "disabled",
+        "disabled",
+        "disabled",
+        "disabled",
+        "disabled",
+        "disabled"
+      ]
+    },
+    {
+      "id": 5,
+      "type": "KSampler",
+      "pos": [
+        989.1738891601562,
+        324.86175537109375
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 8
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 7
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 6
+        },
+        {
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 4
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            5
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "K采样器",
+      "properties": {},
+      "widgets_values": [
+        "0",
+        "fixed",
+        20,
+        8.0,
+        "euler",
+        "normal",
+        1.0
+      ]
+    },
+    {
+      "id": 15,
+      "type": "VAELoader",
+      "pos": [
+        993.3515625,
+        707.4558715820312
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "links": [
+            2
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "VAE加载器",
+      "properties": {},
+      "widgets_values": [
+        "sdxl_vae.safetensors"
+      ]
+    }
+  ],
+  "links": [
+    [
+      0,
+      18,
+      1,
+      16,
+      0,
+      "CLIPTextEncode"
+    ],
+    [
+      1,
+      18,
+      1,
+      17,
+      0,
+      "CLIPTextEncode"
+    ],
+    [
+      2,
+      15,
+      0,
+      14,
+      1,
+      "VAEDecode"
+    ],
+    [
+      3,
+      14,
+      0,
+      3,
+      0,
+      "预览"
+    ],
+    [
+      4,
+      19,
+      0,
+      5,
+      3,
+      "KSampler"
+    ],
+    [
+      5,
+      5,
+      0,
+      14,
+      0,
+      "VAEDecode"
+    ],
+    [
+      6,
+      17,
+      0,
+      5,
+      2,
+      "KSampler"
+    ],
+    [
+      7,
+      16,
+      0,
+      5,
+      1,
+      "KSampler"
+    ],
+    [
+      8,
+      18,
+      0,
+      5,
+      0,
+      "KSampler"
+    ],
+    [
+      9,
+      4,
+      0,
+      16,
+      1,
+      "CLIPTextEncode"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {},
+  "version": 0.4
+}

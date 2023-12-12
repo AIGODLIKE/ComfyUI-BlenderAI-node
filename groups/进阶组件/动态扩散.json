@@ -1,0 +1,154 @@
+{
+    "last_node_id": 5,
+    "last_link_id": 2,
+    "nodes": [
+        {
+            "id": 3,
+            "type": "ADE_AnimateDiffUniformContextOptions",
+            "pos": [
+                1244.508544921875,
+                1046.7158203125
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 1,
+            "mode": 0,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "CONTEXT_OPTIONS",
+                    "type": "CONTEXT_OPTIONS",
+                    "links": [
+                        0
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "ADE_AnimateDiffUniformContextOptions",
+            "properties": {},
+            "widgets_values": [
+                16,
+                1,
+                4,
+                "uniform",
+                false
+            ]
+        },
+        {
+            "id": 4,
+            "type": "ADE_AnimateDiffLoaderWithContext",
+            "pos": [
+                1574.123291015625,
+                808.641845703125
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 2,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "model",
+                    "type": "MODEL",
+                    "link": null
+                },
+                {
+                    "name": "context_options",
+                    "type": "CONTEXT_OPTIONS",
+                    "link": 0
+                },
+                {
+                    "name": "motion_lora",
+                    "type": "MOTION_LORA",
+                    "link": null
+                },
+                {
+                    "name": "motion_model_settings",
+                    "type": "MOTION_MODEL_SETTINGS",
+                    "link": 1
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "MODEL",
+                    "type": "MODEL",
+                    "slot_index": 0
+                }
+            ],
+            "title": "ADE_AnimateDiffLoaderWithContext",
+            "properties": {},
+            "widgets_values": [
+                "improved3DMotion_improved3DV1.ckpt",
+                "sqrt_linear (AnimateDiff)",
+                1.0,
+                true
+            ]
+        },
+        {
+            "id": 5,
+            "type": "ADE_AnimateDiffModelSettingsSimple",
+            "pos": [
+                1246.793701171875,
+                1239.3192138671875
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 100.0
+            },
+            "flags": {},
+            "order": 0,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "mask_motion_scale",
+                    "type": "MASK",
+                    "link": null
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "MOTION_MODEL_SETTINGS",
+                    "type": "MOTION_MODEL_SETTINGS",
+                    "links": [
+                        1
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "ADE_AnimateDiffModelSettingsSimple",
+            "properties": {},
+            "widgets_values": [
+                0,
+                1.0,
+                1.0
+            ]
+        }
+    ],
+    "links": [
+        [
+            0,
+            3,
+            0,
+            4,
+            1,
+            "ADE_AnimateDiffLoaderWithContext"
+        ],
+        [
+            1,
+            5,
+            0,
+            4,
+            3,
+            "ADE_AnimateDiffLoaderWithContext"
+        ]
+    ],
+    "groups": [],
+    "config": {},
+    "extra": {},
+    "version": 0.4
+}
