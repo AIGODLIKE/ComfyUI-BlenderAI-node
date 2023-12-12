@@ -150,7 +150,7 @@ class AddonPreference(bpy.types.AddonPreferences):
     auto_launch: bpy.props.BoolProperty(default=False, name="Auto Launch Browser")
     install_deps: bpy.props.BoolProperty(default=False, name="Check Depencies Before Server Launch", description="Check ComfyUI(some) Depencies Before Server Launch")
     force_log: bpy.props.BoolProperty(default=False, name="Force Log", description="Force Log, Generally Not Needed")
-    fixed_preview_image_size: bpy.props.BoolProperty(default=False, name="Fixed Preview Image Size")
+    fixed_preview_image_size: bpy.props.BoolProperty(default=True, name="Fixed Preview Image Size")
     preview_image_size: bpy.props.IntProperty(default=256, min=64, max=8192, name="Preview Image Size")
     stencil_offset_size_xy: bpy.props.IntVectorProperty(default=(0, 18), size=2, min=-100, max=100, name="Stencil Offset Size")
     drag_link_result_count_col: bpy.props.IntProperty(default=4, min=1, max=10, name="Drag Link Result Count Column")
@@ -229,7 +229,7 @@ class AddonPreference(bpy.types.AddonPreferences):
     pref_dirs_init: bpy.props.BoolProperty(default=True, name="Init Custom Preset Path", description="Create presets/groups dir if not exists")
     
     rt_track_freq: bpy.props.FloatProperty(default=0.5, min=0.01, name="Viewport Track Frequency")
-    view_context: bpy.props.BoolProperty(default=False, name="Use View Context", description="If enalbed use scene settings, otherwise use the current 3D view for rt rendering.")
+    view_context: bpy.props.BoolProperty(default=True, name="Use View Context", description="If enalbed use scene settings, otherwise use the current 3D view for rt rendering.")
 
     def update_open_dir1(self, context):
         if self.open_dir1:
