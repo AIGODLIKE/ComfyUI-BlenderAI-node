@@ -229,6 +229,7 @@ class AddonPreference(bpy.types.AddonPreferences):
     pref_dirs_init: bpy.props.BoolProperty(default=True, name="Init Custom Preset Path", description="Create presets/groups dir if not exists")
     
     rt_track_freq: bpy.props.FloatProperty(default=0.5, min=0.01, name="Viewport Track Frequency")
+    view_context: bpy.props.BoolProperty(default=False, name="Use View Context", description="If enalbed use scene settings, otherwise use the current 3D view for rt rendering.")
 
     def update_open_dir1(self, context):
         if self.open_dir1:
@@ -304,7 +305,9 @@ class AddonPreference(bpy.types.AddonPreferences):
             row.prop(self, "auto_launch", toggle=True, text_ctxt=ctxt)
             row.prop(self, "install_deps", toggle=True, text_ctxt=ctxt)
             row.prop(self, "force_log", toggle=True, text_ctxt=ctxt)
-        layout.prop(self, "rt_track_freq", text_ctxt=ctxt)
+        row = layout.row(align=True)
+        row.prop(self, "view_context", toggle=True, text_ctxt=ctxt)
+        row.prop(self, "rt_track_freq", text_ctxt=ctxt)
         self.draw_custom_presets(layout)
         layout.prop(self, "debug", toggle=True, text_ctxt=ctxt)
 

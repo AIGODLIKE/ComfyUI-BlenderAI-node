@@ -1158,7 +1158,7 @@ class 输入图像(BluePrintBase):
             old = bpy.context.scene.render.filepath
             bpy.context.scene.render.filepath = self.image
             if self.mode == "视口":
-                bpy.ops.render.opengl(write_still=True, view_context=False)
+                bpy.ops.render.opengl(write_still=True, view_context=get_pref().view_context)
                 bpy.context.scene.render.filepath = old
                 return
             if (cam := bpy.context.scene.camera) and (gpos := cam.get("SD_Mask", [])):
