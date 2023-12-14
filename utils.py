@@ -408,7 +408,8 @@ class PkgInstaller:
         for pkg in need:
             try:
                 site = urlparse(url)
-                command = ['install', pkg, "-i", url]
+                # 避免build
+                command = ['install', pkg, "-i", url, "--prefer-binary"]
                 command.append("--trusted-host")
                 command.append(site.netloc)
                 main(command)
