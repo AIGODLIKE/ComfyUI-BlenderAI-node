@@ -183,6 +183,8 @@ other = {
     "Non-Standard Enum": "非标准枚举",
     "Capture Screen": "截图",
     "Capture Screen Region": "截图区域",
+    "Error Capture Screen Region": "截图区域错误",
+    "Save Screenshot": "保存截图",
     # SDNode/tree.py
     "Invalid Node Type: {}": "检查到无效的节点: {}",
     "ParseNode Time:": "解析节点耗时:",

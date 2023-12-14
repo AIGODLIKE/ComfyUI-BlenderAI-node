@@ -1269,6 +1269,9 @@ class 截图(BluePrintBase):
         from ..External.mss import mss
         from ..External.mss.tools import to_png
         x1, y1, x2, y2 = self.x1, self.y1, self.x2, self.y2
+        if x1 == x2 or y1 == y2:
+            logger.error(f"{_T('Error Capture Screen Region')}: {x1, y1, x2, y2}")
+            return
         # print("GET REGION:", x1, y1, x2, y2)
         with mss() as sct:
             monitor = {"top": y1, "left": x1, "width": x2 - x1, "height": y2 - y1}
@@ -1276,10 +1279,10 @@ class 截图(BluePrintBase):
             output = Path(tempfile.gettempdir()).joinpath(output).as_posix()
             # Grab the data
             from ..utils import CtxTimer
-            with CtxTimer(f"截图: {output}"):
+            with CtxTimer(f"{_T(('Capture Screen'))}: {output}"):
                 sct_img = sct.grab(monitor)
             # Save to the picture file
-            with CtxTimer(f"保存截图: {output}"):
+            with CtxTimer(f"{_T('Save Screenshot')}: {output}"):
                 to_png(sct_img.rgb, sct_img.size, output=output, level=0)
             self.image = output
 
@@ -1291,13 +1294,17 @@ class 截图(BluePrintBase):
             from ..External.lupawrapper import get_lua_runtime
             rt = get_lua_runtime()
             hk = rt.load_dll("luahook")
-            self.x1, self.y1, self.x2, self.y2 = hk.scrcap()
+            x1, y1, x2, y2 = hk.scrcap()
+            if x1 == x2 or y1 == y2:
+                logger.error(f"{_T('Error Capture Screen Region')}: {x1, y1, x2, y2}")
+                return
+            self.x1, self.y1, self.x2, self.y2 = x1, y1, x2, y2
             s._capture(self)
         prop = bpy.props.BoolProperty(default=False, update=update_capture, name="Capture Screen", description="Capture Screen Region")
         properties["capture"] = prop
         prop = bpy.props.PointerProperty(type=bpy.types.Image)
         properties["prev"] = prop
-        prop = bpy.props.IntProperty(default=512, min=0)
+        prop = bpy.props.IntProperty(default=512)
         properties["x1"] = prop
         properties["y1"] = prop
         properties["x2"] = prop
