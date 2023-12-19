@@ -41,42 +41,6 @@ def get_url():
 WITH_PROXY = False
 if not WITH_PROXY:
     request.install_opener(request.build_opener(request.ProxyHandler({})))
-# wmpp 指定到WebUI路径
-# wmp 指定到 WebUI/models 路径
-a111_yaml = """
-a111:
-    base_path: {wmpp}
-
-    checkpoints: {wmp}/Stable-diffusion
-    configs: {wmp}/Stable-diffusion
-    vae: {wmp}/VAE
-    loras: {wmp}/Lora
-    upscale_models: |
-                  {wmp}/ESRGAN
-                  {wmp}/SwinIR
-    embeddings: {wmpp}/embeddings
-    controlnet: {wmp}/ControlNet
-            """
-# cmpp 指定到ComfyUI路径
-# cmp 指定到 ComfyUI/models 路径
-custom_comfyui = """
-mycomfyui:
-    base_path: {cmpp}
-    checkpoints: {cmp}/checkpoints
-    configs: {cmp}/configs
-    loras: {cmp}/loras
-    vae: {cmp}/vae
-    clip: {cmp}/clip
-    clip_vision: {cmp}/clip_vision
-    style_models: {cmp}/style_models
-    embeddings: {cmp}/embeddings
-    diffusers: {cmp}/diffusers
-    controlnet: {cmp}/controlnet
-    gligen: {cmp}/gligen
-    upscale_models: {cmp}/upscale_models
-    hypernetworks: {cmp}/hypernetworks
-    #custom_nodes: {cmpp}/custom_nodes
-            """
 
 
 class Task:
@@ -595,12 +559,12 @@ class LocalServer(Server):
             return
 
         # custom_nodes
-        for file in (Path(__file__).parent / "custom_nodes").iterdir():
+        for file in Path(__file__).parent.joinpath("custom_nodes").iterdir():
+            dst = Path(model_path).joinpath("custom_nodes", file.name)
             if file.is_dir():
-                dst = Path(model_path) / "custom_nodes" / file.name
                 if dst.exists():
                     rt(dst)
-                shutil.copytree(file, Path(model_path) / "custom_nodes" / file.name, dirs_exist_ok=True)
+                shutil.copytree(file, dst, dirs_exist_ok=True)
                 continue
             if not file.suffix == ".py":
                 continue
@@ -608,10 +572,11 @@ class LocalServer(Server):
                 t = file.read_text(encoding="utf-8")
                 t = t.replace("XXXHOST-PATHXXX", Path(__file__).parent.as_posix())
                 t = t.replace("FORCE_LOG = False", f"FORCE_LOG = {get_pref().force_log}")
-                (Path(model_path) / "custom_nodes" / file.name).write_text(t, encoding="utf-8")
+                Path(model_path).joinpath("custom_nodes", file.name).write_text(t, encoding="utf-8")
                 continue
-            shutil.copyfile(file, Path(model_path) / "custom_nodes" / file.name)
-        args = self.create_args(python, Path(model_path))
+            shutil.copyfile(file, dst)
+        args = pref.parse_server_args(python, model_path, self)
+        # args = self.create_args(python, Path(model_path))
         self.launch_ip = get_ip()
         self.launch_port = get_port()
         self.launch_url = f"http://{self.launch_ip}:{self.launch_port}"
@@ -742,6 +707,7 @@ class LocalServer(Server):
 
     def create_args(self, python: Path, model_path: Path):
         pref = get_pref()
+        return pref.parse_server_args(python, model_path, self)
         args = [python.as_posix()]
         # arg = f"-s {str(model_path)}/main.py"
         args.append("-s")
@@ -811,12 +777,8 @@ class LocalServer(Server):
             if pref.cuda.isdigit():
                 args.append("--cuda-device")
                 args.append(pref.cuda)
-            if pref.cpu_only:
-                # arg += " --cpu"
-                args.append("--cpu")
-            else:
-                # arg += f" {pref.mem_level}"
-                args.append(f"{pref.mem_level}")
+            if pref.vram != "default":
+                args.append(pref.vram)
             yaml = ""
             if pref.with_webui_model and Path(pref.with_webui_model).exists():
                 wmp = Path(pref.with_webui_model).as_posix()
@@ -1174,7 +1136,7 @@ class TaskManager:
                 cf = "\033[92m" + "█" * v + "\033[0m"
                 cp = "\033[32m" + "░" * (m - v) + "\033[0m"
                 content = f"{v*100/m:3.0f}% " + cf + cp + f" {v}/{m}"
-                logger.info(content+"\r", extra={"same_line": True})
+                logger.info(content + "\r", extra={"same_line": True})
                 # sys.stdout.write(content)
                 # sys.stdout.flush()
                 if tm.cur_task:

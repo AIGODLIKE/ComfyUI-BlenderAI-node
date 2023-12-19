@@ -1,0 +1,14 @@
+# wmpp 指定到WebUI路径
+# wmp 指定到 WebUI/models 路径
+a111:
+    base_path: {wmpp}
+
+    checkpoints: {wmp}/Stable-diffusion
+    configs: {wmp}/Stable-diffusion
+    vae: {wmp}/VAE
+    loras: {wmp}/Lora
+    upscale_models: |
+                  {wmp}/ESRGAN
+                  {wmp}/SwinIR
+    embeddings: {wmpp}/embeddings
+    controlnet: {wmp}/ControlNet
