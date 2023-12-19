@@ -575,7 +575,7 @@ class LocalServer(Server):
                 Path(model_path).joinpath("custom_nodes", file.name).write_text(t, encoding="utf-8")
                 continue
             shutil.copyfile(file, dst)
-        args = pref.parse_server_args(python, model_path, self)
+        args = pref.parse_server_args(Path(python), Path(model_path), self)
         # args = self.create_args(python, Path(model_path))
         self.launch_ip = get_ip()
         self.launch_port = get_port()
