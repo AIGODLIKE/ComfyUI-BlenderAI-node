@@ -1,15 +1,4 @@
 {
-    "LoadImage //Inspire": {
-        "title": "加载图像(Inspire)",
-        "widgets": {
-            "image": "图像",
-            "image_data": "图像数据"
-        },
-        "outputs": {
-            "IMAGE": "图像",
-            "MASK": "遮罩"
-        }
-    },
     "XY Input: Lora Block Weight //Inspire": {
         "title": "XY输入：LoRA分层权重",
         "widgets": {
@@ -37,7 +26,7 @@
                 "Diff": "差值",
                 "Diff+Heatmap": "差值+热度"
         },
-        "ouptuts": {
+        "outputs": {
             "X (vectors)": "X (向量)",
             "Y (effect_compares)": "Y (效果)"
         }
@@ -62,7 +51,7 @@
             "block_vectors": "层权重",
             "bypass": "停用"
         },
-        "ouptuts": {
+        "outputs": {
             "model": "模型",
             "clip": "CLIP",
             "populated_vector": "填充向量"
@@ -234,8 +223,8 @@
         "title": "K采样器(Inspire)",
         "inputs": {
             "model": "模型",
-            "positive": "正面提示词",
-            "negative": "负面提示词",
+            "positive": "正面条件",
+            "negative": "负面条件",
             "latent_image": "Latent"
         },
         "widgets": {
@@ -260,8 +249,8 @@
         "title": "K采样器(高级Inspire)",
         "inputs": {
             "model": "模型",
-            "positive": "正面提示词",
-            "negative": "负面提示词",
+            "positive": "正面条件",
+            "negative": "负面条件",
             "latent_image": "Latent"
         },
         "widgets": {
@@ -313,16 +302,16 @@
             "zipped_prompt": "提示词包"
         },
         "outputs": {
-            "positive": "正面提示词",
-            "negative": "负面提示词",
+            "positive": "正面条件",
+            "negative": "负面条件",
             "name": "名称"
         }
     },
     "ZipPrompt //Inspire": {
         "title": "打包提示词",
         "widgets": {
-            "positive": "正面提示词",
-            "negative": "负面提示词",
+            "positive": "正面条件",
+            "negative": "负面条件",
             "name": "名称"
         },
         "outputs": {
@@ -333,13 +322,13 @@
         "title": "提取提示词",
         "widgets": {
             "image": "图像",
-            "positive": "正面提示词",
-            "negative": "负面提示词",
+            "positive": "正面条件",
+            "negative": "负面条件",
             "info": "信息"
         },
         "outputs": {
-            "positive": "正面提示词",
-            "negative": "负面提示词"
+            "positive": "正面条件",
+            "negative": "负面条件"
         }
     },
     "PromptBuilder //Inspire": {
@@ -379,12 +368,90 @@
 
 
 
+    "LoadImage //Inspire": {
+        "title": "加载图像(Inspire)",
+        "widgets": {
+            "image": "图像",
+            "image_data": "图像数据"
+        },
+        "outputs": {
+            "IMAGE": "图像",
+            "MASK": "遮罩"
+        }
+    },
+    "ChangeImageBatchSize //Inspire": {
+        "title": "修改图像批次大小",
+        "inputs": {
+            "image": "图像"
+        },
+        "widgets": {
+            "batch_size": "批次大小",
+            "mode": "模式"
+        },
+        "outputs": {
+            "IMAGE": "图像"
+        }
+    },
+
+
+
+    "ListCounter //Inspire": {
+        "title": "列表计数",
+        "inputs": {
+            "signal": "值"
+        },
+        "widgets": {
+            "base_value": "基值"
+        },
+        "outputs": {
+            "INT": "整数"
+        }
+    },
+    "CLIPTextEncodeWithWeight //Inspire": {
+        "title": "CLIP文本编码(权重)",
+        "inputs": {
+            "clip": "CLIP"
+        },
+        "widgets": {
+            "text": "文本",
+            "strength": "强度",
+            "add_weight": "附加权重"
+        },
+        "outputs": {
+            "CONDITIONING": "条件"
+        }
+    },
+    "FromIPAdapterPipe //Inspire": {
+        "title": "从IP适配",
+        "inputs": {
+            "ipadapter_pipe": "IP适配束"
+        },
+        "outputs": {
+            "IPADAPTER": "IP适配",
+            "CLIP_VISION": "CLIP视觉",
+            "MODEL": "模型"
+        }
+    },
+    "ToIPAdapterPipe //Inspire": {
+        "title": "到IP适配",
+        "inputs": {
+            "ipadapter": "IP适配",
+            "clip_vision": "CLIP视觉",
+            "model": "模型"
+        },
+        "outputs": {
+            "IPADAPTER_PIPE": "IP适配束"
+        }
+    },
+
+
+
     "KSamplerProgress //Inspire": {
         "title": "K采样器(过程)",
         "inputs": {
             "model": "模型",
-            "positive": "正面提示词",
-            "negative": "负面提示词",
+            "positive": "正面条件",
+            "negative": "负面条件",
             "latent_image": "Latent"
         },
         "widgets": {
@@ -412,8 +479,8 @@
         "title": "K采样器(高级过程)",
         "inputs": {
             "model": "模型",
-            "positive": "正面提示词",
-            "negative": "负面提示词",
+            "positive": "正面条件",
+            "negative": "负面条件",
             "latent_image": "Latent",
             "prev_progress_latent_opt": "前过程Latent"
         },
@@ -492,31 +559,57 @@
     "RemoveBackendData //Inspire": {
         "title": "移除后端数据(字符串键)",
         "inputs": {
-            "signal_opt": "信号(可选)"
+            "signal_opt": "值(可选)"
         },
         "widgets": {
             "key": "键"
         },
         "outputs": {
-            "signal": "信号"
+            "signal": "值"
         }
     },
     "RemoveBackendDataNumberKey //Inspire": {
         "title": "移除后端数据(数字键)",
         "inputs": {
-            "signal_opt": "信号(可选)"
+            "signal_opt": "信号"
         },
         "widgets": {
             "key": "键"
         },
         "outputs": {
-            "signal": "信号"
+            "signal": "值"
         }
     },
     "ShowCachedInfo //Inspire": {
         "title": "显示缓存信息",
         "widgets": {
             "cache_info": "缓存信息"
+        }
+    },
+    "CacheBackendDataList //Inspire": {
+        "title": "后端缓存数据列表",
+        "inputs": {
+            "data": "数据"
+        },
+        "widgets": {
+            "key": "键",
+            "tag": "数据标签"
+        },
+        "outputs": {
+            "data opt": "数据"
+        }
+    },
+    "CacheBackendDataNumberKeyList //Inspire": {
+        "title": "后端缓存数字键列表",
+        "inputs": {
+            "data": "数据"
+        },
+        "widgets": {
+            "key": "键",
+            "tag": "数据标签"
+        },
+        "outputs": {
+            "data opt": "数据"
         }
     },
 
@@ -571,17 +664,17 @@
     "BindImageListPromptList //Inspire": {
         "title": "绑定图像提示词列表",
         "inputs": {
-            "imamges": "图像",
+            "images": "图像",
             "zipped_prompt": "提示词包"
         },
         "widgets": {
-            "default_positive": "默认正面提示词",
-            "default_negative": "默认负面提示词"
+            "default_positive": "默认正面条件",
+            "default_negative": "默认负面条件"
         },
         "outputs": {
             "image": "图像",
-            "positive": "正面提示词",
-            "negative": "负面提示词",
+            "positive": "正面条件",
+            "negative": "负面条件",
             "prompt_label": "提示词标签"
         }
     },
@@ -636,7 +729,7 @@
         "title": "区域提示词(颜色遮罩)",
         "inputs": {
             "basic_pipe": "基础束",
-            "color_mask": "颜色遮罩"
+            "color_mask": "图像遮罩"
         },
         "widgets": {
             "mask_color": "遮罩颜色",
@@ -669,7 +762,7 @@
         "title": "区域条件(颜色遮罩)",
         "inputs": {
             "clip": "CLIP",
-            "color_mask": "颜色遮罩"
+            "color_mask": "图像遮罩"
         },
         "widgets": {
             "mask_color": "遮罩颜色",
@@ -682,8 +775,138 @@
             "MASK": "遮罩"
         }
     },
+    "RegionalIPAdapterMask //Inspire": {
+        "title": "区域IP适配",
+        "inputs": {
+            "ipadapter_pipe": "IP适配束",
+            "mask": "遮罩",
+            "images": "图像"
+        },
+        "widgets": {
+            "weight": "权重",
+            "noise": "噪波",
+            "weight_interpolation": "权重插值方式",
+                "original": "初始",
+                "linear": "线性",
+                "channel penalty": "通道惩罚"
+        },
+        "outputs": {
+            "IPADAPTER_PIPE": "IP适配束",
+            "MODEL": "模型"
+        }
+    },
+    "RegionalIPAdapterColorMask //Inspire": {
+        "title": "区域IP适配(颜色遮罩)",
+        "inputs": {
+            "ipadapter_pipe": "IP适配束",
+            "color_mask": "图像遮罩",
+            "images": "图像"
+        },
+        "widgets": {
+            "mask_color": "遮罩颜色",
+            "weight": "权重",
+            "noise": "噪波",
+            "weight_interpolation": "权重插值方式",
+                "original": "初始",
+                "linear": "线性",
+                "channel penalty": "通道惩罚"
+        },
+        "outputs": {
+            "IPADAPTER_PIPE": "IP适配束",
+            "MODEL": "模型",
+            "MASK" : "遮罩"
+        }
+    },
+    "RegionalSeedExplorerMask //Inspire": {
+        "title": "区域随机种管理",
+        "inputs": {
+            "mask": "遮罩",
+            "noise": "噪波"
+        },
+        "widgets": {
+            "seed_prompt": "随机种提示词",
+            "enable_additional": "启用拓展",
+            "additional_seed": "拓展随机种",
+            "additional_strength": "拓展强度",
+            "noise_mode": "噪波模式"
+        },
+        "outputs": {
+            "NOISE": "噪波"
+        }
+    },
+    "RegionalSeedExplorerColorMask //Inspire": {
+        "title": "区域随机种管理(颜色遮罩)",
+        "inputs": {
+            "color_mask": "图像遮罩",
+            "noise": "噪波"
+        },
+        "widgets": {
+            "mask_color": "遮罩颜色",
+            "seed_prompt": "随机种提示词",
+            "enable_additional": "启用拓展",
+            "additional_seed": "拓展随机种",
+            "additional_strength": "拓展强度",
+            "noise_mode": "噪波模式"
+        },
+        "outputs": {
+            "NOISE": "噪波",
+            "MASK": "遮罩"
+        }
+    },
+    "RegionalIPAdapterEncodedMask //Inspire": {
+        "title": "区域IP适配(编码遮罩)",
+        "inputs": {
+            "mask": "遮罩",
+            "embeds": "嵌入组"
+        },
+        "widgets": {
+            "weight": "权重",
+            "weight_interpolation": "权重插值方式"
+        },
+        "outputs": {
+            "REGIONAL_IPADAPER": "区域IP适配"
+        }
+    },
+    "RegionalIPAdapterEncodedColorMask //Inspire": {
+        "title": "区域IP适配(编码颜色遮罩)",
+        "inputs": {
+            "color_mask": "图像遮罩",
+            "embeds": "嵌入组"
+        },
+        "widgets": {
+            "mask_color": "遮罩颜色",
+            "weight": "权重",
+            "weight_interpolation": "权重插值方式"
+        },
+        "outputs": {
+            "REGIONAL_IPADAPTER": "区域IP适配",
+            "MASK": "遮罩"
+        }
+    },
+    "ApplyRegionalIPAdapters //Inspire": {
+        "title": "应用区域IP适配",
+        "inputs": {
+            "ipadapter_pipe": "IP适配束",
+            "regional_ipadapter1": "区域IP适配1"
+        },
+        "outputs": {
+            "MODEL": "模型"
+        }
+    },
+    "CheckpointLoaderSimpleShared //Inspire": {
+        "title": "Checkpoint加载器(简易共享)",
+        "widgets": {
+            "ckpt_name": "模型名称",
+            "key_opt": "Key"
+        },
+        "outputs": {
+            "model": "模型",
+            "clip": "CLIP",
+            "vae": "VAE",
+            "cache key": "缓存Key"
+        }
+    },
 
-    
 
     "FloatRange //Inspire": {
         "title": "浮点范围",
@@ -696,6 +919,28 @@
         },
         "outputs": {
             "FLOAT": "浮点"
+        }
+    },
+
+
+    "ConcatConditioningsWithMultiplier //Inspire": {
+        "title": "条件联结(系数)",
+        "inputs": {
+            "conditioning1": "条件1",
+            "conditioning2": "条件2",
+            "conditioning3": "条件3",
+            "conditioning4": "条件4",
+            "conditioning5": "条件5"
+        },
+        "widgets": {
+            "multiplier1": "系数1",
+            "multiplier2": "系数2",
+            "multiplier3": "系数3",
+            "multiplier4": "系数4",
+            "multiplier5": "系数5"
+        },
+        "outputs": {
+            "CONDITIONING": "条件"
         }
     }
 }

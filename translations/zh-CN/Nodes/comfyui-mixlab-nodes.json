@@ -1,0 +1,423 @@
+{
+    "SplitLongMask": {
+        "title": "分割遮罩列表",
+        "inputs": {
+            "long_mask": "遮罩"
+        },
+        "widgets": {
+            "count": "计数"
+        },
+        "outputs": {
+            "MASK": "遮罩"
+        }
+    },
+    "FeatheredMask": {
+        "title": "羽化遮罩",
+        "inputs": {
+            "mask": "遮罩"
+        },
+        "widgets": {
+            "start_offset": "偏移",
+            "feathering_weight": "权重"
+        },
+        "outputs": {
+            "MASK": "遮罩"
+        }
+    },
+    "SmoothMask": {
+        "title": "平滑遮罩",
+        "inputs": {
+            "mask": "遮罩"
+        },
+        "widgets": {
+            "smoothness": "平滑"
+        },
+        "outputs": {
+            "MASK": "遮罩"
+        }
+    },
+    "AreaToMask": {
+        "title": "区域到遮罩",
+        "inputs": {
+            "RGBA": "RGBA"
+        },
+        "outputs": {
+            "MASK": "遮罩"
+        }
+    },
+    "FaceToMask": {
+        "title": "面部到遮罩",
+        "inputs": {
+            "image": "图像"
+        },
+        "outputs": {
+            "MASK": "遮罩"
+        }
+    },
+    "CombineMasks": {
+        "title": "合并遮罩",
+        "inputs": {
+            "input_image": "图像",
+            "mask_1": "遮罩_1",
+            "mask_2": "遮罩_2",
+            "mask_3": "遮罩_3"
+        },
+        "outputs": {
+            "Combined Mask": "遮罩",
+            "Heatmap Mask": "热度图",
+            "BW Mask": "灰度图"
+        }
+    },
+    "CLIPSeg_":{
+        "title": "CLIP语义分割",
+        "inputs": {
+            "image": "图像"
+        },
+        "widgets": {
+            "text": "文本",
+            "blur": "模糊",
+            "threshold": "阈值",
+            "dilation_factor": "膨胀"
+        },
+        "outputs": {
+            "Mask": "遮罩",
+            "Heatmap Mask": "热度图",
+            "BW Mask": "灰度图"
+        }
+    },
+    "CombineMasks_": {
+        "title": "合并遮罩",
+        "inputs": {
+            "input_image": "图像",
+            "mask_1": "遮罩_1",
+            "mask_2": "遮罩_2",
+            "mask_3": "遮罩_3"
+        },
+        "outputs": {
+            "Combined Mask": "遮罩",
+            "Heatmap Mask": "热度图",
+            "BW Mask": "灰度图"
+        }
+    },
+
+
+
+    "RandomPrompt": {
+        "title": "随机提示词",
+        "widgets": {
+            "max_count": "最大数量",
+            "mutable_prompt": "可变提示词",
+            "immutable_prompt": "不变提示词",
+            "random_sample": "随机采样",
+                "enable": "启用",
+                "disable": "关闭"
+        },
+        "outputs": {
+            "STRING": "字符串"
+        }
+    },
+
+
+
+    "TransparentImage": {
+        "title": "透明图像",
+        "inputs": {
+            "images": "图像",
+            "masks": "遮罩"
+        },
+        "widgets": {
+            "invert": "反转",
+                "yes": "是",
+                "no": "否",
+            "save": "保存",
+            "filename_prefix": "文件名前缀"
+        },
+        "outputs": {
+            "STRING": "字符串",
+            "IMAGE": "图像",
+            "MASK": "遮罩"
+        }
+    },
+    "LoadImagesFromPath": {
+        "title": "加载图像(路径)",
+        "widgets": {
+            "file_path": "文件路径",
+            "white_bg": "白背景",
+                "disable": "关闭",
+                "enable": "启用",
+            "newest_files": "最新文件",
+            "index_variable": "索引",
+            "seed": "随机种",
+            "control_after_generate": "运行后操作",
+                "fixed": "固定",
+                "increment": "增加",
+                "decrement": "减少",
+                "randomize": "随机"
+        },
+        "outputs": {
+            "IMAGE": "图像",
+            "MASK": "遮罩"
+        }
+    },
+    "TextImage": {
+        "title": "文本图像",
+        "widgets": {
+            "text": "文本",
+            "font_path": "字体路径",
+            "font_size": "字体大小",
+            "spacing": "间隔",
+            "text_color": "文本颜色"
+        },
+        "outputs": {
+            "IMAGE": "图像",
+            "MASK": "遮罩"
+        }
+    },
+    "EnhanceImage": {
+        "title": "增强图像",
+        "inputs": {
+            "image": "图像"
+        },
+        "widgets": {
+            "contrast": "对比度"
+        },
+        "outputs": {
+            "IMAGE": "图像"
+        }
+    },
+    "ImageCropByAlpha": {
+        "title": "图像Alpha裁剪",
+        "inputs": {
+            "image": "图像",
+            "RGBA": "RGBA"
+        },
+        "outputs": {
+            "IMAGE": "图像"
+        }
+    },
+    "SvgImage": {
+        "title": "SVG图像",
+        "inputs": {
+            "upload": "上传"
+        },
+        "outputs": {
+            "IMAGE": "图像",
+            "layers": "图层"
+        }
+    },
+    "3DImage": {
+        "title": "3D图像",
+        "inputs": {
+            "upload": "上传"
+        },
+        "outputs": {
+            "IMAGE": "图像",
+            "MASK": "遮罩"
+        }
+    },
+
+
+
+    "ScreenShare": {
+        "title": "屏幕分享",
+        "inputs": {
+            "image_base64": "图像_base64"
+        },
+        "widgets": {
+            "seed": "随机种",
+            "control_after_generate": "运行后操作",
+                "fixed": "固定",
+                "increment": "增加",
+                "decrement": "减少",
+                "randomize": "随机"
+        },
+        "outputs": {
+            "IMAGE": "图像",
+            "MASK": "遮罩"
+        }
+    },
+    "FloatingVideo": {
+        "title": "屏幕窗口",
+        "inputs": {
+            "images": "图像"
+        },
+        "widgets": {
+            "seed": "随机种",
+            "control_after_generate": "运行后操作",
+                "fixed": "固定",
+                "increment": "增加",
+                "decrement": "减少",
+                "randomize": "随机"
+        }
+    },
+
+
+
+    "EmptyLayer": {
+        "title": "空图层",
+        "widgets": {
+            "width": "宽度",
+            "height": "高度"
+        },
+        "outputs": {
+            "layers": "图层"
+        }
+    },
+    "NewLayer": {
+        "title": "新图层",
+        "inputs": {
+            "image": "图像",
+            "mask": "遮罩",
+            "layers": "图层"
+        },
+        "widgets": {
+            "x": "X",
+            "y": "Y",
+            "width": "宽度",
+            "height": "高度",
+            "z_index": "编号",
+            "scale_option": "缩放方法"
+        },
+        "outputs": {
+            "layers": "图层"
+        }
+    },
+    "ShowLayer": {
+        "title": "显示图层",
+        "inputs": {
+            "layers": "图层"
+        },
+        "widgets": {
+            "Layer Index": "图层编号",
+            "x": "X",
+            "y": "Y",
+            "width": "宽度",
+            "height": "高度",
+            "z_index": "编号",
+            "scale_option": "缩放方法"
+        }
+    },
+    "MergeLayers": {
+        "title": "合并图层",
+        "inputs": {
+            "layers": "图层",
+            "image": "图像"
+        },
+        "outputs": {
+            "IMAGE": "图像"
+        }
+    },
+
+
+
+    "VAELoaderConsistencyDecoder": {
+        "title": "稳定VAE加载器",
+        "widgets": {
+            "vae_name": "VAE"
+        },
+        "outputs": {
+            "VAE": "VAE"
+        }
+    },
+    "VAEDecodeConsistencyDecoder": {
+        "title": "稳定VAE解码",
+        "inputs": {
+            "samples": "Latent",
+            "vae": "VAe"
+        },
+        "outputs": {
+            "IMAGE": "图像"
+        }
+    },
+
+
+
+    "ChatGPT": {
+        "title": "ChatGPT",
+        "inputs": {
+            "api_key": "API",
+            "api_url": "API_url"
+        },
+        "widgets": {
+            "prompt": "提示词",
+            "system_content": "系统提示词",
+            "model": "模型",
+            "seed": "随机种",
+            "control_after_generate": "运行后操作",
+                "fixed": "固定",
+                "increment": "增加",
+                "decrement": "减少",
+                "randomize": "随机",
+            "context_size": "上下文大小"
+        },
+        "outputs": {
+            "text": "文本",
+            "message": "信息",
+            "session_history": "会话历史"
+        }
+    },
+    "ChatGPTOpenAI": {
+        "title": "ChatGPT",
+        "inputs": {
+            "api_key": "API_Key",
+            "api_url": "API_url"
+        },
+        "widgets": {
+            "prompt": "提示词",
+            "system_content": "系统提示词",
+            "model": "模型",
+            "seed": "随机种",
+            "control_after_generate": "运行后操作",
+                "fixed": "固定",
+                "increment": "增加",
+                "decrement": "减少",
+                "randomize": "随机",
+            "context_size": "上下文大小"
+        },
+        "outputs": {
+            "text": "文本",
+            "message": "信息",
+            "session_history": "会话历史"
+        }
+    },
+    "ShowTextForGPT": {
+        "title": "显示文本",
+        "widgets": {
+            "text": "文本"
+        },
+        "outputs": {
+            "STRING": "字符串"
+        }
+    },
+    "CharacterInText": {
+        "title": "文本内的字符",
+        "widgets": {
+            "text": "文本",
+            "character": "字符"
+        },
+        "outputs": {
+            "INT": "整数"
+        }
+    },
+
+
+
+    "SpeechRecognition": {
+        "title": "语音识别",
+        "widgets": {
+            "START": "开始"
+        },
+        "outputs": {
+            "prompt": "提示词"
+        }
+    },
+    "SpeechSynthesis": {
+        "title": "语音合成",
+        "widgets": {
+            "text": "文本"
+        },
+        "outputs": {
+            "STRING": "字符串"
+        }
+    }
+}
