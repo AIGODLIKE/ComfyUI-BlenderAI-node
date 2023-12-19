@@ -511,7 +511,7 @@ class AddonPreference(bpy.types.AddonPreferences):
             box.prop(self, "fpvae", text_ctxt=ctxt)
             box.prop(self, "fpte", text_ctxt=ctxt)
             box.prop(self, "attn", text_ctxt=ctxt)
-            row.prop(self, "preview_method", text_ctxt=ctxt, toggle=True)
+            box.prop(self, "preview_method", text_ctxt=ctxt, toggle=True)
             row = box.row(align=True)
             row.prop(self, "dont_upcast_attention", text_ctxt=ctxt, toggle=True)
             row.prop(self, "disable_ipex_optimize", text_ctxt=ctxt, toggle=True)
