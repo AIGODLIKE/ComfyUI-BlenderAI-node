@@ -362,6 +362,9 @@ other = {
     "Disable saving prompt metadata in files.": "禁止prompt元数保存到文件",
     "windows standalone build": "Windows独立构建",
     "Windows standalone build: Enable convenient things that most people using the standalone windows build will probably enjoy (like auto opening the page on startup).": "Windows独立构建: 启用大多数人使用独立Windows构建时可能会喜欢的便利功能(例如启动时自动打开页面)",
+    "Args Copied To Clipboard": "参数已复制到剪切板",
+    "Copy Args": "复制参数",
+    "Copy Args To Clipboard": "将参数复制到剪切板",
     # MLT
     " Prompts": "提示词",
     "MLT": "多行文本",

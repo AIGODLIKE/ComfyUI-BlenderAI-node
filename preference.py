@@ -206,6 +206,15 @@ class AddonPreference(bpy.types.AddonPreferences):
         description="Windows standalone build: Enable convenient things that most people using the standalone windows build will probably enjoy (like auto opening the page on startup).")  # --windows-standalone-build
     with_webui_model: bpy.props.StringProperty(default="", name="With WEBUI Model", subtype="DIR_PATH")
     with_comfyui_model: bpy.props.StringProperty(default="", name="With ComfyUI Model", subtype="DIR_PATH")
+    def update_copy_args(self, context):
+        if self.copy_args:
+            self.copy_args = False
+            wm = bpy.context.window_manager
+            wm.clipboard = " ".join(self.parse_server_args())
+            def draw(self, context):
+                self.layout.label(text="Args Copied To Clipboard", text_ctxt=ctxt)
+            wm.popup_menu(draw, title=_T("Info"), icon="INFO")
+    copy_args: bpy.props.BoolProperty(default=False, name="Copy Args", description="Copy Args To Clipboard", update=update_copy_args)
     auto_launch: bpy.props.BoolProperty(default=False, name="Auto Launch Browser")
     install_deps: bpy.props.BoolProperty(default=False, name="Check Depencies Before Server Launch", description="Check ComfyUI(some) Depencies Before Server Launch")
     force_log: bpy.props.BoolProperty(default=False, name="Force Log", description="Force Log, Generally Not Needed")
@@ -530,7 +539,9 @@ class AddonPreference(bpy.types.AddonPreferences):
             box = layout.box()
             box.label(text="Advanced", text_ctxt=ctxt)
             args = self.parse_server_args()
-            box.label(text=" ".join(args), text_ctxt=ctxt)
+            row = box.row(align=True)
+            row.label(text=" ".join(args), text_ctxt=ctxt)
+            row.prop(self, "copy_args", toggle=True, text_ctxt=ctxt, text="", icon="COPYDOWN")
             # 新增参数
             box.prop(self, "cuda_malloc", text_ctxt=ctxt)
             box.prop(self, "fp", text_ctxt=ctxt)
