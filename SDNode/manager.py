@@ -542,9 +542,9 @@ class LocalServer(Server):
             TaskManager.put_error_msg(_T("ComfyUI Path Not Found"))
             return
         logger.debug(f"{_T('Model Path')}: {model_path}")
-        python = self.get_python()
+        python = pref.get_python()
         if pref.install_deps:
-            self.run_pre(model_path)
+            self.run_pre()
 
         logger.warn(_T("Server Launching"))
         if sys.platform == "win32" and not python.exists():
@@ -575,8 +575,7 @@ class LocalServer(Server):
                 Path(model_path).joinpath("custom_nodes", file.name).write_text(t, encoding="utf-8")
                 continue
             shutil.copyfile(file, dst)
-        args = pref.parse_server_args(Path(python), Path(model_path), self)
-        # args = self.create_args(python, Path(model_path))
+        args = pref.parse_server_args(self)
         self.launch_ip = get_ip()
         self.launch_port = get_port()
         self.launch_url = f"http://{self.launch_ip}:{self.launch_port}"
@@ -655,29 +654,14 @@ class LocalServer(Server):
             # os.kill(pid, signal.SIGKILL)
         logger.error(f"{_T('Kill Last ComfyUI Process')} id -> {pid}")
 
-    def get_python(self):
-        python = Path("python3")
-        custom_python = Path(get_pref().python_path)
-        if get_pref().python_path and custom_python.exists():
-            if custom_python.is_dir():
-                if sys.platform == "win32":
-                    python = custom_python / "python.exe"
-                else:
-                    python = custom_python / "python3"
-            else:
-                python = custom_python
-        elif sys.platform == "win32":
-            model_path = get_pref().model_path
-            python = Path(model_path).parent / "python_embeded/python.exe"
-        return python
-
-    def run_pre(self, model_path):
+    def run_pre(self):
         """
         Check pre install
         """
         # controlnet check
         logger.warn(_T("ControlNet Init...."))
-        python = self.get_python()
+        python = get_pref().get_python()
+        model_path = get_pref().model_path
 
         controlnet = Path(model_path) / "custom_nodes/comfy_controlnet_preprocessors"
         if controlnet.exists():
@@ -704,99 +688,6 @@ class LocalServer(Server):
 
         logger.warn(_T("ControlNet Init Finished."))
         logger.warn(_T("If controlnet still not worked, install manually by double clicked {}").format((controlnet / "install.bat").as_posix()))
-
-    def create_args(self, python: Path, model_path: Path):
-        pref = get_pref()
-        return pref.parse_server_args(python, model_path, self)
-        args = [python.as_posix()]
-        # arg = f"-s {str(model_path)}/main.py"
-        args.append("-s")
-
-        # 备份main.py 为 main-bak.py
-        # 为main-bak.py新增 sys.path代码
-        try:
-            with open(model_path.joinpath("main.py"), "r", encoding="utf-8") as f:
-                mainpy = f.read()
-                mainpy = "sys.path.append(r\"{}\")\n".format(model_path.as_posix()) + mainpy
-                mainpy = "import sys\n" + mainpy
-                Path(model_path.joinpath("main-bak.py")).write_text(mainpy, encoding="utf-8")
-        except BaseException:
-            ...
-        if get_pref().python_path and Path(get_pref().python_path).exists() and Path(model_path.joinpath("main-bak.py")).exists():
-            args.append(f"{model_path.joinpath('main-bak.py').resolve().as_posix()}")
-        else:
-            args.append(f"{model_path.joinpath('main.py').resolve().as_posix()}")
-
-        def parse_comfyUIStart():
-            config = []
-            try:
-                path = Path(sys.argv[sys.argv.index("comfyUIStart") + 1])
-                if not path.exists():
-                    logger.error(_T("Invalid Config File Path"))
-                    return []
-                config = json.loads(path.read_text(encoding="utf-8"))
-                if not isinstance(config, list):
-                    return []
-                for piece in config:
-                    # --listen 127.0.0.1 --port 8188
-                    if ip := re.match(r"--listen\s+([0-9.]+)", piece):
-                        ip = ip.group(1)
-                        ip = {"0.0.0.0": "127.0.0.1"}.get(ip, ip)
-                        get_pref().ip = ip
-                    if port := re.match(r".*?--port\s+([0-9]+)", piece):
-                        get_pref().port = int(port.group(1))
-                config = " ".join(config)
-                config = re.split(r"\s(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)", config)
-                logger.info(f"{_T('Reparse Config')}: {config}")
-                # config = " ".join(config).split(" ")  # resplit
-                for i, piece in enumerate(config):
-                    if piece[0] == piece[-1] == "\"":
-                        piece = Path(piece.replace("\"", "")).resolve()
-                        piece = FSWatcher.to_str(piece)
-                        config[i] = piece
-                if "--auto-launch" in config:
-                    config.remove("--auto-launch")
-                if "--disable-auto-launch" in config:
-                    config.remove("--disable-auto-launch")
-                if "--windows-standalone-build" in config:
-                    config.remove("--windows-standalone-build")
-                logger.info(f"{_T('Find Config')}: {config}")
-            except IndexError:
-                logger.error(_T("No Config File Found"))
-            except Exception as e:
-                logger.error(_T("Parse Config Error: {e}").format(e))
-            return config
-        # [ 'comfyUIStart', 'startConfigureFile.json']
-        if "comfyUIStart" in sys.argv:
-            args.extend(parse_comfyUIStart())
-        else:
-            args.append("--listen")
-            args.append(get_ip())
-            args.append("--port")
-            args.append(f"{get_port()}")
-            if pref.cuda.isdigit():
-                args.append("--cuda-device")
-                args.append(pref.cuda)
-            if pref.vram != "default":
-                args.append(pref.vram)
-            yaml = ""
-            if pref.with_webui_model and Path(pref.with_webui_model).exists():
-                wmp = Path(pref.with_webui_model).as_posix()
-                wmpp = Path(pref.with_webui_model).parent.as_posix()
-                yaml += a111_yaml.format(wmp=wmp, wmpp=wmpp)
-            if pref.with_comfyui_model and Path(pref.with_comfyui_model).exists():
-                cmp = Path(pref.with_comfyui_model).as_posix()  # 指定到 models
-                cmpp = Path(pref.with_comfyui_model).parent.as_posix()
-                yaml += custom_comfyui.format(cmp=cmp, cmpp=cmpp)
-            if yaml:
-                extra_model_paths = Path(__file__).parent / "config.yaml"
-                extra_model_paths.write_text(yaml)
-                args.append("--extra-model-paths-config")
-                args.append(extra_model_paths.as_posix())
-        # 特殊处理
-        if pref.auto_launch:
-            args.append("--auto-launch")
-        return args
 
     def stdout_listen(self):
         p = self.child

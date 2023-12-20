@@ -200,6 +200,10 @@ class AddonPreference(bpy.types.AddonPreferences):
     deterministic: bpy.props.BoolProperty(default=False, name="deterministic", description="Make pytorch use slower deterministic algorithms when it can. Note that this might not make images deterministic in all cases.")  # --deterministic
     dont_print_server: bpy.props.BoolProperty(default=False, name="dont print server", description="Don't print server output.")  # --dont-print-server
     disable_metadata: bpy.props.BoolProperty(default=False, name="disable metadata", description="Disable saving prompt metadata in files.")  # --disable-metadata
+    windows_standalone_build: bpy.props.BoolProperty(
+        default=False,
+        name="windows standalone build",
+        description="Windows standalone build: Enable convenient things that most people using the standalone windows build will probably enjoy (like auto opening the page on startup).")  # --windows-standalone-build
     with_webui_model: bpy.props.StringProperty(default="", name="With WEBUI Model", subtype="DIR_PATH")
     with_comfyui_model: bpy.props.StringProperty(default="", name="With ComfyUI Model", subtype="DIR_PATH")
     auto_launch: bpy.props.BoolProperty(default=False, name="Auto Launch Browser")
@@ -229,9 +233,9 @@ class AddonPreference(bpy.types.AddonPreferences):
                 if ip := re.match(r"--listen\s+([0-9.]+)", piece):
                     ip = ip.group(1)
                     ip = {"0.0.0.0": "127.0.0.1"}.get(ip, ip)
-                    get_pref().ip = ip
+                    self.ip = ip
                 if port := re.match(r".*?--port\s+([0-9]+)", piece):
-                    get_pref().port = int(port.group(1))
+                    self.port = int(port.group(1))
             config = " ".join(config)
             config = re.split(r"\s(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)", config)
             logger.info(f"{_T('Reparse Config')}: {config}")
@@ -253,9 +257,28 @@ class AddonPreference(bpy.types.AddonPreferences):
         except Exception as e:
             logger.error(_T("Parse Config Error: {e}").format(e))
         return config
-
-    def parse_server_args(self, python: Path, model_path: Path, server):
-        pref = self
+    
+    def get_python(self):
+        python = Path("python3")
+        custom_python = Path(self.python_path)
+        if self.python_path and custom_python.exists():
+            if custom_python.is_dir():
+                if sys.platform == "win32":
+                    python = custom_python / "python.exe"
+                else:
+                    python = custom_python / "python3"
+            else:
+                python = custom_python
+        elif sys.platform == "win32":
+            python = Path(self.model_path).parent / "python_embeded/python.exe"
+        return python
+    
+    def parse_server_args(self, server=None):
+        if server is None:
+            from .SDNode.manager import FakeServer
+            server = FakeServer._instance
+        python = self.get_python()
+        model_path = Path(self.model_path)
         args = [python.as_posix()]
         # arg = f"-s {str(model_path)}/main.py"
         args.append("-s")
@@ -273,7 +296,7 @@ class AddonPreference(bpy.types.AddonPreferences):
         else:
             args.append(f"{model_path.joinpath('main.py').resolve().as_posix()}")
         # 特殊处理
-        if pref.auto_launch:
+        if self.auto_launch:
             args.append("--auto-launch")
         # [ 'comfyUIStart', 'startConfigureFile.json']
         if "comfyUIStart" in sys.argv:
@@ -284,21 +307,21 @@ class AddonPreference(bpy.types.AddonPreferences):
         args.append(server.get_ip())
         args.append("--port")
         args.append(f"{server.get_port()}")
-        if pref.cuda.isdigit():
+        if self.cuda.isdigit():
             args.append("--cuda-device")
-            args.append(pref.cuda)
-        if pref.vram != "default":
-            args.append(pref.vram)
+            args.append(self.cuda)
+        if self.vram != "default":
+            args.append(self.vram)
         yaml = ""
         yamlpath = Path(__file__).parent / "yaml"
-        if pref.with_webui_model and Path(pref.with_webui_model).exists():
-            wmp = Path(pref.with_webui_model).as_posix()
-            wmpp = Path(pref.with_webui_model).parent.as_posix()
+        if self.with_webui_model and Path(self.with_webui_model).exists():
+            wmp = Path(self.with_webui_model).as_posix()
+            wmpp = Path(self.with_webui_model).parent.as_posix()
             a111_yaml = yamlpath.joinpath("a111.yaml").read_text(encoding="utf-8")
             yaml += a111_yaml.format(wmp=wmp, wmpp=wmpp)
-        if pref.with_comfyui_model and Path(pref.with_comfyui_model).exists():
-            cmp = Path(pref.with_comfyui_model).as_posix()  # 指定到 models
-            cmpp = Path(pref.with_comfyui_model).parent.as_posix()
+        if self.with_comfyui_model and Path(self.with_comfyui_model).exists():
+            cmp = Path(self.with_comfyui_model).as_posix()  # 指定到 models
+            cmpp = Path(self.with_comfyui_model).parent.as_posix()
             custom_comfyui = yamlpath.joinpath("custom.yaml").read_text(encoding="utf-8")
             yaml += custom_comfyui.format(cmp=cmp, cmpp=cmpp)
         if yaml:
@@ -349,6 +372,8 @@ class AddonPreference(bpy.types.AddonPreferences):
         # --disable-metadata
         if self.disable_metadata:
             args.append("--disable-metadata")
+        if self.windows_standalone_build:
+            args.append("--windows-standalone-build")
         return args
 
     def update_count_page_next(self, context):
@@ -504,6 +529,8 @@ class AddonPreference(bpy.types.AddonPreferences):
         if self.server_type == "Local":
             box = layout.box()
             box.label(text="Advanced", text_ctxt=ctxt)
+            args = self.parse_server_args()
+            box.label(text=" ".join(args), text_ctxt=ctxt)
             # 新增参数
             box.prop(self, "cuda_malloc", text_ctxt=ctxt)
             box.prop(self, "fp", text_ctxt=ctxt)
@@ -523,6 +550,7 @@ class AddonPreference(bpy.types.AddonPreferences):
             row.prop(self, "dont_print_server", text_ctxt=ctxt, toggle=True)
             row = box.row(align=True)
             row.prop(self, "disable_metadata", text_ctxt=ctxt, toggle=True)
+            row.prop(self, "windows_standalone_build", text_ctxt=ctxt, toggle=True)
         layout.prop(self, "debug", toggle=True, text_ctxt=ctxt)
 
     def draw_website(self, layout: bpy.types.UILayout):
