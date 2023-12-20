@@ -139,33 +139,33 @@ class AddonPreference(bpy.types.AddonPreferences):
                                         ], default=0)
 
     cuda_malloc: bpy.props.EnumProperty(name="cuda-malloc",
-                                        items=[("default", "Default", "", 0),
+                                        items=[("default", "Auto", "", 0),
                                                ("--cuda-malloc", "Enable", "Enable cudaMallocAsync (enabled by default for torch 2.0 and up).", 1),
                                                ("--disable-cuda-malloc", "Disable", "Disable cudaMallocAsync.", 2)
                                                ])  # --cuda_malloc
     dont_upcast_attention: bpy.props.BoolProperty(default=False, name="dont upcast attention", description="Disable upcasting of attention. Can boost speed but increase the chances of black images.")  # --dont-upcast-attention
 
     fp: bpy.props.EnumProperty(name="fp",
-                               items=[("default", "Default", "", 0),
+                               items=[("default", "Auto", "", 0),
                                       ("--force-fp32", "Force fp32", "Force fp32 (If this makes your GPU work better please report it).", 1),
                                       ("--force-fp16", "Force fp16", "Force fp16.", 2)
                                       ])  # --fp
 
     fpunet: bpy.props.EnumProperty(name="fpunet",
-                                   items=[("default", "Default", "", 0),
+                                   items=[("default", "Auto", "", 0),
                                           ("--bf16-unet", "bf16", "Run the UNET in bf16. This should only be used for testing stuff.", 1),
                                           ("--fp16-unet", "fp16", "Store unet weights in fp16.", 2),
                                           ("--fp8_e4m3fn-unet", "fp8_e4m3fn", "Store unet weights in fp8_e4m3fn.", 3),
                                           ("--fp8_e5m2-unet", "fp8_e5m2", "Store unet weights in fp8_e5m2.", 4)
                                           ])  # --fpunet
     fpvae: bpy.props.EnumProperty(name="fpvae",
-                                  items=[("default", "Default", "", 0),
+                                  items=[("default", "Auto", "", 0),
                                          ("--fp16-vae", "fp16-vae", "Run the VAE in fp16, might cause black images.", 1),
                                          ("--fp32-vae", "fp32-vae", "Run the VAE in full precision fp32.", 2),
                                          ("--bf16-vae", "bf16-vae", "Run the VAE in bf16.", 3)
                                          ])  # --fpvae
     fpte: bpy.props.EnumProperty(name="fpte",
-                                 items=[("default", "Default", "", 0),
+                                 items=[("default", "Auto", "", 0),
                                         ("--fp8_e4m3fn-text-enc", "fp8_e4m3fn-text-enc", "Store text encoder weights in fp8 (e4m3fn variant).", 1),
                                         ("--fp8_e5m2-text-enc", "fp8_e5m2-text-enc", "Store text encoder weights in fp8 (e5m2 variant).", 2),
                                         ("--fp16-text-enc", "fp16-text-enc", "Store text encoder weights in fp16.", 3),
@@ -181,7 +181,7 @@ class AddonPreference(bpy.types.AddonPreferences):
     disable_ipex_optimize: bpy.props.BoolProperty(default=False, name="disable ipex optimize", description="Disables ipex.optimize when loading models with Intel GPUs.")  # --disable-ipex-optimize
 
     attn: bpy.props.EnumProperty(name="attn",
-                                 items=[("default", "Default", "", 0),
+                                 items=[("default", "Auto", "", 0),
                                         ("--use-split-cross-attention", "split-cross-attention", "Use the split cross attention optimization. Ignored when xformers is used.", 1),
                                         ("--use-quad-cross-attention", "quad-cross-attention", "Use the sub-quadratic cross attention optimization . Ignored when xformers is used.", 2),
                                         ("--use-pytorch-cross-attention", "pytorch-cross-attention", "Use the new pytorch 2.0 cross attention function.", 3)
@@ -189,12 +189,13 @@ class AddonPreference(bpy.types.AddonPreferences):
     disable_xformers: bpy.props.BoolProperty(default=False, name="Disable xformers", description="Disable xformers.")  # --disable-xformers
 
     vram: bpy.props.EnumProperty(name="VRam Mode",
-                                 items=[("--gpu-only", "Gpu Only", "Store and run everything (text encoders/CLIP models, etc... on the GPU).", 0),
-                                        ("--highvram", "High VRam", "By default models will be unloaded to CPU memory after being used. This option keeps them in GPU memory.", 1),
-                                        ("--normalvram", "Normal VRam", "Used to force normal vram use if lowvram gets automatically enabled.", 2),
-                                        ("--lowvram", "Low VRam", "Split the unet in parts to use less vram.", 3),
-                                        ("--novram", "No VRam", "When lowvram isn't enough.", 4),
-                                        ("--cpu", "Cpu Only", "To use the CPU for everything (slow).", 5),
+                                 items=[("default", "Auto", "", 0),
+                                        ("--gpu-only", "Gpu Only", "Store and run everything (text encoders/CLIP models, etc... on the GPU).", 1),
+                                        ("--highvram", "High VRam", "By default models will be unloaded to CPU memory after being used. This option keeps them in GPU memory.", 2),
+                                        ("--normalvram", "Normal VRam", "Used to force normal vram use if lowvram gets automatically enabled.", 3),
+                                        ("--lowvram", "Low VRam", "Split the unet in parts to use less vram.", 4),
+                                        ("--novram", "No VRam", "When lowvram isn't enough.", 5),
+                                        ("--cpu", "Cpu Only", "To use the CPU for everything (slow).", 6),
                                         ])  # --vram
     disable_smart_memory: bpy.props.BoolProperty(default=False, name="disable smart memory", description="Force ComfyUI to agressively offload to regular ram instead of keeping models in vram when it can.")  # --disable-smart-memory
     deterministic: bpy.props.BoolProperty(default=False, name="deterministic", description="Make pytorch use slower deterministic algorithms when it can. Note that this might not make images deterministic in all cases.")  # --deterministic
@@ -206,11 +207,13 @@ class AddonPreference(bpy.types.AddonPreferences):
         description="Windows standalone build: Enable convenient things that most people using the standalone windows build will probably enjoy (like auto opening the page on startup).")  # --windows-standalone-build
     with_webui_model: bpy.props.StringProperty(default="", name="With WEBUI Model", subtype="DIR_PATH")
     with_comfyui_model: bpy.props.StringProperty(default="", name="With ComfyUI Model", subtype="DIR_PATH")
+
     def update_copy_args(self, context):
         if self.copy_args:
             self.copy_args = False
             wm = bpy.context.window_manager
             wm.clipboard = " ".join(self.parse_server_args())
+
             def draw(self, context):
                 self.layout.label(text="Args Copied To Clipboard", text_ctxt=ctxt)
             wm.popup_menu(draw, title=_T("Info"), icon="INFO")
@@ -266,7 +269,7 @@ class AddonPreference(bpy.types.AddonPreferences):
         except Exception as e:
             logger.error(_T("Parse Config Error: {e}").format(e))
         return config
-    
+
     def get_python(self):
         python = Path("python3")
         custom_python = Path(self.python_path)
@@ -281,7 +284,7 @@ class AddonPreference(bpy.types.AddonPreferences):
         elif sys.platform == "win32":
             python = Path(self.model_path).parent / "python_embeded/python.exe"
         return python
-    
+
     def parse_server_args(self, server=None):
         if server is None:
             from .SDNode.manager import FakeServer
@@ -422,7 +425,7 @@ class AddonPreference(bpy.types.AddonPreferences):
         try:
             res = subprocess.check_output("nvidia-smi -L", shell=True).decode("utf-8")
             # GPU 0: NVIDIA GeForce GTX 1060 5GB (UUID: xxxx)
-            items = []
+            items = [("default", "Auto", "", 0,)]
             for line in res.split("\n"):
                 m = re.search(r"GPU (\d+): NVIDIA GeForce (.*) \(UUID: GPU-.*\)", line)
                 if not line.startswith("GPU") or not m:
@@ -430,7 +433,7 @@ class AddonPreference(bpy.types.AddonPreferences):
                 items.append((m.group(1), m.group(2), "", len(items),))
             return items
         except BaseException:
-            return []
+            return [("default", "Auto", "", 0,)]
 
     cuda: bpy.props.EnumProperty(name="cuda", items=get_cuda_list())
 
