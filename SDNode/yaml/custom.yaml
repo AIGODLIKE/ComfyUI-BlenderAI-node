@@ -1,5 +1,5 @@
-# cmpp 指定到ComfyUI路径
-# cmp 指定到 ComfyUI/models 路径
+# cmpp to ComfyUI folder
+# cmp to ComfyUI/models folder
 mycomfyui:
     base_path: {cmpp}
     checkpoints: {cmp}/checkpoints

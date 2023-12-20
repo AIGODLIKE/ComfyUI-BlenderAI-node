@@ -322,16 +322,16 @@ class AddonPreference(bpy.types.AddonPreferences):
         if self.vram != "default":
             args.append(self.vram)
         yaml = ""
-        yamlpath = Path(__file__).parent / "yaml"
+        yamlpath = Path(__file__).parent / "SDNode/yaml"
         if self.with_webui_model and Path(self.with_webui_model).exists():
             wmp = Path(self.with_webui_model).as_posix()
             wmpp = Path(self.with_webui_model).parent.as_posix()
-            a111_yaml = yamlpath.joinpath("a111.yaml").read_text(encoding="utf-8")
+            a111_yaml = yamlpath.joinpath("a111.yaml").read_text()
             yaml += a111_yaml.format(wmp=wmp, wmpp=wmpp)
         if self.with_comfyui_model and Path(self.with_comfyui_model).exists():
             cmp = Path(self.with_comfyui_model).as_posix()  # 指定到 models
             cmpp = Path(self.with_comfyui_model).parent.as_posix()
-            custom_comfyui = yamlpath.joinpath("custom.yaml").read_text(encoding="utf-8")
+            custom_comfyui = yamlpath.joinpath("custom.yaml").read_text()
             yaml += custom_comfyui.format(cmp=cmp, cmpp=cmpp)
         if yaml:
             extra_model_paths = yamlpath.joinpath("config.yaml")
