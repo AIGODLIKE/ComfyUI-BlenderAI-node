@@ -6,6 +6,7 @@ from .ops import Ops, Load_History, Copy_Tree, Load_Batch, Fetch_Node_Status
 from .translations import ctxt
 from .SDNode import TaskManager, FakeServer
 from .SDNode.tree import TREE_TYPE
+from .SDNode.nodegroup import SDNGroupEdit, AddGroupTree
 from .SDNode.rt_tracker import Tracker_Loop, is_looped
 from .preference import get_pref, AddonPreference
 from .utils import get_addon_name, _T
@@ -139,6 +140,8 @@ class Panel(bpy.types.Panel):
 
     def show_debug(self, layout: bpy.types.UILayout):
         self.show_launch_cnn(layout)
+        layout.operator(SDNGroupEdit.bl_idname)
+        layout.operator(AddGroupTree.bl_idname)
         return
         rv3d = bpy.context.space_data.region_3d
         layout.prop(rv3d, "view_camera_offset")

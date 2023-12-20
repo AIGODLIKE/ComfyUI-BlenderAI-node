@@ -24,6 +24,7 @@ from .ops import Ops, Ops_Mask, Load_History, Popup_Load, Copy_Tree, Load_Batch,
 from .ui import Panel, HISTORY_UL_UIList, HistoryItem
 from .SDNode.history import History
 from .SDNode.rt_tracker import reg_tracker, unreg_tracker
+from .SDNode.nodegroup import nodegroup_reg, nodegroup_unreg
 from .prop import RenderLayerString, Prop
 from .Linker import linker_register, linker_unregister
 from .hook import use_hook
@@ -98,6 +99,7 @@ def register():
     use_hook()
     FSWatcher.init()
     disable_reload()
+    nodegroup_reg()
     print(f"{__package__} Launch Time: {time.time() - ts:.4f}s")
 
 
@@ -118,6 +120,7 @@ def unregister():
     modules_update()
     linker_unregister()
     use_hook(False)
+    nodegroup_unreg()
     FSWatcher.stop()
 
 

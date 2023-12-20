@@ -961,6 +961,18 @@ class NodeParser:
                       }
             SocketDesc = type(stype, (SocketBase,), fields)
             socket_clss.append(SocketDesc)
+            fields = {
+                "bl_idname": f"{stype}Interface",
+                "bl_socket_idname": stype,
+                "bl_label": stype,
+                "draw_color": lambda s, c: s.color,
+                "draw": lambda s, c, l: l.label(text=s.bl_label),
+                "__annotations__": {"color": color, },
+            }
+            base = getattr(bpy.types, "NodeSocketInterface",
+                           getattr(bpy.types, "NodeTreeInterfaceSocket", None))
+            InterfaceDesc = type(f"{stype}Interface", (base,), fields)
+            socket_clss.append(InterfaceDesc)
         return socket_clss
 
     def _parse_node_clss(self):

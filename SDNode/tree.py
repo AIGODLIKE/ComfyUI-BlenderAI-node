@@ -360,6 +360,15 @@ class CFNodeTree(NodeTree):
             node.update()
         return load_nodes
 
+    def sockets(self, in_out='INTPUT'):
+        if bpy.app.version >= (4, 0):
+            for item in self.interface.items_tree:
+                if item.item_type == 'SOCKET':
+                    if item.in_out == in_out:
+                        yield item
+        else:
+            yield from self.inputs if in_out == 'INPUT' else self.outputs
+
     def get_nodes(self, cmf=True) -> list[NodeBase]:
         if cmf:
             return [n for n in self.nodes if n.bl_idname not in {"NodeFrame", } and n.is_registered_node_type()]
@@ -418,6 +427,8 @@ class CFNodeTree(NodeTree):
         """
         nodes = self.get_nodes()
         for n in nodes:
+            if n.bl_idname in {"NodeGroupInput", "NodeGroupOutput"}:
+                continue
             if n.id == "-1":
                 n.apply_unique_id()
             for nn in nodes:
@@ -437,6 +448,8 @@ class CFNodeTree(NodeTree):
         ids = set()
         nodes = self.get_nodes(cmf=True)
         for node in nodes:
+            if node.bl_idname in {"NodeGroupInput", "NodeGroupOutput"}:
+                continue
             ids.add(node.id)
         NodeBase.pool.clear()
         NodeBase.pool.update(ids)
@@ -644,34 +657,34 @@ def reg_node_reroute():
     from .nodes import NodeBase
     bpy.types.NodeSocketColor.slot_index = bpy.props.IntProperty(default=-1)
     bpy.types.NodeSocketColor.index = bpy.props.IntProperty(default=-1)
+    for inode in [bpy.types.NodeReroute, bpy.types.NodeGroupInput, bpy.types.NodeGroupOutput]:
+        inode.id = bpy.props.StringProperty(default="-1")
+        inode.sdn_order = bpy.props.IntProperty(default=-1)
+        inode.pool = NodeBase.pool
+        inode.load = NodeBase.load
+        inode.dump = NodeBase.dump
+        inode.update = NodeBase.update
+        inode.serialize_pre = NodeBase.serialize_pre
+        inode.serialize = NodeBase.serialize
+        inode.post_fn = NodeBase.post_fn
+        inode.pre_fn = NodeBase.pre_fn
+        inode.apply_unique_id = NodeBase.apply_unique_id
+        inode.unique_id = NodeBase.unique_id
+        inode.calc_slot_index = NodeBase.calc_slot_index
+        inode.is_base_type = NodeBase.is_base_type
+        inode.get_meta = NodeBase.get_meta
+        inode.query_stat = NodeBase.query_stat
+        inode.set_stat = NodeBase.set_stat
+        inode.switch_socket = NodeBase.switch_socket
+        inode.get_from_link = NodeBase.get_from_link
+        inode.get_ctxt = NodeBase.get_ctxt
+        inode.get_blueprints = NodeBase.get_blueprints
+        inode.get_tree = NodeBase.get_tree
 
-    bpy.types.NodeReroute.id = bpy.props.StringProperty(default="-1")
-    bpy.types.NodeReroute.sdn_order = bpy.props.IntProperty(default=-1)
-    bpy.types.NodeReroute.pool = NodeBase.pool
-    bpy.types.NodeReroute.load = NodeBase.load
-    bpy.types.NodeReroute.dump = NodeBase.dump
-    bpy.types.NodeReroute.update = NodeBase.update
-    bpy.types.NodeReroute.serialize_pre = NodeBase.serialize_pre
-    bpy.types.NodeReroute.serialize = NodeBase.serialize
-    bpy.types.NodeReroute.post_fn = NodeBase.post_fn
-    bpy.types.NodeReroute.pre_fn = NodeBase.pre_fn
-    bpy.types.NodeReroute.apply_unique_id = NodeBase.apply_unique_id
-    bpy.types.NodeReroute.unique_id = NodeBase.unique_id
-    bpy.types.NodeReroute.calc_slot_index = NodeBase.calc_slot_index
-    bpy.types.NodeReroute.is_base_type = NodeBase.is_base_type
-    bpy.types.NodeReroute.get_meta = NodeBase.get_meta
-    bpy.types.NodeReroute.query_stat = NodeBase.query_stat
-    bpy.types.NodeReroute.set_stat = NodeBase.set_stat
-    bpy.types.NodeReroute.switch_socket = NodeBase.switch_socket
-    bpy.types.NodeReroute.get_from_link = NodeBase.get_from_link
-    bpy.types.NodeReroute.get_ctxt = NodeBase.get_ctxt
-    bpy.types.NodeReroute.get_blueprints = NodeBase.get_blueprints
-    bpy.types.NodeReroute.get_tree = NodeBase.get_tree
-
-    bpy.types.NodeReroute.class_type = "Reroute"
-    bpy.types.NodeReroute.__metadata__ = {}
-    bpy.types.NodeReroute.inp_types = []
-    bpy.types.NodeReroute.out_types = []
+        inode.class_type = "Reroute"
+        inode.__metadata__ = {}
+        inode.inp_types = []
+        inode.out_types = []
     bpy.types.NodeFrame.class_type = "NodeFrame"
 
 
