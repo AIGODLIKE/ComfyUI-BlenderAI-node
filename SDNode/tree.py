@@ -98,20 +98,12 @@ class CFNodeTree(NodeTree):
     display_shape = {"CIRCLE"}
     outUpdate: bpy.props.BoolProperty(default=False)
     root: bpy.props.BoolProperty(default=True)
-    instance = None
 
     @staticmethod
     def refresh_current_tree():
-        CFNodeTree.instance = getattr(bpy.context.space_data, "edit_tree", None)
-
-    @staticmethod
-    def get_current_tree():
-        return CFNodeTree.instance
+        ...
 
     def update(self):
-        if self.root:
-            CFNodeTree.instance = self
-            logger.error(f"SET INST :{self.name}")
         print(f"CFNodeTree Update {self.name}", time.time())
 
     def serialize_pre(self):
