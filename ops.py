@@ -46,14 +46,14 @@ class LoopExec(WorkerFunc):
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
         if TaskManager.get_task_num() != 0:
             return
-        nt: CFNodeTree = LoopExec.args.get("nt", None)
+        tree: CFNodeTree = LoopExec.args.get("tree", None)
         try:
-            nt.load_json
+            tree.load_json
         except ReferenceError:
             return
         except AttributeError:
             return
-        with bpy.context.temp_override(sdn_tree=nt):
+        with bpy.context.temp_override(sdn_tree=tree):
             bpy.ops.sdn.ops(action="Submit")
 
 
@@ -200,7 +200,7 @@ class Ops(bpy.types.Operator):
             Ops.is_advanced_enable = True
             if bpy.context.scene.sdn.loop_exec:
                 loop_exec = LoopExec()
-                loop_exec.args["nt"] = tree
+                loop_exec.args["tree"] = tree
                 Worker.push_worker(loop_exec)
                 return {"FINISHED"}
             for _ in range(bpy.context.scene.sdn.batch_count):
