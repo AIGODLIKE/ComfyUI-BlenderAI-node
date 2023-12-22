@@ -20,7 +20,7 @@ from random import random as rand
 from functools import partial, lru_cache
 from mathutils import Vector, Matrix
 from bpy.types import Context, Event
-from .utils import gen_mask, get_tree, SELECTED_COLLECTIONS
+from .utils import SELECTED_COLLECTIONS, get_default_tree
 from ..utils import logger, update_screen, Icon, _T
 from ..datas import ENUM_ITEMS_CACHE, IMG_SUFFIX
 from ..preference import get_pref
@@ -152,6 +152,9 @@ class NodeBase(bpy.types.Node):
     pool = set()
     class_type: str
 
+    def is_group(self) -> bool:
+        return False
+
     def get_tree(self):
         from .tree import CFNodeTree
         tree: CFNodeTree = self.id_data
@@ -239,7 +242,7 @@ class NodeBase(bpy.types.Node):
             name = node.name
             self.get_tree().safe_remove_nodes([node])
 
-            def f(self, name):
+            def f(self: NodeBase, name):
                 self.name = name
             Timer.put((f, self, name))
 
@@ -427,7 +430,7 @@ class Ops_Swith_Socket(bpy.types.Operator):
     action: bpy.props.StringProperty(default="")
 
     def execute(self, context):
-        tree = get_tree()
+        tree = get_default_tree()
         node: NodeBase = None
         socket_name = get_ori_name(self.socket_name)
         if not (node := tree.nodes.get(self.node_name)):
@@ -461,7 +464,7 @@ class Ops_Add_SaveImage(bpy.types.Operator):
     node_name: bpy.props.StringProperty()
 
     def execute(self, context):
-        tree = get_tree()
+        tree = get_default_tree()
         node: NodeBase = None
         if not (node := tree.nodes.get(self.node_name)):
             return {"FINISHED"}
@@ -484,7 +487,7 @@ class Ops_Active_Tex(bpy.types.Operator):
     def execute(self, context):
         if not (img := bpy.data.images.get(self.img_name)):
             return {"FINISHED"}
-        tree = get_tree()
+        tree = get_default_tree()
         if not (node := tree.nodes.get(self.node_name)):
             return {"FINISHED"}
         node.image = None if img == node.image else img

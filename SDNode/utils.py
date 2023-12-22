@@ -4,24 +4,41 @@ from pathlib import Path
 from ..utils import logger, _T
 SELECTED_COLLECTIONS = []
 
-def get_tree(current=False, screen=None):
-    tree = getattr(bpy.context.space_data, "edit_tree", None)
-    if tree:
-        return tree
+
+def get_default_tree(context=None) -> "CFNodeTree":
+    if context is None:
+        context = bpy.context
+    if hasattr(context, "sdn_tree"):
+        return context.sdn_tree
+    return getattr(context.space_data, "edit_tree", None)
+
+
+def get_trees_from_screen(screen=None) -> list["CFNodeTree"]:
     if screen is None:
         screen = bpy.context.screen
+    trees = []
     for a in screen.areas:
         if a.type != "NODE_EDITOR":
             continue
         for s in a.spaces:
             if s.type != "NODE_EDITOR" or s.tree_type != "CFNodeTree":
                 continue
-            tree = s.edit_tree
+            trees.append(s.edit_tree)
+    return trees
+
+
+def get_tree(current=False, screen=None) -> "CFNodeTree":
+    tree = getattr(bpy.context.space_data, "edit_tree", None)
+    if tree:
+        return tree
+    trees = get_trees_from_screen(screen)
+    if trees:
+        tree = trees[0]
     if current:
         return tree
-    if not tree:
-        from .tree import CFNodeTree
-        tree = CFNodeTree.instance
+    # if not tree:
+    #     from .tree import CFNodeTree
+    #     tree = CFNodeTree.get_current_tree()
     try:
         t = tree.load_json
     except ReferenceError:
@@ -29,6 +46,7 @@ def get_tree(current=False, screen=None):
     except AttributeError:
         return tree
     return tree
+
 
 def get_cmpt(nt: bpy.types.NodeTree):
     for node in nt.nodes:

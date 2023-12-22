@@ -1,3 +1,4 @@
+from __future__ import annotations
 import bpy
 import typing
 import time
@@ -12,7 +13,7 @@ from functools import partial
 from collections import OrderedDict
 from bpy.types import NodeTree
 from nodeitems_utils import NodeCategory, NodeItem, register_node_categories, unregister_node_categories, _node_categories
-from .nodes import nodes_reg, nodes_unreg, NodeParser, NodeBase, get_tree, clear_nodes_data_cache
+from .nodes import nodes_reg, nodes_unreg, NodeParser, NodeBase, clear_nodes_data_cache
 from ..utils import logger, Icon, rgb2hex, hex2rgb, _T, FSWatcher
 from ..datas import EnumCache
 from ..timer import Timer
@@ -96,10 +97,22 @@ class CFNodeTree(NodeTree):
     bl_icon = "EVENT_T"
     display_shape = {"CIRCLE"}
     outUpdate: bpy.props.BoolProperty(default=False)
+    root: bpy.props.BoolProperty(default=True)
     instance = None
 
+    @staticmethod
+    def refresh_current_tree():
+        CFNodeTree.instance = getattr(bpy.context.space_data, "edit_tree", None)
+
+    @staticmethod
+    def get_current_tree():
+        return CFNodeTree.instance
+
     def update(self):
-        CFNodeTree.instance = self
+        if self.root:
+            CFNodeTree.instance = self
+            logger.error(f"SET INST :{self.name}")
+        print(f"CFNodeTree Update {self.name}", time.time())
 
     def serialize_pre(self):
         for node in self.get_nodes():
@@ -680,6 +693,7 @@ def reg_node_reroute():
         inode.get_ctxt = NodeBase.get_ctxt
         inode.get_blueprints = NodeBase.get_blueprints
         inode.get_tree = NodeBase.get_tree
+        inode.is_group = NodeBase.is_group
 
         inode.class_type = "Reroute"
         inode.__metadata__ = {}
@@ -690,9 +704,11 @@ def reg_node_reroute():
 
 def update_tree_handler():
     try:
-        if CFNodeTree.instance:
-            CFNodeTree.instance.update_tick()
-            CFNodeTree.instance.calc_unique_id()
+        for group in bpy.data.node_groups:
+            if group.bl_idname != TREE_TYPE:
+                continue
+            group.update_tick()
+            group.calc_unique_id()
     except ReferenceError:
         ...
     except Exception as e:

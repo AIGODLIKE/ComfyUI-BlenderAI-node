@@ -70,7 +70,7 @@ sampler_name_map = {
 # }
 
 
-def get_tree():
+def get_screen_tree():
     import bpy
     for a in bpy.context.screen.areas:
         for s in a.spaces:
@@ -133,7 +133,7 @@ def load_apn_config(data):
     # ['euler','euler_ancestral','heun','dpm_2','dpm_2_ancestral','lms','dpm_fast','dpm_adaptive','dpmpp_2s_ancestral','dpmpp_sde','dpmpp_2m','ddim','uni_pc','uni_pc_bh2']
     # ====================================================
     
-    tree = get_tree()
+    tree = get_screen_tree()
     if not tree:
         return
     logger.info(f"Recv APN Data -> {config}")
