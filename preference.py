@@ -250,7 +250,7 @@ class AddonPreference(bpy.types.AddonPreferences):
                     self.port = int(port.group(1))
             config = " ".join(config)
             config = re.split(r"\s(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)", config)
-            logger.info(f"{_T('Reparse Config')}: {config}")
+            # logger.info(f"{_T('Reparse Config')}: {config}")
             # config = " ".join(config).split(" ")  # resplit
             for i, piece in enumerate(config):
                 if piece[0] == piece[-1] == "\"":
@@ -263,7 +263,7 @@ class AddonPreference(bpy.types.AddonPreferences):
                 config.remove("--disable-auto-launch")
             if "--windows-standalone-build" in config:
                 config.remove("--windows-standalone-build")
-            logger.info(f"{_T('Find Config')}: {config}")
+            # logger.info(f"{_T('Find Config')}: {config}")
         except IndexError:
             logger.error(_T("No Config File Found"))
         except Exception as e:
