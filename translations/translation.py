@@ -189,6 +189,7 @@ other = {
     "Invalid Node Type: {}": "检查到无效的节点: {}",
     "ParseNode Time:": "解析节点耗时:",
     "Changed Node": "变更节点",
+    "SDNGroup": "组",
     # SDNode/utils.py
     "Gen Mask": "遮罩生成",
     # SDNode/nodegroup.py

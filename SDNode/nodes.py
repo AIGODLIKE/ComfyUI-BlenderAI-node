@@ -147,10 +147,17 @@ class NodeBase(bpy.types.Node):
     bl_width_min = 200.0
     bl_width_max = 2000.0
     sdn_order: bpy.props.IntProperty(default=-1)
+    sdn_dirty: bpy.props.BoolProperty(default=False)
     id: bpy.props.StringProperty(default="-1")
     builtin__stat__: bpy.props.StringProperty(subtype="BYTE_STRING")  # ori name: True/False
     pool = set()
     class_type: str
+
+    def is_dirty(self):
+        return self.sdn_dirty
+
+    def set_dirty(self, value=True):
+        self.sdn_dirty = value
 
     def is_group(self) -> bool:
         return False
@@ -432,6 +439,8 @@ class Ops_Swith_Socket(bpy.types.Operator):
     def execute(self, context):
         tree = get_default_tree()
         node: NodeBase = None
+        if context.node and context.node.is_group():
+            tree = context.node.node_tree
         socket_name = get_ori_name(self.socket_name)
         if not (node := tree.nodes.get(self.node_name)):
             return {"FINISHED"}
@@ -440,6 +449,10 @@ class Ops_Swith_Socket(bpy.types.Operator):
                 node.switch_socket(socket_name, True)
             case "ToProp":
                 node.switch_socket(socket_name, False)
+        if context.node and context.node.is_group():
+            tree.interface_update(context)
+            tree.update()
+            context.node.update()
         self.action = ""
         return {"FINISHED"}
 
@@ -970,7 +983,8 @@ class NodeParser:
                 "bl_label": stype,
                 "draw_color": lambda s, c: s.color,
                 "draw": lambda s, c, l: l.label(text=s.bl_label),
-                "__annotations__": {"color": color, },
+                "__annotations__": {"color": color,
+                                    "sid": bpy.props.StringProperty(default="")}
             }
             base = getattr(bpy.types, "NodeSocketInterface",
                            getattr(bpy.types, "NodeTreeInterfaceSocket", None))
