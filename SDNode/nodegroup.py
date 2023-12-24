@@ -4,8 +4,12 @@ from bpy.types import Context, Event, UILayout, Node, NodeTree, NodeSocket, Node
 from mathutils import Vector
 from ..kclogger import logger
 from ..utils import _T
-from .nodes import NodeBase
+from ..translations import get_reg_name
+from .nodes import NodeBase, Ops_Swith_Socket
 from .utils import get_default_tree
+
+SOCK_TAG = "SDN_LINK_SOCK"
+NODE_TAG = "SDN_NODES"
 
 
 class SDNGroup(bpy.types.NodeCustomGroup, NodeBase):
@@ -18,6 +22,11 @@ class SDNGroup(bpy.types.NodeCustomGroup, NodeBase):
     inp_types = {}
     out_types = {}
 
+    def node_tree_update(self, context):
+        self.update()
+    node_tree: bpy.props.PointerProperty(type=bpy.types.NodeTree,
+                                         update=node_tree_update)
+
     def is_group(self) -> bool:
         return True
 
@@ -25,37 +34,63 @@ class SDNGroup(bpy.types.NodeCustomGroup, NodeBase):
         from ..utils import ScopeTimer
         t = ScopeTimer(f"G {self.name} Update", prt=logger.error)
         super().update()
+        self.recursive_check()
         if not self.node_tree:
             self.clear_sockets()
             return
+        self.ensure_inner_nodes()
         tree_inputs = list(self.node_tree.sockets("INPUT"))
         tree_outputs = list(self.node_tree.sockets("OUTPUT"))
         self.validate_sockets(self.inputs, tree_inputs)
         self.validate_sockets(self.outputs, tree_outputs)
         self.inner_links_update()
         self.adjust_sockets_order()
+        # hack: update outer socket
+        self.name = self.name
+
+    def recursive_check(self):
+        if self.node_tree == self.id_data:
+            self.node_tree = None
+
+    def ensure_inner_nodes(self):
+        nodes = set()
+        tree = self.node_tree
+        for node in self.node_tree.nodes:
+            if node.bl_idname in ("NodeGroupInput", "NodeGroupOutput"):
+                continue
+            nodes.add(node.name)
+        nodes = list(nodes)
+        if NODE_TAG not in tree or tree[NODE_TAG] != nodes:
+            self.clear_interface(tree)
+            tree[NODE_TAG] = nodes
+        if NODE_TAG not in self or self[NODE_TAG] != nodes:
+            self.clear_sockets()
+            self[NODE_TAG] = nodes
+
+    def get_in_out_node(self) -> list[bpy.types.Node]:
+        in_node = None
+        out_node = None
+        if not self.node_tree:
+            return in_node, out_node
+        for n in self.node_tree.nodes:
+            if n.bl_idname == "NodeGroupInput":
+                in_node = n
+            elif n.bl_idname == "NodeGroupOutput":
+                out_node = n
+        return in_node, out_node
 
     def inner_links_update(self):
         # 将未连接的 socket 全连到 GroupInput 和 GroupOutput
         tree: bpy.types.NodeTree = self.node_tree
 
-        def get_in_out_node(tree: bpy.types.NodeTree) -> list[bpy.types.Node]:
-            in_node = None
-            out_node = None
-            for n in tree.nodes:
-                if n.bl_idname == "NodeGroupInput":
-                    in_node = n
-                elif n.bl_idname == "NodeGroupOutput":
-                    out_node = n
-            return in_node, out_node
-        inode, onode = get_in_out_node(tree)
+        inode, onode = self.get_in_out_node()
         if not inode or not onode:
             return
         inode.update()
         onode.update()
 
         def ensure_interface(tree: NodeTree, node: Node, s: NodeSocket, in_out):
-            sid = node.name + " " + s.identifier
+            sid = f"{node.name}[{s.identifier}]"
             stype = getattr(s, "bl_socket_idname", s.bl_idname)
             for it in tree.interface.items_tree:
                 if it.sid == sid and it.in_out == in_out:
@@ -67,7 +102,7 @@ class SDNGroup(bpy.types.NodeCustomGroup, NodeBase):
         def find_socket(io: Node, node: Node, name, in_out):
             sockets = io.inputs if in_out == "OUTPUT" else io.outputs
             for s in sockets:
-                if s.name == node.name + " " + name:
+                if s.name == f"{node.name}[{name}]":
                     return s
             return None
 
@@ -108,7 +143,7 @@ class SDNGroup(bpy.types.NodeCustomGroup, NodeBase):
             if it.in_out == "OUTPUT":
                 interface_outputs[it.sid] = len(interface_outputs)
         for i in range(len(self.inputs) - 1):
-            while True:
+            for _ in range(len(self.inputs) ** 2):
                 inp = self.inputs[i]
                 tindex = interface_inputs.get(inp.name, -1)
                 if tindex == -1:
@@ -119,9 +154,9 @@ class SDNGroup(bpy.types.NodeCustomGroup, NodeBase):
                     break
                 self.inputs.move(i, tindex)
         for i in range(len(self.outputs) - 1):
-            while True:
-                outp = self.outputs[i]
-                tindex = interface_outputs.get(outp.name, -1)
+            for _ in range(len(self.outputs) ** 2):
+                out = self.outputs[i]
+                tindex = interface_outputs.get(out.name, -1)
                 if tindex == -1:
                     self.clear_sockets()
                     self.update()
@@ -142,7 +177,14 @@ class SDNGroup(bpy.types.NodeCustomGroup, NodeBase):
             if sf.identifier in sti:
                 continue
             t = getattr(sf, "bl_socket_idname", sf.bl_idname)
-            sts.new(t, sf.name, identifier=sf.identifier)
+            sock = sts.new(t, sf.name, identifier=sf.identifier)
+            sock[SOCK_TAG] = sf.identifier
+
+    def clear_interface(self, tree):
+        if not tree:
+            return
+        for it in list(tree.interface.items_tree):
+            tree.interface.remove(it)
 
     def clear_sockets(self):
         for s in list(self.inputs):
@@ -178,6 +220,32 @@ class SDNGroup(bpy.types.NodeCustomGroup, NodeBase):
             box = layout.box()
             box.label(text=node.name)
             node.draw_buttons(context, box)
+
+    def draw_socket(_self, self: bpy.types.NodeSocket, context, layout, node: NodeBase, text):
+        if not node.node_tree:
+            return
+        # logger.error(node.name)
+        if SOCK_TAG in self:
+            inode, onode = node.get_in_out_node()
+            link_sock = self[SOCK_TAG]
+            if self.is_output and (sock := onode.inputs.get(link_sock)):
+                link = sock.links[0]
+                link.from_socket.draw(context, layout, link.from_node, "SDN_OUTER_OUTPUT")
+            if not self.is_output and (sock := inode.outputs.get(link_sock)):
+                link = sock.links[0]
+                link.to_socket.draw(context, layout, link.to_node, "SDN_OUTER_INPUT")
+        else:
+            layout.label(text=text)
+
+    def free(self):
+        self.pool.discard(self.id)
+        bp = self.get_blueprints()
+        bp.free(self)
+        tree = self.node_tree
+        if not self.node_tree:
+            return
+        if tree.users == 1 or (tree.use_fake_user and tree.users == 2):
+            bpy.data.node_groups.remove(self.node_tree, do_unlink=True)
 
 
 class SDNNewGroup(bpy.types.Operator):

@@ -175,12 +175,20 @@ class NodeBase(bpy.types.Node):
         from ..translations.translation import get_ctxt
         return get_ctxt(self.class_type)
 
-    def query_stat(self, name):
+    def query_stats(self) -> dict:
         if not self.builtin__stat__:
-            return None
-        stat = pickle.loads(self.builtin__stat__)
+            return {}
+        return pickle.loads(self.builtin__stat__)
+
+    def query_stat(self, name):
+        stat = self.query_stats()
         name = get_ori_name(name)
         return stat.get(name, None)
+
+    def set_stat(self, name, value):
+        stat = self.query_stats()
+        stat[name] = value
+        self.builtin__stat__ = pickle.dumps(stat)
 
     def is_base_type(self, name):
         """
@@ -188,13 +196,6 @@ class NodeBase(bpy.types.Node):
         """
         reg_name = get_reg_name(name)
         return hasattr(self, reg_name)
-
-    def set_stat(self, name, value):
-        if not self.builtin__stat__:
-            self.builtin__stat__ = pickle.dumps({})
-        stat = pickle.loads(self.builtin__stat__)
-        stat[name] = value
-        self.builtin__stat__ = pickle.dumps(stat)
 
     def switch_socket(self, name, value):
         self.set_stat(name, value)
@@ -403,6 +404,27 @@ class NodeBase(bpy.types.Node):
         bp = self.get_blueprints()
         return bp.make_serialze(self)
 
+    def draw_socket(_self, self: bpy.types.NodeSocket, context, layout, node: NodeBase, text):
+        if node.bl_idname == "NodeUndefined":
+            return
+        rinfo = ""
+        linfo = ""
+        if text == "SDN_OUTER_INPUT":
+            rinfo = f" [{_T(node.name)}]"
+        if text == "SDN_OUTER_OUTPUT":
+            linfo = f"[{_T(node.name)}] "
+        prop = get_reg_name(self.name)
+        if self.is_output or not hasattr(node, prop):
+            layout.label(text=linfo + _T(self.name) + rinfo, text_ctxt=node.get_ctxt())
+            return
+        row = layout.row(align=True)
+        row.label(text=linfo + _T(prop) + rinfo, text_ctxt=node.get_ctxt())
+        op = row.operator(Ops_Swith_Socket.bl_idname, text="", icon="UNLINKED")
+        op.node_name = node.name
+        op.socket_name = self.name
+        op.action = "ToProp"
+        row.prop(node, prop, text="", text_ctxt=node.get_ctxt())
+
 
 class SocketBase(bpy.types.NodeSocket):
     allowLink = {"*", }
@@ -452,7 +474,8 @@ class Ops_Swith_Socket(bpy.types.Operator):
         if context.node and context.node.is_group():
             tree.interface_update(context)
             tree.update()
-            context.node.update()
+            # 通知更新所有节点
+            bpy.msgbus.publish_rna(key=(bpy.types.SpaceNodeEditor, "node_tree"))
         self.action = ""
         return {"FINISHED"}
 
@@ -952,19 +975,7 @@ class NodeParser:
                 continue
 
             def draw(self, context, layout, node: NodeBase, text):
-                if node.bl_idname == "NodeUndefined":
-                    return
-                prop = get_reg_name(self.name)
-                if self.is_output or not hasattr(node, prop):
-                    layout.label(text=self.name, text_ctxt=node.get_ctxt())
-                    return
-                row = layout.row(align=True)
-                row.label(text=prop, text_ctxt=node.get_ctxt())
-                op = row.operator(Ops_Swith_Socket.bl_idname, text="", icon="UNLINKED")
-                op.node_name = node.name
-                op.socket_name = self.name
-                op.action = "ToProp"
-                row.prop(node, prop, text="", text_ctxt=node.get_ctxt())
+                node.draw_socket(self, context, layout, node, text)
             rand_color = (rand()**0.5, rand()**0.5, rand()**0.5, 1)
             color = bpy.props.FloatVectorProperty(size=4, default=rand_color)
             __annotations__ = {"color": color,

@@ -3,6 +3,7 @@ import bpy
 import typing
 import time
 import sys
+import pickle
 import traceback
 from hashlib import md5
 from string import ascii_letters
@@ -96,6 +97,7 @@ class CFNodeTree(NodeTree):
     bl_label = "ComfyUI Node"
     bl_icon = "EVENT_T"
     display_shape = {"CIRCLE"}
+    msgbus_owner = object()
     outUpdate: bpy.props.BoolProperty(default=False)
     root: bpy.props.BoolProperty(default=True)
 
@@ -555,6 +557,8 @@ class CFNodeTree(NodeTree):
         CFNodeTree.force_regen_id()
         CFNodeTree.reset_node()
         Timer.reg()
+        CFNodeTree.unreg_switch_update()
+        CFNodeTree.reg_switch_update()
 
     @staticmethod
     def reset_node():
@@ -581,6 +585,26 @@ class CFNodeTree(NodeTree):
                 else:
                     pool.add(node.id)
                     # logger.debug("Add: %s", node.id)
+
+    @staticmethod
+    def reg_switch_update():
+        def switch_tree_update():
+            for group in bpy.data.node_groups:
+                group: CFNodeTree = group
+                if group.bl_idname != TREE_TYPE:
+                    continue
+                for node in group.get_nodes():
+                    node.update()
+        bpy.msgbus.subscribe_rna(
+            key=(bpy.types.SpaceNodeEditor, "node_tree"),
+            owner=CFNodeTree,
+            args=(),
+            notify=switch_tree_update,
+        )
+
+    @staticmethod
+    def unreg_switch_update():
+        bpy.msgbus.clear_by_owner(CFNodeTree)
 
 
 class CFNodeCategory(NodeCategory):
@@ -694,6 +718,7 @@ def reg_node_reroute():
         inode.calc_slot_index = NodeBase.calc_slot_index
         inode.is_base_type = NodeBase.is_base_type
         inode.get_meta = NodeBase.get_meta
+        inode.query_stats = NodeBase.query_stats
         inode.query_stat = NodeBase.query_stat
         inode.set_stat = NodeBase.set_stat
         inode.switch_socket = NodeBase.switch_socket
@@ -704,9 +729,11 @@ def reg_node_reroute():
         inode.is_group = NodeBase.is_group
         inode.is_dirty = NodeBase.is_dirty
         inode.set_dirty = NodeBase.set_dirty
+        inode.draw_socket = NodeBase.draw_socket
 
         inode.class_type = "Reroute"
         inode.__metadata__ = {}
+        inode.builtin__stat__ = pickle.dumps({})
         inode.inp_types = []
         inode.out_types = []
     bpy.types.NodeFrame.class_type = "NodeFrame"
