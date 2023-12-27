@@ -75,8 +75,9 @@ def save_json_wrapper(func):
                 if "(Blender特供)" in node.get("title", ""):
                     node["title"] = node.get("title", "").replace("(Blender特供)", "")
             return res
-        except BaseException:
+        except Exception as e:
             logger.error(traceback.format_exc())
+            raise e
         return {}
     return wrapper
 
@@ -335,6 +336,12 @@ class CFNodeTree(NodeTree):
             from_socket = link.from_socket
             to_node = link.to_node
             to_socket = link.to_socket
+            if not from_socket.node.is_registered_node_type():
+                logger.error(_T("Invalid Node Type: {}").format(from_socket.node.name))
+                raise InvalidNodeType(_T("Invalid Node Type: {}").format(from_socket.node.name))
+            if not to_socket.node.is_registered_node_type():
+                logger.error(_T("Invalid Node Type: {}").format(to_socket.node.name))
+                raise InvalidNodeType(_T("Invalid Node Type: {}").format(to_socket.node.name))
             link_info = [
                 i,
                 int(from_socket.node.id),
@@ -583,6 +590,8 @@ class CFNodeTree(NodeTree):
         self.id_clear_update()
         self.calc_unique_id()
         for node in self.nodes:
+            if not node.is_registered_node_type():
+                continue
             self.primitive_node_update(node)
             self.dirty_nodes_update(node)
             self.group_nodes_update(node)
@@ -591,6 +600,8 @@ class CFNodeTree(NodeTree):
         ids = set()
         nodes = self.get_nodes(cmf=True)
         for node in nodes:
+            if not node.is_registered_node_type():
+                continue
             if node.bl_idname in {"NodeGroupInput", "NodeGroupOutput"}:
                 continue
             ids.add(node.id)
@@ -656,6 +667,10 @@ class CFNodeTree(NodeTree):
                     # link_id = output.links[j] # 全局 links 是一个列表,这里的 link_id 用来取link
                     from_node = self.find_from_node(olink)
                     to_node = self.find_to_node(olink)
+                    if from_node.bl_idname == "NodeGroupInput":
+                        from_node = None
+                    if to_node.bl_idname == "NodeGroupOutput":
+                        to_node = None
                     {"id": 1, "type": "MODEL", "origin_id": 4, "origin_slot": 0, "target_id": 3, "target_slot": 0, "_data": None, "_pos": {"0": 607, "1": 335}}
                     if to_node is None:
                         continue

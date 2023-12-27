@@ -418,7 +418,7 @@ class NodeBase(bpy.types.Node):
         return bp.make_serialze(self)
 
     def draw_socket(_self, self: bpy.types.NodeSocket, context, layout, node: NodeBase, text):
-        if node.bl_idname == "NodeUndefined":
+        if not node.is_registered_node_type():
             return
         rinfo = ""
         linfo = ""
@@ -988,6 +988,8 @@ class NodeParser:
                 continue
 
             def draw(self, context, layout, node: NodeBase, text):
+                if not node.is_registered_node_type():
+                    return
                 node.draw_socket(self, context, layout, node, text)
             rand_color = (rand()**0.5, rand()**0.5, rand()**0.5, 1)
             color = bpy.props.FloatVectorProperty(size=4, default=rand_color)

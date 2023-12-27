@@ -60,7 +60,9 @@ class SDNGroup(bpy.types.NodeCustomGroup, NodeBase):
         nodes = {}
         tree = self.node_tree
         for node in self.node_tree.nodes:
-            if node.bl_idname in ("NodeGroupInput", "NodeGroupOutput"):
+            if not node.is_registered_node_type():
+                continue
+            if node.bl_idname in ("NodeGroupInput", "NodeGroupOutput", "PrimitiveNode"):
                 continue
             isocks = []
             nodes[node.name] = isocks
@@ -116,7 +118,7 @@ class SDNGroup(bpy.types.NodeCustomGroup, NodeBase):
 
         old_new = []
         # 构造顺序 ori_socket -> base_type_socket
-        inner_nodes = [n for n in self.get_sort_inner_nodes() if n.bl_idname not in {"NodeGroupInput", "NodeGroupOutput"}]
+        inner_nodes = [n for n in self.get_sort_inner_nodes() if n.bl_idname not in {"NodeGroupInput", "NodeGroupOutput", "PrimitiveNode"}]
         # 原始socket
         for n in inner_nodes:
             for s in n.inputs:
@@ -244,7 +246,9 @@ class SDNGroup(bpy.types.NodeCustomGroup, NodeBase):
             tree.interface.remove(it)
 
     def get_sort_inner_nodes(self) -> list[NodeBase]:
-        return sorted(self.node_tree.nodes, key=lambda x: int(x.id))
+        nodes = [n for n in self.node_tree.nodes if n.is_registered_node_type()]
+        nodes.sort(key=lambda x: int(x.id))
+        return nodes
 
     def draw_buttons(self, context: Context, layout: UILayout):
         layout.template_ID(self, "node_tree", new=SDNNewGroup.bl_idname)
@@ -253,7 +257,9 @@ class SDNGroup(bpy.types.NodeCustomGroup, NodeBase):
             return
         # 显示tree中的所有未连接属性
         for node in self.get_sort_inner_nodes():
-            if node.bl_idname in ("NodeGroupInput", "NodeGroupOutput"):
+            if not node.is_registered_node_type():
+                continue
+            if node.bl_idname in ("NodeGroupInput", "NodeGroupOutput", "PrimitiveNode"):
                 continue
             box = layout.box()
             box.label(text=node.name)

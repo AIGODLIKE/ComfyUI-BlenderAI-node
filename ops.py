@@ -633,6 +633,11 @@ class Copy_Tree(bpy.types.Operator):
 
     def execute(self, context):
         tree = get_default_tree(context)
+        try:
+            workflow = tree.save_json()
+        except Exception as e:
+            self.report({"ERROR"}, str(e.args))
+            return {"FINISHED"}
         bpy.context.window_manager.clipboard = json.dumps(tree.save_json())
         # 弹出提示 已复制到剪切板
 

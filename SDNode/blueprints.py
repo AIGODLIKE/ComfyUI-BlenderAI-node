@@ -12,7 +12,7 @@ from pathlib import Path
 from copy import deepcopy
 from bpy.types import Context, UILayout
 
-from .nodegroup import LABEL_TAG, SOCK_TAG
+from .nodegroup import LABEL_TAG, SOCK_TAG, SDNGroup
 from .nodes import NodeBase
 from .utils import gen_mask
 from .plugins.animatedimageplayer import AnimatedImagePlayer as AIP
@@ -1596,10 +1596,10 @@ class SaveAnimatedWEBP(BluePrintBase):
         self.prev_name = ""
 
 
-class SDNGroup(BluePrintBase):
+class SDNGroupBP(BluePrintBase):
     comfyClass = "SDNGroup"
 
-    def dump(s, self: NodeBase, selected_only=False):
+    def dump(s, self: SDNGroup, selected_only=False):
         tree = self.get_tree()
         outer_all_links: list[bpy.types.NodeLink] = tree.links[:]
         all_links: list[bpy.types.NodeLink] = self.node_tree.links[:]
@@ -1609,9 +1609,18 @@ class SDNGroup(BluePrintBase):
         widgets_values = []
         # 组的 widgets_values 导出顺序非常重要 和 node.id有关
         for sn in self.get_sort_inner_nodes():
-            if sn.bl_idname in {"NodeGroupInput", "NodeGroupOutput"}:
+            if sn.bl_idname in {"NodeGroupInput", "NodeGroupOutput", "NodeUndefined"}:
                 continue
-            widgets_values += sn.dump(selected_only=selected_only).get("widgets_values")
+            nwidgets = sn.dump(selected_only=selected_only).get("widgets_values")
+            
+            # 需要将已经转为socket的widgets移除
+            rm_index = []
+            for i, inp_name in enumerate(sn.inp_types):
+                if sn.query_stat(inp_name):
+                    rm_index.append(i)
+            for i in rm_index[::-1]:
+                nwidgets.pop(i)
+            widgets_values += nwidgets
         inode, onode = self.get_in_out_node()
         for outer_inp in self.inputs:
             # TODO: 这里应该由 对应的node.query_stat
