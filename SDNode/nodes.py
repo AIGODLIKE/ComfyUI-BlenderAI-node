@@ -150,7 +150,6 @@ class NodeBase(bpy.types.Node):
     sdn_dirty: bpy.props.BoolProperty(default=False)
     id: bpy.props.StringProperty(default="-1")
     builtin__stat__: bpy.props.StringProperty(subtype="BYTE_STRING")  # ori name: True/False
-    pool = set()
     class_type: str
 
     def is_dirty(self):
@@ -192,10 +191,20 @@ class NodeBase(bpy.types.Node):
 
     def is_base_type(self, name):
         """
-        判断是不是基本类型, 目前通过 拥有注册属性名判断
+        是基本类型?
+        目前通过 拥有注册属性名判断
         """
         reg_name = get_reg_name(name)
         return hasattr(self, reg_name)
+
+    def is_ori_sock(self, name, in_out="INPUT"):
+        """
+        是原始socket?
+        """
+        reg_name = get_reg_name(name)
+        if in_out == "INPUT":
+            return not hasattr(self, reg_name) and self.inputs.get(name)
+        return not hasattr(self, reg_name) and self.outputs.get(name)
 
     def switch_socket(self, name, value):
         self.set_stat(name, value)
@@ -228,15 +237,19 @@ class NodeBase(bpy.types.Node):
         for i, out in enumerate(self.outputs):
             out.slot_index = i
 
+    def pool_get(self) -> set:
+        return self.get_tree().get_id_pool()
+
     def unique_id(self):
+        pool = self.pool_get()
         for i in range(3, 99999):
             i = str(i)
-            if i not in self.pool:
-                self.pool.add(i)
+            if i not in pool:
+                pool.add(i)
                 return i
 
     def free(self):
-        self.pool.discard(self.id)
+        self.pool_get().discard(self.id)
         bp = self.get_blueprints()
         bp.free(self)
 

@@ -9,6 +9,7 @@ from .nodes import NodeBase, Ops_Swith_Socket
 from .utils import get_default_tree
 
 SOCK_TAG = "SDN_LINK_SOCK"
+LABEL_TAG = "SDN_LABEL_TAG"
 NODE_TAG = "SDN_NODES"
 
 
@@ -53,17 +54,22 @@ class SDNGroup(bpy.types.NodeCustomGroup, NodeBase):
             self.node_tree = None
 
     def ensure_inner_nodes(self):
-        nodes = set()
+        """
+        检查node_tree是否有变化, 如果有变化则清空sockets
+        """
+        nodes = {}
         tree = self.node_tree
         for node in self.node_tree.nodes:
             if node.bl_idname in ("NodeGroupInput", "NodeGroupOutput"):
                 continue
-            nodes.add(node.name)
-        nodes = list(nodes)
-        if NODE_TAG not in tree or tree[NODE_TAG] != nodes:
+            isocks = []
+            nodes[node.name] = isocks
+            for s in node.inputs:
+                isocks.append(s.bl_idname)
+        if NODE_TAG not in tree or tree[NODE_TAG].to_dict() != nodes:
             self.clear_interface(tree)
             tree[NODE_TAG] = nodes
-        if NODE_TAG not in self or self[NODE_TAG] != nodes:
+        if NODE_TAG not in self or self[NODE_TAG].to_dict() != nodes:
             self.clear_sockets()
             self[NODE_TAG] = nodes
 
@@ -92,12 +98,14 @@ class SDNGroup(bpy.types.NodeCustomGroup, NodeBase):
         def ensure_interface(tree: NodeTree, node: Node, s: NodeSocket, in_out):
             sid = f"{node.name}[{s.identifier}]"
             stype = getattr(s, "bl_socket_idname", s.bl_idname)
+            if stype == "NodeSocketUndefined":
+                return None, False
             for it in tree.interface.items_tree:
                 if it.sid == sid and it.in_out == in_out:
-                    return it
+                    return it, False
             it = tree.interface.new_socket(sid, in_out=in_out, socket_type=stype)
             it.sid = sid
-            return it
+            return it, True
 
         def find_socket(io: Node, node: Node, name, in_out):
             sockets = io.inputs if in_out == "OUTPUT" else io.outputs
@@ -106,25 +114,54 @@ class SDNGroup(bpy.types.NodeCustomGroup, NodeBase):
                     return s
             return None
 
-        for n in tree.nodes:
-            if n.bl_idname in {"NodeGroupInput", "NodeGroupOutput"}:
-                continue
+        old_new = []
+        # 构造顺序 ori_socket -> base_type_socket
+        inner_nodes = [n for n in self.get_sort_inner_nodes() if n.bl_idname not in {"NodeGroupInput", "NodeGroupOutput"}]
+        # 原始socket
+        for n in inner_nodes:
             for s in n.inputs:
-                if s.links:
+                if s.links and s.links[0].from_node.bl_idname != "NodeGroupInput":
+                    continue
+                if not n.is_ori_sock(s.name):
                     continue
                 in_out = "INPUT"
-                it = ensure_interface(tree, n, s, in_out)
+                it, flag = ensure_interface(tree, n, s, in_out)
+                old_new.append(flag)
+                if s.links:
+                    continue
                 oo = find_socket(inode, n, s.identifier, in_out)
                 if it and oo:
                     tree.links.new(s, oo)
             for s in n.outputs:
-                if s.links:
+                if s.links and s.links[0].to_node.bl_idname != "NodeGroupOutput":
                     continue
                 in_out = "OUTPUT"
-                it = ensure_interface(tree, n, s, in_out)
+                it, flag = ensure_interface(tree, n, s, in_out)
+                old_new.append(flag)
+                if s.links:
+                    continue
                 oi = find_socket(onode, n, s.identifier, in_out)
                 if it and oi:
                     tree.links.new(oi, s)
+        # widgets
+        for n in inner_nodes:
+            for s in n.inputs:
+                if s.links and s.links[0].from_node.bl_idname != "NodeGroupInput":
+                    continue
+                if n.is_ori_sock(s.name):
+                    continue
+                in_out = "INPUT"
+                it, flag = ensure_interface(tree, n, s, in_out)
+                old_new.append(flag)
+                if s.links:
+                    continue
+                oo = find_socket(inode, n, s.identifier, in_out)
+                if it and oo:
+                    tree.links.new(s, oo)
+        # 全新增 或 全已存在 则不管
+        # 部分新增 部分已存在 则清空接口(保证顺序)
+        if not (all(old_new) or not any(old_new)):
+            self.clear_interface(tree)
         if self.is_dirty():
             return
         # 移除多余的socket
@@ -179,18 +216,16 @@ class SDNGroup(bpy.types.NodeCustomGroup, NodeBase):
             t = getattr(sf, "bl_socket_idname", sf.bl_idname)
             sock = sts.new(t, sf.name, identifier=sf.identifier)
             sock[SOCK_TAG] = sf.identifier
+            sock[LABEL_TAG] = t
 
     def clear_interface(self, tree):
         if not tree:
             return
-        for it in list(tree.interface.items_tree):
-            tree.interface.remove(it)
+        tree.interface.clear()
 
     def clear_sockets(self):
-        for s in list(self.inputs):
-            self.inputs.remove(s)
-        for s in list(self.outputs):
-            self.outputs.remove(s)
+        self.inputs.clear()
+        self.outputs.clear()
 
     def clear_unused_sockets(self, tree: NodeTree, inode: NodeBase, onode: NodeBase):
         rmit = []
@@ -208,13 +243,16 @@ class SDNGroup(bpy.types.NodeCustomGroup, NodeBase):
             onode.update()
             tree.interface.remove(it)
 
+    def get_sort_inner_nodes(self) -> list[NodeBase]:
+        return sorted(self.node_tree.nodes, key=lambda x: int(x.id))
+
     def draw_buttons(self, context: Context, layout: UILayout):
         layout.template_ID(self, "node_tree", new=SDNNewGroup.bl_idname)
         tree = self.node_tree
         if not tree:
             return
         # 显示tree中的所有未连接属性
-        for node in tree.nodes:
+        for node in self.get_sort_inner_nodes():
             if node.bl_idname in ("NodeGroupInput", "NodeGroupOutput"):
                 continue
             box = layout.box()
@@ -229,16 +267,21 @@ class SDNGroup(bpy.types.NodeCustomGroup, NodeBase):
             inode, onode = node.get_in_out_node()
             link_sock = self[SOCK_TAG]
             if self.is_output and (sock := onode.inputs.get(link_sock)):
+                if not sock.links:
+                    return
                 link = sock.links[0]
                 link.from_socket.draw(context, layout, link.from_node, "SDN_OUTER_OUTPUT")
             if not self.is_output and (sock := inode.outputs.get(link_sock)):
+                if not sock.links:
+                    return
                 link = sock.links[0]
                 link.to_socket.draw(context, layout, link.to_node, "SDN_OUTER_INPUT")
         else:
             layout.label(text=text)
 
     def free(self):
-        self.pool.discard(self.id)
+        pool = self.pool_get()
+        pool.discard(self.id)
         bp = self.get_blueprints()
         bp.free(self)
         tree = self.node_tree

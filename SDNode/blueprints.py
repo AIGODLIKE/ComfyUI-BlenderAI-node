@@ -11,6 +11,9 @@ from functools import partial, lru_cache
 from pathlib import Path
 from copy import deepcopy
 from bpy.types import Context, UILayout
+
+from .nodegroup import LABEL_TAG, SOCK_TAG
+from .nodes import NodeBase
 from .utils import gen_mask
 from .plugins.animatedimageplayer import AnimatedImagePlayer as AIP
 from .nodes import NodeBase, Ops_Add_SaveImage, Ops_Link_Mask, Ops_Active_Tex, Set_Render_Res, Ops_Swith_Socket
@@ -241,7 +244,8 @@ class BluePrintBase:
 
     def load(s, self: NodeBase, data, with_id=True):
         data = s.load_pre(self, data, with_id)
-        self.pool.discard(self.id)
+        pool = self.pool_get()
+        pool.discard(self.id)
         self.location[:] = [data["pos"][0], -data["pos"][1]]
         if isinstance(data["size"], list):
             self.width, self.height = [data["size"][0], -data["size"][1]]
@@ -255,7 +259,7 @@ class BluePrintBase:
         if with_id:
             try:
                 self.id = str(data["id"])
-                self.pool.add(self.id)
+                pool.add(self.id)
             except BaseException:
                 self.apply_unique_id()
         # 处理 inputs
@@ -336,6 +340,7 @@ class BluePrintBase:
             inp_info = {"name": ori_name,
                         "type": inp.bl_idname,
                         "link": None}
+            inp_info["label"] = inp.name
             link = self.get_from_link(inp)
             is_base_type = self.is_base_type(inp_name)
             if link:
@@ -1589,6 +1594,81 @@ class SaveAnimatedWEBP(BluePrintBase):
 
     def copy(s, self: NodeBase, node):
         self.prev_name = ""
+
+
+class SDNGroup(BluePrintBase):
+    comfyClass = "SDNGroup"
+
+    def dump(s, self: NodeBase, selected_only=False):
+        tree = self.get_tree()
+        outer_all_links: list[bpy.types.NodeLink] = tree.links[:]
+        all_links: list[bpy.types.NodeLink] = self.node_tree.links[:]
+
+        inputs = []
+        outputs = []
+        widgets_values = []
+        # 组的 widgets_values 导出顺序非常重要 和 node.id有关
+        for sn in self.get_sort_inner_nodes():
+            if sn.bl_idname in {"NodeGroupInput", "NodeGroupOutput"}:
+                continue
+            widgets_values += sn.dump(selected_only=selected_only).get("widgets_values")
+        inode, onode = self.get_in_out_node()
+        for outer_inp in self.inputs:
+            # TODO: 这里应该由 对应的node.query_stat
+            sid = outer_inp[SOCK_TAG]
+            slink = inode.outputs[sid].links[0]
+            inp = slink.to_socket
+            snode = slink.to_node
+            inp_name = inp.name
+            ori_name = get_ori_name(inp_name)
+            md = snode.get_meta(ori_name)
+            inp_info = {"name": ori_name,
+                        "type": inp.bl_idname,
+                        "link": None}
+            if LABEL_TAG in outer_inp:
+                inp_info["label"] = outer_inp[LABEL_TAG]
+            link = self.get_from_link(outer_inp)
+            is_base_type = snode.is_base_type(inp_name)
+            if link:
+                if not selected_only:
+                    inp_info["link"] = outer_all_links.index(outer_inp.links[0])
+                elif inp.links[0].from_node.select:
+                    inp_info["link"] = outer_all_links.index(outer_inp.links[0])
+            if is_base_type:
+                if not snode.query_stat(inp.name) or not md:
+                    continue
+                inp_info["widget"] = {"name": ori_name, "config": md}
+                inp_info["type"] = ",".join(md[0]) if isinstance(md[0], list) else md[0]
+            inputs.append(inp_info)
+        for i, out in enumerate(self.outputs):
+            out_info = {"name": out.name, "type": out.name}
+            if LABEL_TAG in out:
+                out_info["label"] = out[LABEL_TAG]
+                out_info["type"] = out[LABEL_TAG]
+            if not selected_only:
+                out_info["links"] = [outer_all_links.index(link) for link in out.links]
+            elif out.links:
+                out_info["links"] = [outer_all_links.index(link) for link in out.links if link.to_node.select]
+            out_info["slot_index"] = i
+            outputs.append(out_info)
+        cfg = {
+            "id": int(self.id),
+            "type": f"workflow/{self.node_tree.name}",
+            "pos": [self.location.x, -self.location.y],
+            "size": {"0": self.width, "1": self.height},
+            "flags": {},
+            "order": self.sdn_order,
+            "mode": 0,
+            "inputs": inputs,
+            "outputs": outputs,
+            "title": self.name,
+            "properties": {},
+            "widgets_values": widgets_values
+        }
+        __locals_copy__ = locals()
+        __locals_copy__.pop("s")
+        s.dump_specific(**__locals_copy__)
+        return cfg
 
 
 @lru_cache(maxsize=1024)
