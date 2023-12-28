@@ -62,7 +62,7 @@ class SDNGroup(bpy.types.NodeCustomGroup, NodeBase):
         for node in self.node_tree.nodes:
             if not node.is_registered_node_type():
                 continue
-            if node.bl_idname in ("NodeGroupInput", "NodeGroupOutput", "PrimitiveNode"):
+            if node.bl_idname in ("NodeGroupInput", "NodeGroupOutput"):
                 continue
             isocks = []
             nodes[node.name] = isocks
@@ -118,7 +118,7 @@ class SDNGroup(bpy.types.NodeCustomGroup, NodeBase):
 
         old_new = []
         # 构造顺序 ori_socket -> base_type_socket
-        inner_nodes = [n for n in self.get_sort_inner_nodes() if n.bl_idname not in {"NodeGroupInput", "NodeGroupOutput", "PrimitiveNode"}]
+        inner_nodes = [n for n in self.get_sort_inner_nodes() if n.bl_idname not in {"NodeGroupInput", "NodeGroupOutput"}]
         # 原始socket
         for n in inner_nodes:
             for s in n.inputs:
@@ -134,6 +134,8 @@ class SDNGroup(bpy.types.NodeCustomGroup, NodeBase):
                 oo = find_socket(inode, n, s.identifier, in_out)
                 if it and oo:
                     tree.links.new(s, oo)
+            if n.bl_idname == "PrimitiveNode":
+                continue
             for s in n.outputs:
                 if s.links and s.links[0].to_node.bl_idname != "NodeGroupOutput":
                     continue

@@ -348,7 +348,7 @@ class CFNodeTree(NodeTree):
                 from_socket.slot_index,
                 int(to_socket.node.id),
                 to_socket.slot_index,
-                to_node.class_type
+                to_socket.bl_idname
             ]
             if to_node.class_type == "Reroute":
                 link_info[-1] = "*"
