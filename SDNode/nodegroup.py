@@ -213,12 +213,15 @@ class SDNGroup(bpy.types.NodeCustomGroup, NodeBase):
             if st.identifier in sfi:
                 continue
             sts.remove(st)
+        index = 0
         # add new sockets
         for sf in list(sfs):
             if sf.identifier in sti:
                 continue
             t = getattr(sf, "bl_socket_idname", sf.bl_idname)
             sock = sts.new(t, sf.name, identifier=sf.identifier)
+            sock.slot_index = index
+            index += 1
             sock[SOCK_TAG] = sf.identifier
             sock[LABEL_TAG] = t
 

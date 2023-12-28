@@ -109,10 +109,11 @@ class Task:
                 self.executing_node.use_custom_color = False
                 self.executing_node.label = ""
             self.executing_node = None
+            pnode_id = node_id.split(":")[0]
             for n in self.tree.nodes:
                 if not hasattr(n, "id"):
                     continue
-                if n.id == node_id and n.bl_idname == self.node_ref_map.get(node_id, ""):
+                if n.id == pnode_id and n.bl_idname == self.node_ref_map.get(pnode_id, ""):
                     self.executing_node = n
                     break
             n = self.executing_node

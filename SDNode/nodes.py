@@ -390,12 +390,12 @@ class NodeBase(bpy.types.Node):
         bp = self.get_blueprints()
         return bp.serialize_pre(self)
 
-    def serialize(self, execute=True):
+    def serialize(self, execute=True, parent: NodeBase = None):
         """
         gen prompt
         """
         bp = self.get_blueprints()
-        return bp.serialize(self, execute)
+        return bp.serialize(self, execute, parent=parent)
 
     def load(self, data, with_id=True):
         bp = self.get_blueprints()
@@ -413,9 +413,9 @@ class NodeBase(bpy.types.Node):
         bp = self.get_blueprints()
         bp.pre_fn(self)
 
-    def make_serialze(self):
+    def make_serialize(self, parent: NodeBase = None) -> dict:
         bp = self.get_blueprints()
-        return bp.make_serialze(self)
+        return bp.make_serialize(self, parent=parent)
 
     def draw_socket(_self, self: bpy.types.NodeSocket, context, layout, node: NodeBase, text):
         if not node.is_registered_node_type():

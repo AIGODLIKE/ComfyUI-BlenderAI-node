@@ -409,7 +409,7 @@ class BluePrintBase:
             cfg["inputs"]["image"] = rpath.as_posix()
             cfg["inputs"]["frame"] = bpy.context.scene.frame_current
 
-    def serialize(s, self: NodeBase, execute=False):
+    def serialize(s, self: NodeBase, execute=False, parent: NodeBase = None):
         inputs = {}
         for inp_name in self.inp_types:
             # inp = self.inp_types[inp_name]
@@ -423,7 +423,30 @@ class BluePrintBase:
                         inputs[inp_name] = s.getattr(self, reg_name)
                     else:
                         # 添加 socket
-                        inputs[inp_name] = [link.from_node.id, link.from_node.outputs[:].index(link.from_socket)]
+                        fnode = link.from_node
+                        fid = fnode.id
+                        sock_index = fnode.outputs[:].index(link.from_socket)
+                        if fnode.bl_idname == "NodeGroupInput":
+                            # 需要拿到 NodeGroup 的 id
+                            sid = link.from_socket.identifier
+                            pinp = parent.inputs[sid]
+                            plink = self.get_from_link(pinp)
+                            pfnode = plink.from_node
+                            sock_index = pfnode.outputs[:].index(plink.from_socket)
+                            fid = pfnode.id
+                        elif fnode.is_group():
+                            # 需要拿到 NodeGroup 的 id
+                            gout_id = link.from_socket[SOCK_TAG]
+                            inode, onode = fnode.get_in_out_node()
+                            oinp = onode.inputs[gout_id]
+                            golink = self.get_from_link(oinp)
+                            gonode = golink.from_node
+                            fid = f"{fnode.id}:{gonode.id}"
+                            sock_index = gonode.outputs[:].index(golink.from_socket)
+                        elif parent:
+                            fid = f"{parent.id}:{fnode.id}"
+                        # fnode 可能是 NodeGroupInput 需要转换
+                        inputs[inp_name] = [fid, sock_index]
                 elif self.get_meta(inp_name):
                     if hasattr(self, reg_name):
                         # 添加 widget
@@ -454,8 +477,8 @@ class BluePrintBase:
     def post_fn(s, self: NodeBase, t: Task, result):
         logger.debug(f"BluePrintBase: {self.class_type} {_T('Post Function')}->{result}")
 
-    def make_serialze(s, self: NodeBase):
-        return (self.serialize(), self.pre_fn, self.post_fn)
+    def make_serialize(s, self: NodeBase, parent: NodeBase = None) -> dict:
+        return {self.id: (self.serialize(parent=parent), self.pre_fn, self.post_fn)}
 
     def free(s, self: NodeBase):
         ...
@@ -1031,7 +1054,7 @@ class 存储(BluePrintBase):
                 return True
         return True
 
-    def make_serialze(s, self: NodeBase):
+    def make_serialize(s, self: NodeBase, parent: NodeBase = None) -> dict:
         def __post_fn__(self: NodeBase, t: Task, result: dict, mode, image):
             logger.debug(f"{self.class_type}{_T('Post Function')}->{result}")
             img_paths = result.get("output", {}).get("images", [])
@@ -1051,7 +1074,7 @@ class 存储(BluePrintBase):
                         img_src.reload()
                 Timer.put((f, image, img))
         post_fn = partial(__post_fn__, self, mode=self.mode, image=self.image)
-        return self.serialize(), self.pre_fn, post_fn
+        return {self.id: (self.serialize(parent=parent), self.pre_fn, post_fn)}
 
     def serialize_specific(s, self: NodeBase, cfg, execute):
         if self.mode not in {"Import", "ToImage"}:
@@ -1612,7 +1635,7 @@ class SDNGroupBP(BluePrintBase):
             if sn.bl_idname in {"NodeGroupInput", "NodeGroupOutput", "NodeUndefined"}:
                 continue
             nwidgets = sn.dump(selected_only=selected_only).get("widgets_values")
-            
+
             # 需要将已经转为socket的widgets移除
             rm_index = []
             for i, inp_name in enumerate(sn.inp_types):
@@ -1678,6 +1701,17 @@ class SDNGroupBP(BluePrintBase):
         __locals_copy__.pop("s")
         s.dump_specific(**__locals_copy__)
         return cfg
+
+    def make_serialize(s, self: NodeBase, parent: NodeBase = None) -> dict:
+        tree = self.node_tree
+        if not tree:
+            return {}
+        sub_prompt = tree.serialize(parent=self)
+        prompt = {}
+        for k, v in sub_prompt.items():
+            prompt[f"{self.id}:{k}"] = v
+        return prompt
+        return {self.id: (self.serialize(), )}
 
 
 @lru_cache(maxsize=1024)

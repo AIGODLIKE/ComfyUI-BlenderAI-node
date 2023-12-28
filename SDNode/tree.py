@@ -189,13 +189,18 @@ class CFNodeTree(NodeTree):
             node.serialize_pre()
 
     @serialize_wrapper
-    def serialize(self):
+    def serialize(self, parent=None):
         """
         get prompts
         """
         self.validation()
         self.serialize_pre()
-        return {node.id: node.make_serialze() for node in self.get_nodes() if node.class_type not in {"Reroute", "PrimitiveNode", "Note"}}
+        prompt = {}
+        for node in self.get_nodes():
+            if node.class_type in {"Reroute", "PrimitiveNode", "Note"}:
+                continue
+            prompt.update(node.make_serialize(parent=parent))
+        return prompt
 
     def validation(self, nodes=None):
 
