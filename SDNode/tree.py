@@ -7,6 +7,7 @@ import time
 import sys
 import pickle
 import traceback
+import inspect
 from hashlib import md5
 from string import ascii_letters
 from pathlib import Path
@@ -856,36 +857,54 @@ def reg_node_reroute():
         inode.id = bpy.props.StringProperty(default="-1")
         inode.sdn_order = bpy.props.IntProperty(default=-1)
         inode.sdn_dirty = bpy.props.BoolProperty(default=False)
-        inode.load = NodeBase.load
-        inode.dump = NodeBase.dump
-        inode.update = NodeBase.update
-        inode.serialize_pre = NodeBase.serialize_pre
-        inode.serialize = NodeBase.serialize
-        inode.post_fn = NodeBase.post_fn
-        inode.pre_fn = NodeBase.pre_fn
-        inode.apply_unique_id = NodeBase.apply_unique_id
-        inode.unique_id = NodeBase.unique_id
-        inode.calc_slot_index = NodeBase.calc_slot_index
-        inode.is_base_type = NodeBase.is_base_type
+        # inode.is_dirty = NodeBase.is_dirty
+        # inode.set_dirty = NodeBase.set_dirty
+        # inode.is_group = NodeBase.is_group
+        # inode.get_tree = NodeBase.get_tree
+        # inode.load = NodeBase.load
+        # inode.dump = NodeBase.dump
+        # inode.update = NodeBase.update
+        # inode.serialize_pre = NodeBase.serialize_pre
+        # inode.serialize = NodeBase.serialize
+        # inode.post_fn = NodeBase.post_fn
+        # inode.pre_fn = NodeBase.pre_fn
+        # inode.apply_unique_id = NodeBase.apply_unique_id
+        # inode.unique_id = NodeBase.unique_id
+        # inode.calc_slot_index = NodeBase.calc_slot_index
+        # inode.is_base_type = NodeBase.is_base_type
         inode.get_meta = NodeBase.get_meta
-        inode.query_stats = NodeBase.query_stats
-        inode.query_stat = NodeBase.query_stat
-        inode.set_stat = NodeBase.set_stat
-        inode.switch_socket = NodeBase.switch_socket
-        inode.get_from_link = NodeBase.get_from_link
-        inode.get_ctxt = NodeBase.get_ctxt
-        inode.get_blueprints = NodeBase.get_blueprints
-        inode.get_tree = NodeBase.get_tree
-        inode.is_group = NodeBase.is_group
-        inode.is_dirty = NodeBase.is_dirty
-        inode.set_dirty = NodeBase.set_dirty
-        inode.draw_socket = NodeBase.draw_socket
+        # inode.query_stats = NodeBase.query_stats
+        # inode.query_stat = NodeBase.query_stat
+        # inode.set_stat = NodeBase.set_stat
+        # inode.switch_socket = NodeBase.switch_socket
+        # inode.get_from_link = NodeBase.get_from_link
+        # inode.get_ctxt = NodeBase.get_ctxt
+        # inode.get_blueprints = NodeBase.get_blueprints
+        # inode.draw_socket = NodeBase.draw_socket
 
         inode.class_type = inode.__name__
         inode.__metadata__ = {}
         inode.builtin__stat__ = pickle.dumps({})
         inode.inp_types = []
         inode.out_types = []
+        funcs = inspect.getmembers(NodeBase, predicate=inspect.isfunction)
+        disable_func = [
+            'copy',
+            'draw_buttons',
+            'draw_label',
+            'free', 
+            'init',
+            # 'is_ori_sock',
+            'make_serialze',
+            # 'pool_get',
+            'primitive_check',
+            'remove_invalid_link',
+            'remove_multi_link'
+        ]
+        for name, func in funcs:
+            if name in disable_func:
+                continue
+            setattr(inode, name, func)
     bpy.types.NodeReroute.class_type = "Reroute"
     bpy.types.NodeFrame.class_type = "NodeFrame"
 
