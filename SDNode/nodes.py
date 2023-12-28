@@ -1118,7 +1118,7 @@ class NodeParser:
                     return
                 if not isinstance(inp[1], dict):
                     return
-                PARAMS = {"default", "min", "max", "step", "soft_min", "soft_max", "description", "subtype", "update", "options", "multiline"}
+                PARAMS = {"default", "min", "max", "step", "soft_min", "soft_max", "description", "subtype", "update", "options", "multiline", "display"}
                 # 排除掉不需要的属性
                 for key in list(inp[1].keys()):
                     if key in PARAMS:
@@ -1170,6 +1170,8 @@ class NodeParser:
                         default = 0
                     inp[1]["default"] = int(default)
                     inp[1]["step"] = ceil(inp[1].get("step", 1))
+                    if inp[1].pop("display", False):
+                        inp[1]["subtype"] = "FACTOR"
                     prop = bpy.props.IntProperty(**inp[1])
 
                 elif proptype == "FLOAT":
@@ -1177,6 +1179,8 @@ class NodeParser:
                     if len(inp) > 1:
                         if "step" in inp[1]:
                             inp[1]["step"] *= 100
+                        if inp[1].pop("display", False):
+                            inp[1]["subtype"] = "FACTOR"
                         prop = bpy.props.FloatProperty(**inp[1])
                 elif proptype == "BOOLEAN":
                     if len(inp) <= 1:
