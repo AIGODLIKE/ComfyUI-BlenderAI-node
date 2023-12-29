@@ -431,6 +431,11 @@ class BluePrintBase:
                             sid = link.from_socket.identifier
                             pinp = parent.get_input(sid)
                             plink = self.get_from_link(pinp)
+                            # plink可能为空(outer没连接)
+                            if not plink:
+                                if self.get_meta(inp_name) and hasattr(self, reg_name):
+                                    inputs[inp_name] = s.getattr(self, reg_name)
+                                continue
                             pfnode = plink.from_node
                             sock_index = pfnode.outputs[:].index(plink.from_socket)
                             fid = pfnode.id
