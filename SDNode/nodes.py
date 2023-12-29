@@ -1338,6 +1338,42 @@ clss = [Ops_Swith_Socket, Ops_Add_SaveImage, Set_Render_Res, GetSelCol, Ops_Acti
 reg, unreg = bpy.utils.register_classes_factory(clss)
 
 
+def notify_draw():
+    from .tree import CFNodeTree
+    from .node_process import calc_size, display_text, VecWorldToRegScale, FONT_ID
+    tree: CFNodeTree = get_default_tree()
+    if not tree:
+        return
+    i, o = tree.get_in_out_node()
+    if not i or not o:
+        return
+    # 绘制警告信息
+    view2d = bpy.context.region.view2d
+    if not view2d:
+        return
+    size = 20 * ui_scale()
+    x = y = 50
+    us = ui_scale()
+    display_text(_T("Warning:"), (x * us, (y + 60) * us), size, (0, 1, 0.0, 1.0))
+    display_text(_T("Don't link to GroupIn/Out node"), ((x + 40) * us, (y + 30) * us), size, (0, 1, 0.0, 1.0))
+    display_text(_T("Corresponding link will auto connect after exiting the group editing"), ((x + 40) * us, y * us), size, (0, 1, 0.0, 1.0))
+    # size = calc_size(view2d, vsize)
+    # for n in [i, o]:
+    #     loc = n.location.copy()
+    #     loc.y += 10
+    #     pos = VecWorldToRegScale(loc)
+    #     display_text("禁止手动连接到此节点", pos, size, (0, 1, 0.0, 1.0))
+
+    # head = f"[{n.name}] {_T('Executing')}"
+    # blf.size(FONT_ID, size)
+    # loc.x += blf.dimensions(FONT_ID, head)[0] / size * vsize
+    # pos = VecWorldToRegScale(loc)
+    # display_text(" --2-- ", pos, size * 1.5, (1, 1, 0.0, 1.0))
+
+
+handle = bpy.types.SpaceNodeEditor.draw_handler_add(notify_draw, (), 'WINDOW', 'POST_PIXEL')
+
+
 def nodes_reg():
     reg()
     Ops_Link_Mask.reg()

@@ -180,6 +180,16 @@ class CFNodeTree(NodeTree):
                             tree.links.new(fsock, inp)
         bpy.msgbus.publish_rna(key=(bpy.types.SpaceNodeEditor, "node_tree"))
 
+    def get_in_out_node(self) -> list[NodeBase]:
+        in_node = None
+        out_node = None
+        for n in self.nodes:
+            if n.bl_idname == "NodeGroupInput":
+                in_node = n
+            elif n.bl_idname == "NodeGroupOutput":
+                out_node = n
+        return in_node, out_node
+
     def update(self):
         return
         logger.error(f"{self.name} Update {time.time_ns()}")
@@ -888,7 +898,7 @@ def reg_node_reroute():
             'copy',
             'draw_buttons',
             'draw_label',
-            'free', 
+            'free',
             'init',
             # 'is_ori_sock',
             'make_serialze',

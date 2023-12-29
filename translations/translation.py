@@ -185,6 +185,9 @@ other = {
     "Input Value: %s": "输入项值: %s",
     "Enum Hashable Error: %s": "错误枚举: %s",
     "Skip Reg Node: %s": "跳过解析节点: %s",
+    "Warning:": "警告:",
+    "Don't link to GroupIn/Out node": "禁止手动连接到组输入/组输出节点",
+    "Corresponding link will auto connect after exiting the group editing": "对应连接将在退出组编辑后自动连接",
     # SDNode/blueprints.py
     "Non-Standard Enum": "非标准枚举",
     "Capture Screen": "截图",
