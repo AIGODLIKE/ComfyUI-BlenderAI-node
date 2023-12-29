@@ -35,6 +35,8 @@ class KcHandler(logging.StreamHandler):
 
 
 class Filter(logging.Filter):
+    translate: callable = None
+
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
 
@@ -52,6 +54,8 @@ class Filter(logging.Filter):
             'CRITICAL': ["[35m", "CRT"],
         }
         c, n = FMTDICT.get(rec.levelname, ["[37m", "UN"])
+        if Filter.translate:
+            rec.msg = Filter.translate(rec.msg)
         rec.msg = self.fill_color(c, rec.msg)
         rec.levelname = self.fill_color(c, n)
         return True
@@ -94,6 +98,10 @@ logger = getLogger(NAME, level)
 # logger.critical("CRITICAL")
 
 
+def set_translate(func):
+    Filter.translate = func
+
+
 def close_logger():
     for h in reversed(logger.handlers[:]):
         try:
@@ -107,4 +115,3 @@ def close_logger():
                 h.release()
         except BaseException:
             ...
-
