@@ -175,7 +175,8 @@ class PropGen:
         # logger.info(f"🌚 No Icon <- {file.name}")
         return Icon["NONE"]
 
-    def Gen(proptype, nname, reg_name, inp_name, inp):
+    def Gen(proptype, nname, inp_name, inp):
+        reg_name = get_reg_name(inp_name)
         prop = getattr(PropGen, proptype)(nname, inp_name, reg_name, inp)
         prop = PropGen._spec_gen_properties(nname, inp_name, prop)
         return prop
@@ -1261,7 +1262,6 @@ class NodeParser:
             properties = {}
             skip = False
             for inp_name in inp_types:
-                reg_name = get_reg_name(inp_name)
                 inp = inp_types[inp_name]
                 if not inp:
                     logger.error("None Input: %s", inp)
@@ -1273,15 +1273,17 @@ class NodeParser:
                 if proptype not in {"ENUM", "INT", "FLOAT", "STRING", "BOOLEAN"}:
                     continue
                 try:
-                    prop = PropGen.Gen(proptype, nname, reg_name, inp_name, inp)
+                    prop = PropGen.Gen(proptype, nname, inp_name, inp)
+                    reg_name = get_reg_name(inp_name)
                     properties[reg_name] = prop
                 except Exception as e:
                     # 打印头部虚线
-                    width = os.get_terminal_size().columns - len("[SDN-ERR]: ")
+                    width = os.get_terminal_size().columns - 11 # len("[SDN-ERR]: ")
                     logger.error("-" * width)
                     logger.error("Enum Hashable Error: %s", e)
                     logger.error("Node Name: %s", nname)
                     logger.error("Input Name: %s", inp_name)
+                    logger.error("Input Type: %s", proptype)
                     logger.error("Input Value: %s", inp[0])
                     logger.error("-" * width)
                     skip = True
@@ -1301,7 +1303,7 @@ class NodeParser:
                       "__metadata__": ndesc
                       }
             if skip:
-                logger.error("Skip Reg Node: %s", nname)
+                logger.warn("Skip Reg Node: %s", nname)
                 continue
             NodeDesc = type(nname, (NodeBase,), fields)
             NodeDesc.dcolor = (rand() / 2, rand() / 2, rand() / 2)
