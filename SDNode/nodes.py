@@ -107,8 +107,8 @@ def try_get_path_cfg():
 def get_icon_path(nname):
 
     {'controlnet': [['D:\\BaiduNetdiskDownload\\AI\\ComfyUI\\models\\controlnet',
-                     'D:\\BaiduNetdiskDownload\\AI\\ComfyUI\\models\\t2i_adapter'], ['.bin', '.safetensors', '.pth', '.pt', '.ckpt']],
-     'upscale_models': [['D:\\BaiduNetdiskDownload\\AI\\ComfyUI\\models\\upscale_models'], ['.bin', '.safetensors', '.pth', '.pt', '.ckpt']]}
+                    'D:\\BaiduNetdiskDownload\\AI\\ComfyUI\\models\\t2i_adapter'], ['.bin', '.safetensors', '.pth', '.pt', '.ckpt']],
+        'upscale_models': [['D:\\BaiduNetdiskDownload\\AI\\ComfyUI\\models\\upscale_models'], ['.bin', '.safetensors', '.pth', '.pt', '.ckpt']]}
 
     if not PREVICONPATH:
         if not (d := try_get_path_cfg()):
@@ -141,6 +141,170 @@ def calc_hash_type(stype):
                 winfo = winfo[:40] + "......"
             raise TypeError(f"{_T('Non-Standard Enum')} -> {winfo}")
     return hash_type
+
+
+class PropGen:
+
+    def _find_icon(nname, inp_name, item):
+        prev_path_list = get_icon_path(nname).get(inp_name)
+        if not prev_path_list:
+            return 0
+
+        file_list = []
+        for prev_path in prev_path_list:
+            pp = Path(prev_path)
+            if not pp.exists():
+                continue
+            # 直接搜索 prev_path_list + item文件名 + jpg/png后缀
+            for suffix in IMG_SUFFIX:
+                pimg = pp / Path(item).with_suffix(suffix).as_posix()
+                if not pimg.exists():
+                    continue
+                return Icon.reg_icon(pimg.absolute())
+            for file in pp.iterdir():
+                file_list.append(file)
+        item_prefix = Path(item).stem
+        # file_list = [file for prev_path in prev_path_list for file in Path(prev_path).iterdir()]
+        for file in file_list:
+            if (item not in file.stem) and (item_prefix not in file.stem):
+                continue
+            if file.suffix.lower() not in IMG_SUFFIX:
+                continue
+            # logger.info(f"🌟 Found Icon -> {file.name}")
+            return Icon.reg_icon(file.absolute())
+        # logger.info(f"🌚 No Icon <- {file.name}")
+        return Icon["NONE"]
+
+    def Gen(proptype, nname, reg_name, inp_name, inp):
+        prop = getattr(PropGen, proptype)(nname, inp_name, reg_name, inp)
+        prop = PropGen._spec_gen_properties(nname, inp_name, prop)
+        return prop
+
+    def ENUM(nname, inp_name, reg_name, inp):
+        def get_items(nname, inp_name, inp):
+            def wrap(self, context):
+                if nname not in ENUM_ITEMS_CACHE:
+                    ENUM_ITEMS_CACHE[nname] = {}
+                if inp_name in ENUM_ITEMS_CACHE[nname]:
+                    return ENUM_ITEMS_CACHE[nname][inp_name]
+                items = []
+                for item in inp[0]:
+                    icon_id = PropGen._find_icon(nname, inp_name, item)
+                    if icon_id:
+                        ENUM_ITEMS_CACHE[nname][inp_name] = items
+                    items.append((str(item), str(item), "", icon_id, len(items)))
+                return items
+            return wrap
+        prop = bpy.props.EnumProperty(items=get_items(nname, reg_name, inp))
+        # 判断可哈希
+
+        def is_all_hashable(some_list):
+            return all(hasattr(item, "__hash__") for item in some_list)
+        if is_all_hashable(inp[0]) and set(inp[0]) == {True, False}:
+            prop = bpy.props.BoolProperty()
+        return prop
+
+    def INT(nname, inp_name, reg_name, inp):
+        # {'default': 20, 'min': 1, 'max': 10000}
+        inp[1]["max"] = min(int(inp[1].get("max", 9999999)), 2**31 - 1)
+        inp[1]["min"] = max(int(inp[1].get("min", -999999)), -2**31)
+        default = inp[1].get("default", 0)
+        if not default:
+            default = 0
+        inp[1]["default"] = int(default)
+        inp[1]["step"] = ceil(inp[1].get("step", 1))
+        if inp[1].pop("display", False):
+            inp[1]["subtype"] = "FACTOR"
+        prop = bpy.props.IntProperty(**inp[1])
+        return prop
+
+    def FLOAT(nname, inp_name, reg_name, inp):
+        {'default': 8.0, 'min': 0.0, 'max': 100.0}
+        if len(inp) > 1:
+            if "step" in inp[1]:
+                inp[1]["step"] *= 100
+            if inp[1].pop("display", False):
+                inp[1]["subtype"] = "FACTOR"
+            prop = bpy.props.FloatProperty(**inp[1])
+            return prop
+        return None
+
+    def BOOLEAN(nname, inp_name, reg_name, inp):
+        if len(inp) <= 1:
+            prop = bpy.props.BoolProperty()
+        else:
+            prop = bpy.props.BoolProperty(**inp[1])
+        return prop
+
+    def STRING(nname, inp_name, reg_name, inp):
+        {'default': 'ComfyUI', 'multiline': True}
+        subtype = "NONE"
+
+        def update_wrap(n=""):
+            i_name = n
+
+            def wrap(self, context):
+                if not self[i_name]:
+                    return
+                if not self[i_name].startswith("//"):
+                    return
+                self[i_name] = bpy.path.abspath(self[i_name])
+            return wrap
+        update = update_wrap(inp_name)
+        if inp_name == "image":
+            subtype = "FILE_PATH"
+        elif inp_name == "output_dir":
+            subtype = "DIR_PATH"
+        else:
+            def update(_, __): return
+        prop = bpy.props.StringProperty(default=str(inp[1].get("default", "")),
+                                        subtype=subtype,
+                                        update=update)
+        return prop
+
+    def _spec_gen_properties(nname, inp_name, prop):
+
+        def set_sync_rand(self: NodeBase, seed):
+            if not getattr(self, "sync_rand", False):
+                return
+            tree = self.get_tree()
+            for node in tree.get_nodes():
+                if node == self:
+                    continue
+                if hasattr(node, "seed"):
+                    node["seed"] = seed
+                elif hasattr(node, "noise_seed"):
+                    node["noise_seed"] = seed
+
+        if inp_name == "noise_seed":
+            def setter(self, v):
+                try:
+                    _ = int(v)
+                    self["noise_seed"] = v
+                except Exception:
+                    ...
+                set_sync_rand(self, self["noise_seed"])
+
+            def getter(self):
+                if "noise_seed" not in self:
+                    self["noise_seed"] = "0"
+                return str(self["noise_seed"])
+            prop = bpy.props.StringProperty(default="0", set=setter, get=getter)
+        elif inp_name == "seed":
+            def setter(self, v):
+                try:
+                    _ = int(v)
+                    self["seed"] = v
+                except Exception:
+                    ...
+                set_sync_rand(self, self["seed"])
+
+            def getter(self):
+                if "seed" not in self:
+                    self["seed"] = "0"
+                return str(self["seed"])
+            prop = bpy.props.StringProperty(default="0", set=setter, get=getter)
+        return prop
 
 
 class NodeBase(bpy.types.Node):
@@ -1044,7 +1208,7 @@ class NodeParser:
                 for index, inp_name in enumerate(self.inp_types):
                     inp = self.inp_types[inp_name]
                     if not inp:
-                        logger.error(f"{_T('None Input')}: %s", inp_name)
+                        logger.error(_T("None Input: %s"), inp_name)
                         continue
                     socket = inp[0]
                     if isinstance(inp[0], list):
@@ -1081,36 +1245,6 @@ class NodeParser:
                         l = Ops_Swith_Socket.draw_prop(l, self, prop)
                     l.prop(self, prop, text=prop, text_ctxt=self.get_ctxt())
 
-            def find_icon(nname, inp_name, item):
-                prev_path_list = get_icon_path(nname).get(inp_name)
-                if not prev_path_list:
-                    return 0
-
-                file_list = []
-                for prev_path in prev_path_list:
-                    pp = Path(prev_path)
-                    if not pp.exists():
-                        continue
-                    # 直接搜索 prev_path_list + item文件名 + jpg/png后缀
-                    for suffix in IMG_SUFFIX:
-                        pimg = pp / Path(item).with_suffix(suffix).as_posix()
-                        if not pimg.exists():
-                            continue
-                        return Icon.reg_icon(pimg.absolute())
-                    for file in pp.iterdir():
-                        file_list.append(file)
-                item_prefix = Path(item).stem
-                # file_list = [file for prev_path in prev_path_list for file in Path(prev_path).iterdir()]
-                for file in file_list:
-                    if (item not in file.stem) and (item_prefix not in file.stem):
-                        continue
-                    if file.suffix.lower() not in IMG_SUFFIX:
-                        continue
-                    # logger.info(f"🌟 Found Icon -> {file.name}")
-                    return Icon.reg_icon(file.absolute())
-                # logger.info(f"🌚 No Icon <- {file.name}")
-                return Icon["NONE"]
-
             def validate_inp(inp):
                 if not isinstance(inp, list):
                     return
@@ -1124,13 +1258,13 @@ class NodeParser:
                     if key in PARAMS:
                         continue
                     inp[1].pop(key)
-
             properties = {}
+            skip = False
             for inp_name in inp_types:
                 reg_name = get_reg_name(inp_name)
                 inp = inp_types[inp_name]
                 if not inp:
-                    logger.error(f"{_T('None Input')}: %s", inp)
+                    logger.error("None Input: %s", inp)
                     continue
                 proptype = inp[0]
                 if isinstance(inp[0], list):
@@ -1138,81 +1272,21 @@ class NodeParser:
                 validate_inp(inp)
                 if proptype not in {"ENUM", "INT", "FLOAT", "STRING", "BOOLEAN"}:
                     continue
-                if proptype == "ENUM":
+                try:
+                    prop = PropGen.Gen(proptype, nname, reg_name, inp_name, inp)
+                    properties[reg_name] = prop
+                except Exception as e:
+                    # 打印头部虚线
+                    width = os.get_terminal_size().columns - len("[SDN-ERR]: ")
+                    logger.error("-" * width)
+                    logger.error("Enum Hashable Error: %s", e)
+                    logger.error("Node Name: %s", nname)
+                    logger.error("Input Name: %s", inp_name)
+                    logger.error("Input Value: %s", inp[0])
+                    logger.error("-" * width)
+                    skip = True
+                    continue
 
-                    def get_items(nname, inp_name, inp):
-                        def wrap(self, context):
-                            if nname not in ENUM_ITEMS_CACHE:
-                                ENUM_ITEMS_CACHE[nname] = {}
-                            if inp_name in ENUM_ITEMS_CACHE[nname]:
-                                return ENUM_ITEMS_CACHE[nname][inp_name]
-                            items = []
-                            for item in inp[0]:
-                                icon_id = find_icon(nname, inp_name, item)
-                                if icon_id:
-                                    ENUM_ITEMS_CACHE[nname][inp_name] = items
-                                items.append((str(item), str(item), "", icon_id, len(items)))
-                            return items
-                        return wrap
-                    prop = bpy.props.EnumProperty(items=get_items(nname, reg_name, inp))
-                    # 判断可哈希
-
-                    def is_all_hashable(some_list):
-                        return all(hasattr(item, "__hash__") for item in some_list)
-                    if is_all_hashable(inp[0]) and set(inp[0]) == {True, False}:
-                        prop = bpy.props.BoolProperty()
-                elif proptype == "INT":
-                    # {'default': 20, 'min': 1, 'max': 10000}
-                    inp[1]["max"] = min(int(inp[1].get("max", 9999999)), 2**31 - 1)
-                    inp[1]["min"] = max(int(inp[1].get("min", -999999)), -2**31)
-                    default = inp[1].get("default", 0)
-                    if not default:
-                        default = 0
-                    inp[1]["default"] = int(default)
-                    inp[1]["step"] = ceil(inp[1].get("step", 1))
-                    if inp[1].pop("display", False):
-                        inp[1]["subtype"] = "FACTOR"
-                    prop = bpy.props.IntProperty(**inp[1])
-
-                elif proptype == "FLOAT":
-                    {'default': 8.0, 'min': 0.0, 'max': 100.0}
-                    if len(inp) > 1:
-                        if "step" in inp[1]:
-                            inp[1]["step"] *= 100
-                        if inp[1].pop("display", False):
-                            inp[1]["subtype"] = "FACTOR"
-                        prop = bpy.props.FloatProperty(**inp[1])
-                elif proptype == "BOOLEAN":
-                    if len(inp) <= 1:
-                        prop = bpy.props.BoolProperty()
-                    else:
-                        prop = bpy.props.BoolProperty(**inp[1])
-                elif proptype == "STRING":
-                    {'default': 'ComfyUI', 'multiline': True}
-                    subtype = "NONE"
-
-                    def update_wrap(n=""):
-                        i_name = n
-
-                        def wrap(self, context):
-                            if not self[i_name]:
-                                return
-                            if not self[i_name].startswith("//"):
-                                return
-                            self[i_name] = bpy.path.abspath(self[i_name])
-                        return wrap
-                    update = update_wrap(inp_name)
-                    if inp_name == "image":
-                        subtype = "FILE_PATH"
-                    elif inp_name == "output_dir":
-                        subtype = "DIR_PATH"
-                    else:
-                        def update(_, __): return
-                    prop = bpy.props.StringProperty(default=str(inp[1].get("default", "")),
-                                                    subtype=subtype,
-                                                    update=update)
-                prop = spec_gen_properties(nname, inp_name, prop)
-                properties[reg_name] = prop
             from .blueprints import get_blueprints
             bp = get_blueprints(nname)
             bp.extra_properties(properties, nname, ndesc)
@@ -1226,55 +1300,13 @@ class NodeParser:
                       "__annotations__": properties,
                       "__metadata__": ndesc
                       }
+            if skip:
+                logger.error("Skip Reg Node: %s", nname)
+                continue
             NodeDesc = type(nname, (NodeBase,), fields)
             NodeDesc.dcolor = (rand() / 2, rand() / 2, rand() / 2)
             node_clss.append(NodeDesc)
         return node_clss
-
-
-def spec_gen_properties(nname, inp_name, prop):
-
-    def set_sync_rand(self: NodeBase, seed):
-        if not getattr(self, "sync_rand", False):
-            return
-        tree = self.get_tree()
-        for node in tree.get_nodes():
-            if node == self:
-                continue
-            if hasattr(node, "seed"):
-                node["seed"] = seed
-            elif hasattr(node, "noise_seed"):
-                node["noise_seed"] = seed
-
-    if inp_name == "noise_seed":
-        def setter(self, v):
-            try:
-                _ = int(v)
-                self["noise_seed"] = v
-            except Exception:
-                ...
-            set_sync_rand(self, self["noise_seed"])
-
-        def getter(self):
-            if "noise_seed" not in self:
-                self["noise_seed"] = "0"
-            return str(self["noise_seed"])
-        prop = bpy.props.StringProperty(default="0", set=setter, get=getter)
-    elif inp_name == "seed":
-        def setter(self, v):
-            try:
-                _ = int(v)
-                self["seed"] = v
-            except Exception:
-                ...
-            set_sync_rand(self, self["seed"])
-
-        def getter(self):
-            if "seed" not in self:
-                self["seed"] = "0"
-            return str(self["seed"])
-        prop = bpy.props.StringProperty(default="0", set=setter, get=getter)
-    return prop
 
 
 class Images(bpy.types.PropertyGroup):
