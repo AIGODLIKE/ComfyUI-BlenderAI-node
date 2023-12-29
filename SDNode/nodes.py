@@ -317,6 +317,24 @@ class NodeBase(bpy.types.Node):
     builtin__stat__: bpy.props.StringProperty(subtype="BYTE_STRING")  # ori name: True/False
     class_type: str
 
+    def get_input(self, identifier):
+        if bpy.app.version >= (4, 0):
+            return self.inputs.get(identifier)
+        else:
+            for s in self.inputs:
+                if s.identifier == identifier:
+                    return s
+            return None
+
+    def get_output(self, identifier):
+        if bpy.app.version >= (4, 0):
+            return self.outputs.get(identifier)
+        else:
+            for s in self.outputs:
+                if s.identifier == identifier:
+                    return s
+            return None
+
     def is_dirty(self):
         return self.sdn_dirty
 
@@ -1278,7 +1296,7 @@ class NodeParser:
                     properties[reg_name] = prop
                 except Exception as e:
                     # 打印头部虚线
-                    width = os.get_terminal_size().columns - 11 # len("[SDN-ERR]: ")
+                    width = os.get_terminal_size().columns - 11  # len("[SDN-ERR]: ")
                     logger.error("-" * width)
                     logger.error("Enum Hashable Error: %s", e)
                     logger.error("Node Name: %s", nname)

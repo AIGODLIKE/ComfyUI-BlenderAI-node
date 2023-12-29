@@ -504,15 +504,6 @@ class CFNodeTree(NodeTree):
             node.update()
         return load_nodes
 
-    def sockets(self, in_out="INTPUT"):
-        if bpy.app.version >= (4, 0):
-            for item in self.interface.items_tree:
-                if item.item_type != "SOCKET" or item.in_out != in_out:
-                    continue
-                yield item
-        else:
-            yield from self.inputs if in_out == "INTPUT" else self.outputs
-
     def get_nodes(self, cmf=True) -> list[NodeBase]:
         if cmf:
             return [n for n in self.nodes if n.bl_idname not in {"NodeFrame", "NodeGroupInput", "NodeGroupOutput"} and n.is_registered_node_type()]

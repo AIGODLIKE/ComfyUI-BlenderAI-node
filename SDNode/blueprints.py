@@ -423,22 +423,23 @@ class BluePrintBase:
                         inputs[inp_name] = s.getattr(self, reg_name)
                     else:
                         # 添加 socket
-                        fnode = link.from_node
+                        fnode: NodeBase = link.from_node
                         fid = fnode.id
                         sock_index = fnode.outputs[:].index(link.from_socket)
                         if fnode.bl_idname == "NodeGroupInput":
                             # 需要拿到 NodeGroup 的 id
                             sid = link.from_socket.identifier
-                            pinp = parent.inputs[sid]
+                            pinp = parent.get_input(sid)
                             plink = self.get_from_link(pinp)
                             pfnode = plink.from_node
                             sock_index = pfnode.outputs[:].index(plink.from_socket)
                             fid = pfnode.id
                         elif fnode.is_group():
+                            fnode: SDNGroup = fnode
                             # 需要拿到 NodeGroup 的 id
                             gout_id = link.from_socket[SOCK_TAG]
                             inode, onode = fnode.get_in_out_node()
-                            oinp = onode.inputs[gout_id]
+                            oinp = onode.get_input(gout_id)
                             golink = self.get_from_link(oinp)
                             gonode = golink.from_node
                             fid = f"{fnode.id}:{gonode.id}"
@@ -1648,7 +1649,7 @@ class SDNGroupBP(BluePrintBase):
         for outer_inp in self.inputs:
             # TODO: 这里应该由 对应的node.query_stat
             sid = outer_inp[SOCK_TAG]
-            slink = inode.outputs[sid].links[0]
+            slink = inode.get_output(sid).links[0]
             inp = slink.to_socket
             snode = slink.to_node
             inp_name = inp.name
