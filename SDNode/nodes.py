@@ -20,7 +20,7 @@ from random import random as rand
 from functools import partial, lru_cache
 from mathutils import Vector, Matrix
 from bpy.types import Context, Event
-from .utils import SELECTED_COLLECTIONS, get_default_tree
+from .utils import SELECTED_COLLECTIONS, get_default_tree, THelper
 from ..utils import logger, update_screen, Icon, _T
 from ..datas import ENUM_ITEMS_CACHE, IMG_SUFFIX
 from ..preference import get_pref
@@ -490,6 +490,8 @@ class NodeBase(bpy.types.Node):
                 if lfrom:
                     fs = lfrom.from_socket
                 ts = l.to_socket
+                if ts.bl_idname == "*" or fs.bl_idname == "*":
+                    continue
                 if fs.bl_idname == "*" and SOCKET_HASH_MAP.get(ts.bl_idname) in {"ENUM", "INT", "FLOAT", "STRING", "BOOLEAN"}:
                     continue
                 if fs.bl_idname == ts.bl_idname:
@@ -501,7 +503,16 @@ class NodeBase(bpy.types.Node):
                 #     continue
                 if not hasattr(bpy.context.space_data, "edit_tree"):
                     continue
-
+                # 组中的 NodeReroute的output 不删除, 但要检查是否连接的相同接口
+                if any(self.get_tree().get_in_out_node()) and l.from_node.bl_idname == "NodeReroute":
+                    reroute = l.from_node
+                    for l2 in reroute.outputs[0].links[:]:
+                        if l2.to_node == self:
+                            continue
+                        if l2.to_socket.bl_idname == ts.bl_idname:
+                            continue
+                        bpy.context.space_data.edit_tree.links.remove(l2)
+                    continue
                 bpy.context.space_data.edit_tree.links.remove(l)
 
     def primitive_check(self):

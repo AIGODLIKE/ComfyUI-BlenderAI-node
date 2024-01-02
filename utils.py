@@ -35,6 +35,8 @@ def get_addon_name():
 
 
 def _T(word):
+    if not isinstance(word, str):
+        return word
     import bpy
     from bpy.app.translations import pgettext
     locale = bpy.context.preferences.view.language

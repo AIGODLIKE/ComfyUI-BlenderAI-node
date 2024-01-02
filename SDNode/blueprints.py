@@ -14,7 +14,7 @@ from bpy.types import Context, UILayout
 
 from .nodegroup import LABEL_TAG, SOCK_TAG, SDNGroup
 from .nodes import NodeBase
-from .utils import gen_mask
+from .utils import gen_mask, THelper, Interface
 from .plugins.animatedimageplayer import AnimatedImagePlayer as AIP
 from .nodes import NodeBase, Ops_Add_SaveImage, Ops_Link_Mask, Ops_Active_Tex, Set_Render_Res, Ops_Swith_Socket
 from .nodes import name2path, get_icon_path, Images
@@ -850,27 +850,31 @@ class Reroute(BluePrintBase):
         all_links = kwargs.get("all_links")
         inputs.clear()
         inputs.append({"name": "", "type": "*", "link": None, })
+        helper = THelper()
         if self.inputs[0].is_linked:
             if not selected_only:
                 inputs[0]["link"] = all_links.index(self.inputs[0].links[0])
             elif self.inputs[0].links[0].from_node.select:
                 inputs[0]["link"] = all_links.index(self.inputs[0].links[0])
+            from_socket = self.inputs[0].links[0].from_socket
+            if helper.is_reroute_socket(from_socket):
+                inputs[0]["name"] = ""
+                inputs[0]["type"] = "*"
         if not self.outputs[0].is_linked:
             outputs[0]["name"] = outputs[0]["type"] = "*"
         else:
-            def find_out_node(node: bpy.types.Node):
-                output = node.outputs[0]
-                if not output.is_linked:
-                    return None
-                to = output.links[0].to_node
-                to_socket = output.links[0].to_socket
-                if to.class_type == "Reroute":
-                    return find_out_node(to)
-                return to_socket
-            to_socket = find_out_node(self)
+            to_socket = helper.find_to_sock(self.outputs[0])
             if out and to_socket:
                 outputs[0]["name"] = to_socket.bl_idname
                 outputs[0]["type"] = to_socket.bl_idname
+            if helper.is_reroute_socket(to_socket):
+                outputs[0]["name"] = ""
+                outputs[0]["type"] = "*"
+            olink = self.outputs[0].links[0]
+            ilink = self.inputs[0].links[0]
+            if olink.to_node.bl_idname == "NodeGroupOutput" and ilink.from_node.bl_idname != "NodeGroupInput":
+                outputs[0]["name"] = ""
+                outputs[0]["type"] = "*"
         properties.clear()
         properties.update({"showOutputText": True, "horizontal": False})
 
@@ -1629,6 +1633,7 @@ class SDNGroupBP(BluePrintBase):
     comfyClass = "SDNGroup"
 
     def dump(s, self: SDNGroup, selected_only=False):
+        helper = THelper()
         tree = self.get_tree()
         outer_all_links: list[bpy.types.NodeLink] = tree.links[:]
         all_links: list[bpy.types.NodeLink] = self.node_tree.links[:]
@@ -1656,7 +1661,7 @@ class SDNGroupBP(BluePrintBase):
             sid = outer_inp[SOCK_TAG]
             slink = inode.get_output(sid).links[0]
             inp = slink.to_socket
-            snode = slink.to_node
+            snode: NodeBase = slink.to_node
             inp_name = inp.name
             ori_name = get_ori_name(inp_name)
             md = snode.get_meta(ori_name)
@@ -1672,6 +1677,17 @@ class SDNGroupBP(BluePrintBase):
                     inp_info["link"] = outer_all_links.index(outer_inp.links[0])
                 elif inp.links[0].from_node.select:
                     inp_info["link"] = outer_all_links.index(outer_inp.links[0])
+                from_socket = link.from_socket
+                if helper.is_reroute_socket(from_socket):
+                    inp_info["name"] = "*"
+                    inp_info["type"] = "*"
+                    inp_info["label"] = "*"
+            elif helper.is_reroute_socket(inp):
+                tinp = helper.find_to_sock(inp)
+                if tinp.bl_idname not in {"NodeGroupInput", "NodeGroupOutput"}:
+                    inp_info["name"] = tinp.bl_idname
+                    inp_info["type"] = tinp.bl_idname
+                    inp_info["label"] = tinp.bl_idname
             if is_base_type:
                 if not snode.query_stat(inp.name) or not md:
                     continue
@@ -1687,6 +1703,15 @@ class SDNGroupBP(BluePrintBase):
                 out_info["links"] = [outer_all_links.index(link) for link in out.links]
             elif out.links:
                 out_info["links"] = [outer_all_links.index(link) for link in out.links if link.to_node.select]
+            if out_info["type"] == "*":
+                # 当输出节点是reroute时, 需要找到真正的输出节点
+                _, onode = self.get_in_out_node()
+                if onode and SOCK_TAG in out:
+                    inp = onode.inputs[out[SOCK_TAG]]
+                    fsock = helper.find_from_sock(inp)
+                    out_info["name"] = fsock.bl_idname
+                    out_info["label"] = fsock.bl_idname
+                    out_info["type"] = fsock.bl_idname
             out_info["slot_index"] = i
             outputs.append(out_info)
         cfg = {

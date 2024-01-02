@@ -7,51 +7,11 @@ from ..kclogger import logger
 from ..utils import _T
 from ..translations import get_reg_name
 from .nodes import NodeBase, Ops_Swith_Socket
-from .utils import get_default_tree
+from .utils import get_default_tree, Interface, THelper
 
 SOCK_TAG = "SDN_LINK_SOCK"
 LABEL_TAG = "SDN_LABEL_TAG"
 NODE_TAG = "SDN_NODES"
-
-class Interface:
-    # 版本兼容的 interface 操作
-    def __init__(self, tree: NodeTree):
-        self.tree = tree
-
-    def clear(self):
-        if bpy.app.version >= (4, 0):
-            self.tree.interface.clear()
-        else:
-            self.tree.inputs.clear()
-            self.tree.outputs.clear()
-
-    def remove(self, item):
-        if bpy.app.version >= (4, 0):
-            self.tree.interface.remove(item)
-        else:
-            if item.is_output:
-                self.tree.outputs.remove(item)
-            else:
-                self.tree.inputs.remove(item)
-
-    def new_socket(self, sid, in_out, socket_type):
-        if bpy.app.version >= (4, 0):
-            return self.tree.interface.new_socket(sid, in_out=in_out, socket_type=socket_type)
-        else:
-            if in_out == "INPUT":
-                return self.tree.inputs.new(socket_type, sid)
-            else:
-                return self.tree.outputs.new(socket_type, sid)
-
-    def get_sockets(self, in_out=None):
-        if bpy.app.version >= (4, 0):
-            if not in_out:
-                return self.tree.interface.items_tree
-            return [item for item in self.tree.interface.items_tree if item.in_out == in_out]
-        else:
-            if not in_out:
-                return self.tree.inputs[:] + self.tree.outputs[:]
-            return self.tree.inputs if in_out == "INPUT" else self.tree.outputs
 
 
 class SDNGroup(bpy.types.NodeCustomGroup, NodeBase):
@@ -261,7 +221,11 @@ class SDNGroup(bpy.types.NodeCustomGroup, NodeBase):
         for sf in list(sfs):
             if sf.identifier in sti:
                 continue
-            t = getattr(sf, "bl_socket_idname", sf.bl_idname)
+            bl_idname = getattr(sf, "bl_idname", None)
+            t = getattr(sf, "bl_socket_idname", bl_idname)
+            if t == "NodeSocketColor":
+                logger.error("NodeReroute")
+                t = "*"
             sock = sts.new(t, sf.name, identifier=sf.identifier)
             sock.slot_index = index
             index += 1
@@ -308,7 +272,7 @@ class SDNGroup(bpy.types.NodeCustomGroup, NodeBase):
         for node in self.get_sort_inner_nodes():
             if not node.is_registered_node_type():
                 continue
-            if node.bl_idname in ("NodeGroupInput", "NodeGroupOutput", "PrimitiveNode"):
+            if node.bl_idname in ("NodeGroupInput", "NodeGroupOutput", "NodeReroute"):
                 continue
             box = layout.box()
             box.label(text=node.name)
@@ -325,11 +289,17 @@ class SDNGroup(bpy.types.NodeCustomGroup, NodeBase):
                 if not sock.links:
                     return
                 link = sock.links[0]
+                if THelper.is_reroute_socket(link.from_socket):
+                    layout.label(text=link.from_node.name)
+                    return
                 link.from_socket.draw(context, layout, link.from_node, "SDN_OUTER_OUTPUT")
             if not self.is_output and (sock := inode.get_output(link_sock)):
                 if not sock.links:
                     return
                 link = sock.links[0]
+                if THelper.is_reroute_socket(link.to_socket):
+                    layout.label(text=link.to_node.name)
+                    return
                 link.to_socket.draw(context, layout, link.to_node, "SDN_OUTER_INPUT")
         else:
             layout.label(text=text)

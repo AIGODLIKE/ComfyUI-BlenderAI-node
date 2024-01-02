@@ -22,6 +22,7 @@ from ..utils import logger, Icon, rgb2hex, hex2rgb, _T, FSWatcher
 from ..datas import EnumCache
 from ..timer import Timer
 from ..translations import ctxt, get_ori_name
+from .utils import THelper
 
 TREE_NAME = "CFNODES_SYS"
 TREE_TYPE = "CFNodeTree"
@@ -284,9 +285,10 @@ class CFNodeTree(NodeTree):
                         # TODO: 判断是否为外部连接
                 links = []
                 for link in res["links"]:
-                    if link[2] == -1 or link[4] == -1:
+                    if link[1] == -1 or link[3] == -1:
                         continue
-                    # 定义已改
+                    # 原始数据: 0: lindex, 1: fnode, 2: fslot, 3: tnode, 4: tslot
+                    # 定义已改: 0: fnode,  1: fslot, 2: tnode, 3: tslot, 4: lindex
                     link[:5] = *link[1:5], link[0]
                     links.append(link)
                 res["links"] = links
@@ -331,23 +333,6 @@ class CFNodeTree(NodeTree):
         # pack link info into a non-verbose format
         links = []
         for i, link in enumerate(self.links):
-            # links is an OBJECT
-            # [id, origin_id, origin_slot, target_id, target_slot, type]
-            # 当有 NodeReroute 的时候 情况比较复杂
-            # from_node = self.find_from_node(link)
-            # to_node = self.find_to_node(link)
-            # if (to_node not in dump_nodes) or (from_node not in dump_nodes):
-            #     continue
-            # from_socket = self.find_from_link(link).from_socket
-            # to_socket = self.find_to_link(link).to_socket
-            # link_info = [
-            #     i,
-            #     int(from_socket.node.id),
-            #     from_socket.slot_index,
-            #     int(to_socket.node.id),
-            #     to_socket.slot_index,
-            #     from_socket.node.class_type
-            # ]
             from_node = link.from_node
             from_socket = link.from_socket
             to_node = link.to_node
@@ -538,34 +523,6 @@ class CFNodeTree(NodeTree):
         t.start()
         t.join()
 
-    def find_from_node(self, link: bpy.types.NodeLink):
-        return self.find_node_ex(link, is_from=True, ret_socket=False)
-
-    def find_to_node(self, link: bpy.types.NodeLink):
-        return self.find_node_ex(link, is_from=False, ret_socket=False)
-
-    def find_from_link(self, link: bpy.types.NodeLink):
-        return self.find_node_ex(link, is_from=True, ret_socket=True)
-
-    def find_to_link(self, link: bpy.types.NodeLink):
-        return self.find_node_ex(link, is_from=False, ret_socket=True)
-
-    def find_node_ex(self, link: bpy.types.NodeLink, is_from, ret_socket=False):
-        while True:
-            if is_from:
-                node = link.from_node
-            else:
-                node = link.to_node
-            if node.bl_idname == "NodeReroute":
-                if is_from and node.inputs[0].is_linked:
-                    link = node.inputs[0].links[0]
-                elif not is_from and node.outputs[0].is_linked:
-                    link = node.outputs[0].links[0]
-                else:
-                    return
-            else:
-                return link if ret_socket else node
-
     def calc_unique_id(self):
         """
         force unique id
@@ -672,8 +629,8 @@ class CFNodeTree(NodeTree):
             for output in node.outputs:
                 for olink in output.links:
                     # link_id = output.links[j] # 全局 links 是一个列表,这里的 link_id 用来取link
-                    from_node = self.find_from_node(olink)
-                    to_node = self.find_to_node(olink)
+                    from_node = THelper().find_from_node(olink)
+                    to_node = THelper().find_to_node(olink)
                     if from_node.bl_idname == "NodeGroupInput":
                         from_node = None
                     if to_node.bl_idname == "NodeGroupOutput":
@@ -857,8 +814,10 @@ reg, unreg = bpy.utils.register_classes_factory(clss)
 
 def reg_node_reroute():
     from .nodes import NodeBase
-    bpy.types.NodeSocketColor.slot_index = bpy.props.IntProperty(default=-1)
+    bpy.types.NodeSocketColor.slot_index = bpy.props.IntProperty(default=0)
     bpy.types.NodeSocketColor.index = bpy.props.IntProperty(default=-1)
+    if bpy.app.version >= (4, 0):
+        bpy.types.NodeTreeInterfaceSocketColor.sid = bpy.props.StringProperty(default="")
     for inode in [bpy.types.NodeReroute, bpy.types.NodeFrame, bpy.types.NodeGroupInput, bpy.types.NodeGroupOutput]:
         inode.id = bpy.props.StringProperty(default="-1")
         inode.sdn_order = bpy.props.IntProperty(default=-1)

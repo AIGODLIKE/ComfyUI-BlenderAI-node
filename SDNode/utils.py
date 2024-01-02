@@ -5,6 +5,110 @@ from ..utils import logger, _T
 SELECTED_COLLECTIONS = []
 
 
+class Interface:
+    # 版本兼容的 interface 操作
+    def __init__(self, tree: bpy.types.NodeTree):
+        self.tree = tree
+
+    def clear(self):
+        if bpy.app.version >= (4, 0):
+            self.tree.interface.clear()
+        else:
+            self.tree.inputs.clear()
+            self.tree.outputs.clear()
+
+    def remove(self, item):
+        if bpy.app.version >= (4, 0):
+            self.tree.interface.remove(item)
+        else:
+            if item.is_output:
+                self.tree.outputs.remove(item)
+            else:
+                self.tree.inputs.remove(item)
+
+    def new_socket(self, sid, in_out, socket_type):
+        if bpy.app.version >= (4, 0):
+            return self.tree.interface.new_socket(sid, in_out=in_out, socket_type=socket_type)
+        else:
+            if in_out == "INPUT":
+                return self.tree.inputs.new(socket_type, sid)
+            else:
+                return self.tree.outputs.new(socket_type, sid)
+
+    def get_sockets(self, in_out=None):
+        if bpy.app.version >= (4, 0):
+            if not in_out:
+                return self.tree.interface.items_tree
+            return [item for item in self.tree.interface.items_tree if item.in_out == in_out]
+        else:
+            if not in_out:
+                return self.tree.inputs[:] + self.tree.outputs[:]
+            return self.tree.inputs if in_out == "INPUT" else self.tree.outputs
+
+
+class THelper:
+    def __init__(self) -> None:
+        ...
+
+    @staticmethod
+    def reroute_sock_idname():
+        return "NodeSocketColor"
+
+    @staticmethod
+    def is_reroute_node(node):
+        return node.bl_idname == "NodeReroute"
+
+    @staticmethod
+    def is_reroute_socket(sock: bpy.types.NodeSocket):
+        return sock.bl_idname == "NodeSocketColor"
+
+    def find_from_sock(self, tsocket: bpy.types.NodeSocket, ignore_reroute=True):
+        if not tsocket.is_linked:
+            return None
+        fnode: bpy.types.Node = tsocket.links[0].from_node
+        fsocket = tsocket.links[0].from_socket
+        if ignore_reroute and fnode.class_type == "Reroute":
+            return self.find_from_sock(fnode.inputs[0], ignore_reroute)
+        return fsocket
+
+    def find_from_node(self, link: bpy.types.NodeLink):
+        return self.find_node_ex(link, is_from=True, ret_socket=False)
+
+    def find_from_link(self, link: bpy.types.NodeLink):
+        return self.find_node_ex(link, is_from=True, ret_socket=True)
+
+    def find_to_sock(self, fsocket: bpy.types.NodeSocket, ignore_reroute=True):
+        if not fsocket.is_linked:
+            return None
+        tnode: bpy.types.Node = fsocket.links[0].to_node
+        tsocket = fsocket.links[0].to_socket
+        if ignore_reroute and tnode.class_type == "Reroute":
+            return self.find_to_sock(tnode.outputs[0], ignore_reroute)
+        return tsocket
+
+    def find_to_node(self, link: bpy.types.NodeLink):
+        return self.find_node_ex(link, is_from=False, ret_socket=False)
+
+    def find_to_link(self, link: bpy.types.NodeLink):
+        return self.find_node_ex(link, is_from=False, ret_socket=True)
+
+    def find_node_ex(self, link: bpy.types.NodeLink, is_from, ret_socket=False):
+        while True:
+            if is_from:
+                node = link.from_node
+            else:
+                node = link.to_node
+            if node.bl_idname == "NodeReroute":
+                if is_from and node.inputs[0].is_linked:
+                    link = node.inputs[0].links[0]
+                elif not is_from and node.outputs[0].is_linked:
+                    link = node.outputs[0].links[0]
+                else:
+                    return
+            else:
+                return link if ret_socket else node
+
+
 def get_default_tree(context=None) -> "CFNodeTree":
     if context is None:
         context = bpy.context
