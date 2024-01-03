@@ -818,6 +818,7 @@ def reg_node_reroute():
     bpy.types.NodeSocketColor.index = bpy.props.IntProperty(default=-1)
     if bpy.app.version >= (4, 0):
         bpy.types.NodeTreeInterfaceSocketColor.sid = bpy.props.StringProperty(default="")
+        bpy.types.NodeTreeInterfaceSocketColor.io_type = bpy.props.StringProperty(default="")
     for inode in [bpy.types.NodeReroute, bpy.types.NodeFrame, bpy.types.NodeGroupInput, bpy.types.NodeGroupOutput]:
         inode.id = bpy.props.StringProperty(default="-1")
         inode.sdn_order = bpy.props.IntProperty(default=-1)

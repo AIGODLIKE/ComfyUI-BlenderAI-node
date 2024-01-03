@@ -26,7 +26,7 @@ class SDNGroup(bpy.types.NodeCustomGroup, NodeBase):
 
     def node_tree_update(self, context):
         self.update()
-    node_tree: bpy.props.PointerProperty(type=bpy.types.NodeTree,
+    node_tree: bpy.props.PointerProperty(type=NodeTree,
                                          update=node_tree_update)
 
     def is_group(self) -> bool:
@@ -91,7 +91,7 @@ class SDNGroup(bpy.types.NodeCustomGroup, NodeBase):
 
     def inner_links_update(self):
         # 将未连接的 socket 全连到 GroupInput 和 GroupOutput
-        tree: bpy.types.NodeTree = self.node_tree
+        tree: NodeTree = self.node_tree
 
         inode, onode = self.get_in_out_node()
         if not inode or not onode:
@@ -109,6 +109,11 @@ class SDNGroup(bpy.types.NodeCustomGroup, NodeBase):
                 if it.sid == sid:
                     return it, False
             it = interface.new_socket(sid, in_out=in_out, socket_type=stype)
+            if THelper.is_reroute_node(n):
+                if in_out == "INPUT":
+                    it.io_type = THelper().find_to_sock(n.outputs[0]).bl_idname
+                else:
+                    it.io_type = THelper().find_from_sock(n.inputs[0]).bl_idname
             it.sid = sid
             return it, True
 
@@ -216,21 +221,27 @@ class SDNGroup(bpy.types.NodeCustomGroup, NodeBase):
             if st.identifier in sfi:
                 continue
             sts.remove(st)
+
+        def get_socket_type(sf: NodeSocket) -> str:
+            bl_idname = getattr(sf, "bl_idname", None)
+            st = getattr(sf, "bl_socket_idname", bl_idname)
+            if st == "NodeSocketColor":
+                st = "*"
+                if sf.io_type and sf.io_type != "NodeSocketColor":
+                    st = sf.io_type
+            # logger.debug(f"NodeSocketColor {sf.name} {sf.io_type}")
+            return st
         index = 0
         # add new sockets
         for sf in list(sfs):
             if sf.identifier in sti:
                 continue
-            bl_idname = getattr(sf, "bl_idname", None)
-            t = getattr(sf, "bl_socket_idname", bl_idname)
-            if t == "NodeSocketColor":
-                logger.error("NodeReroute")
-                t = "*"
-            sock = sts.new(t, sf.name, identifier=sf.identifier)
+            st = get_socket_type(sf)
+            sock = sts.new(st, sf.name, identifier=sf.identifier)
             sock.slot_index = index
             index += 1
             sock[SOCK_TAG] = sf.identifier
-            sock[LABEL_TAG] = t
+            sock[LABEL_TAG] = st
 
     def clear_interface(self, tree):
         if not tree:
@@ -278,7 +289,7 @@ class SDNGroup(bpy.types.NodeCustomGroup, NodeBase):
             box.label(text=node.name)
             node.draw_buttons(context, box)
 
-    def draw_socket(_self, self: bpy.types.NodeSocket, context, layout, node: SDNGroup, text):
+    def draw_socket(_self, self: NodeSocket, context, layout: UILayout, node: SDNGroup, text):
         if not node.node_tree:
             return
         # logger.error(node.name)
@@ -289,18 +300,34 @@ class SDNGroup(bpy.types.NodeCustomGroup, NodeBase):
                 if not sock.links:
                     return
                 link = sock.links[0]
-                if THelper.is_reroute_socket(link.from_socket):
-                    layout.label(text=link.from_node.name)
-                    return
-                link.from_socket.draw(context, layout, link.from_node, "SDN_OUTER_OUTPUT")
+                fsocket: NodeSocket = link.from_socket
+                fnode = link.from_node
+                text = "SDN_OUTER_OUTPUT"
+                if THelper.is_reroute_socket(fsocket):
+                    helper = THelper()
+                    fnode = helper.find_from_node(link)
+                    if fnode.bl_idname == "NodeGroupInput":
+                        text = fsocket.node.name
+                    fsocket = helper.find_from_sock(fsocket)
+                    # layout.label(text=link.from_node.name)
+                    # return
+                fsocket.draw(context, layout, fnode, text)
             if not self.is_output and (sock := inode.get_output(link_sock)):
                 if not sock.links:
                     return
                 link = sock.links[0]
-                if THelper.is_reroute_socket(link.to_socket):
-                    layout.label(text=link.to_node.name)
-                    return
-                link.to_socket.draw(context, layout, link.to_node, "SDN_OUTER_INPUT")
+                tsocket: NodeSocket = link.to_socket
+                tnode = link.to_node
+                text = "SDN_OUTER_INPUT"
+                if THelper.is_reroute_socket(tsocket):
+                    helper = THelper()
+                    tnode: NodeBase = helper.find_to_node(link)
+                    if tnode.bl_idname == "NodeGroupOutput":
+                        text = tsocket.node.name
+                    tsocket = helper.find_to_sock(tsocket)
+                    # layout.label(text=link.to_node.name)
+                    # return
+                tsocket.draw(context, layout, tnode, text)
         else:
             layout.label(text=text)
 
@@ -357,14 +384,14 @@ class SDNGroupEdit(bpy.types.Operator):
     action: bpy.props.StringProperty()
 
     @classmethod
-    def poll(cls, context: bpy.types.Context):
+    def poll(cls, context: Context):
         tree = get_default_tree(context)
         return tree and tree.bl_idname == "CFNodeTree"
 
-    def execute(self, context: bpy.types.Context):
+    def execute(self, context: Context):
         node: NodeBase = context.active_node
         if node and hasattr(node, 'node_tree'):
-            sub_tree: bpy.types.NodeTree = node.node_tree
+            sub_tree: NodeTree = node.node_tree
             if not sub_tree:
                 return {"CANCELLED"}
             context.space_data.path.append(sub_tree, node=node)
@@ -385,18 +412,18 @@ class PackGroupTree(bpy.types.Operator):
     action: bpy.props.StringProperty()
 
     @classmethod
-    def poll(cls, context: bpy.types.Context):
+    def poll(cls, context: Context):
         tree = get_default_tree(context)
         return tree and tree.bl_idname == "CFNodeTree"
 
-    def get_center(self, nodes: list[bpy.types.Node]) -> Vector:
+    def get_center(self, nodes: list[Node]) -> Vector:
         center = Vector().to_2d()
         for n in nodes:
             center += n.location
         return center / len(nodes)
 
     def execute(self, context):
-        tree: bpy.types.NodeTree = context.space_data.edit_tree
+        tree: NodeTree = context.space_data.edit_tree
         if len(context.space_data.path) > 1:
             self.report({'ERROR'}, _T("Depth of group tree is limited to 1"))
             return {"CANCELLED"}
@@ -443,18 +470,18 @@ class UnPackGroupTree(bpy.types.Operator):
     action: bpy.props.StringProperty()
 
     @classmethod
-    def poll(cls, context: bpy.types.Context):
+    def poll(cls, context: Context):
         tree = get_default_tree(context)
         return tree and tree.bl_idname == "CFNodeTree"
 
-    def get_center(self, nodes: list[bpy.types.Node]) -> Vector:
+    def get_center(self, nodes: list[Node]) -> Vector:
         center = Vector().to_2d()
         for n in nodes:
             center += n.location
         return center / len(nodes)
 
     def execute(self, context):
-        tree: bpy.types.NodeTree = context.space_data.edit_tree
+        tree: NodeTree = context.space_data.edit_tree
         node = context.active_node
         if not tree or not node or not hasattr(node, "node_tree"):
             return {"CANCELLED"}

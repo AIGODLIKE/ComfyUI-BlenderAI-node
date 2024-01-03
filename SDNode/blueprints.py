@@ -409,10 +409,85 @@ class BluePrintBase:
             cfg["inputs"]["image"] = rpath.as_posix()
             cfg["inputs"]["frame"] = bpy.context.scene.frame_current
 
+    def _serialize_input(s, self: NodeBase, inp_name, inputs, parent: NodeBase = None):
+        """
+        根据 inp_name 计算输入接口或widget值
+        1. 当为接口时返回连接情况
+        2. 当为widget时返回widget值
+        """
+        reg_name = get_reg_name(inp_name)
+        inp = self.inputs.get(reg_name)
+        # ---------------- widget ----------------
+        # 1. 未在输入接口中
+        if not inp:
+            inputs[inp_name] = s.getattr(self, reg_name)
+            return
+
+        link = self.get_from_link(inp)
+        # 2. 在输入接口中, 但未连接
+        if not link:
+            if self.get_meta(inp_name) and hasattr(self, reg_name):
+                inputs[inp_name] = s.getattr(self, reg_name)
+            return
+        # 3. 在输入接口中, 且已连接, 但连接的是 PrimitiveNode
+        if link.from_node.bl_idname == "PrimitiveNode":
+            inputs[inp_name] = s.getattr(self, reg_name)
+            return
+
+        fnode: NodeBase = link.from_node
+        fid = fnode.id
+        sock_index = fnode.outputs[:].index(link.from_socket)
+        # ---------------- socket ----------------
+        # 1. 连接起始于组输入
+        if fnode.bl_idname == "NodeGroupInput":
+            # parent(组节点) { fnode <- self(在组内) }
+            sid = link.from_socket.identifier
+            pinp = parent.get_input(sid)
+            plink = self.get_from_link(pinp)
+            # plink为空(outer没连接)
+            if not plink:
+                if self.get_meta(inp_name) and hasattr(self, reg_name):
+                    inputs[inp_name] = s.getattr(self, reg_name)
+                return
+            pfnode = plink.from_node
+            sock_index = pfnode.outputs[:].index(plink.from_socket)
+            fid = pfnode.id
+        # 2. 连接起始于组节点
+        elif fnode.is_group():
+            # gonode(真实连接的节点) <- onode(组输出) <- fnode(组) <- self
+            fnode: SDNGroup = fnode
+            gout_id = link.from_socket[SOCK_TAG]
+            inode, onode = fnode.get_in_out_node()
+            oinp = onode.get_input(gout_id)
+            golink = self.get_from_link(oinp)
+            gonode = golink.from_node
+            sock_index = gonode.outputs[:].index(golink.from_socket)
+            fid = f"{fnode.id}:{gonode.id}"
+            # 当gonode 为组输入时: gonode <- fnode:NodeReroute <- self
+            if gonode.bl_idname == "NodeGroupInput":
+                sid = golink.from_socket.identifier
+                pinp = fnode.get_input(sid)
+                plink = self.get_from_link(pinp)
+                # plink可能为空(outer没连接)
+                if not plink:
+                    if self.get_meta(inp_name) and hasattr(self, reg_name):
+                        inputs[inp_name] = s.getattr(self, reg_name)
+                    return
+                pfnode = plink.from_node
+                sock_index = pfnode.outputs[:].index(plink.from_socket)
+                fid = pfnode.id
+        # 3. 由外部tree调用
+        elif parent:
+            fid = f"{parent.id}:{fnode.id}"
+        # fnode 可能是 NodeGroupInput 需要转换
+        inputs[inp_name] = [fid, sock_index]
+
     def serialize(s, self: NodeBase, execute=False, parent: NodeBase = None):
         inputs = {}
         for inp_name in self.inp_types:
             # inp = self.inp_types[inp_name]
+            s._serialize_input(self, inp_name, inputs, parent)
+            continue
             reg_name = get_reg_name(inp_name)
             if inp := self.inputs.get(reg_name):
                 link = self.get_from_link(inp)
@@ -447,8 +522,23 @@ class BluePrintBase:
                             oinp = onode.get_input(gout_id)
                             golink = self.get_from_link(oinp)
                             gonode = golink.from_node
-                            fid = f"{fnode.id}:{gonode.id}"
-                            sock_index = gonode.outputs[:].index(golink.from_socket)
+                            # 有可能 outer_inp <- node_reroute <- outer_out
+                            if gonode.bl_idname == "NodeGroupInput":
+                                logger.critical(gonode)
+                                sid = golink.from_socket.identifier
+                                pinp = fnode.get_input(sid)
+                                plink = self.get_from_link(pinp)
+                                # plink可能为空(outer没连接)
+                                if not plink:
+                                    if self.get_meta(inp_name) and hasattr(self, reg_name):
+                                        inputs[inp_name] = s.getattr(self, reg_name)
+                                    continue
+                                pfnode = plink.from_node
+                                sock_index = pfnode.outputs[:].index(plink.from_socket)
+                                fid = pfnode.id
+                            else:
+                                sock_index = gonode.outputs[:].index(golink.from_socket)
+                                fid = f"{fnode.id}:{gonode.id}"
                         elif parent:
                             fid = f"{parent.id}:{fnode.id}"
                         # fnode 可能是 NodeGroupInput 需要转换
@@ -1657,14 +1747,12 @@ class SDNGroupBP(BluePrintBase):
             widgets_values += nwidgets
         inode, onode = self.get_in_out_node()
         for outer_inp in self.inputs:
-            # TODO: 这里应该由 对应的node.query_stat
             sid = outer_inp[SOCK_TAG]
             slink = inode.get_output(sid).links[0]
             inp = slink.to_socket
             snode: NodeBase = slink.to_node
             inp_name = inp.name
             ori_name = get_ori_name(inp_name)
-            md = snode.get_meta(ori_name)
             inp_info = {"name": ori_name,
                         "type": inp.bl_idname,
                         "link": None}
@@ -1682,13 +1770,28 @@ class SDNGroupBP(BluePrintBase):
                     inp_info["name"] = "*"
                     inp_info["type"] = "*"
                     inp_info["label"] = "*"
+                else:
+                    slink = helper.find_to_link(slink)
+                    tsocket = slink.to_socket
+                    inp_info["name"] = from_socket.bl_idname
+                    if not helper.is_reroute_socket(tsocket):
+                        inp_info["name"] = tsocket.name
+                    inp_info["type"] = from_socket.bl_idname
+                    inp_info["label"] = from_socket.bl_idname
+                if "slot_index" in outer_inp:
+                    inp_info["slot_index"] = outer_inp["slot_index"]
             elif helper.is_reroute_socket(inp):
                 tinp = helper.find_to_sock(inp)
                 if tinp.bl_idname not in {"NodeGroupInput", "NodeGroupOutput"}:
                     inp_info["name"] = tinp.bl_idname
                     inp_info["type"] = tinp.bl_idname
                     inp_info["label"] = tinp.bl_idname
+                if helper.is_reroute_socket(tinp):
+                    inp_info["name"] = "*"
+                    inp_info["type"] = "*"
+                    inp_info["label"] = "*"
             if is_base_type:
+                md = snode.get_meta(ori_name)
                 if not snode.query_stat(inp.name) or not md:
                     continue
                 inp_info["widget"] = {"name": ori_name, "config": md}
@@ -1712,6 +1815,10 @@ class SDNGroupBP(BluePrintBase):
                     out_info["name"] = fsock.bl_idname
                     out_info["label"] = fsock.bl_idname
                     out_info["type"] = fsock.bl_idname
+                    if helper.is_reroute_socket(fsock):
+                        out_info["name"] = fsock.name + "*"
+                        out_info["label"] = "*"
+                        out_info["type"] = "*"
             out_info["slot_index"] = i
             outputs.append(out_info)
         cfg = {

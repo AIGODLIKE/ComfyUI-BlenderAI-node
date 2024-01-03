@@ -62,51 +62,92 @@ class THelper:
     def is_reroute_socket(sock: bpy.types.NodeSocket):
         return sock.bl_idname == "NodeSocketColor"
 
-    def find_from_sock(self, tsocket: bpy.types.NodeSocket, ignore_reroute=True):
+    @staticmethod
+    def in_out(sock: bpy.types.NodeSocket):
+        if bpy.app.version >= (4, 0):
+            return sock.in_out
+        return "INPUT" if sock.is_output else "OUTPUT"
+
+    def find_from_sock(self, tsocket: bpy.types.NodeSocket, ignore_reroute=True) -> bpy.types.NodeSocket:
         if not tsocket.is_linked:
-            return None
+            return tsocket
         fnode: bpy.types.Node = tsocket.links[0].from_node
         fsocket = tsocket.links[0].from_socket
         if ignore_reroute and fnode.class_type == "Reroute":
             return self.find_from_sock(fnode.inputs[0], ignore_reroute)
         return fsocket
 
-    def find_from_node(self, link: bpy.types.NodeLink):
-        return self.find_node_ex(link, is_from=True, ret_socket=False)
+    def find_from_node(self, link: bpy.types.NodeLink, with_end=False):
+        while True:
+            node = link.from_node
+            if node.bl_idname == "NodeReroute":
+                if node.inputs[0].is_linked:
+                    link = node.inputs[0].links[0]
+                elif with_end:
+                    break
+                else:
+                    return None
+            else:
+                break
+        return node
 
-    def find_from_link(self, link: bpy.types.NodeLink):
-        return self.find_node_ex(link, is_from=True, ret_socket=True)
+        return self.find_node_ex(link, is_from=True, find_link=False, with_end=with_end)
 
-    def find_to_sock(self, fsocket: bpy.types.NodeSocket, ignore_reroute=True):
+    def find_from_link(self, link: bpy.types.NodeLink, with_end=False):
+        while True:
+            node = link.from_node
+            if node.bl_idname == "NodeReroute":
+                if node.inputs[0].is_linked:
+                    link = node.inputs[0].links[0]
+                elif with_end:
+                    break
+                else:
+                    return None
+            else:
+                break
+        return link
+
+        return self.find_node_ex(link, is_from=True, find_link=True)
+
+    def find_to_sock(self, fsocket: bpy.types.NodeSocket, ignore_reroute=True) -> bpy.types.NodeSocket:
         if not fsocket.is_linked:
-            return None
+            return fsocket
         tnode: bpy.types.Node = fsocket.links[0].to_node
         tsocket = fsocket.links[0].to_socket
         if ignore_reroute and tnode.class_type == "Reroute":
             return self.find_to_sock(tnode.outputs[0], ignore_reroute)
         return tsocket
 
-    def find_to_node(self, link: bpy.types.NodeLink):
-        return self.find_node_ex(link, is_from=False, ret_socket=False)
+    def find_to_node(self, link: bpy.types.NodeLink, with_end=False):
+        while True:
+            node = link.to_node
+            if node.bl_idname == "NodeReroute":
+                if node.outputs[0].is_linked:
+                    link = node.outputs[0].links[0]
+                elif with_end:
+                    return node
+                else:
+                    return None
+            else:
+                return node
+        return self.find_node_ex(link, is_from=False, find_link=False, with_end=with_end)
 
     def find_to_link(self, link: bpy.types.NodeLink):
-        return self.find_node_ex(link, is_from=False, ret_socket=True)
+        return self.find_node_ex(link, is_from=False, find_link=True)
 
-    def find_node_ex(self, link: bpy.types.NodeLink, is_from, ret_socket=False):
+    def find_node_ex(self, link: bpy.types.NodeLink, is_from, find_link=False, with_end=False):
         while True:
-            if is_from:
-                node = link.from_node
-            else:
-                node = link.to_node
+            node = link.from_node if is_from else link.to_node
             if node.bl_idname == "NodeReroute":
-                if is_from and node.inputs[0].is_linked:
-                    link = node.inputs[0].links[0]
-                elif not is_from and node.outputs[0].is_linked:
-                    link = node.outputs[0].links[0]
+                if (node.inputs[0] if is_from else node.outputs[0]).is_linked:
+                    link = (node.inputs[0] if is_from else node.outputs[0]).links[0]
+                elif with_end:
+                    break
                 else:
-                    return
+                    return None
             else:
-                return link if ret_socket else node
+                break
+        return link if find_link else node
 
 
 def get_default_tree(context=None) -> "CFNodeTree":

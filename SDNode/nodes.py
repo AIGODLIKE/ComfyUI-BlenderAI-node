@@ -1204,7 +1204,9 @@ class NodeParser:
                 "draw_color": lambda s, c: s.color,
                 "draw": lambda s, c, l: l.label(text=s.bl_label),
                 "__annotations__": {"color": color,
-                                    "sid": bpy.props.StringProperty(default="")}
+                                    "sid": bpy.props.StringProperty(default=""),
+                                    "io_type": bpy.props.StringProperty(default=""),
+                                    }
             }
             base = getattr(bpy.types, "NodeSocketInterface",
                            getattr(bpy.types, "NodeTreeInterfaceSocket", None))
