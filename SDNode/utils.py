@@ -150,7 +150,7 @@ class THelper:
         return link if find_link else node
 
 
-def get_default_tree(context=None) -> "CFNodeTree":
+def get_default_tree(context=None) -> bpy.types.NodeTree:
     if context is None:
         context = bpy.context
     if hasattr(context, "sdn_tree"):
@@ -158,7 +158,7 @@ def get_default_tree(context=None) -> "CFNodeTree":
     return getattr(context.space_data, "edit_tree", None)
 
 
-def get_trees_from_screen(screen=None) -> list["CFNodeTree"]:
+def get_trees_from_screen(screen=None) -> list[bpy.types.NodeTree]:
     if screen is None:
         screen = bpy.context.screen
     trees = []
@@ -172,7 +172,7 @@ def get_trees_from_screen(screen=None) -> list["CFNodeTree"]:
     return trees
 
 
-def get_tree(current=False, screen=None) -> "CFNodeTree":
+def get_tree(current=False, screen=None) -> bpy.types.NodeTree:
     tree = getattr(bpy.context.space_data, "edit_tree", None)
     if tree:
         return tree

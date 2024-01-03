@@ -1309,7 +1309,11 @@ class NodeParser:
                     properties[reg_name] = prop
                 except Exception as e:
                     # 打印头部虚线
-                    width = os.get_terminal_size().columns - 11  # len("[SDN-ERR]: ")
+                    width = 80
+                    try:
+                        width = os.get_terminal_size().columns - 11  # len("[SDN-ERR]: ")
+                    except OSError:
+                        ...
                     logger.error("-" * width)
                     logger.error("Enum Hashable Error: %s", e)
                     logger.error("Node Name: %s", nname)

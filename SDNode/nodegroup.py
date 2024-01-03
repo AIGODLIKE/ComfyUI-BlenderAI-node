@@ -12,6 +12,7 @@ from .utils import get_default_tree, Interface, THelper
 SOCK_TAG = "SDN_LINK_SOCK"
 LABEL_TAG = "SDN_LABEL_TAG"
 NODE_TAG = "SDN_NODES"
+REC_LINKS = "REC_LINKS"
 
 
 class SDNGroup(bpy.types.NodeCustomGroup, NodeBase):
@@ -388,6 +389,38 @@ class SDNGroupEdit(bpy.types.Operator):
         tree = get_default_tree(context)
         return tree and tree.bl_idname == "CFNodeTree"
 
+    def relink(self):
+        # 恢复外部link
+        node = bpy.context.active_node
+        rec_links = node.get(REC_LINKS)
+        if not rec_links:
+            return
+        logger.debug(rec_links)
+        tree = get_default_tree()
+        inner_tree: NodeTree = node.node_tree
+        helper = THelper()
+        for fnode_name, fsock_name, tnode_name, tsock_name, in_out in rec_links:
+            if in_out == "INPUT":
+                # outer <- inner(group)
+                fnode: NodeBase = tree.nodes.get(fnode_name)
+                tnode: NodeBase = inner_tree.nodes.get(tnode_name)
+                fsock = fnode.outputs.get(fsock_name)
+                tsock = tnode.inputs.get(tsock_name)
+                in_fsock = helper.find_from_sock(tsock)
+                ifid = in_fsock.identifier
+                ginput = node.inputs.get(ifid)
+                tree.links.new(ginput, fsock)
+            else:
+                # inner(group) -> outer
+                fnode: NodeBase = inner_tree.nodes.get(fnode_name)
+                tnode: NodeBase = tree.nodes.get(tnode_name)
+                fsock = fnode.outputs.get(fsock_name)
+                tsock = tnode.inputs.get(tsock_name)
+                out_tsock = helper.find_to_sock(fsock)
+                ofid = out_tsock.identifier
+                goutput = node.outputs.get(ofid)
+                tree.links.new(tsock, goutput)
+
     def execute(self, context: Context):
         node: NodeBase = context.active_node
         if node and hasattr(node, 'node_tree'):
@@ -403,6 +436,7 @@ class SDNGroupEdit(bpy.types.Operator):
                     continue
                 node.update()
                 node.set_dirty()
+            self.relink()
         return {'FINISHED'}
 
 
@@ -430,6 +464,7 @@ class PackGroupTree(bpy.types.Operator):
         if not tree:
             return {"CANCELLED"}
         selected = [n for n in tree.nodes if n.select]
+        rec_links = []
         if self.action == "SELECT":
             if selected:
                 # 如果选中的节点中有组节点，则报深度错误
@@ -437,9 +472,22 @@ class PackGroupTree(bpy.types.Operator):
                     self.report({"ERROR"}, _T("Node group can't be nested"))
                     return {"CANCELLED"}
                 bpy.ops.node.clipboard_copy()
+                # 记录选中节点的link 以便后续恢复到 节点组外部
+                for n in selected:
+                    # [from_node, from_socket, to_node, to_socket, in_out]
+                    for l in [l for sock in (n.inputs[:] + n.outputs[:]) for l in sock.links]:
+                        fnode = l.from_node
+                        tnode = l.to_node
+                        if fnode in selected and tnode in selected:
+                            continue
+                        in_out = "INPUT"
+                        if fnode in selected:
+                            in_out = "OUTPUT"
+                        rec_links.append((fnode.name, l.from_socket.identifier, tnode.name, l.to_socket.identifier, in_out))
             else:
                 return {"CANCELLED"}
         gp: bpy.types.NodeCustomGroup = tree.nodes.new(SDNGroup.bl_idname)
+        gp[REC_LINKS] = rec_links
         sub_tree = bpy.data.node_groups.new("Group", "CFNodeTree")
         sub_tree.use_fake_user = True
         sub_tree.root = False
