@@ -1086,6 +1086,8 @@ class TaskManager:
         ws.run_forever()
         logger.debug(_T("Poll Result Thread Exit"))
         TaskManager.ws = None
+        if TaskManager.server.is_launched():
+            Timer.put((TaskManager.restart_server, True))
 
 
 def removetemp():
