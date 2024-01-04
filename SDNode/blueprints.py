@@ -247,10 +247,11 @@ class BluePrintBase:
         pool = self.pool_get()
         pool.discard(self.id)
         self.location[:] = [data["pos"][0], -data["pos"][1]]
-        if isinstance(data["size"], list):
-            self.width, self.height = [data["size"][0], -data["size"][1]]
+        size = data.get("size", [200, 200])
+        if isinstance(size, list):
+            self.width, self.height = [size[0], -size[1]]
         else:
-            self.width, self.height = [data["size"]["0"], -data["size"]["1"]]
+            self.width, self.height = [size["0"], -size["1"]]
         title = data.get("title", "")
         if self.class_type in {"KSampler", "KSamplerAdvanced"}:
             logger.info(_T("Saved Title Name -> ") + title)  # do not replace name
@@ -369,8 +370,8 @@ class BluePrintBase:
         cfg = {
             "id": int(self.id),
             "type": self.class_type,
-            "pos": [self.location.x, -self.location.y],
-            "size": {"0": self.width, "1": self.height},
+            "pos": [int(self.location.x), -int(self.location.y)],
+            "size": {"0": int(self.width), "1": int(self.height)},
             "flags": {},
             "order": self.sdn_order,
             "mode": 0,
@@ -416,7 +417,7 @@ class BluePrintBase:
         2. 当为widget时返回widget值
         """
         reg_name = get_reg_name(inp_name)
-        inp = self.inputs.get(reg_name)
+        inp = self.inputs.get(inp_name)
         # ---------------- widget ----------------
         # 1. 未在输入接口中
         if not inp:
@@ -1733,14 +1734,29 @@ class SDNGroupBP(BluePrintBase):
         widgets_values = []
         # 组的 widgets_values 导出顺序非常重要 和 node.id有关
         for sn in self.get_sort_inner_nodes():
+            if sn.bl_idname == "NodeReroute" and sn.outputs[0].links:
+                tsock = helper.find_to_sock(sn.outputs[0])
+                sn: NodeBase = tsock.node
+                if sn.bl_idname == "NodeGroupOutput":
+                    continue
+                if sn.is_base_type(tsock.name):
+                    widgets_values.append(s.getattr(sn, get_reg_name(tsock.name)))
+                    continue
+
             if sn.bl_idname in {"NodeGroupInput", "NodeGroupOutput", "NodeUndefined"}:
                 continue
             nwidgets = sn.dump(selected_only=selected_only).get("widgets_values")
 
+            # # 单独处理 widgets_values
+            # for inp_name in self.inp_types:
+            #     if not self.is_base_type(inp_name):
+            #         continue
+            #     widgets_values.append(s.getattr(self, get_reg_name(inp_name)))
             # 需要将已经转为socket的widgets移除
             rm_index = []
-            for i, inp_name in enumerate(sn.inp_types):
-                if sn.query_stat(inp_name):
+            for i, inp_name in enumerate([it for it in sn.inp_types if sn.is_base_type(it)]):
+                # 转为接口且已经连接
+                if sn.query_stat(inp_name) and sn.inputs[inp_name].links:
                     rm_index.append(i)
             for i in rm_index[::-1]:
                 nwidgets.pop(i)
@@ -1783,9 +1799,9 @@ class SDNGroupBP(BluePrintBase):
             elif helper.is_reroute_socket(inp):
                 tinp = helper.find_to_sock(inp)
                 if tinp.bl_idname not in {"NodeGroupInput", "NodeGroupOutput"}:
-                    inp_info["name"] = tinp.bl_idname
+                    inp_info["name"] = tinp.name  # f"{tinp.to_node.name} {tinp.name}"
                     inp_info["type"] = tinp.bl_idname
-                    inp_info["label"] = tinp.bl_idname
+                    inp_info["label"] = tinp.name
                 if helper.is_reroute_socket(tinp):
                     inp_info["name"] = "*"
                     inp_info["type"] = "*"
@@ -1794,8 +1810,15 @@ class SDNGroupBP(BluePrintBase):
                 md = snode.get_meta(ori_name)
                 if not snode.query_stat(inp.name) or not md:
                     continue
-                inp_info["widget"] = {"name": ori_name, "config": md}
+                # inp_info["widget"] = {"name": ori_name, "config": md}
+                inp_info["widget"] = {"name": ori_name}
                 inp_info["type"] = ",".join(md[0]) if isinstance(md[0], list) else md[0]
+            if snode.bl_idname == "NodeReroute":
+                inp_info["name"] = inp_info["type"]
+                tsock = helper.find_to_sock(inp)
+                if tsock.node.is_base_type(tsock.name):
+                    inp_info["widget"] = {"name": inp_info["type"]}
+            inp_info["label"] = inp_info["name"]
             inputs.append(inp_info)
         for i, out in enumerate(self.outputs):
             out_info = {"name": out.name, "type": out.name}
@@ -1824,8 +1847,8 @@ class SDNGroupBP(BluePrintBase):
         cfg = {
             "id": int(self.id),
             "type": f"workflow/{self.node_tree.name}",
-            "pos": [self.location.x, -self.location.y],
-            "size": {"0": self.width, "1": self.height},
+            "pos": [int(self.location.x), -int(self.location.y)],
+            "size": {"0": int(self.width), "1": int(self.height)},
             "flags": {},
             "order": self.sdn_order,
             "mode": 0,
@@ -1841,7 +1864,8 @@ class SDNGroupBP(BluePrintBase):
         return cfg
 
     def make_serialize(s, self: NodeBase, parent: NodeBase = None) -> dict:
-        tree = self.node_tree
+        from .tree import CFNodeTree
+        tree: CFNodeTree = self.node_tree
         if not tree:
             return {}
         sub_prompt = tree.serialize(parent=self)

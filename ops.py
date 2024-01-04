@@ -171,7 +171,7 @@ class Ops(bpy.types.Operator):
         nodes = find_nodes_by_idname(tree, "材质图")
         return nodes[0] if nodes else None
 
-    def ensure_tree(self):
+    def ensure_tree(self) -> CFNodeTree:
         tree = get_default_tree()
         if not tree:
             bpy.ops.node.new_node_tree(type=TREE_TYPE, name="NodeTree")
@@ -632,13 +632,13 @@ class Copy_Tree(bpy.types.Operator):
         return bpy.context.space_data.edit_tree
 
     def execute(self, context):
-        tree = get_default_tree(context)
+        tree: CFNodeTree = get_default_tree(context)
         try:
             workflow = tree.save_json()
         except Exception as e:
             self.report({"ERROR"}, str(e.args))
             return {"FINISHED"}
-        bpy.context.window_manager.clipboard = json.dumps(tree.save_json())
+        bpy.context.window_manager.clipboard = json.dumps(workflow, ensure_ascii=False)
         # 弹出提示 已复制到剪切板
 
         def draw(pm: bpy.types.UIPopupMenu, context):

@@ -191,6 +191,18 @@ class CFNodeTree(NodeTree):
                 out_node = n
         return in_node, out_node
 
+    def update_editor(self):
+        try:
+            for area in bpy.context.screen.areas:
+                for space in area.spaces:
+                    if space.type != "NODE_EDITOR":
+                        continue
+                    space.node_tree = space.node_tree
+                if area.type == "NODE_EDITOR":
+                    area.tag_redraw()
+        except Exception:
+            ...
+
     def update(self):
         return
         logger.error(f"{self.name} Update {time.time_ns()}")
@@ -255,6 +267,7 @@ class CFNodeTree(NodeTree):
         self.validation(dump_nodes)
         self.calc_unique_id()
         self.compute_execution_order()
+        dump_nodes.sort(key=lambda x: x.id)
         nodes_info = []
         # extra 需要导出 groupNodes
         groupNodes = {}
@@ -293,7 +306,7 @@ class CFNodeTree(NodeTree):
                     links.append(link)
                 res["links"] = links
                 # nodes按index 排序
-                res["nodes"] = sorted(res["nodes"], key=lambda x: x["index"])
+                res["nodes"].sort(key=lambda x: x["order"])
                 index_map = {n["index"]: i for i, n in enumerate(res["nodes"])}
                 for link in res["links"]:
                     link[0] = index_map[link[0]]
@@ -393,7 +406,6 @@ class CFNodeTree(NodeTree):
         get workflow
         """
         dump_nodes = self.get_nodes()
-
         return self.save_json_ex(dump_nodes)
 
     def save_json_group(self):
@@ -416,10 +428,29 @@ class CFNodeTree(NodeTree):
         id_map = {}
         id_node_map = {}
         pool = self.get_id_pool()
+        groupNodes = data.get("extra", {}).get("groupNodes", {})
+        # 先加载groupNodes
+        for gname, group in groupNodes.items():
+            if old_gp := bpy.data.node_groups.get(gname):
+                bpy.data.node_groups.remove(old_gp)
+            gtree: CFNodeTree = bpy.data.node_groups.new(gname, "CFNodeTree")
+            gtree.use_fake_user = True
+            gtree.root = False
+            for link in group.get("links", []):
+                link[:5] = link[5], *link[0:4]
+            gtree.load_json(group)
+            gtree.nodes.new("NodeGroupInput").location = (-250, 0)
+            gtree.nodes.new("NodeGroupOutput").location = (250, 0)
+
         for node_info in data.get("nodes", []):
             t = node_info["type"]
             if t == "Reroute":
                 node: NodeBase = self.nodes.new(type="NodeReroute")
+            elif t.startswith("workflow/"):
+                from .nodegroup import SDNGroup
+                node: bpy.types.NodeCustomGroup = self.nodes.new(SDNGroup.bl_idname)
+                gname = t.replace("workflow/", "")
+                node.node_tree = bpy.data.node_groups.get(gname)
             else:
                 try:
                     node: NodeBase = self.nodes.new(type=t)
@@ -431,7 +462,10 @@ class CFNodeTree(NodeTree):
                 node.load(node_info, with_id=False)
             else:
                 node.load(node_info)
-            old_id = str(node_info["id"])
+            if "index" in node_info:
+                old_id = str(node_info["index"])
+            else:
+                old_id = str(node_info["id"])
             id_map[old_id] = old_id
             id_node_map[old_id] = node
             load_nodes.append(node)
@@ -441,8 +475,41 @@ class CFNodeTree(NodeTree):
                 else:
                     pool.add(old_id)
                     node.id = old_id
+        self.update_editor()
+        nlinks = self.dolink(data.get("links", []), id_map, id_node_map)
 
-        for link in data.get("links", []):
+        for group in data.get("groups", []):
+            label = group.get("title")
+            bounding = group.get("bounding")
+            color = group.get("color")
+            node = self.nodes.new(type="NodeFrame")
+            load_nodes.append(node)
+            node.shrink = False
+            if label:
+                node.label = label
+            if color:
+                node.use_custom_color = True
+                try:
+                    node.color = hex2rgb(color)
+                except BaseException:
+                    logger.warn(f"Color: {color} Set Failed!")
+            node.location.x = bounding[0]
+            node.location.y = -bounding[1]
+            node.width = bounding[2]
+            node.height = bounding[3]
+            node.update()
+
+        def f(links, id_map, id_node_map):
+            # hack: wait for nodegroup sockets update
+            time.sleep(0.01)
+            Timer.put((self.dolink, links, id_map, id_node_map))
+        Thread(target=f, args=(nlinks, id_map, id_node_map)).start()
+
+        return load_nodes
+
+    def dolink(self, links, id_map, id_node_map):
+        not_found_links = []
+        for link in links:
             # logger.debug(link)
             if str(link[1]) not in id_map:
                 logger.warn(f"{_T('|IGNORED|')} Link -> {link[0]} -> {_T('Not Found Node')}: {link[1]}")
@@ -450,10 +517,16 @@ class CFNodeTree(NodeTree):
             if str(link[3]) not in id_map:
                 logger.warn(f"{_T('|IGNORED|')} Link -> {link[0]} -> {_T('Not Found Node')}: {link[3]}")
                 continue
-            from_node = id_node_map[str(link[1])]
-            to_node = id_node_map[str(link[3])]
+            from_node: NodeBase = id_node_map[str(link[1])]
+            to_node: NodeBase = id_node_map[str(link[3])]
             if not from_node or not to_node:
                 logger.warn(f"Not Found Link:{link}")
+                continue
+            if from_node.is_group() and len(from_node.outputs) == 0:
+                not_found_links.append(link)
+                continue
+            if to_node.is_group() and len(to_node.inputs) == 0:
+                not_found_links.append(link)
                 continue
             from_slot = link[2]
             to_slot = link[4]
@@ -477,27 +550,7 @@ class CFNodeTree(NodeTree):
                 self.links.new(find_out, find_in)
             else:
                 logger.error(link)
-        for group in data.get("groups", []):
-            label = group.get("title")
-            bounding = group.get("bounding")
-            color = group.get("color")
-            node = self.nodes.new(type="NodeFrame")
-            load_nodes.append(node)
-            node.shrink = False
-            if label:
-                node.label = label
-            if color:
-                node.use_custom_color = True
-                try:
-                    node.color = hex2rgb(color)
-                except BaseException:
-                    logger.warn(f"Color: {color} Set Failed!")
-            node.location.x = bounding[0]
-            node.location.y = -bounding[1]
-            node.width = bounding[2]
-            node.height = bounding[3]
-            node.update()
-        return load_nodes
+        return not_found_links
 
     def get_nodes(self, cmf=True) -> list[NodeBase]:
         if cmf:
@@ -552,6 +605,7 @@ class CFNodeTree(NodeTree):
         force update
         """
         self.id_clear_update()
+        self.compute_execution_order()
         self.calc_unique_id()
         for node in self.nodes:
             if not node.is_registered_node_type():
@@ -605,6 +659,8 @@ class CFNodeTree(NodeTree):
         """
         Reference from ComfyUI
         """
+        helper = THelper()
+        all_links = self.links.values()
         L = []
         S = []  # 起始节点
         M = OrderedDict()
@@ -614,13 +670,15 @@ class CFNodeTree(NodeTree):
         # 搜索无inp的节点(起始点)
         for node in self.get_nodes():
             M[node.id] = node  # add to pending nodes
-            num = 0  # num of input connections
-            for inp in node.inputs:
-                if inp.links:
-                    num += 1
+            num = sum([bool(inp.links) for inp in node.inputs])  # num of input connections
+            # for inp in node.inputs:
+            #     if inp.links:
+            #         num += 1
             if num == 0:
+                node.sdn_level = 1
                 S.append(node)
             else:
+                node.sdn_level = 0
                 remaining_links[node.id] = num
         while S:
             node = S.pop()  # get an starting node
@@ -629,19 +687,29 @@ class CFNodeTree(NodeTree):
             for output in node.outputs:
                 for olink in output.links:
                     # link_id = output.links[j] # 全局 links 是一个列表,这里的 link_id 用来取link
-                    from_node = THelper().find_from_node(olink)
-                    to_node = THelper().find_to_node(olink)
-                    if from_node.bl_idname == "NodeGroupInput":
+                    from_node = helper.find_from_node(olink)
+                    to_node = helper.find_to_node(olink)
+                    if not from_node or from_node.bl_idname == "NodeGroupInput":
                         from_node = None
-                    if to_node.bl_idname == "NodeGroupOutput":
+                    if not to_node or to_node.bl_idname == "NodeGroupOutput":
                         to_node = None
-                    {"id": 1, "type": "MODEL", "origin_id": 4, "origin_slot": 0, "target_id": 3, "target_slot": 0, "_data": None, "_pos": {"0": 607, "1": 335}}
+                    # _LINK_DEF = {
+                    #     "id": 1,
+                    #     "origin_id": 4,
+                    #     "origin_slot": 0,
+                    #     "target_id": 3,
+                    #     "target_slot": 0,
+                    #     "type": "MODEL",
+                    # }
                     if to_node is None:
                         continue
+                    if not to_node.sdn_level or to_node.sdn_level <= node.sdn_level:
+                        to_node.sdn_level = node.sdn_level + 1
                     # already visited link (ignore it)
-                    if to_node.id in visited_links:
+                    link_id = all_links.index(olink)
+                    if link_id in visited_links:
                         continue
-                    visited_links[from_node.id] = True  # mark as visited
+                    visited_links[link_id] = True  # mark as visited
                     remaining_links[to_node.id] -= 1  # reduce the number of links remaining
                     if remaining_links[to_node.id] == 0:
                         S.append(to_node)
@@ -649,6 +717,20 @@ class CFNodeTree(NodeTree):
         for i in M:
             L.append(M[i])
 
+        """
+        // Note: the priority is null by default
+        // javascript sort function
+        L = L.sort(function(A, B) {
+            var Ap = A.constructor.priority || A.priority || 0;
+            var Bp = B.constructor.priority || B.priority || 0;
+            if (Ap == Bp) {
+                //if same priority, sort by order
+                return A.order - B.order;
+            }
+            return Ap - Bp; //sort by priority
+        });
+        """
+        L.sort(key=lambda x: x.sdn_order)
         for i, n in enumerate(L):
             n.sdn_order = i
         return L
@@ -822,6 +904,7 @@ def reg_node_reroute():
     for inode in [bpy.types.NodeReroute, bpy.types.NodeFrame, bpy.types.NodeGroupInput, bpy.types.NodeGroupOutput]:
         inode.id = bpy.props.StringProperty(default="-1")
         inode.sdn_order = bpy.props.IntProperty(default=-1)
+        inode.sdn_level = bpy.props.IntProperty(default=0)
         inode.sdn_dirty = bpy.props.BoolProperty(default=False)
         # inode.is_dirty = NodeBase.is_dirty
         # inode.set_dirty = NodeBase.set_dirty

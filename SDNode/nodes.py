@@ -312,6 +312,7 @@ class NodeBase(bpy.types.Node):
     bl_width_min = 200.0
     bl_width_max = 2000.0
     sdn_order: bpy.props.IntProperty(default=-1)
+    sdn_level: bpy.props.IntProperty(default=0)
     sdn_dirty: bpy.props.BoolProperty(default=False)
     id: bpy.props.StringProperty(default="-1")
     builtin__stat__: bpy.props.StringProperty(subtype="BYTE_STRING")  # ori name: True/False

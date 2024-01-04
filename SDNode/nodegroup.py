@@ -41,6 +41,7 @@ class SDNGroup(bpy.types.NodeCustomGroup, NodeBase):
         if not self.node_tree:
             self.clear_sockets()
             return
+        self.node_tree.compute_execution_order()
         self.ensure_inner_nodes()
         interface = Interface(self.node_tree)
         tree_inputs = interface.get_sockets("INPUT")
@@ -270,9 +271,9 @@ class SDNGroup(bpy.types.NodeCustomGroup, NodeBase):
             onode.update()
             interface.remove(it)
 
-    def get_sort_inner_nodes(self) -> list[NodeBase]:
+    def get_sort_inner_nodes(self, key=lambda x: int(x.sdn_order)) -> list[NodeBase]:
         nodes = [n for n in self.node_tree.nodes if n.is_registered_node_type()]
-        nodes.sort(key=lambda x: int(x.id))
+        nodes.sort(key=key)
         return nodes
 
     def draw_buttons(self, context: Context, layout: UILayout):
@@ -392,10 +393,11 @@ class SDNGroupEdit(bpy.types.Operator):
     def relink(self):
         # 恢复外部link
         node = bpy.context.active_node
+        if not node:
+            return
         rec_links = node.get(REC_LINKS)
         if not rec_links:
             return
-        logger.debug(rec_links)
         tree = get_default_tree()
         inner_tree: NodeTree = node.node_tree
         helper = THelper()

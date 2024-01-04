@@ -69,6 +69,20 @@ def update_screen():
         ...
 
 
+def update_node_editor():
+    try:
+        import bpy
+        for area in bpy.context.screen.areas:
+            for space in area.spaces:
+                if space.type != "NODE_EDITOR":
+                    continue
+                space.node_tree = space.node_tree
+            if area.type == "NODE_EDITOR":
+                area.tag_redraw()
+    except Exception:
+        ...
+
+
 def clear_cache(d=None):
     from pathlib import Path
     from shutil import rmtree
