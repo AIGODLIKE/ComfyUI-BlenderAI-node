@@ -749,7 +749,7 @@ class CFNodeTree(NodeTree):
             return
         rec_links = []
         if REC_LINKS in node:
-            rec_links = node[REC_LINKS]
+            rec_links = [tuple(l) for l in node[REC_LINKS]]
         # [from_node, from_socket, to_node, to_socket, in_out, type]
         for l in [l for sock in (node.inputs[:] + node.outputs[:]) for l in sock.links]:
             in_out = "INPUT" if l.from_node != node else "OUTPUT"
