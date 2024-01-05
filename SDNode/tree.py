@@ -741,6 +741,38 @@ class CFNodeTree(NodeTree):
                 return node
         return None
 
+    def store_toggle_links(self):
+        from .nodegroup import REC_LINKS
+        from .utils import VLink
+        node = self.nodes.active
+        if not node:
+            return
+        rec_links = []
+        if REC_LINKS in node:
+            rec_links = node[REC_LINKS]
+        # [from_node, from_socket, to_node, to_socket, in_out, type]
+        for l in [l for sock in (node.inputs[:] + node.outputs[:]) for l in sock.links]:
+            in_out = "INPUT" if l.from_node != node else "OUTPUT"
+            link = VLink.dump(l, in_out, "TOGGLE")
+            rec_links.append(link)
+        node[REC_LINKS] = list(set(rec_links))
+        # logger.debug(f"{node} store_links {rec_links}")
+
+    def restore_toggle_links(self):
+        from .nodegroup import REC_LINKS
+        from .utils import VLink
+        # 恢复外部link
+        node = self.nodes.active
+        if not node:
+            return
+        rec_links = node.pop(REC_LINKS, None)
+        if not rec_links:
+            return
+        for l in rec_links:
+            vlink = VLink(*l)
+            Timer.put((vlink.relink, node, self))
+            # logger.debug(f"{node} restore_links {vlink}")
+
     @staticmethod
     @bpy.app.handlers.persistent
     def reinit(scene):

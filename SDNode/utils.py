@@ -1,8 +1,148 @@
 import bpy
 from contextlib import contextmanager
 from pathlib import Path
+from dataclasses import dataclass
 from ..utils import logger, _T
 SELECTED_COLLECTIONS = []
+
+
+@dataclass
+class VLink:
+    """
+    用于恢复组内外节点的连接
+    """
+    fnode_name: str
+    fsock_name: str
+    tnode_name: str
+    tsock_name: str
+    in_out: str
+    ltype: str
+
+    @staticmethod
+    def dump(link: bpy.types.NodeLink, in_out: str, ltype: str):
+        from .nodes import NodeBase
+        from .tree import CFNodeTree
+        from .nodegroup import SOCK_TAG
+        helper = THelper()
+        fnode: NodeBase = link.from_node
+        tnode: NodeBase = link.to_node
+        fsock = link.from_socket
+        tsock = link.to_socket
+        if in_out == "INPUT" and tnode.is_group():
+            tree: CFNodeTree = tnode.node_tree
+            # outer <- inner(group)
+            # 需要记录 group 的输出节点
+            inode, onode = tree.get_in_out_node()
+            isock = inode.outputs.get(tsock[SOCK_TAG])
+            gtsock = helper.find_to_sock(isock)
+            # logger.critical(f"FIND INPUT: {gtsock}")
+            return VLink(fnode.name,
+                         fsock.identifier,
+                         gtsock.node.name,
+                         gtsock.identifier,
+                         in_out,
+                         ltype).to_tuple()
+        if in_out == "OUTPUT" and fnode.is_group():
+            tree: CFNodeTree = fnode.node_tree
+            # inner(group) -> outer
+            # 需要记录 group 的输入节点
+            inode, onode = tree.get_in_out_node()
+            osock = onode.inputs.get(fsock[SOCK_TAG])
+            gfsock = helper.find_from_sock(osock)
+            # logger.critical(f"FIND OUTPUT: {gfsock}")
+            return VLink(gfsock.node.name,
+                         gfsock.identifier,
+                         tnode.name,
+                         tsock.identifier,
+                         in_out,
+                         ltype).to_tuple()
+        return VLink(link.from_node.name,
+                     link.from_socket.identifier,
+                     link.to_node.name,
+                     link.to_socket.identifier,
+                     in_out,
+                     ltype).to_tuple()
+
+    def to_tuple(self):
+        return (self.fnode_name,
+                self.fsock_name,
+                self.tnode_name,
+                self.tsock_name,
+                self.in_out,
+                self.ltype)
+
+    def relink_toggle(self, node: bpy.types.Node, tree: bpy.types.NodeTree):
+        from .nodes import NodeBase
+        from .tree import CFNodeTree
+        from .nodegroup import SOCK_TAG
+        helper = THelper()
+        # fnode: NodeBase = tree.nodes.get(self.fnode_name)
+        # tnode: NodeBase = tree.nodes.get(self.tnode_name)
+        # fsock = fnode.outputs.get(self.fsock_name)
+        # tsock = tnode.inputs.get(self.tsock_name)
+        # if fsock and tsock:
+        #     tree.links.new(tsock, fsock)
+        # return
+        inner_tree: CFNodeTree = node.node_tree
+        inode, onode = inner_tree.get_in_out_node()
+        if self.in_out == "INPUT":
+            # outer <- inner(group)
+            fnode: NodeBase = tree.nodes.get(self.fnode_name)
+            fsock = fnode.outputs.get(self.fsock_name)
+            tnode: NodeBase = inner_tree.nodes.get(self.tnode_name)
+            tfsock = None
+            if tnode:
+                tfsock = helper.find_from_sock(tnode.inputs.get(self.tsock_name))
+            if tfsock and tfsock.node.bl_idname == "NodeGroupInput" and fsock:
+                tsock = node.inputs.get(tfsock.identifier)
+                tree.links.new(tsock, fsock)
+                return
+        else:
+            # inner(group) -> outer
+            fnode: NodeBase = inner_tree.nodes.get(self.fnode_name)
+            tnode: NodeBase = tree.nodes.get(self.tnode_name)
+            tsock = tnode.inputs.get(self.tsock_name)
+            ftsock = None
+            if fnode:
+                ftsock = helper.find_to_sock(fnode.outputs.get(self.fsock_name))
+            if ftsock and ftsock.node.bl_idname == "NodeGroupOutput" and tsock:
+                fsock = node.outputs.get(ftsock.identifier)
+                tree.links.new(tsock, fsock)
+                return
+        logger.warn("Relink failed: %s", self.to_tuple())
+            
+
+    def relink_pack(self, node: bpy.types.Node, tree: bpy.types.NodeTree):
+        from .nodes import NodeBase
+        from .tree import CFNodeTree
+        helper = THelper()
+        inner_tree: CFNodeTree = node.node_tree
+        if self.in_out == "INPUT":
+            # outer <- inner(group)
+            fnode: NodeBase = tree.nodes.get(self.fnode_name)
+            tnode: NodeBase = inner_tree.nodes.get(self.tnode_name)
+            fsock = fnode.outputs.get(self.fsock_name)
+            tsock = tnode.inputs.get(self.tsock_name)
+            in_fsock = helper.find_from_sock(tsock)
+            ifid = in_fsock.identifier
+            ginput = node.inputs.get(ifid)
+            tree.links.new(ginput, fsock)
+        else:
+            # inner(group) -> outer
+            fnode: NodeBase = inner_tree.nodes.get(self.fnode_name)
+            tnode: NodeBase = tree.nodes.get(self.tnode_name)
+            fsock = fnode.outputs.get(self.fsock_name)
+            tsock = tnode.inputs.get(self.tsock_name)
+            out_tsock = helper.find_to_sock(fsock)
+            ofid = out_tsock.identifier
+            goutput = node.outputs.get(ofid)
+            tree.links.new(tsock, goutput)
+
+    def relink(self, node: bpy.types.Node, tree: bpy.types.NodeTree):
+        if self.ltype == "TOGGLE":
+            self.relink_toggle(node, tree)
+        elif self.ltype == "PACK":
+            self.relink_pack(node, tree)
 
 
 class Interface:

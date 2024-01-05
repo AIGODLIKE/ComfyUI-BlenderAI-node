@@ -667,9 +667,12 @@ class Ops_Swith_Socket(bpy.types.Operator):
     action: bpy.props.StringProperty(default="")
 
     def execute(self, context):
-        tree = get_default_tree()
+        from .tree import CFNodeTree
+        tree: CFNodeTree = get_default_tree()
+        otree = tree
         node: NodeBase = None
         if context.node and context.node.is_group():
+            otree.store_toggle_links()
             tree = context.node.node_tree
         socket_name = get_ori_name(self.socket_name)
         if not (node := tree.nodes.get(self.node_name)):
@@ -684,6 +687,8 @@ class Ops_Swith_Socket(bpy.types.Operator):
             tree.update()
             # 通知更新所有节点
             bpy.msgbus.publish_rna(key=(bpy.types.SpaceNodeEditor, "node_tree"))
+            otree.switch_tree_update()
+            otree.restore_toggle_links()
         self.action = ""
         return {"FINISHED"}
 

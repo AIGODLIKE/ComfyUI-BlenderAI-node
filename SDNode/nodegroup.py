@@ -5,9 +5,10 @@ from bpy.types import Context, Event, UILayout, Node, NodeTree, NodeSocket, Node
 from mathutils import Vector
 from ..kclogger import logger
 from ..utils import _T
+from ..timer import Timer
 from ..translations import get_reg_name
 from .nodes import NodeBase, Ops_Swith_Socket
-from .utils import get_default_tree, Interface, THelper
+from .utils import get_default_tree, Interface, THelper, VLink
 
 SOCK_TAG = "SDN_LINK_SOCK"
 LABEL_TAG = "SDN_LABEL_TAG"
@@ -41,7 +42,6 @@ class SDNGroup(bpy.types.NodeCustomGroup, NodeBase):
         if not self.node_tree:
             self.clear_sockets()
             return
-        self.node_tree.compute_execution_order()
         self.ensure_inner_nodes()
         interface = Interface(self.node_tree)
         tree_inputs = interface.get_sockets("INPUT")
@@ -390,55 +390,46 @@ class SDNGroupEdit(bpy.types.Operator):
         tree = get_default_tree(context)
         return tree and tree.bl_idname == "CFNodeTree"
 
+    def store_links(self):
+        from .tree import CFNodeTree
+        tree: CFNodeTree = get_default_tree(bpy.context)
+        if not tree:
+            return
+        tree.store_toggle_links()
+
     def relink(self):
-        # 恢复外部link
-        node = bpy.context.active_node
-        if not node:
+        from .tree import CFNodeTree
+        tree: CFNodeTree = get_default_tree(bpy.context)
+        if not tree:
             return
-        rec_links = node.get(REC_LINKS)
-        if not rec_links:
-            return
-        tree = get_default_tree()
-        inner_tree: NodeTree = node.node_tree
-        helper = THelper()
-        for fnode_name, fsock_name, tnode_name, tsock_name, in_out in rec_links:
-            if in_out == "INPUT":
-                # outer <- inner(group)
-                fnode: NodeBase = tree.nodes.get(fnode_name)
-                tnode: NodeBase = inner_tree.nodes.get(tnode_name)
-                fsock = fnode.outputs.get(fsock_name)
-                tsock = tnode.inputs.get(tsock_name)
-                in_fsock = helper.find_from_sock(tsock)
-                ifid = in_fsock.identifier
-                ginput = node.inputs.get(ifid)
-                tree.links.new(ginput, fsock)
-            else:
-                # inner(group) -> outer
-                fnode: NodeBase = inner_tree.nodes.get(fnode_name)
-                tnode: NodeBase = tree.nodes.get(tnode_name)
-                fsock = fnode.outputs.get(fsock_name)
-                tsock = tnode.inputs.get(tsock_name)
-                out_tsock = helper.find_to_sock(fsock)
-                ofid = out_tsock.identifier
-                goutput = node.outputs.get(ofid)
-                tree.links.new(tsock, goutput)
+        tree.restore_toggle_links()
+
+    def enter_tree(self):
+        node: NodeBase = bpy.context.active_node
+        sub_tree: NodeTree = node.node_tree
+        if not sub_tree:
+            return {"CANCELLED"}
+        self.store_links()
+        bpy.context.space_data.path.append(sub_tree, node=node)
+
+    def exit_tree(self):
+        from .tree import CFNodeTree
+        bpy.context.space_data.path.pop()
+        tree: CFNodeTree = bpy.context.space_data.node_tree
+        for node in tree.nodes:
+            node: NodeBase = node
+            if node.bl_idname != SDNGroup.bl_idname:
+                continue
+            node.update()
+            node.set_dirty()
+        self.relink()
 
     def execute(self, context: Context):
         node: NodeBase = context.active_node
         if node and hasattr(node, 'node_tree'):
-            sub_tree: NodeTree = node.node_tree
-            if not sub_tree:
-                return {"CANCELLED"}
-            context.space_data.path.append(sub_tree, node=node)
+            self.enter_tree()
         elif len(context.space_data.path) > 1:
-            context.space_data.path.pop()
-            tree = context.space_data.node_tree
-            for node in tree.nodes:
-                if node.bl_idname != SDNGroup.bl_idname:
-                    continue
-                node.update()
-                node.set_dirty()
-            self.relink()
+            self.exit_tree()
         return {'FINISHED'}
 
 
@@ -485,7 +476,8 @@ class PackGroupTree(bpy.types.Operator):
                         in_out = "INPUT"
                         if fnode in selected:
                             in_out = "OUTPUT"
-                        rec_links.append((fnode.name, l.from_socket.identifier, tnode.name, l.to_socket.identifier, in_out))
+                        link = VLink.dump(l, in_out, "PACK")
+                        rec_links.append(link)
             else:
                 return {"CANCELLED"}
         gp: bpy.types.NodeCustomGroup = tree.nodes.new(SDNGroup.bl_idname)
