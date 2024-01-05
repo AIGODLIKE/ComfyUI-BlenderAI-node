@@ -23,6 +23,7 @@ from ..datas import EnumCache
 from ..timer import Timer
 from ..translations import ctxt, get_ori_name
 from .utils import THelper
+from contextlib import contextmanager
 
 TREE_NAME = "CFNODES_SYS"
 TREE_TYPE = "CFNodeTree"
@@ -105,6 +106,7 @@ class CFNodeTree(NodeTree):
     msgbus_owner = object()
     outUpdate: bpy.props.BoolProperty(default=False)
     root: bpy.props.BoolProperty(default=True)
+    freeze: bpy.props.BoolProperty(default=False, description="冻结更新")
 
     class Pool:
         def __init__(self, tree: CFNodeTree) -> None:
@@ -206,6 +208,20 @@ class CFNodeTree(NodeTree):
     def update(self):
         return
         logger.error(f"{self.name} Update {time.time_ns()}")
+
+    @contextmanager
+    def with_freeze(self):
+        """
+        context
+        enter时 freeze
+        exit时 unfreeze
+        """
+        self.freeze = True
+        try:
+            yield
+        except BaseException:
+            traceback.print_exc()
+        self.freeze = False
 
     def serialize_pre(self):
         for node in self.get_nodes():
@@ -741,7 +757,15 @@ class CFNodeTree(NodeTree):
                 return node
         return None
 
-    def store_toggle_links(self):
+    def clear_store_links(self):
+        from .nodegroup import REC_LINKS
+        node = self.nodes.active
+        if not node:
+            return
+        if REC_LINKS in node:
+            node.pop(REC_LINKS)
+
+    def store_toggle_links(self, ltype="TOGGLE"):
         from .nodegroup import REC_LINKS
         from .utils import VLink
         node = self.nodes.active
@@ -753,12 +777,12 @@ class CFNodeTree(NodeTree):
         # [from_node, from_socket, to_node, to_socket, in_out, type]
         for l in [l for sock in (node.inputs[:] + node.outputs[:]) for l in sock.links]:
             in_out = "INPUT" if l.from_node != node else "OUTPUT"
-            link = VLink.dump(l, in_out, "TOGGLE")
+            link = VLink.dump(l, in_out, ltype)
             rec_links.append(link)
         node[REC_LINKS] = list(set(rec_links))
         # logger.debug(f"{node} store_links {rec_links}")
 
-    def restore_toggle_links(self):
+    def restore_toggle_links(self, now=False):
         from .nodegroup import REC_LINKS
         from .utils import VLink
         # 恢复外部link
@@ -770,7 +794,10 @@ class CFNodeTree(NodeTree):
             return
         for l in rec_links:
             vlink = VLink(*l)
-            Timer.put((vlink.relink, node, self))
+            if now:
+                vlink.relink(node, self)
+            else:
+                Timer.put((vlink.relink, node, self))
             # logger.debug(f"{node} restore_links {vlink}")
 
     @staticmethod

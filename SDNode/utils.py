@@ -84,7 +84,6 @@ class VLink:
         #     tree.links.new(tsock, fsock)
         # return
         inner_tree: CFNodeTree = node.node_tree
-        inode, onode = inner_tree.get_in_out_node()
         if self.in_out == "INPUT":
             # outer <- inner(group)
             fnode: NodeBase = tree.nodes.get(self.fnode_name)
@@ -110,7 +109,6 @@ class VLink:
                 tree.links.new(tsock, fsock)
                 return
         logger.warn("Relink failed: %s", self.to_tuple())
-            
 
     def relink_pack(self, node: bpy.types.Node, tree: bpy.types.NodeTree):
         from .nodes import NodeBase
@@ -138,11 +136,32 @@ class VLink:
             goutput = node.outputs.get(ofid)
             tree.links.new(tsock, goutput)
 
+    def relink_unpack(self, node: bpy.types.Node, tree: bpy.types.NodeTree):
+        from .nodes import NodeBase
+        from .tree import CFNodeTree
+        helper = THelper()
+        fnode: NodeBase = tree.nodes.get(self.fnode_name)
+        tnode: NodeBase = tree.nodes.get(self.tnode_name)
+        fsock = fnode.outputs.get(self.fsock_name)
+        tsock = tnode.inputs.get(self.tsock_name)
+        if self.in_out == "INPUT":
+            # outer <- inner(group)
+            tsock = helper.find_from_sock(tsock)
+        else:
+            # inner(group) -> outer
+            fsock = helper.find_to_sock(fsock)
+        if fsock and tsock:
+            tree.links.new(tsock, fsock)
+            return
+        logger.warn("Relink failed: %s", self.to_tuple())
+
     def relink(self, node: bpy.types.Node, tree: bpy.types.NodeTree):
         if self.ltype == "TOGGLE":
             self.relink_toggle(node, tree)
         elif self.ltype == "PACK":
             self.relink_pack(node, tree)
+        elif self.ltype == "UNPACK":
+            self.relink_unpack(node, tree)
 
 
 class Interface:

@@ -468,6 +468,9 @@ class NodeBase(bpy.types.Node):
     def update(self):
         if not self.is_registered_node_type():
             return
+        tree = self.get_tree()
+        if tree.freeze:
+            return
         self.remove_multi_link()
         self.remove_invalid_link()
         self.primitive_check()

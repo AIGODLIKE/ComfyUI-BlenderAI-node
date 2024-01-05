@@ -523,11 +523,14 @@ class UnPackGroupTree(bpy.types.Operator):
         return center / len(nodes)
 
     def execute(self, context):
-        tree: NodeTree = context.space_data.edit_tree
+        from .tree import CFNodeTree
+        tree: CFNodeTree = context.space_data.edit_tree
         node = context.active_node
         if not tree or not node or not hasattr(node, "node_tree"):
             return {"CANCELLED"}
         bpy.ops.sdn.group_edit()
+        tree.clear_store_links()
+        tree.store_toggle_links("UNPACK")
         bpy.ops.node.select_all(action="SELECT")
         # 取消 NodeGroupInput 和 NodeGroupOutput 的选择
         for n in context.space_data.edit_tree.nodes:
@@ -538,13 +541,16 @@ class UnPackGroupTree(bpy.types.Operator):
         if len(context.space_data.path) > 1:
             context.space_data.path.pop()
         bpy.ops.node.select_all(action="DESELECT")
-        bpy.ops.node.clipboard_paste()
+        with tree.with_freeze():
+            bpy.ops.node.clipboard_paste()
+            tree.restore_toggle_links(now=True)
         # 将粘贴的节点的中心移动到组节点的位置
         loc = node.location
-        selected = [n for n in tree.nodes if n.select]
+        selected: list[NodeBase] = [n for n in tree.nodes if n.select]
         center = self.get_center(selected)
         offset = loc - center
         for n in selected:
+            n.apply_unique_id()
             n.location += offset
         tree.nodes.remove(node)
         return {"FINISHED"}
