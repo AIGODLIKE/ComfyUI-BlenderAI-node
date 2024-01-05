@@ -669,14 +669,24 @@ class Ops_Swith_Socket(bpy.types.Operator):
     node_name: bpy.props.StringProperty()
     action: bpy.props.StringProperty(default="")
 
+    def set_active_node(self, tree):
+        if not tree:
+            return
+        node = bpy.context.node
+        if not node:
+            return
+        if tree.nodes.active:
+            tree.nodes.active.select = False
+        tree.nodes.active = node
+        node.select = True
+
     def execute(self, context):
         from .tree import CFNodeTree
         tree: CFNodeTree = get_default_tree()
         otree = tree
         node: NodeBase = None
         if context.node and context.node.is_group():
-            if otree:
-                otree.nodes.active = context.node
+            self.set_active_node(otree)
             otree.store_toggle_links()
             tree = context.node.node_tree
         socket_name = get_ori_name(self.socket_name)
