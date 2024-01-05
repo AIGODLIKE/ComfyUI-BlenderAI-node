@@ -23,7 +23,7 @@ from ..utils import rmtree as rt, logger, _T, PkgInstaller, FSWatcher
 from ..timer import Timer
 from ..preference import get_pref
 from .history import History
-from .websocket import WebSocketApp
+from ..External.websocket import WebSocketApp
 
 
 def get_ip():
