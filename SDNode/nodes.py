@@ -675,6 +675,8 @@ class Ops_Swith_Socket(bpy.types.Operator):
         otree = tree
         node: NodeBase = None
         if context.node and context.node.is_group():
+            if otree:
+                otree.nodes.active = context.node
             otree.store_toggle_links()
             tree = context.node.node_tree
         socket_name = get_ori_name(self.socket_name)
