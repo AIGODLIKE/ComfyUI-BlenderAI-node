@@ -50,9 +50,10 @@ class Task:
         self._pre = pre
         self._post = post
         from .tree import CFNodeTree
+        from .nodes import NodeBase
         self.tree: CFNodeTree = tree
         self.executing_node_id = ""
-        self.executing_node = None
+        self.executing_node: NodeBase = None
         self.is_finished = False
         self.process = {}
         # 记录node的类型 防止节点树变更
@@ -94,20 +95,19 @@ class Task:
             for n in self.tree.nodes:
                 if not n.label.endswith("-EXEC"):
                     continue
-                n.use_custom_color = False
-                n.label = ""
+                n.restore_appearance()
         Timer.put((f, self))
 
     def set_executing_node_id(self, node_id):
         self.executing_node_id = node_id
 
         def f(self: Task):
+            from .nodes import NodeBase
             if not self.is_tree_valid():
                 return
             self.process = {}
             if self.executing_node:
-                self.executing_node.use_custom_color = False
-                self.executing_node.label = ""
+                self.executing_node.store_appearance()
             self.executing_node = None
             pnode_id = node_id.split(":")[0]
             for n in self.tree.nodes:
@@ -116,7 +116,8 @@ class Task:
                 if n.id == pnode_id and n.bl_idname == self.node_ref_map.get(pnode_id, ""):
                     self.executing_node = n
                     break
-            n = self.executing_node
+            n: NodeBase = self.executing_node
+            n.store_appearance()
             n.use_custom_color = True
             n.color = (0, 0, 0)
             n.label = n.name + "-EXEC"
@@ -419,8 +420,9 @@ class TaskErrPaser:
                 print(f"Node:{node}")
                 for n in tree.nodes:
                     if n.id == str(node):
-                        n.use_custom_color = True
+                        n.store_appearance()
                         n.color = (1, 0, 0)
+                        n.use_custom_color = True
                         n.label = n.name + "-ERROR"
                         TaskManager.put_error_msg(n.name)
                 for err in node_errors[node]["errors"]:

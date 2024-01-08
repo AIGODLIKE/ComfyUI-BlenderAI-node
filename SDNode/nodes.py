@@ -349,6 +349,24 @@ class NodeBase(bpy.types.Node):
                     return s
             return None
 
+    def store_appearance(self):
+        if self.label.endswith(("-EXEC", "-ERROR")):
+            return
+        self["OLD_APPEARANCE"] = {
+            "label": self.label,
+            "color": self.color[:],
+            "use_custom_color": self.use_custom_color
+        }
+
+    def restore_appearance(self):
+        if not self.label.endswith(("-EXEC", "-ERROR")):
+            return
+        if "OLD_APPEARANCE" not in self:
+            return
+        appearance = self.get("OLD_APPEARANCE", {})
+        for k in appearance:
+            setattr(self, k, appearance[k])
+
     def is_dirty(self):
         return self.sdn_dirty
 
