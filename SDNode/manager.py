@@ -405,7 +405,7 @@ class TaskErrPaser:
                            "class_type": "VAELoader"}}
         node_errors = self.error_info["node_errors"]
         import bpy
-        from .tree import get_tree
+        from .utils import get_tree
         logger.error("Node Error Parse")
         for sc in bpy.data.screens:
             try:
