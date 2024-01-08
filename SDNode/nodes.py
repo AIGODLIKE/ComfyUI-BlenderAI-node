@@ -318,6 +318,19 @@ class NodeBase(bpy.types.Node):
     builtin__stat__: bpy.props.StringProperty(subtype="BYTE_STRING")  # ori name: True/False
     class_type: str
 
+    def get_widgets_num(self):
+        """
+        # 计算当前节点的widgets数量(已转sock不记入)
+        """
+        num = 0
+        for inp in self.inp_types:
+            if inp == "control_after_generate":
+                continue
+            if inp in self.inputs:
+                continue
+            num += 1
+        return num
+
     def get_input(self, identifier):
         if bpy.app.version >= (4, 0):
             return self.inputs.get(identifier)

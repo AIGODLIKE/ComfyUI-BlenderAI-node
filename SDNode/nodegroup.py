@@ -283,6 +283,8 @@ class SDNGroup(bpy.types.NodeCustomGroup, NodeBase):
             return
         # 显示tree中的所有未连接属性
         for node in self.get_sort_inner_nodes():
+            if node.get_widgets_num() == 0:
+                continue
             if not node.is_registered_node_type():
                 continue
             if node.bl_idname in ("NodeGroupInput", "NodeGroupOutput", "NodeReroute"):
