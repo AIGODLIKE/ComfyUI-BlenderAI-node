@@ -1287,6 +1287,10 @@ class 输入图像(BluePrintBase):
             old = bpy.context.scene.render.filepath
             bpy.context.scene.render.filepath = self.image
             if self.mode == "视口":
+                # 场景相机可能为空
+                if not bpy.context.scene.camera:
+                    err_info = _T("No Camera in Scene") + " -> " + bpy.context.scene.name
+                    raise Exception(err_info)
                 bpy.ops.render.opengl(write_still=True, view_context=get_pref().view_context)
                 bpy.context.scene.render.filepath = old
                 return

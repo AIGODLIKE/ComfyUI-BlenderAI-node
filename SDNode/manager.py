@@ -735,7 +735,9 @@ class TaskManager:
             cls._instance = object.__new__(cls, *args, **kw)
         return cls._instance
 
-    def put_error_msg(error):
+    def put_error_msg(error, with_clear=False):
+        if with_clear:
+            TaskManager.clear_error_msg()
         TaskManager.error_msg.append(str(error))
 
     def clear_error_msg():
@@ -874,7 +876,12 @@ class TaskManager:
             TaskManager.progress = {'value': 0, 'max': 1}
             logger.debug(_T("Submit Task"))
             TaskManager.cur_task = task
-            TaskManager.submit(task)
+            try:
+                TaskManager.submit(task)
+            except Exception as e:
+                logger.error(e)
+                TaskManager.put_error_msg(str(e), with_clear=True)
+                TaskManager.mark_finished(with_noexe=False)
         logger.debug(_T("Poll Task Thread Exit"))
 
     def query_server_task():
