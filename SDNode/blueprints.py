@@ -22,7 +22,7 @@ from ..SDNode.manager import Task
 from ..timer import Timer
 from ..preference import get_pref
 from ..kclogger import logger
-from ..utils import _T, Icon, update_screen, PrevMgr
+from ..utils import _T, Icon, update_screen, PrevMgr, rgb2hex, hex2rgb
 from ..translations import ctxt, get_reg_name, get_ori_name
 
 
@@ -248,6 +248,10 @@ class BluePrintBase:
         pool.discard(self.id)
         self.location[:] = [data["pos"][0], -data["pos"][1]]
         size = data.get("size", [200, 200])
+        color = data.get("bgcolor", None)
+        if color:
+            self.color = hex2rgb(color)
+            self.use_custom_color = True
         if isinstance(size, list):
             self.width, self.height = [size[0], -size[1]]
         else:
@@ -381,6 +385,9 @@ class BluePrintBase:
             "properties": {},
             "widgets_values": widgets_values
         }
+        if self.use_custom_color:
+            color = rgb2hex(*self.color)
+            cfg["bgcolor"] = color
         __locals_copy__ = locals()
         __locals_copy__.pop("s")
         s.dump_specific(**__locals_copy__)

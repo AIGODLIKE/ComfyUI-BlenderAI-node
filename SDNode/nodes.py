@@ -1408,10 +1408,12 @@ reg, unreg = bpy.utils.register_classes_factory(clss)
 
 
 def notify_draw():
-    from .tree import CFNodeTree
+    from .tree import CFNodeTree, TREE_TYPE
     from .node_process import calc_size, display_text, VecWorldToRegScale, FONT_ID
     tree: CFNodeTree = get_default_tree()
     if not tree:
+        return
+    if tree.bl_idname != TREE_TYPE:
         return
     i, o = tree.get_in_out_node()
     if not i or not o:

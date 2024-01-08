@@ -98,15 +98,16 @@ def clear_cache(d=None):
                 rmtree(file)
 
 
-def rgb2hex(r, g, b):
+def rgb2hex(r, g, b, *args):
     hex_val = f"#{int(r*256):02x}{int(g*256):02x}{int(b*256):02x}"
     return hex_val
 
 
 def hex2rgb(hex_val):
     hex_val = hex_val.lstrip('#')
-    r, g, b = tuple(int(hex_val[i:i + 2], 16) / 256 for i in (0, 2, 4))
-    return r, g, b
+    if len(hex_val) == 3:
+        return [int(h, 16) / 16 for h in hex_val]
+    return [int(hex_val[i:i + 2], 16) / 256 for i in (0, 2, 4)]
 
 
 class PrevMgr:
