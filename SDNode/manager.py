@@ -107,7 +107,7 @@ class Task:
                 return
             self.process = {}
             if self.executing_node:
-                self.executing_node.store_appearance()
+                self.executing_node.restore_appearance()
             self.executing_node = None
             pnode_id = node_id.split(":")[0]
             for n in self.tree.nodes:
