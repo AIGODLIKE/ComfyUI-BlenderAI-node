@@ -33,7 +33,7 @@ class VLink:
             # outer <- inner(group)
             # 需要记录 group 的输出节点
             inode, onode = tree.get_in_out_node()
-            isock = inode.outputs.get(tsock[SOCK_TAG])
+            isock = inode.get_output(tsock[SOCK_TAG])
             gtsock = helper.find_to_sock(isock)
             # logger.critical(f"FIND INPUT: {gtsock}")
             return VLink(fnode.name,
@@ -47,7 +47,7 @@ class VLink:
             # inner(group) -> outer
             # 需要记录 group 的输入节点
             inode, onode = tree.get_in_out_node()
-            osock = onode.inputs.get(fsock[SOCK_TAG])
+            osock = onode.get_input(fsock[SOCK_TAG])
             gfsock = helper.find_from_sock(osock)
             # logger.critical(f"FIND OUTPUT: {gfsock}")
             return VLink(gfsock.node.name,
@@ -78,8 +78,8 @@ class VLink:
         helper = THelper()
         # fnode: NodeBase = tree.nodes.get(self.fnode_name)
         # tnode: NodeBase = tree.nodes.get(self.tnode_name)
-        # fsock = fnode.outputs.get(self.fsock_name)
-        # tsock = tnode.inputs.get(self.tsock_name)
+        # fsock = fnode.get_output(self.fsock_name)
+        # tsock = tnode.get_input(self.tsock_name)
         # if fsock and tsock:
         #     tree.links.new(tsock, fsock)
         # return
@@ -87,25 +87,25 @@ class VLink:
         if self.in_out == "INPUT":
             # outer <- inner(group)
             fnode: NodeBase = tree.nodes.get(self.fnode_name)
-            fsock = fnode.outputs.get(self.fsock_name)
+            fsock = fnode.get_output(self.fsock_name)
             tnode: NodeBase = inner_tree.nodes.get(self.tnode_name)
             tfsock = None
             if tnode:
-                tfsock = helper.find_from_sock(tnode.inputs.get(self.tsock_name))
+                tfsock = helper.find_from_sock(tnode.get_input(self.tsock_name))
             if tfsock and tfsock.node.bl_idname == "NodeGroupInput" and fsock:
-                tsock = node.inputs.get(tfsock.identifier)
+                tsock = node.get_input(tfsock.identifier)
                 tree.links.new(tsock, fsock)
                 return
         else:
             # inner(group) -> outer
             fnode: NodeBase = inner_tree.nodes.get(self.fnode_name)
             tnode: NodeBase = tree.nodes.get(self.tnode_name)
-            tsock = tnode.inputs.get(self.tsock_name)
+            tsock = tnode.get_input(self.tsock_name)
             ftsock = None
             if fnode:
-                ftsock = helper.find_to_sock(fnode.outputs.get(self.fsock_name))
+                ftsock = helper.find_to_sock(fnode.get_output(self.fsock_name))
             if ftsock and ftsock.node.bl_idname == "NodeGroupOutput" and tsock:
-                fsock = node.outputs.get(ftsock.identifier)
+                fsock = node.get_output(ftsock.identifier)
                 tree.links.new(tsock, fsock)
                 return
         logger.warn("Relink failed: %s", self.to_tuple())
@@ -119,21 +119,21 @@ class VLink:
             # outer <- inner(group)
             fnode: NodeBase = tree.nodes.get(self.fnode_name)
             tnode: NodeBase = inner_tree.nodes.get(self.tnode_name)
-            fsock = fnode.outputs.get(self.fsock_name)
-            tsock = tnode.inputs.get(self.tsock_name)
+            fsock = fnode.get_output(self.fsock_name)
+            tsock = tnode.get_input(self.tsock_name)
             in_fsock = helper.find_from_sock(tsock)
             ifid = in_fsock.identifier
-            ginput = node.inputs.get(ifid)
+            ginput = node.get_input(ifid)
             tree.links.new(ginput, fsock)
         else:
             # inner(group) -> outer
             fnode: NodeBase = inner_tree.nodes.get(self.fnode_name)
             tnode: NodeBase = tree.nodes.get(self.tnode_name)
-            fsock = fnode.outputs.get(self.fsock_name)
-            tsock = tnode.inputs.get(self.tsock_name)
+            fsock = fnode.get_output(self.fsock_name)
+            tsock = tnode.get_input(self.tsock_name)
             out_tsock = helper.find_to_sock(fsock)
             ofid = out_tsock.identifier
-            goutput = node.outputs.get(ofid)
+            goutput = node.get_output(ofid)
             tree.links.new(tsock, goutput)
 
     def relink_unpack(self, node: bpy.types.Node, tree: bpy.types.NodeTree):
@@ -142,8 +142,8 @@ class VLink:
         helper = THelper()
         fnode: NodeBase = tree.nodes.get(self.fnode_name)
         tnode: NodeBase = tree.nodes.get(self.tnode_name)
-        fsock = fnode.outputs.get(self.fsock_name)
-        tsock = tnode.inputs.get(self.tsock_name)
+        fsock = fnode.get_output(self.fsock_name)
+        tsock = tnode.get_input(self.tsock_name)
         if self.in_out == "INPUT":
             # outer <- inner(group)
             tsock = helper.find_from_sock(tsock)

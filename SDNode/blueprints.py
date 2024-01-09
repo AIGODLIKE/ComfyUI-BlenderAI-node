@@ -426,7 +426,7 @@ class BluePrintBase:
         2. 当为widget时返回widget值
         """
         reg_name = get_reg_name(inp_name)
-        inp = self.inputs.get(inp_name)
+        inp = self.get_input(inp_name)
         # ---------------- widget ----------------
         # 1. 未在输入接口中
         if not inp:
