@@ -1871,6 +1871,9 @@ class SDNGroupBP(BluePrintBase):
             "properties": {"sdn_hide": self.sdn_hide, },
             "widgets_values": widgets_values
         }
+        if self.use_custom_color:
+            color = rgb2hex(*self.color)
+            cfg["bgcolor"] = color
         __locals_copy__ = locals()
         __locals_copy__.pop("s")
         s.dump_specific(**__locals_copy__)
