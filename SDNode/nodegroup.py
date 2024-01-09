@@ -276,18 +276,37 @@ class SDNGroup(bpy.types.NodeCustomGroup, NodeBase):
         nodes.sort(key=key)
         return nodes
 
+    def draw_buttons_ext(self, context: Context, layout: UILayout):
+        row = layout.row(align=True)
+        row.label(text=self.name)
+        row.prop(self, "sdn_hide", text="", icon="HIDE_ON" if self.sdn_hide else "HIDE_OFF")
+        for node in self.get_sort_inner_nodes():
+            if not node.is_registered_node_type():
+                continue
+            if node.get_widgets_num() == 0:
+                continue
+            if node.bl_idname in ("NodeGroupInput", "NodeGroupOutput", "NodeReroute"):
+                continue
+            box = layout.box()
+            node.draw_buttons_ext(context, box)
+            layout.separator_spacer()
+
     def draw_buttons(self, context: Context, layout: UILayout):
         layout.template_ID(self, "node_tree", new=SDNNewGroup.bl_idname)
         tree = self.node_tree
         if not tree:
             return
+        if self.sdn_hide:
+            return
         # 显示tree中的所有未连接属性
         for node in self.get_sort_inner_nodes():
-            if node.get_widgets_num() == 0:
-                continue
             if not node.is_registered_node_type():
                 continue
+            if node.get_widgets_num() == 0:
+                continue
             if node.bl_idname in ("NodeGroupInput", "NodeGroupOutput", "NodeReroute"):
+                continue
+            if node.sdn_hide:
                 continue
             box = layout.box()
             box.label(text=node.name)

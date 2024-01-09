@@ -965,6 +965,7 @@ def reg_node_reroute():
         inode.sdn_order = bpy.props.IntProperty(default=-1)
         inode.sdn_level = bpy.props.IntProperty(default=0)
         inode.sdn_dirty = bpy.props.BoolProperty(default=False)
+        inode.sdn_hide = bpy.props.BoolProperty(default=False)
         # inode.is_dirty = NodeBase.is_dirty
         # inode.set_dirty = NodeBase.set_dirty
         # inode.is_group = NodeBase.is_group

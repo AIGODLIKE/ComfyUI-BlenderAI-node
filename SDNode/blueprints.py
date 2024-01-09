@@ -248,6 +248,8 @@ class BluePrintBase:
         pool.discard(self.id)
         self.location[:] = [data["pos"][0], -data["pos"][1]]
         size = data.get("size", [200, 200])
+        properties = data.get("properties", {})
+        self.sdn_hide = properties.get("sdn_hide", False)
         color = data.get("bgcolor", None)
         if color:
             self.color = hex2rgb(color)
@@ -382,7 +384,7 @@ class BluePrintBase:
             "inputs": inputs,
             "outputs": outputs,
             "title": self.name,
-            "properties": {},
+            "properties": {"sdn_hide": self.sdn_hide, },
             "widgets_values": widgets_values
         }
         if self.use_custom_color:
@@ -1866,7 +1868,7 @@ class SDNGroupBP(BluePrintBase):
             "inputs": inputs,
             "outputs": outputs,
             "title": self.name,
-            "properties": {},
+            "properties": {"sdn_hide": self.sdn_hide, },
             "widgets_values": widgets_values
         }
         __locals_copy__ = locals()

@@ -314,6 +314,7 @@ class NodeBase(bpy.types.Node):
     sdn_order: bpy.props.IntProperty(default=-1)
     sdn_level: bpy.props.IntProperty(default=0)
     sdn_dirty: bpy.props.BoolProperty(default=False)
+    sdn_hide: bpy.props.BoolProperty(default=False)
     id: bpy.props.StringProperty(default="-1")
     builtin__stat__: bpy.props.StringProperty(subtype="BYTE_STRING")  # ori name: True/False
     class_type: str
@@ -485,6 +486,31 @@ class NodeBase(bpy.types.Node):
     def apply_unique_id(self):
         self.id = self.unique_id()
         return self.id
+
+    def _draw_(self, context, layout):
+        for prop in self.__annotations__:
+            if self.query_stat(prop):
+                continue
+            if prop == "control_after_generate":
+                continue
+            l = layout
+            # 返回True 则不绘制
+            if self.get_blueprints().draw_button(self, context, l, prop):
+                continue
+            if self.is_base_type(prop) and get_ori_name(prop) in self.inp_types:
+                l = Ops_Swith_Socket.draw_prop(l, self, prop)
+            l.prop(self, prop, text=prop, text_ctxt=self.get_ctxt())
+
+    def draw_buttons(self: NodeBase, context, layout: bpy.types.UILayout):
+        if self.sdn_hide:
+            return
+        self._draw_(context, layout)
+
+    def draw_buttons_ext(self, context, layout):
+        row = layout.row(align=True)
+        row.label(text=self.name, icon="NODE")
+        row.prop(self, "sdn_hide", text="", icon="HIDE_ON" if self.sdn_hide else "HIDE_OFF")
+        self._draw_(context, layout)
 
     def draw_label(self):
         ntype = _T(self.bl_idname)
@@ -1315,20 +1341,6 @@ class NodeParser:
                     out.index = index
                 self.calc_slot_index()
 
-            def draw_buttons(self: NodeBase, context, layout: bpy.types.UILayout):
-                for prop in self.__annotations__:
-                    if self.query_stat(prop):
-                        continue
-                    if prop == "control_after_generate":
-                        continue
-                    l = layout
-                    # 返回True 则不绘制
-                    if self.get_blueprints().draw_button(self, context, l, prop):
-                        continue
-                    if self.is_base_type(prop) and get_ori_name(prop) in self.inp_types:
-                        l = Ops_Swith_Socket.draw_prop(l, self, prop)
-                    l.prop(self, prop, text=prop, text_ctxt=self.get_ctxt())
-
             def validate_inp(inp):
                 if not isinstance(inp, list):
                     return
@@ -1385,7 +1397,6 @@ class NodeParser:
                       "out_types": out_types,
                       "class_type": nname,
                       "bl_label": nname,
-                      "draw_buttons": draw_buttons,
                       "__annotations__": properties,
                       "__metadata__": ndesc
                       }
