@@ -695,17 +695,6 @@ class NodeBase(bpy.types.Node):
 
 
 class SocketBase(bpy.types.NodeSocket):
-    allowLink = {"*", }
-
-    def linkLimitCheck(self, context):
-        self.allowLink.add(self.bl_label)
-        # 连接限制
-        for link in list(self.links):
-            if link.from_node.bl_label in self.allowLink:
-                continue
-            logger.warn(f"{_T('Remove Link')}:{link.from_node.bl_label}",)
-            context.space_data.edit_tree.links.remove(link)
-
     color: bpy.props.FloatVectorProperty(size=4, default=(1, 0, 0, 1))
 
     def draw_color(self, context, node):
@@ -1265,14 +1254,16 @@ class NodeParser:
                 node.draw_socket(self, context, layout, node, text)
             rand_color = (rand()**0.5, rand()**0.5, rand()**0.5, 1)
             color = bpy.props.FloatVectorProperty(size=4, default=rand_color)
-            __annotations__ = {"color": color,
-                               "index": bpy.props.IntProperty(default=-1),
-                               "slot_index": bpy.props.IntProperty(default=-1)}
-            fields = {"draw": draw,
-                      "bl_label": stype,
-                      "__annotations__": __annotations__,
-                      "draw_color_simple_": rand_color
-                      }
+            fields = {
+                "draw": draw,
+                "bl_label": stype,
+                "__annotations__": {
+                    "color": color,
+                    "index": bpy.props.IntProperty(default=-1),
+                    "slot_index": bpy.props.IntProperty(default=-1)
+                },
+                "draw_color_simple_": rand_color
+            }
             SocketDesc = type(stype, (SocketBase,), fields)
             socket_clss.append(SocketDesc)
             fields = {
@@ -1281,10 +1272,11 @@ class NodeParser:
                 "bl_label": stype,
                 "draw_color": lambda s, c: s.color,
                 "draw": lambda s, c, l: l.label(text=s.bl_label),
-                "__annotations__": {"color": color,
-                                    "sid": bpy.props.StringProperty(default=""),
-                                    "io_type": bpy.props.StringProperty(default=""),
-                                    }
+                "__annotations__": {
+                    "color": color,
+                    "sid": bpy.props.StringProperty(default=""),
+                    "io_type": bpy.props.StringProperty(default=""),
+                },
             }
             base = getattr(bpy.types, "NodeSocketInterface",
                            getattr(bpy.types, "NodeTreeInterfaceSocket", None))
@@ -1392,14 +1384,15 @@ class NodeParser:
             bp = get_blueprints(nname)
             bp.extra_properties(properties, nname, ndesc)
             # spec_extra_properties(properties, nname, ndesc)
-            fields = {"init": init,
-                      "inp_types": inp_types,
-                      "out_types": out_types,
-                      "class_type": nname,
-                      "bl_label": nname,
-                      "__annotations__": properties,
-                      "__metadata__": ndesc
-                      }
+            fields = {
+                "init": init,
+                "inp_types": inp_types,
+                "out_types": out_types,
+                "class_type": nname,
+                "bl_label": nname,
+                "__annotations__": properties,
+                "__metadata__": ndesc
+            }
             if skip:
                 logger.warn("Skip Reg Node: %s", nname)
                 continue

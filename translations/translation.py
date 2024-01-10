@@ -412,6 +412,10 @@ LANG_TEXT = {
         "截图": "Screenshot",
         "存储": "Save",
         "预览": "Preview",
+        "输入": "Input",
+        "渲染": "Render",
+        "序列图": "Sequence",
+        "视口": "Viewport",
     },
     get_locale_inv("zh_HANS"): {
         **other,

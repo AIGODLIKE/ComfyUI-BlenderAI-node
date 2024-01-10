@@ -35,8 +35,8 @@ class SDNGroup(bpy.types.NodeCustomGroup, NodeBase):
         return True
 
     def update(self):
-        from ..utils import ScopeTimer
-        t = ScopeTimer(f"G {self.name} Update", prt=logger.error)
+        # from ..utils import ScopeTimer
+        # t = ScopeTimer(f"G {self.name} Update", prt=logger.error)
         super().update()
         self.recursive_check()
         if not self.node_tree:
