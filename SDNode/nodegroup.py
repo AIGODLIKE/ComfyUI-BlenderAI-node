@@ -480,27 +480,26 @@ class PackGroupTree(bpy.types.Operator):
         selected = [n for n in tree.nodes if n.select]
         rec_links = []
         if self.action == "SELECT":
-            if selected:
-                # 如果选中的节点中有组节点，则报深度错误
-                if any([n.bl_idname == SDNGroup.bl_idname for n in selected]):
-                    self.report({"ERROR"}, _T("Node group can't be nested"))
-                    return {"CANCELLED"}
-                bpy.ops.node.clipboard_copy()
-                # 记录选中节点的link 以便后续恢复到 节点组外部
-                for n in selected:
-                    # [from_node, from_socket, to_node, to_socket, in_out]
-                    for l in [l for sock in (n.inputs[:] + n.outputs[:]) for l in sock.links]:
-                        fnode = l.from_node
-                        tnode = l.to_node
-                        if fnode in selected and tnode in selected:
-                            continue
-                        in_out = "INPUT"
-                        if fnode in selected:
-                            in_out = "OUTPUT"
-                        link = VLink.dump(l, in_out, "PACK")
-                        rec_links.append(link)
-            else:
+            if not selected:
                 return {"CANCELLED"}
+            # 如果选中的节点中有组节点，则报深度错误
+            if any([n.bl_idname == SDNGroup.bl_idname for n in selected]):
+                self.report({"ERROR"}, _T("Node group can't be nested"))
+                return {"CANCELLED"}
+            bpy.ops.node.clipboard_copy()
+            # 记录选中节点的link 以便后续恢复到 节点组外部
+            for n in selected:
+                # [from_node, from_socket, to_node, to_socket, in_out]
+                for l in [l for sock in (n.inputs[:] + n.outputs[:]) for l in sock.links]:
+                    fnode = l.from_node
+                    tnode = l.to_node
+                    if fnode in selected and tnode in selected:
+                        continue
+                    in_out = "INPUT"
+                    if fnode in selected:
+                        in_out = "OUTPUT"
+                    link = VLink.dump(l, in_out, "PACK")
+                    rec_links.append(link)
         gp: bpy.types.NodeCustomGroup = tree.nodes.new(SDNGroup.bl_idname)
         gp[REC_LINKS] = rec_links
         sub_tree = bpy.data.node_groups.new("Group", "CFNodeTree")
