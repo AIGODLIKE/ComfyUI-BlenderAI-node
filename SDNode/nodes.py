@@ -634,8 +634,9 @@ class NodeBase(bpy.types.Node):
         while True:
             node = link.from_node
             if node.bl_idname == "NodeReroute":
-                if node.inputs[0].is_linked:
-                    link = node.inputs[0].links[0]
+                inp = node.inputs[0]
+                if inp.is_linked and inp.links:
+                    link = inp.links[0]
                 else:
                     return
             else:
