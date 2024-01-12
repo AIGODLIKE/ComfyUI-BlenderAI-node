@@ -6,7 +6,7 @@ from pathlib import Path
 from threading import Thread
 from functools import lru_cache
 from urllib.parse import urlparse
-from .kclogger import logger
+from .kclogger import logger, set_translate
 from .translations import LANG_TEXT
 from .timer import Timer
 from .datas import IMG_SUFFIX
@@ -35,6 +35,8 @@ def get_addon_name():
 
 
 def _T(word):
+    if not isinstance(word, str):
+        return word
     import bpy
     from bpy.app.translations import pgettext
     locale = bpy.context.preferences.view.language
@@ -46,6 +48,9 @@ def _T(word):
         culture[word] = pgettext(word)
     Timer.put((f, word))
     return LANG_TEXT.get(locale, {}).get(word, word)
+
+
+set_translate(_T)
 
 
 def _T2(word):
@@ -64,6 +69,20 @@ def update_screen():
         ...
 
 
+def update_node_editor():
+    try:
+        import bpy
+        for area in bpy.context.screen.areas:
+            for space in area.spaces:
+                if space.type != "NODE_EDITOR":
+                    continue
+                space.node_tree = space.node_tree
+            if area.type == "NODE_EDITOR":
+                area.tag_redraw()
+    except Exception:
+        ...
+
+
 def clear_cache(d=None):
     from pathlib import Path
     from shutil import rmtree
@@ -79,15 +98,16 @@ def clear_cache(d=None):
                 rmtree(file)
 
 
-def rgb2hex(r, g, b):
+def rgb2hex(r, g, b, *args):
     hex_val = f"#{int(r*256):02x}{int(g*256):02x}{int(b*256):02x}"
     return hex_val
 
 
 def hex2rgb(hex_val):
     hex_val = hex_val.lstrip('#')
-    r, g, b = tuple(int(hex_val[i:i + 2], 16) / 256 for i in (0, 2, 4))
-    return r, g, b
+    if len(hex_val) == 3:
+        return [int(h, 16) / 16 for h in hex_val]
+    return [int(hex_val[i:i + 2], 16) / 256 for i in (0, 2, 4)]
 
 
 class PrevMgr:

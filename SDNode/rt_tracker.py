@@ -4,8 +4,11 @@ from queue import Queue
 from functools import lru_cache
 from time import time
 from ..preference import get_pref
+from .utils import get_default_tree
+
 
 class TrackerStatus:
+    args = {}
 
     def __new__(cls, *args, **kwargs):
         if not hasattr(cls, "_instance"):
@@ -60,7 +63,9 @@ class TrackerStatus:
         if qp_num or qr_num:
             self.push_status(tstatus)
         else:
-            bpy.ops.sdn.ops(action="Submit")
+            tree = self.args.get("tree", None)
+            with bpy.context.temp_override(sdn_tree=tree):
+                bpy.ops.sdn.ops(action="Submit")
             self.last_time = ct
 
 
@@ -95,13 +100,16 @@ class Tracker_Loop(bpy.types.Operator):
                                    )
 
     def execute(self, context):
+        status = get_tracker_status()
         if self.action == "START":
             if is_looped():
                 return {'FINISHED'}
+            status.args["tree"] = get_default_tree()
             bpy.app.timers.register(tracker_timer)
         else:
             if not is_looped():
                 return {'FINISHED'}
+            status.args.clear()
             bpy.app.timers.unregister(tracker_timer)
         return {'FINISHED'}
 

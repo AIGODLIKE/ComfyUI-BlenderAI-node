@@ -23,7 +23,7 @@ from ..utils import rmtree as rt, logger, _T, PkgInstaller, FSWatcher
 from ..timer import Timer
 from ..preference import get_pref
 from .history import History
-from .websocket import WebSocketApp
+from ..External.websocket import WebSocketApp
 
 
 def get_ip():
@@ -50,9 +50,10 @@ class Task:
         self._pre = pre
         self._post = post
         from .tree import CFNodeTree
+        from .nodes import NodeBase
         self.tree: CFNodeTree = tree
         self.executing_node_id = ""
-        self.executing_node = None
+        self.executing_node: NodeBase = None
         self.is_finished = False
         self.process = {}
         # 记录node的类型 防止节点树变更
@@ -94,28 +95,29 @@ class Task:
             for n in self.tree.nodes:
                 if not n.label.endswith("-EXEC"):
                     continue
-                n.use_custom_color = False
-                n.label = ""
+                n.restore_appearance()
         Timer.put((f, self))
 
     def set_executing_node_id(self, node_id):
         self.executing_node_id = node_id
 
         def f(self: Task):
+            from .nodes import NodeBase
             if not self.is_tree_valid():
                 return
             self.process = {}
             if self.executing_node:
-                self.executing_node.use_custom_color = False
-                self.executing_node.label = ""
+                self.executing_node.restore_appearance()
             self.executing_node = None
+            pnode_id = node_id.split(":")[0]
             for n in self.tree.nodes:
                 if not hasattr(n, "id"):
                     continue
-                if n.id == node_id and n.bl_idname == self.node_ref_map.get(node_id, ""):
+                if n.id == pnode_id and n.bl_idname == self.node_ref_map.get(pnode_id, ""):
                     self.executing_node = n
                     break
-            n = self.executing_node
+            n: NodeBase = self.executing_node
+            n.store_appearance()
             n.use_custom_color = True
             n.color = (0, 0, 0)
             n.label = n.name + "-EXEC"
@@ -404,7 +406,7 @@ class TaskErrPaser:
                            "class_type": "VAELoader"}}
         node_errors = self.error_info["node_errors"]
         import bpy
-        from .tree import get_tree
+        from .utils import get_tree
         logger.error("Node Error Parse")
         for sc in bpy.data.screens:
             try:
@@ -418,8 +420,9 @@ class TaskErrPaser:
                 print(f"Node:{node}")
                 for n in tree.nodes:
                     if n.id == str(node):
-                        n.use_custom_color = True
+                        n.store_appearance()
                         n.color = (1, 0, 0)
+                        n.use_custom_color = True
                         n.label = n.name + "-ERROR"
                         TaskManager.put_error_msg(n.name)
                 for err in node_errors[node]["errors"]:
@@ -734,7 +737,9 @@ class TaskManager:
             cls._instance = object.__new__(cls, *args, **kw)
         return cls._instance
 
-    def put_error_msg(error):
+    def put_error_msg(error, with_clear=False):
+        if with_clear:
+            TaskManager.clear_error_msg()
         TaskManager.error_msg.append(str(error))
 
     def clear_error_msg():
@@ -873,7 +878,12 @@ class TaskManager:
             TaskManager.progress = {'value': 0, 'max': 1}
             logger.debug(_T("Submit Task"))
             TaskManager.cur_task = task
-            TaskManager.submit(task)
+            try:
+                TaskManager.submit(task)
+            except Exception as e:
+                logger.error(e)
+                TaskManager.put_error_msg(str(e), with_clear=True)
+                TaskManager.mark_finished(with_noexe=False)
         logger.debug(_T("Poll Task Thread Exit"))
 
     def query_server_task():
@@ -1085,6 +1095,8 @@ class TaskManager:
         ws.run_forever()
         logger.debug(_T("Poll Result Thread Exit"))
         TaskManager.ws = None
+        if TaskManager.server.is_launched():
+            Timer.put((TaskManager.restart_server, True))
 
 
 def removetemp():

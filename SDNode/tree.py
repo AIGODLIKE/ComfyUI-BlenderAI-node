@@ -1,8 +1,13 @@
+from __future__ import annotations
+from types import UnionType
+from typing import Any
 import bpy
 import typing
 import time
 import sys
+import pickle
 import traceback
+import inspect
 from hashlib import md5
 from string import ascii_letters
 from pathlib import Path
@@ -12,11 +17,13 @@ from functools import partial
 from collections import OrderedDict
 from bpy.types import NodeTree
 from nodeitems_utils import NodeCategory, NodeItem, register_node_categories, unregister_node_categories, _node_categories
-from .nodes import nodes_reg, nodes_unreg, NodeParser, NodeBase, get_tree, clear_nodes_data_cache
+from .nodes import nodes_reg, nodes_unreg, NodeParser, NodeBase, clear_nodes_data_cache
 from ..utils import logger, Icon, rgb2hex, hex2rgb, _T, FSWatcher
 from ..datas import EnumCache
 from ..timer import Timer
-from ..translations import ctxt
+from ..translations import ctxt, get_ori_name
+from .utils import THelper
+from contextlib import contextmanager
 
 TREE_NAME = "CFNODES_SYS"
 TREE_TYPE = "CFNodeTree"
@@ -71,8 +78,9 @@ def save_json_wrapper(func):
                 if "(Blender特供)" in node.get("title", ""):
                     node["title"] = node.get("title", "").replace("(Blender特供)", "")
             return res
-        except BaseException:
+        except Exception as e:
             logger.error(traceback.format_exc())
+            raise e
         return {}
     return wrapper
 
@@ -95,24 +103,143 @@ class CFNodeTree(NodeTree):
     bl_label = "ComfyUI Node"
     bl_icon = "EVENT_T"
     display_shape = {"CIRCLE"}
+    msgbus_owner = object()
     outUpdate: bpy.props.BoolProperty(default=False)
-    instance = None
+    root: bpy.props.BoolProperty(default=True)
+    freeze: bpy.props.BoolProperty(default=False, description="冻结更新")
+
+    class Pool:
+        def __init__(self, tree: CFNodeTree) -> None:
+            self.tree = tree
+
+        def add(self, id):
+            pool = self._get_id_pool()
+            pool.add(id)
+            self._set_id_pool(pool)
+
+        def discard(self, id):
+            pool = self._get_id_pool()
+            pool.discard(id)
+            self._set_id_pool(pool)
+
+        def update(self, ids):
+            pool = self._get_id_pool()
+            pool.update(ids)
+            self._set_id_pool(pool)
+
+        def clear(self):
+            self._set_id_pool(set())
+
+        def __contains__(self, id):
+            return id in self._get_id_pool()
+
+        def __or__(self, __value: Any) -> set:
+            return self._get_id_pool() | __value
+
+        def __iter__(self) -> typing.Iterator[Any]:
+            return iter(self._get_id_pool())
+
+        def __repr__(self) -> str:
+            return repr(self._get_id_pool())
+
+        def _get_id_pool(self) -> set:
+            if "ID_POOL" not in self.tree:
+                self.tree["ID_POOL"] = pickle.dumps(set())
+            return pickle.loads(self.tree["ID_POOL"])
+
+        def _set_id_pool(self, value):
+            if not isinstance(value, set):
+                raise TypeError("ID POOL must be set")
+            self.tree["ID_POOL"] = pickle.dumps(value)
+
+    def get_id_pool(self) -> Pool:
+        return self.Pool(self)
+
+    @staticmethod
+    def refresh_current_tree():
+        for tree in bpy.data.node_groups:
+            tree: CFNodeTree = tree
+            if tree.bl_idname != TREE_TYPE:
+                continue
+            # 无效的sock需要重新剔除并重新连接
+            for node in tree.get_nodes():
+                for sock in node.inputs:
+                    if sock.bl_idname != "NodeSocketUndefined":
+                        continue
+                    if node.is_group():
+                        ...
+                        # tree.interface_update(bpy.context)
+                        # tree.update()
+                        # bpy.msgbus.publish_rna(key=(bpy.types.SpaceNodeEditor, "node_tree"))
+                    else:
+                        fsock = None
+                        if sock.is_linked and not sock.links:
+                            fsock = sock.links[0].from_socket
+                        socket_name = get_ori_name(sock.name)
+                        node.switch_socket(socket_name, False)
+                        inp = node.switch_socket(socket_name, True)
+                        if fsock:
+                            print("NEW LINK", fsock, inp)
+                            tree.links.new(fsock, inp)
+        bpy.msgbus.publish_rna(key=(bpy.types.SpaceNodeEditor, "node_tree"))
+
+    def get_in_out_node(self) -> list[NodeBase]:
+        in_node = None
+        out_node = None
+        for n in self.nodes:
+            if n.bl_idname == "NodeGroupInput":
+                in_node = n
+            elif n.bl_idname == "NodeGroupOutput":
+                out_node = n
+        return in_node, out_node
+
+    def update_editor(self):
+        try:
+            for area in bpy.context.screen.areas:
+                for space in area.spaces:
+                    if space.type != "NODE_EDITOR":
+                        continue
+                    space.node_tree = space.node_tree
+                if area.type == "NODE_EDITOR":
+                    area.tag_redraw()
+        except Exception:
+            ...
 
     def update(self):
-        CFNodeTree.instance = self
+        return
+        logger.error(f"{self.name} Update {time.time_ns()}")
+
+    @contextmanager
+    def with_freeze(self):
+        """
+        context
+        enter时 freeze
+        exit时 unfreeze
+        """
+        self.freeze = True
+        try:
+            yield
+        except BaseException:
+            traceback.print_exc()
+        self.freeze = False
 
     def serialize_pre(self):
         for node in self.get_nodes():
             node.serialize_pre()
 
     @serialize_wrapper
-    def serialize(self):
+    def serialize(self, parent=None):
         """
         get prompts
         """
         self.validation()
         self.serialize_pre()
-        return {node.id: node.make_serialze() for node in self.get_nodes() if node.class_type not in {"Reroute", "PrimitiveNode", "Note"}}
+        prompt = {}
+        for node in self.get_nodes():
+            if node.class_type in {"Reroute", "PrimitiveNode", "Note"}:
+                continue
+            prompt.update(node.make_serialize(parent=parent))
+        return prompt
 
     def validation(self, nodes=None):
 
@@ -152,11 +279,15 @@ class CFNodeTree(NodeTree):
         return node.location.x + ox, node.location.y + oy
 
     @save_json_wrapper
-    def save_json_ex(self, dump_nodes: list[bpy.types.Node], dump_frames=None, selected_only=False):
+    def save_json_ex(self, dump_nodes: list[NodeBase], dump_frames=None, selected_only=False):
         self.validation(dump_nodes)
         self.calc_unique_id()
         self.compute_execution_order()
+        dump_nodes.sort(key=lambda x: x.id)
         nodes_info = []
+        # extra 需要导出 groupNodes
+        groupNodes = {}
+        extra = {"groupNodes": groupNodes}
         for node in dump_nodes:
             p = node.parent
             node.parent = None
@@ -164,6 +295,53 @@ class CFNodeTree(NodeTree):
             info = node.dump(selected_only=selected_only)
             node.parent = p
             nodes_info.append(info)
+            if node.is_group():
+                if not node.node_tree:
+                    continue
+                res = {"nodes": [], "links": [], "external": []}
+                res_ = node.node_tree.save_json()
+                # 只同步 res有的key
+                for k in res:
+                    res[k] = res_.get(k, [])
+                for n in res["nodes"]:
+                    n.pop("size")
+                    n["index"] = n.pop("id")
+                    for nlink in n["inputs"]:
+                        nlink["link"] = None
+                        nlink.pop("slot_index", None)
+                    for nlink in n["outputs"]:
+                        nlink["links"] = []
+                        # TODO: 判断是否为外部连接
+                links = []
+                for link in res["links"]:
+                    if link[1] == -1 or link[3] == -1:
+                        continue
+                    # 原始数据: 0: lindex, 1: fnode, 2: fslot, 3: tnode, 4: tslot
+                    # 定义已改: 0: fnode,  1: fslot, 2: tnode, 3: tslot, 4: lindex
+                    link[:5] = *link[1:5], link[0]
+                    links.append(link)
+                res["links"] = links
+                # nodes按index 排序
+                res["nodes"].sort(key=lambda x: x["order"])
+                index_map = {n["index"]: i for i, n in enumerate(res["nodes"])}
+                for link in res["links"]:
+                    link[0] = index_map[link[0]]
+                    link[2] = index_map[link[2]]
+                for n in res["nodes"]:
+                    n["index"] = index_map[n["index"]]
+                # nodes:
+                #   1. 多一个index属性 (和id应该作用相同)
+                #   2. 少id属性
+                #   3. inputs  的 link为null
+                #   4. outputs links为null的是输出, 为[] 的是内部连接
+                #   5.
+                # links:
+                #   0. 只记录内部的节点连接关系
+                #   1. link 开头为 null代表外部输入
+                # 对应的是 node_tree中的 组输出节点的link
+                # logger.error(f"GROUP: {res}")
+                groupNodes[node.node_tree.name] = res
+                continue
             {"id": 7,
              "type": "CLIPTextEncode",
              "pos": [413, 389],
@@ -184,34 +362,23 @@ class CFNodeTree(NodeTree):
         # pack link info into a non-verbose format
         links = []
         for i, link in enumerate(self.links):
-            # links is an OBJECT
-            # [id, origin_id, origin_slot, target_id, target_slot, type]
-            # 当有 NodeReroute 的时候 情况比较复杂
-            # from_node = self.find_from_node(link)
-            # to_node = self.find_to_node(link)
-            # if (to_node not in dump_nodes) or (from_node not in dump_nodes):
-            #     continue
-            # from_socket = self.find_from_link(link).from_socket
-            # to_socket = self.find_to_link(link).to_socket
-            # link_info = [
-            #     i,
-            #     int(from_socket.node.id),
-            #     from_socket.slot_index,
-            #     int(to_socket.node.id),
-            #     to_socket.slot_index,
-            #     from_socket.node.class_type
-            # ]
             from_node = link.from_node
             from_socket = link.from_socket
             to_node = link.to_node
             to_socket = link.to_socket
+            if not from_socket.node.is_registered_node_type():
+                logger.error(_T("Invalid Node Type: {}").format(from_socket.node.name))
+                raise InvalidNodeType(_T("Invalid Node Type: {}").format(from_socket.node.name))
+            if not to_socket.node.is_registered_node_type():
+                logger.error(_T("Invalid Node Type: {}").format(to_socket.node.name))
+                raise InvalidNodeType(_T("Invalid Node Type: {}").format(to_socket.node.name))
             link_info = [
                 i,
                 int(from_socket.node.id),
                 from_socket.slot_index,
                 int(to_socket.node.id),
                 to_socket.slot_index,
-                to_node.class_type
+                to_socket.bl_idname
             ]
             if to_node.class_type == "Reroute":
                 link_info[-1] = "*"
@@ -242,7 +409,7 @@ class CFNodeTree(NodeTree):
             "links": links,
             "groups": groups,
             "config": {},
-            "extra": {},
+            "extra": extra,
             "version": 0.4
         }
         # if onSerialize:
@@ -255,7 +422,6 @@ class CFNodeTree(NodeTree):
         get workflow
         """
         dump_nodes = self.get_nodes()
-
         return self.save_json_ex(dump_nodes)
 
     def save_json_group(self):
@@ -277,13 +443,33 @@ class CFNodeTree(NodeTree):
         load_nodes = []
         id_map = {}
         id_node_map = {}
+        pool = self.get_id_pool()
+        groupNodes = data.get("extra", {}).get("groupNodes", {})
+        # 先加载groupNodes
+        for gname, group in groupNodes.items():
+            if old_gp := bpy.data.node_groups.get(gname):
+                bpy.data.node_groups.remove(old_gp)
+            gtree: CFNodeTree = bpy.data.node_groups.new(gname, "CFNodeTree")
+            gtree.use_fake_user = True
+            gtree.root = False
+            for link in group.get("links", []):
+                link[:5] = link[5], *link[0:4]
+            gtree.load_json(group)
+            gtree.nodes.new("NodeGroupInput").location = (-250, 0)
+            gtree.nodes.new("NodeGroupOutput").location = (250, 0)
+
         for node_info in data.get("nodes", []):
             t = node_info["type"]
             if t == "Reroute":
-                node = self.nodes.new(type="NodeReroute")
+                node: NodeBase = self.nodes.new(type="NodeReroute")
+            elif t.startswith("workflow/"):
+                from .nodegroup import SDNGroup
+                node: bpy.types.NodeCustomGroup = self.nodes.new(SDNGroup.bl_idname)
+                gname = t.replace("workflow/", "")
+                node.node_tree = bpy.data.node_groups.get(gname)
             else:
                 try:
-                    node = self.nodes.new(type=t)
+                    node: NodeBase = self.nodes.new(type=t)
                 except RuntimeError as e:
                     from .manager import TaskManager
                     TaskManager.put_error_msg(str(e))
@@ -292,18 +478,54 @@ class CFNodeTree(NodeTree):
                 node.load(node_info, with_id=False)
             else:
                 node.load(node_info)
-            old_id = str(node_info["id"])
+            if "index" in node_info:
+                old_id = str(node_info["index"])
+            else:
+                old_id = str(node_info["id"])
             id_map[old_id] = old_id
             id_node_map[old_id] = node
             load_nodes.append(node)
             if is_group:
-                if old_id in node.pool:
+                if old_id in pool:
                     id_map[old_id] = node.apply_unique_id()
                 else:
-                    node.pool.add(old_id)
+                    pool.add(old_id)
                     node.id = old_id
+        self.update_editor()
+        nlinks = self.dolink(data.get("links", []), id_map, id_node_map)
 
-        for link in data.get("links", []):
+        for group in data.get("groups", []):
+            label = group.get("title")
+            bounding = group.get("bounding")
+            color = group.get("color")
+            node = self.nodes.new(type="NodeFrame")
+            load_nodes.append(node)
+            node.shrink = False
+            if label:
+                node.label = label
+            if color:
+                node.use_custom_color = True
+                try:
+                    node.color = hex2rgb(color)
+                except BaseException:
+                    logger.warn(f"Color: {color} Set Failed!")
+            node.location.x = bounding[0]
+            node.location.y = -bounding[1]
+            node.width = bounding[2]
+            node.height = bounding[3]
+            node.update()
+
+        def f(links, id_map, id_node_map):
+            # hack: wait for nodegroup sockets update
+            time.sleep(0.01)
+            Timer.put((self.dolink, links, id_map, id_node_map))
+        Thread(target=f, args=(nlinks, id_map, id_node_map)).start()
+
+        return load_nodes
+
+    def dolink(self, links, id_map, id_node_map):
+        not_found_links = []
+        for link in links:
             # logger.debug(link)
             if str(link[1]) not in id_map:
                 logger.warn(f"{_T('|IGNORED|')} Link -> {link[0]} -> {_T('Not Found Node')}: {link[1]}")
@@ -311,10 +533,16 @@ class CFNodeTree(NodeTree):
             if str(link[3]) not in id_map:
                 logger.warn(f"{_T('|IGNORED|')} Link -> {link[0]} -> {_T('Not Found Node')}: {link[3]}")
                 continue
-            from_node = id_node_map[str(link[1])]
-            to_node = id_node_map[str(link[3])]
+            from_node: NodeBase = id_node_map[str(link[1])]
+            to_node: NodeBase = id_node_map[str(link[3])]
             if not from_node or not to_node:
                 logger.warn(f"Not Found Link:{link}")
+                continue
+            if from_node.is_group() and len(from_node.outputs) == 0:
+                not_found_links.append(link)
+                continue
+            if to_node.is_group() and len(to_node.inputs) == 0:
+                not_found_links.append(link)
                 continue
             from_slot = link[2]
             to_slot = link[4]
@@ -338,31 +566,11 @@ class CFNodeTree(NodeTree):
                 self.links.new(find_out, find_in)
             else:
                 logger.error(link)
-        for group in data.get("groups", []):
-            label = group.get("title")
-            bounding = group.get("bounding")
-            color = group.get("color")
-            node = self.nodes.new(type="NodeFrame")
-            load_nodes.append(node)
-            node.shrink = False
-            if label:
-                node.label = label
-            if color:
-                node.use_custom_color = True
-                try:
-                    node.color = hex2rgb(color)
-                except BaseException:
-                    logger.warn(f"Color: {color} Set Failed!")
-            node.location.x = bounding[0]
-            node.location.y = -bounding[1]
-            node.width = bounding[2]
-            node.height = bounding[3]
-            node.update()
-        return load_nodes
+        return not_found_links
 
     def get_nodes(self, cmf=True) -> list[NodeBase]:
         if cmf:
-            return [n for n in self.nodes if n.bl_idname not in {"NodeFrame", } and n.is_registered_node_type()]
+            return [n for n in self.nodes if n.bl_idname not in {"NodeFrame", "NodeGroupInput", "NodeGroupOutput"} and n.is_registered_node_type()]
         return [n for n in self.nodes if n.is_registered_node_type()]
 
     def clear_nodes(self):
@@ -384,34 +592,6 @@ class CFNodeTree(NodeTree):
         t.start()
         t.join()
 
-    def find_from_node(self, link: bpy.types.NodeLink):
-        return self.find_node_ex(link, is_from=True, ret_socket=False)
-
-    def find_to_node(self, link: bpy.types.NodeLink):
-        return self.find_node_ex(link, is_from=False, ret_socket=False)
-
-    def find_from_link(self, link: bpy.types.NodeLink):
-        return self.find_node_ex(link, is_from=True, ret_socket=True)
-
-    def find_to_link(self, link: bpy.types.NodeLink):
-        return self.find_node_ex(link, is_from=False, ret_socket=True)
-
-    def find_node_ex(self, link: bpy.types.NodeLink, is_from, ret_socket=False):
-        while True:
-            if is_from:
-                node = link.from_node
-            else:
-                node = link.to_node
-            if node.bl_idname == "NodeReroute":
-                if is_from and node.inputs[0].is_linked:
-                    link = node.inputs[0].links[0]
-                elif not is_from and node.outputs[0].is_linked:
-                    link = node.outputs[0].links[0]
-                else:
-                    return
-            else:
-                return link if ret_socket else node
-
     def calc_unique_id(self):
         """
         force unique id
@@ -425,44 +605,78 @@ class CFNodeTree(NodeTree):
                     continue
                 if nn.id == n.id:
                     n.apply_unique_id()
+        # 保证id从0开始
+        # ids = sorted([int(n.id) for n in nodes])
+        # min_id = min(ids)
+        # if min_id == 0:
+        #     return
+        # pool = self.get_id_pool()
+        # for n in nodes:
+        #     pool.discard(n.id)
+        #     n.id = str(int(n.id) - min_id)
+        #     pool.add(n.id)
 
     def update_tick(self):
         """
         force update
         """
         self.id_clear_update()
-        self.primitive_node_update()
+        self.compute_execution_order()
+        self.calc_unique_id()
+        for node in self.nodes:
+            if not node.is_registered_node_type():
+                continue
+            self.primitive_node_update(node)
+            self.dirty_nodes_update(node)
+            self.group_nodes_update(node)
 
     def id_clear_update(self):
         ids = set()
         nodes = self.get_nodes(cmf=True)
         for node in nodes:
+            if not node.is_registered_node_type():
+                continue
+            if node.bl_idname in {"NodeGroupInput", "NodeGroupOutput"}:
+                continue
             ids.add(node.id)
-        NodeBase.pool.clear()
-        NodeBase.pool.update(ids)
+        pool = self.get_id_pool()
+        pool.clear()
+        pool.update(ids)
 
-    def primitive_node_update(self):
+    def primitive_node_update(self, node: NodeBase):
         from .nodes import get_reg_name
-        for node in self.nodes:
-            if node.bl_idname != "PrimitiveNode":
+        if node.bl_idname != "PrimitiveNode":
+            return
+        # 未连接或link为空则不需要后续操作
+        if not node.outputs[0].is_linked or not node.outputs[0].links:
+            return
+        prop = getattr(node.outputs[0].links[0].to_node, get_reg_name(node.prop), None)
+        if prop is None:
+            return
+        for link in node.outputs[0].links[1:]:
+            if not link.to_node.is_registered_node_type():
                 continue
-            # 未连接或link为空则不需要后续操作
-            if not node.outputs[0].is_linked or not node.outputs[0].links:
-                continue
-            prop = getattr(node.outputs[0].links[0].to_node, get_reg_name(node.prop), None)
-            if prop is None:
-                continue
-            for link in node.outputs[0].links[1:]:
-                if not link.to_node.is_registered_node_type():
-                    continue
-                n = get_reg_name(link.to_socket.name)
-                old_prop = getattr(link.to_node, n)
-                setattr(link.to_node, n, type(old_prop)(prop))
+            n = get_reg_name(link.to_socket.name)
+            old_prop = getattr(link.to_node, n)
+            setattr(link.to_node, n, type(old_prop)(prop))
+
+    def dirty_nodes_update(self, node: NodeBase):
+        if not node.is_dirty():
+            return
+        node.update()
+        node.set_dirty(False)
+
+    def group_nodes_update(self, node: NodeBase):
+        if not node.is_group():
+            return
+        # node.update()
 
     def compute_execution_order(self):
         """
         Reference from ComfyUI
         """
+        helper = THelper()
+        all_links = self.links.values()
         L = []
         S = []  # 起始节点
         M = OrderedDict()
@@ -472,13 +686,15 @@ class CFNodeTree(NodeTree):
         # 搜索无inp的节点(起始点)
         for node in self.get_nodes():
             M[node.id] = node  # add to pending nodes
-            num = 0  # num of input connections
-            for inp in node.inputs:
-                if inp.links:
-                    num += 1
+            num = sum([bool(inp.links) for inp in node.inputs])  # num of input connections
+            # for inp in node.inputs:
+            #     if inp.links:
+            #         num += 1
             if num == 0:
+                node.sdn_level = 1
                 S.append(node)
             else:
+                node.sdn_level = 0
                 remaining_links[node.id] = num
         while S:
             node = S.pop()  # get an starting node
@@ -487,15 +703,29 @@ class CFNodeTree(NodeTree):
             for output in node.outputs:
                 for olink in output.links:
                     # link_id = output.links[j] # 全局 links 是一个列表,这里的 link_id 用来取link
-                    from_node = self.find_from_node(olink)
-                    to_node = self.find_to_node(olink)
-                    {"id": 1, "type": "MODEL", "origin_id": 4, "origin_slot": 0, "target_id": 3, "target_slot": 0, "_data": None, "_pos": {"0": 607, "1": 335}}
+                    from_node = helper.find_from_node(olink)
+                    to_node = helper.find_to_node(olink)
+                    if not from_node or from_node.bl_idname == "NodeGroupInput":
+                        from_node = None
+                    if not to_node or to_node.bl_idname == "NodeGroupOutput":
+                        to_node = None
+                    # _LINK_DEF = {
+                    #     "id": 1,
+                    #     "origin_id": 4,
+                    #     "origin_slot": 0,
+                    #     "target_id": 3,
+                    #     "target_slot": 0,
+                    #     "type": "MODEL",
+                    # }
                     if to_node is None:
                         continue
+                    if not to_node.sdn_level or to_node.sdn_level <= node.sdn_level:
+                        to_node.sdn_level = node.sdn_level + 1
                     # already visited link (ignore it)
-                    if to_node.id in visited_links:
+                    link_id = all_links.index(olink)
+                    if link_id in visited_links:
                         continue
-                    visited_links[from_node.id] = True  # mark as visited
+                    visited_links[link_id] = True  # mark as visited
                     remaining_links[to_node.id] -= 1  # reduce the number of links remaining
                     if remaining_links[to_node.id] == 0:
                         S.append(to_node)
@@ -503,6 +733,20 @@ class CFNodeTree(NodeTree):
         for i in M:
             L.append(M[i])
 
+        """
+        // Note: the priority is null by default
+        // javascript sort function
+        L = L.sort(function(A, B) {
+            var Ap = A.constructor.priority || A.priority || 0;
+            var Bp = B.constructor.priority || B.priority || 0;
+            if (Ap == Bp) {
+                //if same priority, sort by order
+                return A.order - B.order;
+            }
+            return Ap - Bp; //sort by priority
+        });
+        """
+        L.sort(key=lambda x: x.sdn_order)
         for i, n in enumerate(L):
             n.sdn_order = i
         return L
@@ -513,6 +757,49 @@ class CFNodeTree(NodeTree):
                 return node
         return None
 
+    def clear_store_links(self):
+        from .nodegroup import REC_LINKS
+        node = self.nodes.active
+        if not node:
+            return
+        if REC_LINKS in node:
+            node.pop(REC_LINKS)
+
+    def store_toggle_links(self, ltype="TOGGLE"):
+        from .nodegroup import REC_LINKS
+        from .utils import VLink
+        node = self.nodes.active
+        if not node:
+            return
+        rec_links = []
+        if REC_LINKS in node:
+            rec_links = [tuple(l) for l in node[REC_LINKS]]
+        # [from_node, from_socket, to_node, to_socket, in_out, type]
+        for l in [l for sock in (node.inputs[:] + node.outputs[:]) for l in sock.links]:
+            in_out = "INPUT" if l.from_node != node else "OUTPUT"
+            link = VLink.dump(l, in_out, ltype)
+            rec_links.append(link)
+        node[REC_LINKS] = list(set(rec_links))
+        # logger.debug(f"{node} store_links {rec_links}")
+
+    def restore_toggle_links(self, now=False):
+        from .nodegroup import REC_LINKS
+        from .utils import VLink
+        # 恢复外部link
+        node = self.nodes.active
+        if not node:
+            return
+        rec_links = node.pop(REC_LINKS, None)
+        if not rec_links:
+            return
+        for l in rec_links:
+            vlink = VLink(*l)
+            if now:
+                vlink.relink(node, self)
+            else:
+                Timer.put((vlink.relink, node, self))
+            # logger.debug(f"{node} restore_links {vlink}")
+
     @staticmethod
     @bpy.app.handlers.persistent
     def reinit(scene):
@@ -522,6 +809,9 @@ class CFNodeTree(NodeTree):
         CFNodeTree.force_regen_id()
         CFNodeTree.reset_node()
         Timer.reg()
+        CFNodeTree.unreg_switch_update()
+        CFNodeTree.reg_switch_update()
+        CFNodeTree.switch_tree_update()
 
     @staticmethod
     def reset_node():
@@ -536,18 +826,41 @@ class CFNodeTree(NodeTree):
     @staticmethod
     def force_regen_id():
         for ng in bpy.data.node_groups:
+            ng: CFNodeTree = ng
             if ng.bl_idname != CFNodeTree.bl_idname:
                 continue
+            pool = ng.get_id_pool()
+            pool.clear()
             for node in ng.get_nodes():
-                node.pool.clear()
-            for node in ng.get_nodes():
-                pool = node.pool
                 if node.id in pool | {"-1", "0", "1", "2"}:
                     node.apply_unique_id()
                     # logger.debug("Regen: %s", node.id)
                 else:
                     pool.add(node.id)
                     # logger.debug("Add: %s", node.id)
+
+    @staticmethod
+    def switch_tree_update():
+        for group in bpy.data.node_groups:
+            group: CFNodeTree = group
+            if group.bl_idname != TREE_TYPE:
+                continue
+            for node in group.get_nodes():
+                node.update()
+
+    @staticmethod
+    def reg_switch_update():
+        bpy.msgbus.subscribe_rna(
+            key=(bpy.types.SpaceNodeEditor, "node_tree"),
+            owner=CFNodeTree,
+            args=(),
+            notify=CFNodeTree.switch_tree_update,
+            options={"PERSISTENT"}
+        )
+
+    @staticmethod
+    def unreg_switch_update():
+        bpy.msgbus.clear_by_owner(CFNodeTree)
 
 
 class CFNodeCategory(NodeCategory):
@@ -642,52 +955,88 @@ reg, unreg = bpy.utils.register_classes_factory(clss)
 
 def reg_node_reroute():
     from .nodes import NodeBase
-    bpy.types.NodeSocketColor.slot_index = bpy.props.IntProperty(default=-1)
+    bpy.types.NodeSocketColor.slot_index = bpy.props.IntProperty(default=0)
     bpy.types.NodeSocketColor.index = bpy.props.IntProperty(default=-1)
+    bpy.types.NodeSocketColor.sid = bpy.props.StringProperty(default="")
+    bpy.types.NodeSocketColor.io_type = bpy.props.StringProperty(default="")
+    if bpy.app.version >= (4, 0):
+        bpy.types.NodeTreeInterfaceSocketColor.sid = bpy.props.StringProperty(default="")
+        bpy.types.NodeTreeInterfaceSocketColor.io_type = bpy.props.StringProperty(default="")
+    else:
+        bpy.types.NodeSocketInterfaceColor.sid = bpy.props.StringProperty(default="")
+        bpy.types.NodeSocketInterfaceColor.io_type = bpy.props.StringProperty(default="")
+    for inode in [bpy.types.NodeReroute, bpy.types.NodeFrame, bpy.types.NodeGroupInput, bpy.types.NodeGroupOutput]:
+        inode.id = bpy.props.StringProperty(default="-1")
+        inode.sdn_order = bpy.props.IntProperty(default=-1)
+        inode.sdn_level = bpy.props.IntProperty(default=0)
+        inode.sdn_dirty = bpy.props.BoolProperty(default=False)
+        inode.sdn_hide = bpy.props.BoolProperty(default=False)
+        # inode.is_dirty = NodeBase.is_dirty
+        # inode.set_dirty = NodeBase.set_dirty
+        # inode.is_group = NodeBase.is_group
+        # inode.get_tree = NodeBase.get_tree
+        # inode.load = NodeBase.load
+        # inode.dump = NodeBase.dump
+        # inode.update = NodeBase.update
+        # inode.serialize_pre = NodeBase.serialize_pre
+        # inode.serialize = NodeBase.serialize
+        # inode.post_fn = NodeBase.post_fn
+        # inode.pre_fn = NodeBase.pre_fn
+        # inode.apply_unique_id = NodeBase.apply_unique_id
+        # inode.unique_id = NodeBase.unique_id
+        # inode.calc_slot_index = NodeBase.calc_slot_index
+        # inode.is_base_type = NodeBase.is_base_type
+        inode.get_meta = NodeBase.get_meta
+        # inode.query_stats = NodeBase.query_stats
+        # inode.query_stat = NodeBase.query_stat
+        # inode.set_stat = NodeBase.set_stat
+        # inode.switch_socket = NodeBase.switch_socket
+        # inode.get_from_link = NodeBase.get_from_link
+        # inode.get_ctxt = NodeBase.get_ctxt
+        # inode.get_blueprints = NodeBase.get_blueprints
+        # inode.draw_socket = NodeBase.draw_socket
 
-    bpy.types.NodeReroute.id = bpy.props.StringProperty(default="-1")
-    bpy.types.NodeReroute.sdn_order = bpy.props.IntProperty(default=-1)
-    bpy.types.NodeReroute.pool = NodeBase.pool
-    bpy.types.NodeReroute.load = NodeBase.load
-    bpy.types.NodeReroute.dump = NodeBase.dump
-    bpy.types.NodeReroute.update = NodeBase.update
-    bpy.types.NodeReroute.serialize_pre = NodeBase.serialize_pre
-    bpy.types.NodeReroute.serialize = NodeBase.serialize
-    bpy.types.NodeReroute.post_fn = NodeBase.post_fn
-    bpy.types.NodeReroute.pre_fn = NodeBase.pre_fn
-    bpy.types.NodeReroute.apply_unique_id = NodeBase.apply_unique_id
-    bpy.types.NodeReroute.unique_id = NodeBase.unique_id
-    bpy.types.NodeReroute.calc_slot_index = NodeBase.calc_slot_index
-    bpy.types.NodeReroute.is_base_type = NodeBase.is_base_type
-    bpy.types.NodeReroute.get_meta = NodeBase.get_meta
-    bpy.types.NodeReroute.query_stat = NodeBase.query_stat
-    bpy.types.NodeReroute.set_stat = NodeBase.set_stat
-    bpy.types.NodeReroute.switch_socket = NodeBase.switch_socket
-    bpy.types.NodeReroute.get_from_link = NodeBase.get_from_link
-    bpy.types.NodeReroute.get_ctxt = NodeBase.get_ctxt
-    bpy.types.NodeReroute.get_blueprints = NodeBase.get_blueprints
-    bpy.types.NodeReroute.get_tree = NodeBase.get_tree
-
+        inode.class_type = inode.__name__
+        inode.__metadata__ = {}
+        inode.builtin__stat__ = pickle.dumps({})
+        inode.inp_types = []
+        inode.out_types = []
+        funcs = inspect.getmembers(NodeBase, predicate=inspect.isfunction)
+        disable_func = [
+            'copy',
+            'draw_buttons',
+            'draw_label',
+            'free',
+            'init',
+            # 'is_ori_sock',
+            'make_serialze',
+            # 'pool_get',
+            'primitive_check',
+            'remove_invalid_link',
+            'remove_multi_link'
+        ]
+        for name, func in funcs:
+            if name in disable_func:
+                continue
+            setattr(inode, name, func)
     bpy.types.NodeReroute.class_type = "Reroute"
-    bpy.types.NodeReroute.__metadata__ = {}
-    bpy.types.NodeReroute.inp_types = []
-    bpy.types.NodeReroute.out_types = []
     bpy.types.NodeFrame.class_type = "NodeFrame"
 
 
 def update_tree_handler():
     try:
-        if CFNodeTree.instance:
-            CFNodeTree.instance.update_tick()
-            CFNodeTree.instance.calc_unique_id()
+        for group in bpy.data.node_groups:
+            group: CFNodeTree = group
+            if group.bl_idname != TREE_TYPE:
+                continue
+            group.update_tick()
     except ReferenceError:
         ...
     except Exception as e:
         # logger.warn(str(e))
         traceback.print_exc()
         logger.error(f"{type(e).__name__}: {e}")
-    finally:
-        return 1
+    return 1
 
 
 def draw_intern(self, context):
@@ -697,6 +1046,11 @@ def draw_intern(self, context):
     props.use_transform = True
     props = layout.operator("node.add_node", text="NodeReroute", text_ctxt=ctxt)
     props.type = "NodeReroute"
+    props.use_transform = True
+    row = layout.row()
+    row.enabled = len(context.space_data.path) <= 1
+    props = row.operator("node.add_node", text="SDNGroup", text_ctxt=ctxt)
+    props.type = "SDNGroup"
     props.use_transform = True
 
 

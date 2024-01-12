@@ -131,7 +131,7 @@
             "cropped_image": "裁剪图像",
             "cropped_mask": "裁剪遮罩",
             "crop_region": "裁剪区域",
-            "bbox": "BBox",
+            "bbox": "Seg_ELT_bbox",
             "control_net_wrapper": "ControlNet置换",
             "confidence": "置信度",
             "label": "标签"
@@ -144,7 +144,7 @@
             "cropped_image_opt": "裁剪图像",
             "cropped_mask_opt": "裁剪遮罩",
             "crop_region_opt": "裁剪区域",
-            "bbox_opt": "BBox",
+            "bbox_opt": "Seg_ELT_bbox",
             "control_net_wrapper_opt": "ControlNet置换"
         },
         "widgets": {
@@ -177,6 +177,44 @@
         },
         "outputs": {
             "MASK": "遮罩"
+        }
+    },
+    "ImpactGaussianBlurMask": {
+        "title": "遮罩高斯模糊",
+        "inputs": {
+            "mask": "遮罩"
+        },
+        "widgets": {
+            "kernel_size": "大小",
+            "sigma": "Sigma"
+        },
+        "outputs": {
+            "MASK": "遮罩"
+        }
+    },
+    "ImpactDilateMaskInSEGS": {
+        "title": "Seg遮罩膨胀",
+        "inputs": {
+            "segs": "Seg"
+        },
+        "widgets": {
+            "dilation": "膨胀"
+        },
+        "outputs": {
+            "SEGS": "Seg"
+        }
+    },
+    "ImpactGaussianBlurMaskInSEGS": {
+        "title": "Seg遮罩高斯模糊",
+        "inputs": {
+            "segs": "Seg"
+        },
+        "widgets": {
+            "kernel_size": "大小",
+            "sigma": "Sigma"
+        },
+        "outputs": {
+            "SEGS": "Seg"
         }
     },
     "ImpactScaleBy_BBOX_SEG_ELT": {
