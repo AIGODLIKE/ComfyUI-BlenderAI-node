@@ -107,6 +107,7 @@ class CFNodeTree(NodeTree):
     outUpdate: bpy.props.BoolProperty(default=False)
     root: bpy.props.BoolProperty(default=True)
     freeze: bpy.props.BoolProperty(default=False, description="冻结更新")
+    __metadata__ = {}
 
     class Pool:
         def __init__(self, tree: CFNodeTree) -> None:
@@ -457,6 +458,7 @@ class CFNodeTree(NodeTree):
             gtree.load_json(group)
             gtree.nodes.new("NodeGroupInput").location = (-250, 0)
             gtree.nodes.new("NodeGroupOutput").location = (250, 0)
+            gtree.__metadata__ = group
 
         for node_info in data.get("nodes", []):
             t = node_info["type"]
@@ -517,7 +519,7 @@ class CFNodeTree(NodeTree):
 
         def f(links, id_map, id_node_map):
             # hack: wait for nodegroup sockets update
-            time.sleep(0.01)
+            time.sleep(0.1)
             Timer.put((self.dolink, links, id_map, id_node_map))
         Thread(target=f, args=(nlinks, id_map, id_node_map)).start()
 
@@ -686,10 +688,15 @@ class CFNodeTree(NodeTree):
         # 搜索无inp的节点(起始点)
         for node in self.get_nodes():
             M[node.id] = node  # add to pending nodes
-            num = sum([bool(inp.links) for inp in node.inputs])  # num of input connections
-            # for inp in node.inputs:
-            #     if inp.links:
-            #         num += 1
+            # num = sum([bool(inp.links) for inp in node.inputs])  # num of input connections
+            num = 0
+            for inp in node.inputs:
+                if not inp.links:
+                    continue
+                fnode = inp.links[0].from_node
+                if fnode.bl_idname == "NodeGroupInput":
+                    continue
+                num += 1
             if num == 0:
                 node.sdn_level = 1
                 S.append(node)
@@ -697,9 +704,9 @@ class CFNodeTree(NodeTree):
                 node.sdn_level = 0
                 remaining_links[node.id] = num
         while S:
-            node = S.pop()  # get an starting node
+            node = S.pop(0)  # get an starting node
             L.append(node)  # add to ordered list
-            M.pop(node.id)  # remove from the pending nodes
+            M.pop(node.id, None)  # remove from the pending nodes
             for output in node.outputs:
                 for olink in output.links:
                     # link_id = output.links[j] # 全局 links 是一个列表,这里的 link_id 用来取link
@@ -746,7 +753,7 @@ class CFNodeTree(NodeTree):
             return Ap - Bp; //sort by priority
         });
         """
-        L.sort(key=lambda x: x.sdn_order)
+        # L.sort(key=lambda x: x.sdn_order)
         for i, n in enumerate(L):
             n.sdn_order = i
         return L
