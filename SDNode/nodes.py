@@ -323,6 +323,8 @@ class NodeBase(bpy.types.Node):
         """
         # 计算当前节点的widgets数量(已转sock不记入)
         """
+        if self.bl_idname == "PrimitiveNode":
+            return 1
         num = 0
         for inp in self.inp_types:
             if inp == "control_after_generate":
@@ -412,6 +414,9 @@ class NodeBase(bpy.types.Node):
         """
         reg_name = get_reg_name(name)
         return hasattr(self, reg_name)
+
+    def get_base_types(self) -> list[str]:
+        return [inp for inp in self.inp_types if self.is_base_type(inp)]
 
     def is_ori_sock(self, name, in_out="INPUT"):
         """
@@ -577,10 +582,11 @@ class NodeBase(bpy.types.Node):
                 bpy.context.space_data.edit_tree.links.remove(l)
 
     def primitive_check(self):
-        if not bpy.context.space_data:
-            return
-        if bpy.context.space_data.type != "NODE_EDITOR":
-            return
+        # 在timer里会失败 导致prop为空
+        # if not bpy.context.space_data:
+        #     return
+        # if bpy.context.space_data.type != "NODE_EDITOR":
+        #     return
         tree = self.get_tree()
         if tree.bl_idname != "CFNodeTree":
             return
