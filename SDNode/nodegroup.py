@@ -26,6 +26,12 @@ class SDNGroup(bpy.types.NodeCustomGroup, NodeBase):
     inp_types = {}
     out_types = {}
 
+    @property
+    def __metadata__(self):
+        if self.node_tree:
+            return self.node_tree.__metadata__
+        return {}
+
     def node_tree_update(self, context):
         self.update()
     node_tree: bpy.props.PointerProperty(type=NodeTree,
