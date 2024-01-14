@@ -265,7 +265,11 @@ class BluePrintBase:
             self.name = title
         if with_id:
             try:
-                self.id = str(data["id"])
+                if "index" in data:
+                    old_id = str(data["index"])
+                else:
+                    old_id = str(data["id"])
+                self.id = old_id
                 pool.add(self.id)
             except BaseException:
                 self.apply_unique_id()
@@ -390,7 +394,7 @@ class BluePrintBase:
         if self.use_custom_color:
             color = rgb2hex(*self.color)
             cfg["bgcolor"] = color
-        __locals_copy__ = locals()
+        __locals_copy__ = dict(locals())
         __locals_copy__.pop("s")
         s.dump_specific(**__locals_copy__)
         return cfg
@@ -1013,6 +1017,8 @@ class PrimitiveNode(BluePrintBase):
                                 }
             widgets_values.clear()
             widgets_values += [s.getattr(node, self.prop), "fixed"]
+            if type(s.getattr(node, self.prop)) not in {int, float}:
+                widgets_values.pop()
 
     def serialize_pre_specific(s, self: NodeBase):
         if not self.outputs[0].is_linked:
@@ -1736,6 +1742,63 @@ class SaveAnimatedWEBP(BluePrintBase):
 class SDNGroupBP(BluePrintBase):
     comfyClass = "SDNGroup"
 
+    def load_delay(s, self: NodeBase, data, with_id=True):
+        helper = THelper()
+        # widgets_values分布: widgets ->  linked_widgets
+        inputs = [w for w in data.get("inputs", []) if "widget" in w]
+        widgets: list = data["widgets_values"][:-len(inputs)]
+        # linked_widget: list = data["widgets_values"][-len(inputs):]
+        # widgets_cache: dict[NodeBase, dict[str, str]] = {}
+        # for index, inp in enumerate(inputs):
+        #     name = inp["widget"].get("name", None)
+        #     if not name or " " not in name:
+        #         continue
+        #     value = linked_widget[index]
+        #     nname, vname = name.rpartition(" ")[::2]
+        #     node = self.node_tree.nodes.get(nname)
+        #     if not node:
+        #         continue
+        #     if node not in widgets_cache:
+        #         widgets_cache[node] = {}
+        #     widgets_cache[node][vname] = value
+        # group中记录的 nodes的inputs代表 有连接 或者转成了接口的widget
+        # 排除之后剩下的 widgets 存储在 widgets_values中
+        mnodes = self.__metadata__.get("nodes", [])
+        dumped_node_vname = []
+        for mnode in mnodes:
+            nname = mnode["title"]
+            # node 必定存在, 如果不存在 则之前的步骤有问题
+            node: NodeBase = self.node_tree.nodes.get(nname)
+            if node.bl_idname == "PrimitiveNode" and mnode["outputs"]:
+                out = mnode["outputs"][0]
+                inp = out["widget"]["name"]
+                dumped_node_vname.append((node, inp))
+                continue
+            dumped_widgets = node.get_base_types()
+            for inp in mnode["inputs"]:
+                if "widget" not in inp:
+                    continue
+                dumped_widgets.remove(inp["name"])
+            for inp in dumped_widgets:
+                dumped_node_vname.append((node, inp))
+        for node, inp in dumped_node_vname:
+            v = widgets.pop(0)
+            if node.bl_idname == "PrimitiveNode":
+                node = helper.find_to_node(node.outputs[0].links[0])
+                # continue
+            reg_name = get_reg_name(inp)
+            s.setattr(node, reg_name, v)
+
+    def load(s, self: NodeBase, data, with_id=True):
+        super().load(self, data, with_id)
+        from threading import Thread
+
+        def f(self, data, with_id):
+            import time
+            time.sleep(0.1)
+            Timer.put((s.load_delay, self, data, with_id))
+        Thread(target=f, args=(self, data, with_id)).start()
+
     def dump(s, self: SDNGroup, selected_only=False):
         helper = THelper()
         tree = self.get_tree()
@@ -1745,16 +1808,18 @@ class SDNGroupBP(BluePrintBase):
         inputs = []
         outputs = []
         widgets_values = []
-        # 组的 widgets_values 导出顺序非常重要 和 node.id有关
-        for sn in self.get_sort_inner_nodes():
-            if sn.bl_idname == "NodeReroute" and sn.outputs[0].links:
-                tsock = helper.find_to_sock(sn.outputs[0])
-                sn: NodeBase = tsock.node
-                if sn.bl_idname == "NodeGroupOutput":
-                    continue
-                if sn.is_base_type(tsock.name):
-                    widgets_values.append(s.getattr(sn, get_reg_name(tsock.name)))
-                    continue
+        # 组的 widgets_values 导出顺序非常重要 和 node.id及order有关
+        for sn in self.node_tree.compute_execution_order():
+            if sn.bl_idname == "NodeReroute":
+                continue
+            # if sn.bl_idname == "NodeReroute" and sn.outputs[0].links:
+            #     tsock = helper.find_to_sock(sn.outputs[0])
+            #     sn: NodeBase = tsock.node
+            #     if sn.bl_idname == "NodeGroupOutput":
+            #         continue
+            #     if sn.is_base_type(tsock.name):
+            #         widgets_values.append(s.getattr(sn, get_reg_name(tsock.name)))
+            #         continue
 
             if sn.bl_idname in {"NodeGroupInput", "NodeGroupOutput", "NodeUndefined"}:
                 continue
@@ -1774,6 +1839,22 @@ class SDNGroupBP(BluePrintBase):
             for i in rm_index[::-1]:
                 nwidgets.pop(i)
             widgets_values += nwidgets
+        # widgets_values 最后补上转换后的接口对应的widget值
+        inode, onode = self.get_in_out_node()
+        for outer_inp in self.inputs:
+            sid = outer_inp[SOCK_TAG]
+            slink = inode.get_output(sid).links[0]
+            inp = slink.to_socket
+            snode: NodeBase = slink.to_node
+            inp_name = inp.name
+            ori_name = get_ori_name(inp_name)
+            if not snode.is_base_type(inp_name):
+                continue
+            md = snode.get_meta(ori_name)
+            if not snode.query_stat(inp_name) or not md:
+                continue
+            out_inp_widget = s.getattr(snode, get_reg_name(inp_name))
+            widgets_values.append(out_inp_widget)
         inode, onode = self.get_in_out_node()
         for outer_inp in self.inputs:
             sid = outer_inp[SOCK_TAG]
@@ -1824,7 +1905,9 @@ class SDNGroupBP(BluePrintBase):
                 if not snode.query_stat(inp.name) or not md:
                     continue
                 # inp_info["widget"] = {"name": ori_name, "config": md}
-                inp_info["widget"] = {"name": ori_name}
+                full_name = f"{snode.name} {ori_name}"
+                inp_info["widget"] = {"name": full_name}
+                inp_info["name"] = full_name
                 inp_info["type"] = ",".join(md[0]) if isinstance(md[0], list) else md[0]
             if snode.bl_idname == "NodeReroute":
                 inp_info["name"] = inp_info["type"]
@@ -1874,7 +1957,7 @@ class SDNGroupBP(BluePrintBase):
         if self.use_custom_color:
             color = rgb2hex(*self.color)
             cfg["bgcolor"] = color
-        __locals_copy__ = locals()
+        __locals_copy__ = dict(locals())
         __locals_copy__.pop("s")
         s.dump_specific(**__locals_copy__)
         return cfg
