@@ -1189,6 +1189,9 @@ class NodeParser:
             for index, out_name in enumerate(output_name):
                 if not out_name:
                     continue
+                # 有些书包节点定义的 output为不标准的格式 如 列表 字符串嵌套什么的
+                if not isinstance(desc["output"][index][0], str):
+                    desc["output"][index][0] = out_name
                 desc["output"][index][1] = out_name
             _desc[name] = desc
         for name in list(self.object_info.keys()):
@@ -1232,7 +1235,15 @@ class NodeParser:
                     else:
                         _desc.add(inp_desc[0])
                         self.SOCKET_TYPE[name][inp] = inp_desc[0]
-            for out_type in desc["output"]:
+            for index, out_type in enumerate(desc["output"]):
+                # _desc.add(out_type[0])
+                if isinstance(out_type, list) and desc.get("output_name", []):
+                    out_type = desc["output_name"][index]
+                if isinstance(out_type, str):
+                    _desc.add(out_type)
+                else:
+                    _desc.add(out_type[0])
+                continue
                 # _desc.add(out_type[0])
                 stype = out_type[0]
                 if isinstance(stype, list):
@@ -1304,14 +1315,15 @@ class NodeParser:
         nodes_desc = self._get_n_desc()
         node_clss = []
         for nname, ndesc in nodes_desc.items():
-            opt_types = ndesc["input"].get("optional", {})
+            opt_types: dict = ndesc["input"].get("optional", {})
+            rqr_types: dict = ndesc["input"].get("required", {})
             inp_types = {}
-            for key, value in ndesc["input"].get("required", {}).items():
+            for key, value in list(rqr_types.items()) + list(opt_types.items()):
                 inp_types[key] = value
                 if key in {"seed", "noise_seed"}:
                     inp_types["control_after_generate"] = [["fixed", "increment", "decrement", "randomize"]]
 
-            inp_types.update(opt_types)
+            # inp_types.update(opt_types)
             out_types = ndesc["output"]
             # 节点初始化
 
