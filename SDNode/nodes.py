@@ -319,6 +319,15 @@ class NodeBase(bpy.types.Node):
     builtin__stat__: bpy.props.StringProperty(subtype="BYTE_STRING")  # ori name: True/False
     class_type: str
 
+    def get_widgets(self, exclude_converted=False) -> list[str]:
+        """
+        # 获取当前节点的widgets
+        """
+        widgets = self.get_base_types()
+        if exclude_converted:
+            widgets = [w for w in widgets if not self.query_stat(w)]
+        return widgets
+
     def get_widgets_num(self):
         """
         # 计算当前节点的widgets数量(已转sock不记入)

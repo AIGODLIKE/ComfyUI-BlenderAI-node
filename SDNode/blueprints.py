@@ -263,6 +263,7 @@ class BluePrintBase:
             logger.info(_T("Saved Title Name -> ") + title)  # do not replace name
         elif title:
             self.name = title
+        data["title"] = self.name  # 反向同步到metadata
         if with_id:
             try:
                 if "index" in data:
@@ -286,8 +287,9 @@ class BluePrintBase:
                 continue
             if not (default := inp.get("widget", {}).get("config", {}).get("default")):
                 continue
-            reg_name = get_reg_name(name)
-            s.setattr(self, reg_name, default)
+            # reg_name = get_reg_name(name)
+            # s.setattr(self, reg_name, default)
+            s.try_set_widget(self, name, default)
 
         s.load_specific(self, data, with_id)
         for inp_name in self.inp_types:
@@ -296,20 +298,28 @@ class BluePrintBase:
             reg_name = get_reg_name(inp_name)
             try:
                 v = data["widgets_values"].pop(0)
-                s.setattr(self, reg_name, v)
-            except TypeError as e:
-                if inp_name in {"seed", "noise_seed"}:
-                    setattr(self, reg_name, str(v))
-                elif (enum := re.findall(' enum "(.*?)" not found', str(e), re.S)):
-                    logger.warn(f"{_T('|IGNORED|')} {self.class_type} -> {inp_name} -> {_T('Not Found Item')}: {enum[0]}")
-                else:
-                    logger.error(f"|{e}|")
             except IndexError:
                 logger.info(f"{_T('|IGNORED|')} -> {_T('Load')}<{self.class_type}>{_T('Params not matching with current node')} " + reg_name)
-            except Exception as e:
-                logger.error(f"{_T('Params Loading Error')} {self.class_type} -> {self.class_type}.{inp_name}")
+                continue
+            s.try_set_widget(self, inp_name, v)
 
-                logger.error(f" -> {e}")
+    def try_set_widget(s, self: NodeBase, inp_name, v):
+        if not self.is_base_type(inp_name):
+            return
+        reg_name = get_reg_name(inp_name)
+        try:
+            s.setattr(self, reg_name, v)
+            return True
+        except TypeError as e:
+            if inp_name in {"seed", "noise_seed"}:
+                setattr(self, reg_name, str(v))
+            elif (enum := re.findall(' enum "(.*?)" not found', str(e), re.S)):
+                logger.warn(f"{_T('|IGNORED|')} {self.class_type} -> {inp_name} -> {_T('Not Found Item')}: {enum[0]}")
+            else:
+                logger.error(f"|{e}|")
+        except Exception as e:
+            logger.error(f"{_T('Params Loading Error')} {self.class_type} -> {self.class_type}.{inp_name}")
+            logger.error(f" -> {e}")
 
     def dump_specific(s, self: NodeBase = None, cfg=None, selected_only=False, **kwargs):
         """
@@ -1017,7 +1027,7 @@ class PrimitiveNode(BluePrintBase):
                                 }
             widgets_values.clear()
             widgets_values += [s.getattr(node, self.prop), "fixed"]
-            if type(s.getattr(node, self.prop)) not in {int, float}:
+            if self.prop not in {"seed", "noise_seed"}:
                 widgets_values.pop()
 
     def serialize_pre_specific(s, self: NodeBase):
@@ -1745,8 +1755,9 @@ class SDNGroupBP(BluePrintBase):
     def load_delay(s, self: NodeBase, data, with_id=True):
         helper = THelper()
         # widgets_values分布: widgets ->  linked_widgets
-        inputs = [w for w in data.get("inputs", []) if "widget" in w]
-        widgets: list = data["widgets_values"][:-len(inputs)]
+        converted_widgets = [w for w in data.get("inputs", []) if "widget" in w] # 可能为[]
+        num_cw = len(converted_widgets)
+        widgets: list = data["widgets_values"][:-num_cw] if num_cw else data["widgets_values"][:]
         # linked_widget: list = data["widgets_values"][-len(inputs):]
         # widgets_cache: dict[NodeBase, dict[str, str]] = {}
         # for index, inp in enumerate(inputs):
@@ -1771,23 +1782,31 @@ class SDNGroupBP(BluePrintBase):
             node: NodeBase = self.node_tree.nodes.get(nname)
             if node.bl_idname == "PrimitiveNode" and mnode["outputs"]:
                 out = mnode["outputs"][0]
-                inp = out["widget"]["name"]
-                dumped_node_vname.append((node, inp))
+                if "widget" in out:
+                    inp = out["widget"]["name"]
+                    dumped_node_vname.append((node, inp))
                 continue
             dumped_widgets = node.get_base_types()
             for inp in mnode["inputs"]:
                 if "widget" not in inp:
                     continue
+                if inp["name"] in {"seed", "noise_seed"} and "control_after_generate" in dumped_widgets:
+                    dumped_widgets.remove("control_after_generate")
                 dumped_widgets.remove(inp["name"])
             for inp in dumped_widgets:
                 dumped_node_vname.append((node, inp))
+        # logger.debug(widgets)
         for node, inp in dumped_node_vname:
             v = widgets.pop(0)
             if node.bl_idname == "PrimitiveNode":
+                pnode = node
                 node = helper.find_to_node(node.outputs[0].links[0])
+                if inp in {"seed", "noise_seed"} or type(v) in {int, float}:
+                    sv = widgets.pop(0)
+                    logger.warn(f"{pnode.name} : {sv} {_T('|IGNORED|')}")
                 # continue
-            reg_name = get_reg_name(inp)
-            s.setattr(node, reg_name, v)
+            if s.try_set_widget(node, inp, v):
+                logger.debug(f"{node.name}.{inp} = {v}")
 
     def load(s, self: NodeBase, data, with_id=True):
         super().load(self, data, with_id)
@@ -1804,12 +1823,15 @@ class SDNGroupBP(BluePrintBase):
         tree = self.get_tree()
         outer_all_links: list[bpy.types.NodeLink] = tree.links[:]
         all_links: list[bpy.types.NodeLink] = self.node_tree.links[:]
-
+        ordered_nodes = self.node_tree.compute_execution_order()
+        total_widgets = set()
+        for sn in ordered_nodes:
+            total_widgets.update(sn.get_widgets(exclude_converted=True))
         inputs = []
         outputs = []
         widgets_values = []
         # 组的 widgets_values 导出顺序非常重要 和 node.id及order有关
-        for sn in self.node_tree.compute_execution_order():
+        for sn in ordered_nodes:
             if sn.bl_idname == "NodeReroute":
                 continue
             # if sn.bl_idname == "NodeReroute" and sn.outputs[0].links:
@@ -1836,6 +1858,15 @@ class SDNGroupBP(BluePrintBase):
                 # 转为接口且已经连接
                 if sn.query_stat(inp_name) and sn.inputs[inp_name].links:
                     rm_index.append(i)
+                    continue
+                # 如果为 control_after_generate 则判断 seed 和 noise_seed 是否连接
+                if inp_name == "control_after_generate":
+                    if sn.query_stat("seed") and sn.inputs["seed"].links:
+                        rm_index.append(i)
+                        continue
+                    if sn.query_stat("noise_seed") and sn.inputs["noise_seed"].links:
+                        rm_index.append(i)
+                        continue
             for i in rm_index[::-1]:
                 nwidgets.pop(i)
             widgets_values += nwidgets
@@ -1855,6 +1886,9 @@ class SDNGroupBP(BluePrintBase):
                 continue
             out_inp_widget = s.getattr(snode, get_reg_name(inp_name))
             widgets_values.append(out_inp_widget)
+            if inp_name in {"seed", "noise_seed"}:
+                widgets_values.append("fixed")
+        dumped_sockets = []
         inode, onode = self.get_in_out_node()
         for outer_inp in self.inputs:
             sid = outer_inp[SOCK_TAG]
@@ -1906,7 +1940,11 @@ class SDNGroupBP(BluePrintBase):
                     continue
                 # inp_info["widget"] = {"name": ori_name, "config": md}
                 full_name = f"{snode.name} {ori_name}"
-                inp_info["widget"] = {"name": full_name}
+                if ori_name in total_widgets:
+                    ori_name = full_name
+                else:
+                    total_widgets.add(ori_name)
+                inp_info["widget"] = {"name": ori_name}
                 inp_info["name"] = full_name
                 inp_info["type"] = ",".join(md[0]) if isinstance(md[0], list) else md[0]
             if snode.bl_idname == "NodeReroute":
@@ -1914,6 +1952,11 @@ class SDNGroupBP(BluePrintBase):
                 tsock = helper.find_to_sock(inp)
                 if tsock.node.is_base_type(tsock.name):
                     inp_info["widget"] = {"name": inp_info["type"]}
+            if "widget" not in inp_info:
+                if inp_info["name"] in dumped_sockets:
+                    inp_info["name"] = f"{snode.name} {inp_info['name']}"
+                else:
+                    dumped_sockets.append(inp_info["name"])
             inp_info["label"] = inp_info["name"]
             inputs.append(inp_info)
         for i, out in enumerate(self.outputs):
