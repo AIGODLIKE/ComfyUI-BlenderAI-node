@@ -1755,7 +1755,7 @@ class SDNGroupBP(BluePrintBase):
     def load_delay(s, self: NodeBase, data, with_id=True):
         helper = THelper()
         # widgets_values分布: widgets ->  linked_widgets
-        converted_widgets = [w for w in data.get("inputs", []) if "widget" in w] # 可能为[]
+        converted_widgets = [w for w in data.get("inputs", []) if "widget" in w]  # 可能为[]
         num_cw = len(converted_widgets)
         widgets: list = data["widgets_values"][:-num_cw] if num_cw else data["widgets_values"][:]
         # linked_widget: list = data["widgets_values"][-len(inputs):]
@@ -2016,6 +2016,19 @@ class SDNGroupBP(BluePrintBase):
             prompt[f"{self.id}:{k}"] = v
         return prompt
         return {self.id: (self.serialize(), )}
+
+
+class SDParameterGenerator(BluePrintBase):
+    comfyClass = "SDParameterGenerator"
+
+    def dump_specific(s, self: NodeBase = None, cfg=None, selected_only=False, **kwargs):
+        widgets_values = cfg["widgets_values"]
+        types = self.get_base_types()
+        if "control_after_generate" not in types:
+            return
+        rm = types.index("control_after_generate")
+        if len(widgets_values) > rm:
+            widgets_values.pop(rm)
 
 
 @lru_cache(maxsize=1024)
