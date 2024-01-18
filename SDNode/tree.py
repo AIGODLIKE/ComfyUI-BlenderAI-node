@@ -1047,7 +1047,9 @@ def reg_node_reroute():
         inode.builtin__stat__ = pickle.dumps({})
         inode.inp_types = []
         inode.out_types = []
-        funcs = inspect.getmembers(NodeBase, predicate=inspect.isfunction)
+        # funcs = inspect.getmembers(NodeBase, predicate=inspect.isfunction)
+        import types
+        funcs = inspect.getmembers(NodeBase, predicate=lambda o: isinstance(o, (property, types.FunctionType)))
         disable_func = [
             'copy',
             'draw_buttons',
