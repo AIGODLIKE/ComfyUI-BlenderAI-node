@@ -323,7 +323,6 @@ class CFNodeTree(NodeTree):
                         ocfg["output"] = outv
                     if ocfg:
                         cfg[on.id] = ocfg
-                logger.critical(f"CFG: {cfg}")
                 res_ = tree.save_json()
                 # 只同步 res有的key
                 for k in res:
@@ -349,7 +348,6 @@ class CFNodeTree(NodeTree):
                 # nodes按index 排序
                 res["nodes"].sort(key=lambda x: x["order"])
                 index_map = {n["index"]: i for i, n in enumerate(res["nodes"])}
-                logger.critical(index_map)
                 for link in res["links"]:
                     link[0] = index_map[link[0]]
                     link[2] = index_map[link[2]]
