@@ -421,7 +421,7 @@ def gen_mask(self):
 
             with set_composite(nt) as cmp:
                 if not cmp:
-                    logger.error("未找到合成节点")
+                    logger.error("Composite node not found")
                     return
 
                 crypt = nt.nodes.new("CompositorNodeCryptomatteV2")
@@ -452,16 +452,16 @@ def gen_mask(self):
                 gp = self.gp
             elif mode == "Focus":
                 if not self.cam:
-                    logger.error("遮照节点未设置渲染相机")
+                    logger.error("Mask node not set render cam")
                     return
                 gp = self.cam.get("SD_Mask")
             if isinstance(gp, list):
                 gp = gp[0]
             if not gp:
-                logger.error("蜡笔未设置")
+                logger.error("GP not set")
                 return
             if gp.name not in bpy.context.scene.objects:
-                logger.error("蜡笔物体未存在当前场景中")
+                logger.error("GP not found in current scene")
                 return
             gp.hide_render = False
             hide_map = {}
@@ -486,10 +486,10 @@ def gen_mask(self):
                     l.opacity = 1
             with set_composite(nt) as cmp:
                 if not cmp:
-                    logger.error("未找到合成节点")
+                    logger.error("Composite node not found")
                     return
                 if not (rly := get_renderlayer(nt)):
-                    logger.error("未找到渲染层节点")
+                    logger.error("Render Layer node not found")
                     return
                 cmp.use_alpha = True
                 cmb = nt.nodes.new("CompositorNodeCombineColor")
