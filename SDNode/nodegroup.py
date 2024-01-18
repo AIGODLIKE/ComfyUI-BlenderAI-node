@@ -7,7 +7,7 @@ from ..kclogger import logger
 from ..utils import _T
 from ..timer import Timer
 from ..translations import get_reg_name
-from .nodes import NodeBase, Ops_Swith_Socket
+from .nodes import NodeBase, Ops_Switch_Socket_Widget, Ops_Switch_Socket_Disp
 from .utils import get_default_tree, Interface, THelper, VLink
 
 SOCK_TAG = "SDN_LINK_SOCK"
@@ -143,6 +143,8 @@ class SDNGroup(bpy.types.NodeCustomGroup, NodeBase):
                 if not n.is_ori_sock(s.name):
                     continue
                 in_out = "INPUT"
+                if not n.get_sock_visible(s.name, in_out=in_out):
+                    continue
                 it, flag = ensure_interface(tree, n, s, in_out)
                 old_new.append(flag)
                 if s.links:
@@ -156,6 +158,8 @@ class SDNGroup(bpy.types.NodeCustomGroup, NodeBase):
                 if s.links and s.links[0].to_node.bl_idname != "NodeGroupOutput":
                     continue
                 in_out = "OUTPUT"
+                if not n.get_sock_visible(s.name, in_out=in_out):
+                    continue
                 it, flag = ensure_interface(tree, n, s, in_out)
                 old_new.append(flag)
                 if s.links:
@@ -171,6 +175,8 @@ class SDNGroup(bpy.types.NodeCustomGroup, NodeBase):
                 if n.is_ori_sock(s.name):
                     continue
                 in_out = "INPUT"
+                if not n.get_sock_visible(s.name, in_out=in_out):
+                    continue
                 it, flag = ensure_interface(tree, n, s, in_out)
                 old_new.append(flag)
                 if s.links:
@@ -289,13 +295,15 @@ class SDNGroup(bpy.types.NodeCustomGroup, NodeBase):
         for node in self.get_sort_inner_nodes():
             if not node.is_registered_node_type():
                 continue
-            if node.get_widgets_num() == 0:
-                continue
+            # if node.get_widgets_num() == 0:
+            #     continue
             if node.bl_idname in ("NodeGroupInput", "NodeGroupOutput", "NodeReroute"):
                 continue
             box = layout.box()
             node.draw_buttons_ext(context, box)
-            layout.separator_spacer()
+            node.draw_socket_io_box(context, box, node, "")
+            col = layout.column()
+            col.label(text="")
 
     def draw_buttons(self, context: Context, layout: UILayout):
         layout.template_ID(self, "node_tree", new=SDNNewGroup.bl_idname)
