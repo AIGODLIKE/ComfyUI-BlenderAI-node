@@ -16,7 +16,7 @@ from .nodegroup import LABEL_TAG, SOCK_TAG, SDNGroup
 from .nodes import NodeBase
 from .utils import gen_mask, THelper, Interface
 from .plugins.animatedimageplayer import AnimatedImagePlayer as AIP
-from .nodes import NodeBase, Ops_Add_SaveImage, Ops_Link_Mask, Ops_Active_Tex, Set_Render_Res, Ops_Swith_Socket
+from .nodes import NodeBase, Ops_Add_SaveImage, Ops_Link_Mask, Ops_Active_Tex, Set_Render_Res, Ops_Switch_Socket_Widget
 from .nodes import name2path, get_icon_path, Images
 from ..SDNode.manager import Task
 from ..timer import Timer
@@ -57,8 +57,8 @@ def is_all_str_list(some_list: list):
     return set(type(i) for i in some_list) == {str}
 
 
-def draw_prop_with_link(layout, self, prop, swlink, row=True, pre=None, post=None, **kwargs):
-    layout = Ops_Swith_Socket.draw_prop(layout, self, prop, row, swlink)
+def draw_prop_with_link(layout, self, prop, swsock, swdisp=False, row=True, pre=None, post=None, **kwargs):
+    layout = Ops_Switch_Socket_Widget.draw_prop(layout, self, prop, row, swsock, swdisp)
     if pre:
         pre(layout)
     layout.prop(self, prop, **kwargs)
@@ -128,13 +128,13 @@ class BluePrintBase:
     def new_btn_enable(s, self, layout, context):
         return True
 
-    def draw_button(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True):
+    def draw_button(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swsock=True, swdisp=False):
         def show_model_preview(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILayout, prop: str):
             if self.class_type not in name2path:
                 return False
             if prop not in get_icon_path(self.class_type):
                 return False
-            col = draw_prop_with_link(layout, self, prop, swlink, text="", row=False)
+            col = draw_prop_with_link(layout, self, prop, swsock, swdisp, text="", row=False)
             col.template_icon_view(self, prop, show_labels=True, scale_popup=popup_scale, scale=popup_scale)
             return True
 
@@ -145,7 +145,7 @@ class BluePrintBase:
             lines = textwrap.wrap(text=str(s.getattr(self, prop)), width=width)
             for line in lines:
                 layout.label(text=line, text_ctxt=self.get_ctxt())
-            row = draw_prop_with_link(layout, self, prop, swlink)
+            row = draw_prop_with_link(layout, self, prop, swsock, swdisp)
             row.operator("sdn.enable_mlt", text="", icon="TEXT")
             return True
 
@@ -158,7 +158,7 @@ class BluePrintBase:
             return True
         if hasattr(self, "seed"):
             if prop == "seed":
-                row = draw_prop_with_link(layout, self, prop, swlink, text=prop, text_ctxt=self.get_ctxt())
+                row = draw_prop_with_link(layout, self, prop, swsock, swdisp, text=prop, text_ctxt=self.get_ctxt())
                 row.prop(self, "exe_rand", text="", icon="FILE_REFRESH", text_ctxt=self.get_ctxt())
                 row.prop(bpy.context.scene.sdn, "rand_all_seed", text="", icon="HAND", text_ctxt=self.get_ctxt())
                 row.prop(self, "sync_rand", text="", icon="MOD_WAVE", text_ctxt=self.get_ctxt())
@@ -168,24 +168,24 @@ class BluePrintBase:
         elif hasattr(self, "noise_seed"):
             if prop in {"add_noise", "return_with_leftover_noise"}:
                 def dpre(layout): layout.label(text=prop, text_ctxt=self.get_ctxt())
-                draw_prop_with_link(layout, self, prop, swlink, expand=True, pre=dpre, text_ctxt=self.get_ctxt())
+                draw_prop_with_link(layout, self, prop, swsock, swdisp, expand=True, pre=dpre, text_ctxt=self.get_ctxt())
                 return True
             if prop == "noise_seed":
                 def dpost(layout):
                     layout.prop(self, "exe_rand", text="", icon="FILE_REFRESH", text_ctxt=self.get_ctxt())
                     layout.prop(bpy.context.scene.sdn, "rand_all_seed", text="", icon="HAND", text_ctxt=self.get_ctxt())
                     layout.prop(self, "sync_rand", text="", icon="MOD_WAVE", text_ctxt=self.get_ctxt())
-                draw_prop_with_link(layout, self, prop, swlink, post=dpost, text_ctxt=self.get_ctxt())
+                draw_prop_with_link(layout, self, prop, swsock, swdisp, post=dpost, text_ctxt=self.get_ctxt())
                 return True
             if prop in {"exe_rand", "sync_rand"}:
                 return True
         elif self.class_type in {"OpenPoseFull", "OpenPoseHand", "OpenPoseMediaPipeFace", "OpenPoseDepth", "OpenPose", "OpenPoseFace", "OpenPoseLineart", "OpenPoseFullExtraLimb", "OpenPoseKeyPose", "OpenPoseCanny", }:
             return True
-        elif self.get_blueprints().spec_draw(self, context, layout, prop, swlink):
+        elif self.get_blueprints().spec_draw(self, context, layout, prop, swsock, swdisp):
             return True
         return False
 
-    def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True) -> bool:
+    def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swsock=True, swdisp=False) -> bool:
         return False
 
     def extra_properties(s, properties, nname, ndesc):
@@ -279,7 +279,7 @@ class BluePrintBase:
             name = inp.get("name", "")
             if not self.is_base_type(name):
                 continue
-            new_socket = self.switch_socket(name, True)
+            new_socket = self.switch_socket_widget(name, True)
             if si := inp.get("slot_index"):
                 new_socket.slot_index = si
             md = self.get_meta(name)
@@ -806,7 +806,7 @@ class MultiAreaConditioning(BluePrintBase):
         prop = bpy.props.FloatProperty(default=1.0, min=0, max=10, update=update_strength)
         properties["strength"] = prop
 
-    def spec_draw(s, self: NodeBase, context, layout, prop: str, swlink=True) -> bool:
+    def spec_draw(s, self: NodeBase, context, layout, prop: str, swsock=True, swdisp=False) -> bool:
         if prop == "config":
             return True
         return False
@@ -869,17 +869,17 @@ class KSampler(BluePrintBase):
 class KSamplerAdvanced(BluePrintBase):
     comfyClass = "KSamplerAdvanced"
 
-    def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True) -> bool:
+    def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swsock=True, swdisp=False) -> bool:
         if prop in {"add_noise", "return_with_leftover_noise"}:
             def dpre(layout): layout.label(text=prop, text_ctxt=self.get_ctxt())
-            draw_prop_with_link(layout, self, prop, swlink, expand=True, pre=dpre, text_ctxt=self.get_ctxt())
+            draw_prop_with_link(layout, self, prop, swsock, swdisp, expand=True, pre=dpre, text_ctxt=self.get_ctxt())
             return True
         if prop == "noise_seed":
             def dpost(layout):
                 layout.prop(self, "exe_rand", text="", icon="FILE_REFRESH", text_ctxt=self.get_ctxt())
                 layout.prop(bpy.context.scene.sdn, "rand_all_seed", text="", icon="HAND", text_ctxt=self.get_ctxt())
                 layout.prop(self, "sync_rand", text="", icon="MOD_WAVE", text_ctxt=self.get_ctxt())
-            draw_prop_with_link(layout, self, prop, swlink, post=dpost, text_ctxt=self.get_ctxt())
+            draw_prop_with_link(layout, self, prop, swsock, swdisp, post=dpost, text_ctxt=self.get_ctxt())
             return True
         if prop in {"exe_rand", "sync_rand"}:
             return True
@@ -907,7 +907,7 @@ class Mask(BluePrintBase):
         # prop = bpy.props.PointerProperty(type=bpy.types.Collection)
         # properties["col"] = prop
 
-    def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True) -> bool:
+    def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swsock=True, swdisp=False) -> bool:
         if prop == "mode":
             layout.prop(self, prop, expand=True, text_ctxt=self.get_ctxt())
             if self.mode == "Grease Pencil":
@@ -1000,13 +1000,13 @@ class PrimitiveNode(BluePrintBase):
         prop = bpy.props.StringProperty()
         properties["prop"] = prop
 
-    def spec_draw(s, self: NodeBase, context, layout, prop: str, swlink=True):
+    def spec_draw(s, self: NodeBase, context, layout, prop: str, swsock=True, swdisp=False):
         if self.outputs[0].is_linked and self.outputs[0].links:
             node = self.outputs[0].links[0].to_node
             # 可能会导致prop在node中找不到的情况(断开连接的时候)
             if not hasattr(node, self.prop):
                 return True
-            if self.get_blueprints().draw_button(node, context, layout, self.prop, swlink=False):
+            if self.get_blueprints().draw_button(node, context, layout, self.prop, swsock=False, swdisp=swdisp):
                 return True
             layout.prop(node, get_reg_name(self.prop))
         return True
@@ -1060,7 +1060,7 @@ class 预览(BluePrintBase):
         properties["prev"] = prop
         properties["lnum"] = bpy.props.IntProperty(default=3, min=1, max=10, name="Image num per line")
 
-    def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True) -> bool:
+    def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swsock=True, swdisp=False) -> bool:
         if prop == "lnum":
             return True
         if self.inputs[0].is_linked and self.inputs[0].links:
@@ -1141,7 +1141,7 @@ class 存储(BluePrintBase):
         prop = bpy.props.PointerProperty(type=bpy.types.Image)
         properties["image"] = prop
 
-    def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True) -> bool:
+    def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swsock=True, swdisp=False) -> bool:
         if prop == "mode":
             layout.prop(self, prop, expand=True, text_ctxt=self.get_ctxt())
             if self.mode == "Save":
@@ -1243,7 +1243,7 @@ class 输入图像(BluePrintBase):
         prop = bpy.props.BoolProperty(default=False)
         properties["disable_render"] = prop
 
-    def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True) -> bool:
+    def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swsock=True, swdisp=False) -> bool:
         if prop == "mode":
             if self.mode == "序列图":
                 layout.prop(self, "frames_dir", text="")
@@ -1366,7 +1366,7 @@ class 材质图(BluePrintBase):
         prop = bpy.props.PointerProperty(type=bpy.types.Collection)
         properties["collection"] = prop
 
-    def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True) -> bool:
+    def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swsock=True, swdisp=False) -> bool:
         if prop == "mode":
             layout.prop(self, prop, expand=True, text_ctxt=self.get_ctxt())
             if self.mode == "Object":
@@ -1384,7 +1384,7 @@ class 材质图(BluePrintBase):
 class 截图(BluePrintBase):
     comfyClass = "截图"
 
-    def draw_button(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True):
+    def draw_button(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swsock=True, swdisp=False):
         if prop in {"x1", "y1", "x2", "y2"}:
             return True
         if prop == "capture":
@@ -1421,7 +1421,7 @@ class 截图(BluePrintBase):
                 w = setwidth(self, w)
                 layout.template_icon(icon_id, scale=w // 20)
             return True
-        return super().draw_button(self, context, layout, prop, swlink)
+        return super().draw_button(self, context, layout, prop, swsock, swdisp)
 
     def _capture(s, self: NodeBase):
         from ..External.mss import mss
@@ -1480,7 +1480,7 @@ class AnimateDiffCombine(BluePrintBase):
     PREV = PrevMgr.new()
     PLAYERS: dict[str, AIP] = {}
 
-    def draw_button(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True):
+    def draw_button(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swsock=True, swdisp=False):
         if prop == "prev_name":
             prev = s.PREV.get(self.prev_name, None)
             if prev:
@@ -1488,7 +1488,7 @@ class AnimateDiffCombine(BluePrintBase):
                 scale = min(scale, 100)
                 layout.template_icon(icon_value=prev.icon_id, scale=scale)
             return True
-        super().draw_button(self, context, layout, prop, swlink)
+        super().draw_button(self, context, layout, prop, swsock, swdisp)
 
     def post_fn(s, self: NodeBase, t: Task, result):
         """
@@ -1546,7 +1546,7 @@ class VHS_VideoCombine(BluePrintBase):
     PREV = PrevMgr.new()
     PLAYERS: dict[str, AIP] = {}
 
-    def draw_button(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True):
+    def draw_button(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swsock=True, swdisp=False):
         if prop == "prev_name":
             prev = s.PREV.get(self.prev_name, None)
             if prev:
@@ -1554,7 +1554,7 @@ class VHS_VideoCombine(BluePrintBase):
                 scale = min(scale, 100)
                 layout.template_icon(icon_value=prev.icon_id, scale=scale)
             return True
-        super().draw_button(self, context, layout, prop, swlink)
+        super().draw_button(self, context, layout, prop, swsock, swdisp)
 
     def post_fn(s, self: NodeBase, t: Task, result):
         """
@@ -1618,7 +1618,7 @@ class SaveAnimatedPNG(BluePrintBase):
     PREV = PrevMgr.new()
     PLAYERS: dict[str, AIP] = {}
 
-    def draw_button(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True):
+    def draw_button(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swsock=True, swdisp=False):
         if prop == "prev_name":
             prev = s.PREV.get(self.prev_name, None)
             if prev:
@@ -1626,7 +1626,7 @@ class SaveAnimatedPNG(BluePrintBase):
                 scale = min(scale, 100)
                 layout.template_icon(icon_value=prev.icon_id, scale=scale)
             return True
-        super().draw_button(self, context, layout, prop, swlink)
+        super().draw_button(self, context, layout, prop, swsock, swdisp)
 
     def post_fn(s, self: NodeBase, t: Task, result):
 
@@ -1686,7 +1686,7 @@ class SaveAnimatedWEBP(BluePrintBase):
     PREV = PrevMgr.new()
     PLAYERS: dict[str, AIP] = {}
 
-    def draw_button(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True):
+    def draw_button(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swsock=True, swdisp=False):
         if prop == "prev_name":
             prev = s.PREV.get(self.prev_name, None)
             if prev:
@@ -1694,7 +1694,7 @@ class SaveAnimatedWEBP(BluePrintBase):
                 scale = min(scale, 100)
                 layout.template_icon(icon_value=prev.icon_id, scale=scale)
             return True
-        super().draw_button(self, context, layout, prop, swlink)
+        super().draw_button(self, context, layout, prop, swsock, swdisp)
 
     def post_fn(s, self: NodeBase, t: Task, result):
         logger.debug(f"{self.class_type}{_T('Post Function')}->{result}")
@@ -1786,7 +1786,7 @@ class SDNGroupBP(BluePrintBase):
                     inp = out["widget"]["name"]
                     dumped_node_vname.append((node, inp))
                 continue
-            dumped_widgets = node.get_base_types()
+            dumped_widgets = node.widgets
             for inp in mnode["inputs"]:
                 if "widget" not in inp:
                     continue
@@ -2023,7 +2023,7 @@ class SDParameterGenerator(BluePrintBase):
 
     def dump_specific(s, self: NodeBase = None, cfg=None, selected_only=False, **kwargs):
         widgets_values = cfg["widgets_values"]
-        types = self.get_base_types()
+        types = self.widgets
         if "control_after_generate" not in types:
             return
         rm = types.index("control_after_generate")
