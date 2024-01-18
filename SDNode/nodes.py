@@ -14,7 +14,7 @@ from numpy import clip
 from copy import deepcopy
 from hashlib import md5
 from math import ceil
-from typing import Any
+from typing import Any, Set
 from pathlib import Path
 from random import random as rand
 from functools import partial, lru_cache
@@ -207,16 +207,28 @@ class PropGen:
 
     def INT(nname, inp_name, reg_name, inp):
         # {'default': 20, 'min': 1, 'max': 10000}
+        if len(inp) == 1:
+            return bpy.props.IntProperty()
         inp[1]["max"] = min(int(inp[1].get("max", 9999999)), 2**31 - 1)
         inp[1]["min"] = max(int(inp[1].get("min", -999999)), -2**31)
         default = inp[1].get("default", 0)
         if not default:
             default = 0
         inp[1]["default"] = int(default)
+        if inp[1]["default"] > 2**31 - 1:
+            logger.warn("Default value is too large: %s.%s -> %s", nname, inp_name, inp[1]["default"])
+            inp[1]["default"] = min(inp[1]["default"], 2**31 - 1)
+        elif inp[1]["default"] < -2**31:
+            logger.warn("Default value is too small: %s.%s -> %s", nname, inp_name, inp[1]["default"])
+            inp[1]["default"] = max(inp[1]["default"], -2**31)
         inp[1]["step"] = ceil(inp[1].get("step", 1))
         if inp[1].pop("display", False):
             inp[1]["subtype"] = "FACTOR"
-        prop = bpy.props.IntProperty(**inp[1])
+        params = {}
+        for k in ["name", "description", "translation_context", "default", "min", "max", "soft_min", "soft_max", "step", "options", "override", "tags", "subtype", "update", "get", "set",]:
+            if k in inp[1]:
+                params[k] = inp[1][k]
+        prop = bpy.props.IntProperty(**params)
         return prop
 
     def FLOAT(nname, inp_name, reg_name, inp):
@@ -226,15 +238,23 @@ class PropGen:
                 inp[1]["step"] *= 100
             if inp[1].pop("display", False):
                 inp[1]["subtype"] = "FACTOR"
-            prop = bpy.props.FloatProperty(**inp[1])
+            params = {}
+            for k in ["name", "description", "translation_context", "default", "min", "max", "soft_min", "soft_max", "step", "precision", "options", "override", "tags", "subtype", "unit", "update", "get", "set"]:
+                if k in inp[1]:
+                    params[k] = inp[1][k]
+            prop = bpy.props.FloatProperty(**params)
             return prop
-        return None
+        return bpy.props.FloatProperty()
 
     def BOOLEAN(nname, inp_name, reg_name, inp):
         if len(inp) <= 1:
             prop = bpy.props.BoolProperty()
         else:
-            prop = bpy.props.BoolProperty(**inp[1])
+            params = {}
+            for k in ["name", "description", "translation_context", "default", "options", "override", "tags", "subtype", "update", "get", "set"]:
+                if k in inp[1]:
+                    params[k] = inp[1][k]
+            prop = bpy.props.BoolProperty(**params)
         return prop
 
     def STRING(nname, inp_name, reg_name, inp):
@@ -308,6 +328,13 @@ class PropGen:
         return prop
 
 
+class SDNConfig(bpy.types.PropertyGroup):
+    name: bpy.props.StringProperty()
+    visible: bpy.props.BoolProperty(default=False)
+    in_out: bpy.props.EnumProperty(items=[("INPUT", "INPUT", ""), ("OUTPUT", "OUTPUT", "")], default="INPUT")
+    converted: bpy.props.BoolProperty(default=False)
+
+
 class NodeBase(bpy.types.Node):
     bl_width_min = 200.0
     bl_width_max = 2000.0
@@ -315,15 +342,34 @@ class NodeBase(bpy.types.Node):
     sdn_level: bpy.props.IntProperty(default=0)
     sdn_dirty: bpy.props.BoolProperty(default=False)
     sdn_hide: bpy.props.BoolProperty(default=False)
+    sdn_socket_visible_in: bpy.props.CollectionProperty(type=SDNConfig)
+    sdn_socket_visible_out: bpy.props.CollectionProperty(type=SDNConfig)
     id: bpy.props.StringProperty(default="-1")
     builtin__stat__: bpy.props.StringProperty(subtype="BYTE_STRING")  # ori name: True/False
     class_type: str
+
+    def get_visible_cfg(self, in_out="INPUT"):
+        return self.sdn_socket_visible_in if in_out == "INPUT" else self.sdn_socket_visible_out
+
+    def set_sock_visible(self, name, in_out="INPUT", value=True):
+        cfg: dict[str, SDNConfig] = self.get_visible_cfg(in_out)
+        name = get_ori_name(name)
+        if name not in cfg:
+            cfg.add().name = name
+        cfg[name].visible = bool(value)
+
+    def get_sock_visible(self, name, in_out="INPUT"):
+        cfg: dict[str, SDNConfig] = self.get_visible_cfg(in_out)
+        name = get_ori_name(name)
+        if name not in cfg:
+            return True
+        return cfg[name].visible
 
     def get_widgets(self, exclude_converted=False) -> list[str]:
         """
         # 获取当前节点的widgets
         """
-        widgets = self.get_base_types()
+        widgets = self.widgets
         if exclude_converted:
             widgets = [w for w in widgets if not self.query_stat(w)]
         return widgets
@@ -424,7 +470,8 @@ class NodeBase(bpy.types.Node):
         reg_name = get_reg_name(name)
         return hasattr(self, reg_name)
 
-    def get_base_types(self) -> list[str]:
+    @property
+    def widgets(self) -> list[str]:
         return [inp for inp in self.inp_types if self.is_base_type(inp)]
 
     def is_ori_sock(self, name, in_out="INPUT"):
@@ -436,7 +483,7 @@ class NodeBase(bpy.types.Node):
             return not hasattr(self, reg_name) and self.inputs.get(name)
         return not hasattr(self, reg_name) and self.outputs.get(name)
 
-    def switch_socket(self, name, value):
+    def switch_socket_widget(self, name, value):
         self.set_stat(name, value)
         if value:
             socket_type = NodeParser.SOCKET_TYPE[self.class_type].get(name, "NONE")
@@ -501,18 +548,20 @@ class NodeBase(bpy.types.Node):
         self.id = self.unique_id()
         return self.id
 
-    def _draw_(self, context, layout):
+    def _draw_(self, context, layout, ext=False):
         for prop in self.__annotations__:
+            if not ext and not self.get_sock_visible(prop, "INPUT"):
+                continue
             if self.query_stat(prop):
                 continue
             if prop == "control_after_generate":
                 continue
             l = layout
             # 返回True 则不绘制
-            if self.get_blueprints().draw_button(self, context, l, prop):
+            if self.get_blueprints().draw_button(self, context, l, prop, swdisp=ext):
                 continue
             if self.is_base_type(prop) and get_ori_name(prop) in self.inp_types:
-                l = Ops_Swith_Socket.draw_prop(l, self, prop)
+                l = Ops_Switch_Socket_Widget.draw_prop(l, self, prop, swdisp=ext)
             l.prop(self, prop, text=prop, text_ctxt=self.get_ctxt())
 
     def draw_buttons(self: NodeBase, context, layout: bpy.types.UILayout):
@@ -524,7 +573,7 @@ class NodeBase(bpy.types.Node):
         row = layout.row(align=True)
         row.label(text=self.name, icon="NODE")
         row.prop(self, "sdn_hide", text="", icon="HIDE_ON" if self.sdn_hide else "HIDE_OFF")
-        self._draw_(context, layout)
+        self._draw_(context, layout, ext=True)
 
     def draw_label(self):
         ntype = _T(self.bl_idname)
@@ -688,6 +737,39 @@ class NodeBase(bpy.types.Node):
         bp = self.get_blueprints()
         return bp.make_serialize(self, parent=parent)
 
+    def draw_socket_io_box(self, context, layout: bpy.types.UILayout, node: NodeBase, text=""):
+        if not max(len(self.inputs), len(self.outputs)):
+            return
+        box = layout.box()
+        box.label(text="Socket管理")
+        row = box.row()
+        if self.inputs:
+            lbox = row.box()
+            lbox.label(text="Input")
+        for inp in self.inputs:
+            lrow = lbox.row(align=True)
+            visible = node.get_sock_visible(inp.name, in_out="INPUT")
+            icon = "HIDE_OFF" if visible else "HIDE_ON"
+            lrow.label(text=inp.name)
+            op = lrow.operator(Ops_Switch_Socket_Disp.bl_idname, text="", icon=icon)
+            op.action = "Hide" if visible else "Show"
+            op.socket_name = inp.name
+            op.node_name = node.name
+            op.in_out = "INPUT"
+        if self.outputs:
+            rbox = row.box()
+            rbox.label(text="Output")
+        for out in self.outputs:
+            rrow = rbox.row(align=True)
+            visible = node.get_sock_visible(out.name, in_out="OUTPUT")
+            icon = "HIDE_OFF" if visible else "HIDE_ON"
+            rrow.label(text=out.name)
+            op = rrow.operator(Ops_Switch_Socket_Disp.bl_idname, text="", icon=icon)
+            op.action = "Hide" if visible else "Show"
+            op.socket_name = out.name
+            op.node_name = node.name
+            op.in_out = "OUTPUT"
+
     def draw_socket(_self, self: bpy.types.NodeSocket, context, layout, node: NodeBase, text):
         if not node.is_registered_node_type():
             return
@@ -703,7 +785,7 @@ class NodeBase(bpy.types.Node):
             return
         row = layout.row(align=True)
         row.label(text=linfo + _T(prop) + rinfo, text_ctxt=node.get_ctxt())
-        op = row.operator(Ops_Swith_Socket.bl_idname, text="", icon="UNLINKED")
+        op = row.operator(Ops_Switch_Socket_Widget.bl_idname, text="", icon="UNLINKED")
         op.node_name = node.name
         op.socket_name = self.name
         op.action = "ToProp"
@@ -724,8 +806,51 @@ class SocketBase(bpy.types.NodeSocket):
             return cls.draw_color_simple_
 
 
-class Ops_Swith_Socket(bpy.types.Operator):
-    bl_idname = "sdn.switch_socket"
+class Ops_Switch_Socket_Disp(bpy.types.Operator):
+    bl_idname = "sdn.switch_socket_disp"
+    bl_label = "切换Socket显示隐藏"
+    socket_name: bpy.props.StringProperty()
+    node_name: bpy.props.StringProperty()
+    action: bpy.props.StringProperty(default="")
+    in_out: bpy.props.EnumProperty(items=[("INPUT", "INPUT", ""), ("OUTPUT", "OUTPUT", "")], default="INPUT")
+
+    def switch_disp(self, node: NodeBase):
+        if self.action == "Show":
+            node.set_sock_visible(self.socket_name, self.in_out, True)
+        elif self.action == "Hide":
+            node.set_sock_visible(self.socket_name, self.in_out, False)
+
+    def execute(self, context: Context) -> Set[int] | Set[str]:
+        from .tree import CFNodeTree
+        from .nodegroup import SDNGroup
+        node: SDNGroup = context.node
+        if not node:
+            return {"FINISHED"}
+        if not node.is_group():
+            self.switch_disp(node)
+            return {"FINISHED"}
+        if not node.node_tree:
+            return {"FINISHED"}
+        otree: CFNodeTree = node.get_tree()
+        tree: CFNodeTree = node.node_tree
+        otree.store_toggle_links()
+        sel_node: NodeBase = tree.nodes.get(self.node_name)
+        self.switch_disp(sel_node)
+
+        node.clear_interface(tree)
+        node.clear_sockets()
+        tree.interface_update(context)
+        tree.update()
+        # 通知更新所有节点
+        bpy.msgbus.publish_rna(key=(bpy.types.SpaceNodeEditor, "node_tree"))
+        tree.switch_tree_update()
+        otree.active = node
+        otree.restore_toggle_links()
+        return {"FINISHED"}
+
+
+class Ops_Switch_Socket_Widget(bpy.types.Operator):
+    bl_idname = "sdn.switch_socket_widget"
     bl_label = "切换Socket/属性"
     socket_name: bpy.props.StringProperty()
     node_name: bpy.props.StringProperty()
@@ -756,9 +881,9 @@ class Ops_Swith_Socket(bpy.types.Operator):
             return {"FINISHED"}
         match self.action:
             case "ToSocket":
-                node.switch_socket(socket_name, True)
+                node.switch_socket_widget(socket_name, True)
             case "ToProp":
-                node.switch_socket(socket_name, False)
+                node.switch_socket_widget(socket_name, False)
         if context.node and context.node.is_group():
             tree.interface_update(context)
             tree.update()
@@ -769,14 +894,22 @@ class Ops_Swith_Socket(bpy.types.Operator):
         self.action = ""
         return {"FINISHED"}
 
-    def draw_prop(layout, node, prop, row=True, swlink=True) -> bpy.types.UILayout:
+    def draw_prop(layout, node: NodeBase, prop, row=True, swsock=True, swdisp=False) -> bpy.types.UILayout:
         l = layout
-        if swlink:
+        if swsock:
             l = layout.row(align=True)
-            op = l.operator(Ops_Swith_Socket.bl_idname, text="", icon="LINKED")
+            op = l.operator(Ops_Switch_Socket_Widget.bl_idname, text="", icon="LINKED")
             op.node_name = node.name
             op.socket_name = prop
             op.action = "ToSocket"
+        if swdisp and not node.get_tree().root:
+            visible = node.get_sock_visible(prop, in_out="INPUT")
+            icon = "HIDE_OFF" if visible else "HIDE_ON"
+            op = l.operator(Ops_Switch_Socket_Disp.bl_idname, text="", icon=icon)
+            op.action = "Hide" if visible else "Show"
+            op.socket_name = prop
+            op.node_name = node.name
+            op.in_out = "INPUT"
         if row:
             l = l.row(align=True)
         else:
@@ -1181,6 +1314,11 @@ class NodeParser:
         _desc = {}
 
         def _parse(name, desc, _desc):
+            # 有些书包节点定义的 output居然不是列表 而是单字符串
+            if isinstance(desc.get("output", []), str):
+                desc["output"] = [desc["output"]]
+            if isinstance(desc.get("output_name", []), str):
+                desc["output_name"] = [desc["output_name"]]
             for index, out_type in enumerate(desc.get("output", [])):
                 desc["output"][index] = [out_type, out_type]
             output_name = desc.get("output_name", [])
@@ -1188,6 +1326,9 @@ class NodeParser:
                 output_name = [output_name]
             for index, out_name in enumerate(output_name):
                 if not out_name:
+                    continue
+                # 有些书包节点定义的 output_name 居然比 output多一个
+                if index >= len(desc["output"]):
                     continue
                 # 有些书包节点定义的 output为不标准的格式 如 列表 字符串嵌套什么的
                 if not isinstance(desc["output"][index][0], str):
@@ -1199,6 +1340,9 @@ class NodeParser:
             try:
                 _parse(name, desc, _desc)
             except Exception as e:
+                import traceback
+                stack = "\n" + traceback.format_exc()
+                logger.debug(stack)
                 logger.error(f"{_T('Parsing Failed')}: {name} -> {e}")
                 self.object_info.pop(name)
         return _desc
@@ -1434,7 +1578,7 @@ class Images(bpy.types.PropertyGroup):
     image: bpy.props.PointerProperty(type=bpy.types.Image)
 
 
-clss = [Ops_Swith_Socket, Ops_Add_SaveImage, Set_Render_Res, GetSelCol, Ops_Active_Tex, Ops_Link_Mask, Images]
+clss = [SDNConfig, Ops_Switch_Socket_Disp, Ops_Switch_Socket_Widget, Ops_Add_SaveImage, Set_Render_Res, GetSelCol, Ops_Active_Tex, Ops_Link_Mask, Images]
 
 reg, unreg = bpy.utils.register_classes_factory(clss)
 
