@@ -177,8 +177,8 @@ class CFNodeTree(NodeTree):
                         if sock.is_linked and not sock.links:
                             fsock = sock.links[0].from_socket
                         socket_name = get_ori_name(sock.name)
-                        node.switch_socket(socket_name, False)
-                        inp = node.switch_socket(socket_name, True)
+                        node.switch_socket_widget(socket_name, False)
+                        inp = node.switch_socket_widget(socket_name, True)
                         if fsock:
                             print("NEW LINK", fsock, inp)
                             tree.links.new(fsock, inp)
@@ -299,8 +299,32 @@ class CFNodeTree(NodeTree):
             if node.is_group():
                 if not node.node_tree:
                     continue
-                res = {"nodes": [], "links": [], "external": []}
-                res_ = node.node_tree.save_json()
+                tree: CFNodeTree = node.node_tree
+                res = {
+                    "nodes": [],
+                    "links": [],
+                    "external": [],
+                    "config": {},
+                }
+                cfg = res["config"]
+                ordered_nodes = tree.compute_execution_order()
+                for on in ordered_nodes:
+                    if on.bl_idname == "NodeReroute":
+                        continue
+                    ocfg = {"input": {}, "output": {}}
+                    inpv = {oinp.name: {"visible": False} for oinp in on.inputs if not on.get_sock_visible(oinp.name, in_out="INPUT")}
+                    # widgets:
+                    widv = {w: {"visible": False} for w in on.widgets if not on.get_sock_visible(w, in_out="INPUT")}
+                    inpv.update(widv)
+                    outv = {i: {"visible": False} for i, oout in enumerate(on.outputs) if not on.get_sock_visible(oout.name, in_out="OUTPUT")}
+                    if inpv:
+                        ocfg["input"] = inpv
+                    if outv:
+                        ocfg["output"] = outv
+                    if ocfg:
+                        cfg[on.id] = ocfg
+                logger.critical(f"CFG: {cfg}")
+                res_ = tree.save_json()
                 # 只同步 res有的key
                 for k in res:
                     res[k] = res_.get(k, [])
@@ -325,11 +349,17 @@ class CFNodeTree(NodeTree):
                 # nodes按index 排序
                 res["nodes"].sort(key=lambda x: x["order"])
                 index_map = {n["index"]: i for i, n in enumerate(res["nodes"])}
+                logger.critical(index_map)
                 for link in res["links"]:
                     link[0] = index_map[link[0]]
                     link[2] = index_map[link[2]]
                 for n in res["nodes"]:
                     n["index"] = index_map[n["index"]]
+                # cfg的 id 也需要经过index_map转换
+                for nid in list(cfg):
+                    cfg[str(index_map[int(nid)])] = cfg.pop(nid)
+                if cfg:
+                    res["config"] = cfg
                 # nodes:
                 #   1. 多一个index属性 (和id应该作用相同)
                 #   2. 少id属性
@@ -493,6 +523,15 @@ class CFNodeTree(NodeTree):
                 else:
                     pool.add(old_id)
                     node.id = old_id
+
+        for nid, cfg in data.get("config", {}).items():
+            node = id_node_map[nid]
+            for iname, inp in cfg.get("input", {}).items():
+                node.set_sock_visible(iname, in_out="INPUT", value=inp.get("visible", True))
+            for oindex, out in cfg.get("output", {}).items():
+                oname = node.outputs[int(oindex)].name
+                node.set_sock_visible(oname, in_out="OUTPUT", value=out.get("visible", True))
+
         self.update_editor()
         nlinks = self.dolink(data.get("links", []), id_map, id_node_map)
 
@@ -673,7 +712,7 @@ class CFNodeTree(NodeTree):
             return
         # node.update()
 
-    def compute_execution_order(self):
+    def compute_execution_order(self) -> list[NodeBase]:
         """
         Reference from ComfyUI
         """
@@ -961,7 +1000,7 @@ reg, unreg = bpy.utils.register_classes_factory(clss)
 
 
 def reg_node_reroute():
-    from .nodes import NodeBase
+    from .nodes import NodeBase, SDNConfig
     bpy.types.NodeSocketColor.slot_index = bpy.props.IntProperty(default=0)
     bpy.types.NodeSocketColor.index = bpy.props.IntProperty(default=-1)
     bpy.types.NodeSocketColor.sid = bpy.props.StringProperty(default="")
@@ -978,6 +1017,8 @@ def reg_node_reroute():
         inode.sdn_level = bpy.props.IntProperty(default=0)
         inode.sdn_dirty = bpy.props.BoolProperty(default=False)
         inode.sdn_hide = bpy.props.BoolProperty(default=False)
+        inode.sdn_socket_visible_in = bpy.props.CollectionProperty(type=SDNConfig)
+        inode.sdn_socket_visible_out = bpy.props.CollectionProperty(type=SDNConfig)
         # inode.is_dirty = NodeBase.is_dirty
         # inode.set_dirty = NodeBase.set_dirty
         # inode.is_group = NodeBase.is_group
@@ -997,7 +1038,7 @@ def reg_node_reroute():
         # inode.query_stats = NodeBase.query_stats
         # inode.query_stat = NodeBase.query_stat
         # inode.set_stat = NodeBase.set_stat
-        # inode.switch_socket = NodeBase.switch_socket
+        # inode.switch_socket_widget = NodeBase.switch_socket_widget
         # inode.get_from_link = NodeBase.get_from_link
         # inode.get_ctxt = NodeBase.get_ctxt
         # inode.get_blueprints = NodeBase.get_blueprints
@@ -1106,6 +1147,7 @@ def rtnode_reg_diff():
 
 
 def rtnode_reg():
+    nodes_reg()
     reg_node_reroute()
     clss.append(CFNodeTree)
     t1 = time.time()
@@ -1116,7 +1158,6 @@ def rtnode_reg():
     node_cat = load_node(nodetree_desc=nt_desc)
     clss.extend(node_clss)
     clss.extend(socket_clss)
-    nodes_reg()
     reg()
     reg_nodetree(TREE_NAME, node_cat)  # register_node_categories(TREE_NAME, node_cat)
     set_draw_intern(reg=True)
