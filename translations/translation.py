@@ -84,7 +84,7 @@ INTERNAL_NAMES = {
     "show_preview",
     "show_texture",
     "socket_value_update",
-    "switch_socket",
+    "switch_socket_widget",
     "type",
     "unique_id",
     "update",
@@ -188,6 +188,9 @@ other = {
     "Warning:": "警告:",
     "Don't link to GroupIn/Out node": "禁止手动连接到组输入/组输出节点",
     "Corresponding link will auto connect after exiting the group editing": "对应连接将在退出组编辑后自动连接",
+    "Socket Manage": "Socket管理",
+    "Default value is too large: %s.%s -> %s": "默认值过大: %s.%s -> %s",
+    "Default value is too small: %s.%s -> %s": "默认值过小: %s.%s -> %s",
     # SDNode/blueprints.py
     "Non-Standard Enum": "非标准枚举",
     "Capture Screen": "截图",
@@ -202,6 +205,12 @@ other = {
     "SDNGroup": "组",
     # SDNode/utils.py
     "Gen Mask": "遮罩生成",
+    "Relink failed: %s": "重连失败: %s",
+    "Composite node not found": "未找到合成节点",
+    "Render Layer node not found": "未找到渲染层节点",
+    "Mask node not set render cam": "遮照节点未设置渲染相机",
+    "GP not set": "蜡笔未设置",
+    "GP not found in current scene": "蜡笔物体未存在当前场景中",
     # SDNode/nodegroup.py
     "Depth of group tree is limited to 1": "组最大深度限制为1",
     "Node group can't be nested": "节点组不能被嵌套(最大深度限制为1)",
