@@ -435,7 +435,6 @@ class TaskErrPaser:
 
 class Server:
     _instance: Server = None
-    stdout_listen_exited = False
     uid = 0
 
     def __new__(cls, *args, **kw):
@@ -482,6 +481,9 @@ class Server:
             return self.launch_url
         return f"http://{get_ip()}:{get_port()}"
 
+    def exited(self):
+        return False
+
 
 class FakeServer(Server):
     ...
@@ -524,10 +526,11 @@ class RemoteServer(Server):
 
 
 class LocalServer(Server):
+    exited_status = {}
+
     def __init__(self) -> None:
         self.pid = -1
         self.child: Popen = None
-        self.stdout_listen_exited = False
         super().__init__()
 
     def run(self) -> bool:
@@ -588,6 +591,7 @@ class LocalServer(Server):
         p = Popen(args, stdout=PIPE, stderr=STDOUT, cwd=Path(model_path).resolve().as_posix())
         self.child = p
         self.pid = p.pid
+        self.exited_status[self.pid] = False
         pidpath.write_text(str(p.pid))
         atexit.register(self.child.kill)
         Thread(target=self.stdout_listen, daemon=True).start()
@@ -601,10 +605,15 @@ class LocalServer(Server):
 
         if self.child:
             self.child.kill()
+        self.exited_status[self.pid] = True
         self.child = None
         self.pid = -1
 
+    def exited(self):
+        return self.exited_status.get(self.pid, False)
+
     def wait_connect(self) -> bool:
+        pid = self.pid
         while True:
             import requests
             try:
@@ -614,7 +623,7 @@ class LocalServer(Server):
                 ...
             except Exception as e:
                 logger.error(e)
-            if self.stdout_listen_exited:
+            if self.exited_status.get(pid, False):
                 break
             time.sleep(0.1)
         return False
@@ -694,6 +703,7 @@ class LocalServer(Server):
 
     def stdout_listen(self):
         p = self.child
+        pid = self.pid
         while p.poll() is None and self.child == p:
             line = p.stdout.readline().strip()
             if not line:
@@ -712,7 +722,7 @@ class LocalServer(Server):
                     ...
             if not proc:
                 logger.info(line)
-        self.stdout_listen_exited = True
+        self.exited_status[pid] = True
         logger.debug(_T("STDOUT Listen Thread Exit"))
 
 
@@ -790,7 +800,7 @@ class TaskManager:
         else:
             TaskManager.server = RemoteServer()
         running = TaskManager.server.run()
-        if not TaskManager.server.stdout_listen_exited and running:
+        if not TaskManager.server.exited() and running:
             logger.warn(_T("Server Launched"))
             TaskManager.start_polling()
             Timer.clear()  # timer may cause crash
