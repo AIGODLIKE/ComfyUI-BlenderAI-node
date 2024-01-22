@@ -69,7 +69,7 @@ class Timer:
             res = q.get()
             if isinstance(res, Exception):
                 raise res
-            return q.get()
+            return res
 
         return wrap
 
