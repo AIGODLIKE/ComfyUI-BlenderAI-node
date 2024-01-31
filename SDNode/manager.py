@@ -6,20 +6,17 @@ import sys
 import json
 import time
 import atexit
-import signal
 from concurrent.futures import ThreadPoolExecutor
-from urllib.parse import urlparse
-from mathutils import Color
-from functools import lru_cache
 from copy import deepcopy
 from shutil import rmtree
 from urllib import request
+from urllib.parse import urlparse
 from urllib.error import URLError
 from threading import Thread
-from subprocess import Popen, PIPE, STDOUT, DEVNULL
+from subprocess import Popen, PIPE, STDOUT
 from pathlib import Path
 from queue import Queue
-from ..utils import rmtree as rt, logger, _T, PkgInstaller, FSWatcher
+from ..utils import rmtree as rt, logger, _T, PkgInstaller
 from ..timer import Timer
 from ..preference import get_pref
 from .history import History
@@ -354,6 +351,9 @@ class TaskErrPaser:
             }
             return self.__print__(info)
 
+    def __init__(self) -> None:
+        self.error_info = {}
+
     def decode_info(self, e: request.HTTPError):
         try:
             self.error_info = json.loads(e.read().decode())
@@ -363,7 +363,7 @@ class TaskErrPaser:
     def parse(self, e):
         if isinstance(e, request.HTTPError):
             self.decode_info(e)
-        elif isinstance(e, dict()):
+        elif isinstance(e, dict):
             self.error_info = e
         if not self.error_info:
             return
@@ -507,7 +507,7 @@ class RemoteServer(Server):
     def wait_connect(self) -> bool:
         import requests
         try:
-            if requests.get(f"{self.get_url()}/object_info", proxies={"http": None, "https": None}).status_code == 200:
+            if requests.get(f"{self.get_url()}/object_info", proxies={"http": None, "https": None}, timeout=10).status_code == 200:
                 self.server_connected = True
                 return True
         except requests.exceptions.ConnectionError as e:
@@ -522,7 +522,7 @@ class RemoteServer(Server):
 
     def close(self):
         self.server_connected = False
-        logger.warn(_T("Remote Server Closed"))
+        logger.warning(_T("Remote Server Closed"))
 
 
 class LocalServer(Server):
@@ -547,15 +547,15 @@ class LocalServer(Server):
             logger.error(_T("ComfyUI Path Not Found"))
             TaskManager.put_error_msg(_T("ComfyUI Path Not Found"))
             return
-        logger.debug(f"{_T('Model Path')}: {model_path}")
+        logger.debug("%s: %s", _T("Model Path"), model_path)
         python = pref.get_python()
         if pref.install_deps:
             self.run_pre()
 
-        logger.warn(_T("Server Launching"))
+        logger.warning(_T("Server Launching"))
         if sys.platform == "win32" and not python.exists():
-            logger.error(f"{_T('python interpreter not found')}:")
-            logger.error(f"   ↳{_T('Ensure that the python_embeded located in the same level as ComfyUI dir')}:")
+            logger.error("%s:", _T("python interpreter not found"))
+            logger.error("   ↳%s:", _T("Ensure that the python_embeded located in the same level as ComfyUI dir"))
             logger.error("      SomeDirectory")
             logger.error("      ├─ ComfyUI")
             logger.error("      ├─ python_embeded")
@@ -664,14 +664,14 @@ class LocalServer(Server):
         else:
             ...
             # os.kill(pid, signal.SIGKILL)
-        logger.error(f"{_T('Kill Last ComfyUI Process')} id -> {pid}")
+        logger.error("%s id -> %s", _T("Kill Last ComfyUI Process"), pid)
 
     def run_pre(self):
         """
         Check pre install
         """
         # controlnet check
-        logger.warn(_T("ControlNet Init...."))
+        logger.warning(_T("ControlNet Init...."))
         python = get_pref().get_python()
         model_path = get_pref().model_path
 
@@ -698,8 +698,8 @@ class LocalServer(Server):
                 proc = Popen(command, cwd=model_path)
                 proc.wait()
 
-        logger.warn(_T("ControlNet Init Finished."))
-        logger.warn(_T("If controlnet still not worked, install manually by double clicked {}").format((controlnet / "install.bat").as_posix()))
+        logger.warning(_T("ControlNet Init Finished."))
+        logger.warning(_T("If controlnet still not worked, install manually by double clicked {}").format((controlnet / "install.bat").as_posix()))
 
     def stdout_listen(self):
         p = self.child
@@ -747,35 +747,38 @@ class TaskManager:
             cls._instance = object.__new__(cls, *args, **kw)
         return cls._instance
 
+    @staticmethod
     def put_error_msg(error, with_clear=False):
         if with_clear:
             TaskManager.clear_error_msg()
         TaskManager.error_msg.append(str(error))
 
+    @staticmethod
     def clear_error_msg():
         TaskManager.error_msg.clear()
 
+    @staticmethod
     def get_error_msg(copy=False):
         if copy:
             return deepcopy(TaskManager.error_msg)
         return TaskManager.error_msg
 
+    @staticmethod
     def get_progress():
         return TaskManager.progress
 
+    @staticmethod
     def get_task_num():
         return TaskManager.task_queue.qsize()
 
+    @staticmethod
     def is_launched() -> bool:
         if TaskManager.server:
             return TaskManager.server.is_launched()
         return False
-        if TaskManager.connect_existing:
-            return True
-        return TaskManager.pid != -1
 
+    @staticmethod
     def run_server(fake=False):
-        import time
         from .tree import rtnode_reg, rtnode_unreg
         t1 = time.time()
         rtnode_unreg()
@@ -791,6 +794,7 @@ class TaskManager:
         t4 = time.time()
         logger.info(_T("RegNode Time:") + f" {t4-t3:.2f}s")
 
+    @staticmethod
     def init_server(fake=False):
         if fake:
             TaskManager.server = FakeServer()
@@ -801,7 +805,7 @@ class TaskManager:
             TaskManager.server = RemoteServer()
         running = TaskManager.server.run()
         if not TaskManager.server.exited() and running:
-            logger.warn(_T("Server Launched"))
+            logger.warning(_T("Server Launched"))
             TaskManager.start_polling()
             Timer.clear()  # timer may cause crash
         else:
@@ -809,16 +813,19 @@ class TaskManager:
             TaskManager.server.close()
         return running
 
+    @staticmethod
     def start_polling():
         Thread(target=TaskManager.poll_res, daemon=True).start()
         Thread(target=TaskManager.poll_task, daemon=True).start()
         Thread(target=TaskManager.proc_res, daemon=True).start()
 
+    @staticmethod
     def restart_server(fake=False):
         TaskManager.clear_all()
         TaskManager.server.close()
         TaskManager.run_server(fake=fake)
 
+    @staticmethod
     def close_server():
         if TaskManager.ws:
             TaskManager.ws.close()
@@ -826,6 +833,7 @@ class TaskManager:
         TaskManager.cur_task = None
         TaskManager.restart_server(fake=True)
 
+    @staticmethod
     def push_task(task, pre=None, post=None, tree=None):
         logger.debug(_T('Add Task'))
         if not TaskManager.is_launched():
@@ -835,11 +843,13 @@ class TaskManager:
             return
         TaskManager.task_queue.put(Task(task, pre=pre, post=post, tree=tree))
 
+    @staticmethod
     def push_res(res):
         logger.debug(_T("Add Result"))
         TaskManager.cur_task.res.put(res)
         TaskManager.res_queue.put(TaskManager.cur_task)
 
+    @staticmethod
     def clear_cache():
         req = request.Request(f"{TaskManager.server.get_url()}/cup/clear_cache", method="POST")
         try:
@@ -856,6 +866,7 @@ class TaskManager:
     #         ...
     #     return ""
 
+    @staticmethod
     def interrupt():
         from http.client import RemoteDisconnected
         import traceback
@@ -869,6 +880,7 @@ class TaskManager:
         except Exception:
             traceback.print_exc()
 
+    @staticmethod
     def clear_all():
         TaskManager.interrupt()
         while not TaskManager.task_queue.empty():
@@ -896,6 +908,7 @@ class TaskManager:
                 TaskManager.mark_finished(with_noexe=False)
         logger.debug(_T("Poll Task Thread Exit"))
 
+    @staticmethod
     def query_server_task():
         if not TaskManager.is_launched():
             return {"queue_pending": [], "queue_running": []}
@@ -907,6 +920,7 @@ class TaskManager:
             res = {"queue_pending": [], "queue_running": []}
         return res
 
+    @staticmethod
     def submit(task: Task):
         task.submit_pre()
         task: dict[str, tuple] = task.task
@@ -957,6 +971,7 @@ class TaskManager:
         TaskManager.executer.submit(queue_task, task)
         # Thread(target=queue_task, args=(task, )).start()
 
+    @staticmethod
     def mark_finished(with_noexe=True):
         TaskManager.progress = {}
         TaskManager.cur_task = None
@@ -968,6 +983,7 @@ class TaskManager:
             TaskManager.put_error_msg(f"    4.{_T('Server Not Launched')}")
         TaskManager.execute_status_record.clear()
 
+    @staticmethod
     def mark_finished_with_info(info):
         TaskManager.progress = {}
         TaskManager.cur_task = None
@@ -975,6 +991,7 @@ class TaskManager:
             TaskManager.put_error_msg(i)
         TaskManager.execute_status_record.clear()
 
+    @staticmethod
     def proc_res():
         uid = TaskManager.server.uid
         while uid == TaskManager.server.uid:
@@ -1002,19 +1019,19 @@ class TaskManager:
             mtype = msg["type"]
             data = msg["data"]
             if mtype == "executing":
-                n = data.get('node', '')
+                n = data.get("node", "")
                 if n:
-                    logger.debug(f"{_T('Executing Node')}: {n}")
+                    logger.debug("%s: %s", _T("Executing Node"), n)
             elif mtype == "execution_start":
                 ...
             elif mtype == "execution_cached":
-                logger.debug(f"{_T('Execution Cached')}: {data.get('nodes', '')}")
+                logger.debug("%s: %s", _T("Execution Cached"), data.get("nodes", ""))
             elif mtype == "status":
                 ...
             elif mtype == "execution_error":
                 ...
-            elif mtype != 'progress':
-                logger.debug(f'{_T("got response")}: {message}')
+            elif mtype != "progress":
+                logger.debug("%s: %s", _T("Message Type"), mtype)
 
             def update():
                 import bpy
@@ -1060,7 +1077,7 @@ class TaskManager:
                     sys.stdout.flush()
                     TaskManager.progress_bar = 0
                 tm.push_res(data)
-                logger.warn(f"{_T('Ran Node')}: {data['node']}", )
+                logger.warning("%s: %s", _T("Ran Node"), data["node"])
             elif mtype == "execution_error":
                 _msg = data.get("message", None)
                 if not _msg:
@@ -1095,7 +1112,7 @@ class TaskManager:
                 # tm.mark_finished(with_noexe=False)
             elif mtype == "execution_cached":
                 # {"type": "execution_cached", "data": {"nodes": ["12", "7", "10"], "prompt_id": "ddd"}}
-                # logger.warn(message)
+                # logger.warning(message)
                 ...  # pass
             else:
                 logger.error(message)
