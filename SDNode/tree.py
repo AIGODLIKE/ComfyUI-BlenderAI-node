@@ -460,6 +460,7 @@ class CFNodeTree(NodeTree):
 
     def load_json(self, data):
         self.clear_nodes()
+        Timer.clear() # blueprints中的setwidth 可能崩溃, 因此提前清理
         Timer.put((self.load_json_ex, data))
 
     def load_json_group(self, data) -> list[bpy.types.Node]:
