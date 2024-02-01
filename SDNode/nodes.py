@@ -1,32 +1,23 @@
 from __future__ import annotations
 import bpy
-import random
-import time
 import os
-import re
 import json
 import math
-import textwrap
 import pickle
-import urllib.request
-import urllib.parse
-from numpy import clip
-from copy import deepcopy
 from hashlib import md5
 from math import ceil
-from typing import Any, Set
+from typing import Set, Any
 from pathlib import Path
 from random import random as rand
-from functools import partial, lru_cache
+from functools import lru_cache
 from mathutils import Vector, Matrix
 from bpy.types import Context, Event
-from .utils import SELECTED_COLLECTIONS, get_default_tree, THelper
-from ..utils import logger, update_screen, Icon, _T
+from .utils import SELECTED_COLLECTIONS, get_default_tree
+from ..utils import logger, Icon, _T
 from ..datas import ENUM_ITEMS_CACHE, IMG_SUFFIX
-from ..preference import get_pref
 from ..timer import Timer
 from ..translations import ctxt, get_reg_name, get_ori_name
-from .manager import get_url, Task, WITH_PROXY
+from .manager import get_url, WITH_PROXY
 
 try:
     from requests import get as ______
@@ -95,13 +86,13 @@ def try_get_path_cfg():
         d = json.loads(PATH_CFG.read_text())
         return d
     except Exception as e:
-        logger.warn(_T("icon path load error") + str(e))
+        logger.warning(_T("icon path load error") + str(e))
 
     try:
         d = json.loads(PATH_CFG.read_text(encoding="gbk"))
         return d
     except Exception as e:
-        logger.warn(_T("icon path load error") + str(e))
+        logger.warning(_T("icon path load error") + str(e))
 
 
 def get_icon_path(nname):
@@ -117,34 +108,35 @@ def get_icon_path(nname):
         # {
         #     "ckpt_name": prev_dir / "checkpoints",
         # }
-        for class_type in name2path:
+        for class_type, pathmap in name2path.items():
             path_list = {}
             PREVICONPATH[class_type] = path_list
-            for name in name2path[class_type]:
+            for name, mpath in pathmap.items():
                 reg_name = get_reg_name(name)
-                path_list[reg_name] = d[name2path[class_type][name]][0]
+                path_list[reg_name] = d[mpath][0]
     return PREVICONPATH.get(nname, {})
 
 
 def calc_hash_type(stype):
-    from .blueprints import is_bool_list, is_number_list, is_all_str_list
+    from .blueprints import is_bool_list, is_all_str_list
     if is_bool_list(stype):
-        hash_type = md5(f"{{True, False}}".encode()).hexdigest()
+        hash_type = md5("{True, False}".encode()).hexdigest()
     elif not is_all_str_list(stype):
         hash_type = md5(",".join([str(i) for i in stype]).encode()).hexdigest()
     else:
         try:
             hash_type = md5(",".join(stype).encode()).hexdigest()
-        except TypeError:
+        except TypeError as e:
             winfo = str(stype)
             if len(winfo) > 100:
                 winfo = winfo[:40] + "......"
-            raise TypeError(f"{_T('Non-Standard Enum')} -> {winfo}")
+            raise TypeError(f"{_T('Non-Standard Enum')} -> {winfo}") from e
     return hash_type
 
 
 class PropGen:
 
+    @staticmethod
     def _find_icon(nname, inp_name, item):
         prev_path_list = get_icon_path(nname).get(inp_name)
         if not prev_path_list:
@@ -175,12 +167,14 @@ class PropGen:
         # logger.info(f"🌚 No Icon <- {file.name}")
         return Icon["NONE"]
 
+    @staticmethod
     def Gen(proptype, nname, inp_name, inp):
         reg_name = get_reg_name(inp_name)
         prop = getattr(PropGen, proptype)(nname, inp_name, reg_name, inp)
         prop = PropGen._spec_gen_properties(nname, inp_name, prop)
         return prop
 
+    @staticmethod
     def ENUM(nname, inp_name, reg_name, inp):
         def get_items(nname, inp_name, inp):
             def wrap(self, context):
@@ -205,6 +199,7 @@ class PropGen:
             prop = bpy.props.BoolProperty()
         return prop
 
+    @staticmethod
     def INT(nname, inp_name, reg_name, inp):
         # {'default': 20, 'min': 1, 'max': 10000}
         if len(inp) == 1:
@@ -216,10 +211,10 @@ class PropGen:
             default = 0
         inp[1]["default"] = int(default)
         if inp[1]["default"] > 2**31 - 1:
-            logger.warn("Default value is too large: %s.%s -> %s", nname, inp_name, inp[1]["default"])
+            logger.warning("Default value is too large: %s.%s -> %s", nname, inp_name, inp[1]["default"])
             inp[1]["default"] = min(inp[1]["default"], 2**31 - 1)
         elif inp[1]["default"] < -2**31:
-            logger.warn("Default value is too small: %s.%s -> %s", nname, inp_name, inp[1]["default"])
+            logger.warning("Default value is too small: %s.%s -> %s", nname, inp_name, inp[1]["default"])
             inp[1]["default"] = max(inp[1]["default"], -2**31)
         inp[1]["step"] = ceil(inp[1].get("step", 1))
         if inp[1].pop("display", False):
@@ -231,6 +226,7 @@ class PropGen:
         prop = bpy.props.IntProperty(**params)
         return prop
 
+    @staticmethod
     def FLOAT(nname, inp_name, reg_name, inp):
         {'default': 8.0, 'min': 0.0, 'max': 100.0}
         if len(inp) > 1:
@@ -246,6 +242,7 @@ class PropGen:
             return prop
         return bpy.props.FloatProperty()
 
+    @staticmethod
     def BOOLEAN(nname, inp_name, reg_name, inp):
         if len(inp) <= 1:
             prop = bpy.props.BoolProperty()
@@ -257,6 +254,7 @@ class PropGen:
             prop = bpy.props.BoolProperty(**params)
         return prop
 
+    @staticmethod
     def STRING(nname, inp_name, reg_name, inp):
         {'default': 'ComfyUI', 'multiline': True}
         subtype = "NONE"
@@ -271,18 +269,21 @@ class PropGen:
                     return
                 self[i_name] = bpy.path.abspath(self[i_name])
             return wrap
+
+        def update_default(_, __): ...
         update = update_wrap(inp_name)
         if inp_name == "image":
             subtype = "FILE_PATH"
         elif inp_name == "output_dir":
             subtype = "DIR_PATH"
         else:
-            def update(_, __): return
+            update = update_default
         prop = bpy.props.StringProperty(default=str(inp[1].get("default", "")),
                                         subtype=subtype,
                                         update=update)
         return prop
 
+    @staticmethod
     def _spec_gen_properties(nname, inp_name, prop):
 
         def set_sync_rand(self: NodeBase, seed):
@@ -347,6 +348,12 @@ class NodeBase(bpy.types.Node):
     id: bpy.props.StringProperty(default="-1")
     builtin__stat__: bpy.props.StringProperty(subtype="BYTE_STRING")  # ori name: True/False
     class_type: str
+    # for pylint
+    inp_types: list[str]
+    __metadata__: dict
+    __annotations__: dict
+    prop: str
+    sync_rand: bool
 
     def get_visible_cfg(self, in_out="INPUT"):
         return self.sdn_socket_visible_in if in_out == "INPUT" else self.sdn_socket_visible_out
@@ -499,7 +506,7 @@ class NodeBase(bpy.types.Node):
         判断`属性名`是否存在于`元数据`中(可能是socket也可能是widgets)
         """
         if not hasattr(self, "__metadata__"):
-            logger.warn(f"node {self.name} has no metadata")
+            logger.warning(f"node {self.name} has no metadata")
             return []
         inputs = self.__metadata__.get("input", {})
         if inp_name in (r := inputs.get("required", {})):
@@ -894,6 +901,7 @@ class Ops_Switch_Socket_Widget(bpy.types.Operator):
         self.action = ""
         return {"FINISHED"}
 
+    @staticmethod
     def draw_prop(layout, node: NodeBase, prop, row=True, swsock=True, swdisp=False) -> bpy.types.UILayout:
         l = layout
         if swsock:
@@ -971,6 +979,9 @@ class Ops_Link_Mask(bpy.types.Operator):
         "ctrl": False,
         "alt": False,
     }
+    from_node: bpy.types.Node = None
+    to_node: bpy.types.Node = None
+    handle: Any = None
 
     def get_nearest_node(self, context: bpy.types.Context, filter=lambda _: True) -> bpy.types.Node:
         mouse_pos = context.space_data.cursor_location
@@ -1278,15 +1289,15 @@ class NodeParser:
                 self.PATH.write_text(js)
                 self.ori_object_info = cur_object_info
         except requests.exceptions.ConnectionError:
-            logger.warn(_T("Server Launch Failed"))
+            logger.warning("Server Launch Failed")
         except ModuleNotFoundError:
-            logger.error(f"Module: requests import error!")
+            logger.error("Module: requests import error!")
 
     def find_diff(self):
         # 获取差异object_info
         if self.DIFF_PATH.exists():
             self.diff_object_info = json.load(self.DIFF_PATH.open("r"))
-        for name in {"Note", "PrimitiveNode", "Cache Node"}:
+        for name in ["Note", "PrimitiveNode", "Cache Node"]:
             self.diff_object_info.pop(name, None)
         return self.diff_object_info
 
@@ -1294,7 +1305,7 @@ class NodeParser:
         if diff:
             self.object_info = self.find_diff()
         else:
-            logger.warn(_T("Parsing Node Start"))
+            logger.warning("Parsing Node Start")
             self.object_info = self.fetch_object()
             self.SOCKET_TYPE.clear()
             self.load_internal()
@@ -1303,7 +1314,7 @@ class NodeParser:
         node_clss = self._parse_node_clss()
         nodetree_desc = self._get_nt_desc()
         if not diff:
-            logger.warn(_T("Parsing Node Finished!"))
+            logger.warning("Parsing Node Finished!")
         return nodetree_desc, node_clss, socket_clss
 
     def _get_n_desc(self):
@@ -1366,7 +1377,7 @@ class NodeParser:
         _desc = {"*", }  # Enum/Int/Float/String/Bool 不需要socket
 
         def _parse(name, desc, _desc):
-            for inp_channel in {"required", "optional"}:
+            for inp_channel in ["required", "optional"]:
                 for inp, inp_desc in desc["input"].get(inp_channel, {}).items():
                     stype = inp_desc[0]
                     if isinstance(stype, list):
@@ -1482,7 +1493,7 @@ class NodeParser:
                 for index, inp_name in enumerate(self.inp_types):
                     inp = self.inp_types[inp_name]
                     if not inp:
-                        logger.error(_T("None Input: %s"), inp_name)
+                        logger.error("None Input: %s", inp_name)
                         continue
                     socket = inp[0]
                     if isinstance(inp[0], list):
@@ -1491,7 +1502,7 @@ class NodeParser:
                         continue
                     if socket in {"ENUM", "INT", "FLOAT", "STRING", "BOOLEAN"}:
                         continue
-                    # logger.warn(inp)
+                    # logger.warning(inp)
                     in1 = self.inputs.new(socket, get_reg_name(inp_name))
                     in1.display_shape = "DIAMOND_DOT"
                     # in1.link_limit = 0
@@ -1520,8 +1531,7 @@ class NodeParser:
                     inp[1].pop(key)
             properties = {}
             skip = False
-            for inp_name in inp_types:
-                inp = inp_types[inp_name]
+            for inp_name, inp in inp_types.items():
                 if not inp:
                     logger.error("None Input: %s", inp)
                     continue
@@ -1566,7 +1576,7 @@ class NodeParser:
                 "__metadata__": ndesc
             }
             if skip:
-                logger.warn("Skip Reg Node: %s", nname)
+                logger.warning("Skip Reg Node: %s", nname)
                 continue
             NodeDesc = type(nname, (NodeBase,), fields)
             NodeDesc.dcolor = (rand() / 2, rand() / 2, rand() / 2)
@@ -1585,7 +1595,7 @@ reg, unreg = bpy.utils.register_classes_factory(clss)
 
 def notify_draw():
     from .tree import CFNodeTree, TREE_TYPE
-    from .node_process import calc_size, display_text, VecWorldToRegScale, FONT_ID
+    from .node_process import display_text
     tree: CFNodeTree = get_default_tree()
     if not tree:
         return
