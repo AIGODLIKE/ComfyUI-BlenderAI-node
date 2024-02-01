@@ -52,10 +52,9 @@ def track_ae():
 
 
 def disable_reload():
-    for nmod in sys.modules:
+    for nmod, mod in sys.modules.items():
         if nmod == __package__ or not nmod.startswith(__package__):
             continue
-        mod = sys.modules[nmod]
         if not hasattr(mod, "__addon_enabled__"):
             mod.__addon_enabled__ = False
     if bpy.app.timers.is_registered(track_ae):
@@ -127,9 +126,8 @@ def unregister():
 def modules_update():
     from .kclogger import close_logger
     close_logger()
-    import sys
     modules = []
-    for i in sys.modules.keys():
+    for i in sys.modules:
         if i.startswith(__package__) and i != __package__:
             modules.append(i)
     for i in modules:
