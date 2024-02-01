@@ -13,8 +13,7 @@ from copy import deepcopy
 from bpy.types import Context, UILayout
 
 from .nodegroup import LABEL_TAG, SOCK_TAG, SDNGroup
-from .nodes import NodeBase
-from .utils import gen_mask, THelper, Interface
+from .utils import gen_mask, THelper
 from .plugins.animatedimageplayer import AnimatedImagePlayer as AIP
 from .nodes import NodeBase, Ops_Add_SaveImage, Ops_Link_Mask, Ops_Active_Tex, Set_Render_Res, Ops_Switch_Socket_Widget
 from .nodes import name2path, get_icon_path, Images
@@ -23,7 +22,7 @@ from ..timer import Timer
 from ..preference import get_pref
 from ..kclogger import logger
 from ..utils import _T, Icon, update_screen, PrevMgr, rgb2hex, hex2rgb
-from ..translations import ctxt, get_reg_name, get_ori_name
+from ..translations import get_reg_name, get_ori_name
 
 
 def get_sync_rand_node(tree):
@@ -218,8 +217,8 @@ class BluePrintBase:
             winfo = str(stype)
             if len(winfo) > 40:
                 winfo = winfo[:40] + "...]"
-            logger.warn(f"{_T('Non-Standard Enum')}: {nname}.{inp} -> {winfo}")
-        for k in {"required", "optional"}:
+            logger.warning("%s: %s.%s -> %s", _T('Non-Standard Enum'), nname, inp, winfo)
+        for k in ["required", "optional"]:
             for inp, inp_desc in desc["input"].get(k, {}).items():
                 stype = deepcopy(inp_desc[0])
                 if not stype:
@@ -299,7 +298,7 @@ class BluePrintBase:
             try:
                 v = data["widgets_values"].pop(0)
             except IndexError:
-                logger.info(f"{_T('|IGNORED|')} -> {_T('Load')}<{self.class_type}>{_T('Params not matching with current node')} " + reg_name)
+                logger.info("%s -> %s<%s>%s " + reg_name, _T('|IGNORED|'), _T('Load'), self.class_type, _T('Params not matching with current node'))
                 continue
             s.try_set_widget(self, inp_name, v)
 
@@ -314,12 +313,12 @@ class BluePrintBase:
             if inp_name in {"seed", "noise_seed"}:
                 setattr(self, reg_name, str(v))
             elif (enum := re.findall(' enum "(.*?)" not found', str(e), re.S)):
-                logger.warn(f"{_T('|IGNORED|')} {self.class_type} -> {inp_name} -> {_T('Not Found Item')}: {enum[0]}")
+                logger.warning("%s %s -> %s -> %s: %s", _T('|IGNORED|'), self.class_type, inp_name, _T('Not Found Item'), enum[0])
             else:
-                logger.error(f"|{e}|")
+                logger.error("|%s|", e)
         except Exception as e:
-            logger.error(f"{_T('Params Loading Error')} {self.class_type} -> {self.class_type}.{inp_name}")
-            logger.error(f" -> {e}")
+            logger.error("%s %s -> %s.%s", _T('Params Loading Error'), self.class_type, self.class_type, inp_name)
+            logger.error(" -> %s", e)
 
     def dump_specific(s, self: NodeBase = None, cfg=None, selected_only=False, **kwargs):
         """
@@ -595,7 +594,7 @@ class BluePrintBase:
         ...
 
     def post_fn(s, self: NodeBase, t: Task, result):
-        logger.debug(f"BluePrintBase: {self.class_type} {_T('Post Function')}->{result}")
+        logger.debug("BluePrintBase: %s %s->%s", self.class_type, _T('Post Function'), result)
 
     def make_serialize(s, self: NodeBase, parent: NodeBase = None) -> dict:
         return {self.id: (self.serialize(parent=parent), self.pre_fn, self.post_fn)}
@@ -617,7 +616,7 @@ class WD14Tagger(BluePrintBase):
         cfg["widgets_values"] = cfg["widgets_values"][:4]
 
     def post_fn(s, self: NodeBase, t: Task, result):
-        logger.debug(f"{self.class_type}{_T('Post Function')}->{result}")
+        logger.debug("%s%s->%s", self.class_type, _T('Post Function'), result)
         text = result.get("output", {}).get("tags", [])
         text = "".join(text)
 
@@ -665,7 +664,7 @@ class PreviewTextNode(BluePrintBase):
     comfyClass = "PreviewTextNode"
 
     def post_fn(s, self: NodeBase, t: Task, result):
-        logger.debug(f"{self.class_type}{_T('Post Function')}->{result}")
+        logger.debug("%s%s->%s", self.class_type, _T('Post Function'), result)
         text = result.get("output", {}).get("string", [])
         if text and isinstance(text[0], str):
             self.text = text[0]
@@ -1042,7 +1041,7 @@ def get_image_path(data, suffix="png") -> Path:
     '''data = {"filename": filename, "subfolder": subfolder, "type": folder_type}'''
     url_values = urllib.parse.urlencode(data)
     from .manager import TaskManager
-    url = "{}/view?{}".format(TaskManager.server.get_url(), url_values)
+    url = f"{TaskManager.server.get_url()}/view?{url_values}"
     # logger.debug(f'requesting {url} for image data')
     with urllib.request.urlopen(url) as response:
         img_data = response.read()
@@ -1097,12 +1096,12 @@ class 预览(BluePrintBase):
         self.prev.clear()
 
     def post_fn(s, self: NodeBase, t: Task, result):
-        logger.debug(f"{self.class_type}{_T('Post Function')}->{result}")
+        logger.debug("%s%s->%s", self.class_type, _T('Post Function'), result)
         img_paths = result.get("output", {}).get("images", [])
         if not img_paths:
-            logger.error(f'response is {result}, cannot find images in it')
+            logger.error('response is %s, cannot find images in it', result)
             return
-        logger.warn(f"{_T('Load Preview Image')}: {img_paths}")
+        logger.warning("%s: %s", _T('Load Preview Image'), img_paths)
 
         def f(self, img_paths: list[dict]):
             self.prev.clear()
@@ -1182,7 +1181,7 @@ class 存储(BluePrintBase):
 
     def make_serialize(s, self: NodeBase, parent: NodeBase = None) -> dict:
         def __post_fn__(self: NodeBase, t: Task, result: dict, mode, image):
-            logger.debug(f"{self.class_type}{_T('Post Function')}->{result}")
+            logger.debug("%s%s->%s", self.class_type, _T('Post Function'), result)
             img_paths = result.get("output", {}).get("images", [])
             for img in img_paths:
                 if mode == "Save":
@@ -1206,7 +1205,6 @@ class 存储(BluePrintBase):
         if self.mode not in {"Import", "ToImage"}:
             return
         if "output_dir" in cfg.get("inputs", {}):
-            import tempfile
             cfg.get("inputs", {})["output_dir"] = tempfile.gettempdir()
         if "filename_prefix" in cfg.get("inputs", {}):
             cfg.get("inputs", {})["filename_prefix"] = "SDNode"
@@ -1308,7 +1306,7 @@ class 输入图像(BluePrintBase):
             if self.mode == "视口":
                 # 使用临时文件
                 self.image = Path(tempfile.gettempdir()).joinpath("viewport.png").as_posix()
-            logger.warn(f"{_T('Render')}->{self.image}")
+            logger.warning("%s->%s", _T('Render'), self.image)
             old = bpy.context.scene.render.filepath
             bpy.context.scene.render.filepath = self.image
             if self.mode == "视口":
@@ -1428,7 +1426,7 @@ class 截图(BluePrintBase):
         from ..External.mss.tools import to_png
         x1, y1, x2, y2 = self.x1, self.y1, self.x2, self.y2
         if x1 == x2 or y1 == y2:
-            logger.error(f"{_T('Error Capture Screen Region')}: {x1, y1, x2, y2}")
+            logger.error("%s: %s", _T('Error Capture Screen Region'), (x1, y1, x2, y2))
             return
         # print("GET REGION:", x1, y1, x2, y2)
         with mss() as sct:
@@ -1454,7 +1452,7 @@ class 截图(BluePrintBase):
             hk = rt.load_dll("luahook")
             x1, y1, x2, y2 = hk.scrcap()
             if x1 == x2 or y1 == y2:
-                logger.error(f"{_T('Error Capture Screen Region')}: {x1, y1, x2, y2}")
+                logger.error("%s: %s", _T('Error Capture Screen Region'), (x1, y1, x2, y2))
                 return
             self.x1, self.y1, self.x2, self.y2 = x1, y1, x2, y2
             s._capture(self)
@@ -1494,13 +1492,13 @@ class AnimateDiffCombine(BluePrintBase):
         """
         result : {'node': '11', 'output': {'videos': [{'filename': 'img.gif', 'subfolder': '', 'type': 'output', 'format': 'image/gif'}]}, 'prompt_id': ''}
         """
-        logger.debug(f"{self.class_type}{_T('Post Function')}->{result}")
+        logger.debug("%s%s->%s", self.class_type, _T('Post Function'), result)
         # img_paths = link_get(result, "output.videos")
         img_paths = result.get("output", {}).get("videos", [])
         if not img_paths:
             logger.error(f'response is {result}, cannot find images in it')
             return
-        logger.warn(f"{_T('Load Preview Image')}: {img_paths}")
+        logger.warning("%s: %s", _T('Load Preview Image'), img_paths)
 
         def f(self, img_paths: list[dict]):
             """
@@ -1563,13 +1561,13 @@ class VHS_VideoCombine(BluePrintBase):
             {'node': '9', 'output': {'gifs': [{'filename': 'AnimateDiff_00002.webp', 'subfolder': '', 'type': 'output', 'format': 'image/webp'}]}, 'prompt_id': '16091f8f-cbf2-4c90-8b6c-5b3823344ccc'}
             {'node': '9', 'output': {'gifs': [{'filename': 'AnimateDiff_00003.mov', 'subfolder': '', 'type': 'output', 'format': 'video/ProRes'}]}, 'prompt_id': '462c8f2d-7e1b-4003-9a12-36b43bec6743'}
         """
-        logger.debug(f"{self.class_type}{_T('Post Function')}->{result}")
+        logger.debug("%s%s->%s", self.class_type, _T('Post Function'), result)
         # img_paths = link_get(result, "output.videos")
         img_paths = result.get("output", {}).get("gifs", [])
         if not img_paths:
             logger.error(f'response is {result}, cannot find images in it')
             return
-        logger.warn(f"{_T('Load Preview Image')}: {img_paths}")
+        logger.warning("%s: %s", _T('Load Preview Image'), img_paths)
 
         def f(self, img_paths: list[dict]):
             """
@@ -1630,13 +1628,13 @@ class SaveAnimatedPNG(BluePrintBase):
 
     def post_fn(s, self: NodeBase, t: Task, result):
 
-        logger.debug(f"{self.class_type}{_T('Post Function')}->{result}")
+        logger.debug("%s%s->%s", self.class_type, _T('Post Function'), result)
         # img_paths = link_get(result, "output.videos")
         img_paths = result.get("output", {}).get("images", [])
         if not img_paths:
             logger.error(f'response is {result}, cannot find images in it')
             return
-        logger.warn(f"{_T('Load Preview Image')}: {img_paths}")
+        logger.warning("%s: %s", _T('Load Preview Image'), img_paths)
 
         def f(self, img_paths: list[dict]):
             """
@@ -1697,13 +1695,13 @@ class SaveAnimatedWEBP(BluePrintBase):
         super().draw_button(self, context, layout, prop, swsock, swdisp)
 
     def post_fn(s, self: NodeBase, t: Task, result):
-        logger.debug(f"{self.class_type}{_T('Post Function')}->{result}")
+        logger.debug("%s%s->%s", self.class_type, _T('Post Function'), result)
         # img_paths = link_get(result, "output.videos")
         img_paths = result.get("output", {}).get("images", [])
         if not img_paths:
             logger.error(f'response is {result}, cannot find images in it')
             return
-        logger.warn(f"{_T('Load Preview Image')}: {img_paths}")
+        logger.warning("%s: %s", _T('Load Preview Image'), img_paths)
 
         def f(self, img_paths: list[dict]):
             """
@@ -1803,10 +1801,10 @@ class SDNGroupBP(BluePrintBase):
                 node = helper.find_to_node(node.outputs[0].links[0])
                 if inp in {"seed", "noise_seed"} or type(v) in {int, float}:
                     sv = widgets.pop(0)
-                    logger.warn(f"{pnode.name} : {sv} {_T('|IGNORED|')}")
+                    logger.warning("%s : %s %s", pnode.name, sv, _T('|IGNORED|'))
                 # continue
             if s.try_set_widget(node, inp, v):
-                logger.debug(f"{node.name}.{inp} = {v}")
+                logger.debug("%s.%s = %s", node.name, inp, v)
 
     def load(s, self: NodeBase, data, with_id=True):
         super().load(self, data, with_id)
@@ -1822,7 +1820,7 @@ class SDNGroupBP(BluePrintBase):
         helper = THelper()
         tree = self.get_tree()
         outer_all_links: list[bpy.types.NodeLink] = tree.links[:]
-        all_links: list[bpy.types.NodeLink] = self.node_tree.links[:]
+        # all_links: list[bpy.types.NodeLink] = self.node_tree.links[:]
         ordered_nodes = self.node_tree.compute_execution_order()
         total_widgets = set()
         for sn in ordered_nodes:
