@@ -1,13 +1,9 @@
 from __future__ import annotations
 import bpy
-import time
 from bpy.types import Context, Event, UILayout, Node, NodeTree, NodeSocket, NodeInputs
 from mathutils import Vector
-from ..kclogger import logger
 from ..utils import _T
-from ..timer import Timer
-from ..translations import get_reg_name
-from .nodes import NodeBase, Ops_Switch_Socket_Widget, Ops_Switch_Socket_Disp
+from .nodes import NodeBase
 from .utils import get_default_tree, Interface, THelper, VLink
 
 SOCK_TAG = "SDN_LINK_SOCK"
@@ -25,6 +21,7 @@ class SDNGroup(bpy.types.NodeCustomGroup, NodeBase):
     class_type = "SDNGroup"
     inp_types = {}
     out_types = {}
+    name: str = ""
 
     @property
     def __metadata__(self):
@@ -385,6 +382,7 @@ class SDNNewGroup(bpy.types.Operator):
     bl_label = "New node group"
     bl_description = "New node group"
     bl_options = {"REGISTER", "UNDO"}
+    action: bpy.props.StringProperty()
 
     def new_tree(self):
         sub_tree = bpy.data.node_groups.new("Group", "CFNodeTree")
