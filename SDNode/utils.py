@@ -74,7 +74,6 @@ class VLink:
     def relink_toggle(self, node: bpy.types.Node, tree: bpy.types.NodeTree):
         from .nodes import NodeBase
         from .tree import CFNodeTree
-        from .nodegroup import SOCK_TAG
         helper = THelper()
         # fnode: NodeBase = tree.nodes.get(self.fnode_name)
         # tnode: NodeBase = tree.nodes.get(self.tnode_name)
@@ -108,7 +107,7 @@ class VLink:
                 fsock = node.get_output(ftsock.identifier)
                 tree.links.new(tsock, fsock)
                 return
-        logger.warn("Relink failed: %s", self.to_tuple())
+        logger.warning("Relink failed: %s", self.to_tuple())
 
     def relink_pack(self, node: bpy.types.Node, tree: bpy.types.NodeTree):
         from .nodes import NodeBase
@@ -138,7 +137,6 @@ class VLink:
 
     def relink_unpack(self, node: bpy.types.Node, tree: bpy.types.NodeTree):
         from .nodes import NodeBase
-        from .tree import CFNodeTree
         helper = THelper()
         fnode: NodeBase = tree.nodes.get(self.fnode_name)
         tnode: NodeBase = tree.nodes.get(self.tnode_name)
@@ -153,7 +151,7 @@ class VLink:
         if fsock and tsock:
             tree.links.new(tsock, fsock)
             return
-        logger.warn("Relink failed: %s", self.to_tuple())
+        logger.warning("Relink failed: %s", self.to_tuple())
 
     def relink(self, node: bpy.types.Node, tree: bpy.types.NodeTree):
         if self.ltype == "TOGGLE":
