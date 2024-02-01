@@ -1,4 +1,3 @@
-import typing
 import bpy
 import os
 import sys
@@ -13,8 +12,8 @@ from .kclogger import logger
 
 
 def dir_cb_test(path):
+    # logger.info("%s changed", path)
     return
-    logger.info(f"{path} changed")
 
 
 class PresetsDirDesc(bpy.types.PropertyGroup):
@@ -415,13 +414,12 @@ class AddonPreference(bpy.types.AddonPreferences):
     count_page_prev: bpy.props.BoolProperty(default=False,
                                             name="Drag Link Result Page Prev",
                                             update=update_count_page_prev)
-
+    @staticmethod
     def get_cuda_list():
         """
         借助nvidia-smi获取CUDA版本列表
         """
         import subprocess
-        import re
         try:
             res = subprocess.check_output("nvidia-smi -L", shell=True).decode("utf-8")
             # GPU 0: NVIDIA GeForce GTX 1060 5GB (UUID: xxxx)
@@ -608,7 +606,6 @@ class AddonPreference(bpy.types.AddonPreferences):
 
 
 def get_pref() -> AddonPreference:
-    import bpy
     return bpy.context.preferences.addons[__package__].preferences
 
 
@@ -618,7 +615,7 @@ def pref_dirs_init(_):
     pref = get_pref()
 
     for item in pref.pref_dirs:
-        logger.info(f"FS Register -> {item.path}")
+        logger.info("FS Register -> %s", item.path)
         p = Path(item.path)
         if pref.pref_dirs_init:
             # 创建presets/groups目录
