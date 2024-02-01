@@ -271,7 +271,6 @@ other = {
     "Frame <{}> Add to Task!": "帧任务<{}>添加成功!",
     "Launch/Connect ComfyUI": "启动/连接 ComfyUI服务",
     "Close/Disconnect ComfyUI": "关闭/断开 ComfyUI服务",
-    "Restart ComfyUI": "重启ComfyUI",
     "ClipBoard Content Format Error": "剪切板内容格式错误",
     "Submit Task and with Clear Cache if Alt Pressed": "执行节点树, 如果按下了Alt执行 则 强制执行",
     "ComfyUI not Run,To Run?": "ComfyUI未启动,确定启动?",
@@ -317,7 +316,6 @@ other = {
     "To use the CPU for everything (slow).": "使用CPU运行一切(很慢)",
     "Auto Launch Browser": "启动浏览器(启动服务后)",
     "Fixed Preview Image Size": "固定预览图大小",
-    "Preview Image Size": "预览图大小",
     "Check Depencies Before Server Launch": "启动服务时检查依赖",
     "Check ComfyUI(some) Depencies Before Server Launch": "启动服务时进行ComfyUI插件(部分)依赖安装检查",
     "Force Log": "强制日志",
@@ -431,6 +429,7 @@ LANG_TEXT = {
     }
 }
 
+
 def search_recursive(p: Path):
     if p.is_dir():
         for i in p.iterdir():
@@ -438,7 +437,8 @@ def search_recursive(p: Path):
     else:
         yield p
 
-def get_json_data(p: Path) -> dict[str,dict[str, dict]]:
+
+def get_json_data(p: Path) -> dict[str, dict[str, dict]]:
     json_files = [i for i in p.iterdir() if i.suffix == ".json"]
     json_data = {}
     for file in json_files:
@@ -450,7 +450,8 @@ def get_json_data(p: Path) -> dict[str,dict[str, dict]]:
                 pass
     return json_data
 
-def get_json_data_recursive(p: Path) -> dict[str,dict[str, dict]]:
+
+def get_json_data_recursive(p: Path) -> dict[str, dict[str, dict]]:
     json_files = [i for i in search_recursive(p) if i.suffix == ".json"]
     json_data = {}
     for file in json_files:
@@ -461,6 +462,7 @@ def get_json_data_recursive(p: Path) -> dict[str,dict[str, dict]]:
             except UnicodeDecodeError:
                 pass
     return json_data
+
 
 def read_locale(locale):
     mapped_locale = LOCALE_MAP.get(locale, locale)
@@ -484,13 +486,15 @@ def read_locale(locale):
                     data.update(sv)
     return data
 
-def reg_other_translations(translations_dict:dict, replace_dict:dict, locale:str):
+
+def reg_other_translations(translations_dict: dict, replace_dict: dict, locale: str):
     for word, translation in LANG_TEXT[locale].items():
         translations_dict[locale][(ctxt, word)] = translation
         translations_dict[locale][(None, word)] = translation
         replace_dict[locale][word] = translation
-        
-def reg_node_ctxt(translations_dict:dict, replace_dict:dict, locale:str):
+
+
+def reg_node_ctxt(translations_dict: dict, replace_dict: dict, locale: str):
     mapped_locale = LOCALE_MAP.get(locale, locale)
     # 处理节点注册, 每个节点提供一个ctxt
     # 1. 查找locale
@@ -499,7 +503,7 @@ def reg_node_ctxt(translations_dict:dict, replace_dict:dict, locale:str):
         p = Path(__file__).parent.joinpath(mapped_locale.replace("_", "-"), "Nodes")
     if not p.exists():
         return {}
-    
+
     json_data = get_json_data_recursive(p)
 
     if locale not in translations_dict:
@@ -524,8 +528,8 @@ def reg_node_ctxt(translations_dict:dict, replace_dict:dict, locale:str):
                 # if node_name == "EmptyLatentImage": print(f"{node_name} reg: {wn} -> {wv}")
 
 
-for locale in LANG_TEXT:
-    LANG_TEXT[locale].update(read_locale(locale))
+for locale, TEXT in LANG_TEXT.items():
+    TEXT.update(read_locale(locale))
 
 translations_dict = {}
 for locale in LANG_TEXT:
@@ -533,14 +537,12 @@ for locale in LANG_TEXT:
     REPLACE_DICT[locale] = {}
     reg_node_ctxt(translations_dict, REPLACE_DICT, locale)
     reg_other_translations(translations_dict, REPLACE_DICT, locale)
-    
+
+
 def get_ctxt(msgctxt):
     if msgctxt in REG_CTXT:
         return msgctxt
     return ctxt
-
-
-
 
 
 cat = {'default_real': None,
