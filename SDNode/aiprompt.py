@@ -132,7 +132,7 @@ def load_apn_config(data):
     # 而comfyUI的SamplerName分别如下
     # ['euler','euler_ancestral','heun','dpm_2','dpm_2_ancestral','lms','dpm_fast','dpm_adaptive','dpmpp_2s_ancestral','dpmpp_sde','dpmpp_2m','ddim','uni_pc','uni_pc_bh2']
     # ====================================================
-    
+
     tree = get_screen_tree()
     if not tree:
         return
@@ -145,10 +145,10 @@ def load_apn_config(data):
 
     ksampler = get_ksampler(tree)
     if not isinstance(config, dict):
-        logger.warn(f"|已忽略| APN Config Not Matching")
+        logger.warning("|已忽略| APN Config Not Matching")
         return
     if not ksampler:
-        logger.warn(f"|已忽略| KSampler Not Found")
+        logger.warning("|已忽略| KSampler Not Found")
         return
     pre_proc(config, tree, ksampler)
     for inp in ksampler.inp_types:
@@ -181,7 +181,7 @@ def pre_proc(config, tree, ksampler):
             clip.location = Vector((-292, -237)) + ksampler.location
             tree.links.new(ksampler.inputs["negative"], clip.outputs[0])
         clip.text = negative
-    
+
     if width := config.pop("width", None):
         if node := get_latent_image(tree, ksampler):
             node.sdn_width = width
@@ -192,6 +192,7 @@ def pre_proc(config, tree, ksampler):
         if node := get_latent_image(tree, ksampler):
             node.batch_size = batch_size
 
+
 def get_latent_image(tree, ksampler):
     if ksampler.inputs['latent_image'].is_linked:
         node = ksampler.inputs['latent_image'].links[0].from_node
@@ -201,6 +202,7 @@ def get_latent_image(tree, ksampler):
         node = tree.nodes.new("EmptyLatentImage")
         tree.links.new(ksampler.inputs["latent_image"], node.outputs["LATENT"])
     return node
+
 
 def run_forever():
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
