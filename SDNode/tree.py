@@ -1,5 +1,4 @@
 from __future__ import annotations
-from types import UnionType
 from typing import Any
 import bpy
 import typing
@@ -8,15 +7,15 @@ import sys
 import pickle
 import traceback
 import inspect
+import types
 from hashlib import md5
 from string import ascii_letters
-from pathlib import Path
 from bpy.app.translations import pgettext
 from threading import Thread
 from functools import partial
 from collections import OrderedDict
 from bpy.types import NodeTree
-from nodeitems_utils import NodeCategory, NodeItem, register_node_categories, unregister_node_categories, _node_categories
+from nodeitems_utils import NodeCategory, NodeItem, unregister_node_categories, _node_categories
 from .nodes import nodes_reg, nodes_unreg, NodeParser, NodeBase, clear_nodes_data_cache
 from ..utils import logger, Icon, rgb2hex, hex2rgb, _T, FSWatcher
 from ..datas import EnumCache
@@ -33,18 +32,16 @@ class InvalidNodeType(Exception):
     ...
 
 
-class NodeItem(NodeItem):
+class CFNodeItem(NodeItem):
     translation_context = ctxt
 
-    @staticmethod
     def draw(self, layout, context):
         col = layout.column()
-        col.enabled = NodeItem.new_btn_enable(self, layout, context)
+        col.enabled = self.new_btn_enable(layout, context)
         props = col.operator("node.add_node", text=pgettext(self.label), text_ctxt=ctxt)
         props.type = self.nodetype
         props.use_transform = True
 
-    @staticmethod
     def new_btn_enable(self, layout, context):
         from .blueprints import get_blueprints
         bp = get_blueprints(self.nodetype)
@@ -548,7 +545,7 @@ class CFNodeTree(NodeTree):
                 try:
                     node.color = hex2rgb(color)
                 except BaseException:
-                    logger.warn(f"Color: {color} Set Failed!")
+                    logger.warning("Color: %s Set Failed!", color)
             node.location.x = bounding[0]
             node.location.y = -bounding[1]
             node.width = bounding[2]
@@ -568,15 +565,15 @@ class CFNodeTree(NodeTree):
         for link in links:
             # logger.debug(link)
             if str(link[1]) not in id_map:
-                logger.warn(f"{_T('|IGNORED|')} Link -> {link[0]} -> {_T('Not Found Node')}: {link[1]}")
+                logger.warning("%s Link -> %s -> %s: %s", _T('|IGNORED|'), link[0], _T('Not Found Node'), link[1])
                 continue
             if str(link[3]) not in id_map:
-                logger.warn(f"{_T('|IGNORED|')} Link -> {link[0]} -> {_T('Not Found Node')}: {link[3]}")
+                logger.warning("%s Link -> %s -> %s: %s", _T('|IGNORED|'), link[0], _T('Not Found Node'), link[3])
                 continue
             from_node: NodeBase = id_node_map[str(link[1])]
             to_node: NodeBase = id_node_map[str(link[3])]
             if not from_node or not to_node:
-                logger.warn(f"Not Found Link:{link}")
+                logger.warning("Not Found Link: %s", link)
                 continue
             if from_node.is_group() and len(from_node.outputs) == 0:
                 not_found_links.append(link)
@@ -615,7 +612,6 @@ class CFNodeTree(NodeTree):
 
     def clear_nodes(self):
         def remove_nodes():
-            import time
             time.sleep(0.1)
             self.nodes.clear()
         t = Thread(target=remove_nodes)
@@ -624,7 +620,6 @@ class CFNodeTree(NodeTree):
 
     def safe_remove_nodes(self, nodes):
         def remove_nodes(tree: bpy.types.NodeTree, nodes):
-            import time
             time.sleep(0.1)
             for n in nodes:
                 tree.nodes.remove(n)
@@ -909,8 +904,8 @@ class CFNodeTree(NodeTree):
 
 
 class CFNodeCategory(NodeCategory):
-    @classmethod
-    def poll(cls, context):
+
+    def poll(self, context):
         return context.space_data.tree_type == TREE_TYPE
 
     def __init__(self, *args, **kwargs) -> None:
@@ -922,7 +917,7 @@ class CFNodeCategory(NodeCategory):
 def gen_cat_id(idstr):
     while idstr[0] == "_":
         idstr = idstr[1:]
-    return "NODE_MT_%s" % idstr
+    return f"NODE_MT_{idstr}"
 
 
 def reg_nodetree(identifier, cat_list, sub=False):
@@ -935,7 +930,7 @@ def reg_nodetree(identifier, cat_list, sub=False):
         for menu in self.category.menus:
             col.menu(gen_cat_id(menu.identifier), text_ctxt=ctxt)
         for item in self.category.items(context):
-            item.draw(item, col, context)
+            item.draw(col, context)
         for draw_fn in getattr(self.category, "draw_fns", []):
             draw_fn(self)
 
@@ -979,7 +974,7 @@ def load_node(nodetree_desc, root="", proot=""):
         items = []
         menus = []
         for item in nodes["items"]:
-            items.append(NodeItem(item))
+            items.append(CFNodeItem(item))
         menus.extend(load_node(nodes.get("menus", {}), root=cat, proot=f"{proot}/{ocat}"))
         hash_root = md5(proot.encode()).hexdigest()[:5]
         if not root:
@@ -1049,7 +1044,6 @@ def reg_node_reroute():
         inode.inp_types = []
         inode.out_types = []
         # funcs = inspect.getmembers(NodeBase, predicate=inspect.isfunction)
-        import types
         funcs = inspect.getmembers(NodeBase, predicate=lambda o: isinstance(o, (property, types.FunctionType)))
         disable_func = [
             'copy',
