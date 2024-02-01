@@ -195,7 +195,7 @@ class HISTORY_UL_UIList(bpy.types.UIList):
     def draw_item(self,
                   context: bpy.types.Context,
                   layout: bpy.types.UILayout,
-                  data, item, icon, active_data, active_property, index, flt_flag):
+                  data, item, icon, active_data, active_property, index=0, flt_flag=0):
         row = layout.row(align=True)
         row.label(text="  " + item.name)
         row.operator(Load_History.bl_idname, text="", icon="TIME").name = item.name
