@@ -1,4 +1,3 @@
-import typing
 import bpy
 import re
 import json
@@ -11,7 +10,7 @@ from mathutils import Vector
 from functools import partial
 from .translations import ctxt
 from .prop import Prop
-from .utils import _T, logger, PngParse, FSWatcher
+from .utils import _T, logger, FSWatcher, read_json
 from .timer import Timer, Worker, WorkerFunc
 from .SDNode import TaskManager
 from .SDNode.history import History
@@ -239,8 +238,8 @@ class Ops(bpy.types.Operator):
             for frame in pframes:
                 pnode.image = pframes[frame]
                 # logger.debug(f"F {frame}: {pnode.image}")
-                for fnode in node_frames:
-                    if not (fpath := node_frames[fnode].get(frame, "")):
+                for fnode, node_frame in node_frames.items():
+                    if not (fpath := node_frame.get(frame, "")):
                         error_info = _T("Frame <{}> Not Found in <{}> Node Path!").format(frame, fnode.name)
                         # self.report({"ERROR"}, error_info)
                         logger.error(error_info)
@@ -252,9 +251,9 @@ class Ops(bpy.types.Operator):
                     logger.debug(_T("Frame Task <{}> Added!").format(frame))
                     TaskManager.push_task(get_task(tree), tree=tree)
             # restore config
-            for fnode in old_cfg:
-                setattr(fnode, "mode", old_cfg[fnode]["mode"])
-                setattr(fnode, "image", old_cfg[fnode]["image"])
+            for fnode, cfg in old_cfg.items():
+                setattr(fnode, "mode", cfg["mode"])
+                setattr(fnode, "image", cfg["image"])
             return {"FINISHED"}
         elif mat_image_node := self.find_mat_image_nodes(tree):
             def recursive_node_parent(node, find_nodes=None):
@@ -399,13 +398,11 @@ class Ops(bpy.types.Operator):
                 n.label = ""
         TaskManager.close_server()
         # hack fix tree update crash
-        from .SDNode.tree import CFNodeTree
         CFNodeTree.refresh_current_tree()
 
     def Restart(self):
         TaskManager.restart_server()
         # hack fix tree update crash
-        from .SDNode.tree import CFNodeTree
         CFNodeTree.refresh_current_tree()
 
     def Cancel(self):
@@ -430,7 +427,7 @@ class Ops(bpy.types.Operator):
             return
         data = tree.save_json()
         file = Path(bpy.context.scene.sdn.presets_dir) / f"{self.save_name}.json"
-        with open(file, "w") as f:
+        with open(file, "w", encoding="utf8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
         Prop.mark_dirty()
 
@@ -448,7 +445,7 @@ class Ops(bpy.types.Operator):
             self.report({"ERROR"}, _T("Preset Not Selected!"))
             return
         tree = self.ensure_tree()
-        tree.load_json(json.load(open(bpy.context.scene.sdn.presets)))
+        tree.load_json(read_json(bpy.context.scene.sdn.presets))
 
     def SaveGroup(self):
         tree = get_default_tree()
@@ -461,7 +458,7 @@ class Ops(bpy.types.Operator):
             return
         data = tree.save_json_group()
         file = Path(bpy.context.scene.sdn.groups_dir) / f"{self.save_name}.json"
-        with open(file, "w") as f:
+        with open(file, "w", encoding="utf8") as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
         Prop.mark_dirty()
 
@@ -479,7 +476,7 @@ class Ops(bpy.types.Operator):
             self.report({"ERROR"}, _T("Preset Not Selected!"))
             return
         tree = self.ensure_tree()
-        select_nodes = tree.load_json_group(json.load(open(bpy.context.scene.sdn.groups)))
+        select_nodes = tree.load_json_group(read_json(bpy.context.scene.sdn.groups))
         if not select_nodes:
             return
         self.select_nodes = select_nodes
@@ -673,7 +670,7 @@ class Load_Batch(bpy.types.Operator):
         csv_path = Path(self.filepath)
 
         if not csv_path.exists():
-            self.report({"ERROR"}, _T("File Not Found: ") + self.task_path)
+            self.report({"ERROR"}, _T("File Not Found: ") + self.filepath)
             return {"FINISHED"}
         tree = get_default_tree(context)
         if not tree:
@@ -803,7 +800,7 @@ class Sync_Stencil_Image(bpy.types.Operator):
 
         from bl_ui.properties_paint_common import UnifiedPaintPanel
 
-        rv3d = bpy.context.space_data.region_3d
+        rv3d: bpy.types.RegionView3D = bpy.context.space_data.region_3d
         area = context.area
         # zoom to fac powf((float(M_SQRT2) + camzoom / 50.0f), 2.0f) / 4.0f;
         # max(area.width, area.height) * fac
@@ -811,7 +808,7 @@ class Sync_Stencil_Image(bpy.types.Operator):
         length = max(area.width, area.height) * fac
 
         settings = UnifiedPaintPanel.paint_settings(context)
-        brush = settings.brush  # 可能报错 没brush(settings为空)
+        brush: bpy.types.Brush = settings.brush  # 可能报错 没brush(settings为空)
         width, height = area.width, area.height
         if not brush:
             return {"PASS_THROUGH"}
@@ -835,7 +832,7 @@ class Sync_Stencil_Image(bpy.types.Operator):
             rv3d.view_perspective = "CAMERA"
         return {"PASS_THROUGH"}
 
-    def update_brush(self, brush, pos, dim):
+    def update_brush(self, brush: bpy.types.Brush, pos, dim):
         pos = Vector(pos)
         dim = Vector(dim)
         if brush.stencil_dimension != dim:
@@ -844,7 +841,7 @@ class Sync_Stencil_Image(bpy.types.Operator):
             brush.stencil_pos = pos
 
 
-def menu_sync_stencil_image(self, context):
+def menu_sync_stencil_image(self: bpy.types.Menu, context: bpy.types.Context):
     if context.space_data.type != "VIEW_3D":
         return
     if context.area in Sync_Stencil_Image.areas:
