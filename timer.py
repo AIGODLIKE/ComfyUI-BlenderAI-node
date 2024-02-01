@@ -41,7 +41,7 @@ class Timer:
                 Timer.executor(t)
             except Exception as e:
                 traceback.print_exc()
-                logger.error(f"{type(e).__name__}: {e}")
+                logger.error("%s: %s", type(e).__name__, e)
             except KeyboardInterrupt:
                 ...
         return 0.016666666666666666
@@ -121,7 +121,7 @@ class Worker:
                 Worker.executor(func)
             except Exception as e:
                 traceback.print_exc()
-                logger.error(f"{type(e).__name__}: {e}")
+                logger.error("%s: %s", type(e).__name__, e)
             except KeyboardInterrupt:
                 ...
         return 1
@@ -154,7 +154,7 @@ class Worker:
                 func()
             except Exception as e:
                 traceback.print_exc()
-                logger.error(f"{type(e).__name__}: {e}")
+                logger.error("%s: %s", type(e).__name__, e)
             except KeyboardInterrupt:
                 ...
 
