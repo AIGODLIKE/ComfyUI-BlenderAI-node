@@ -3,29 +3,35 @@ PRESETS_DIR = Path(__file__).parent / "presets"
 GROUPS_DIR = Path(__file__).parent / "groups"
 IMG_SUFFIX = {".png", ".jpg", ".jpeg"}
 
-class MetaIn(type):
-    def __contains__(self, name):
-        return name in EnumCache.CACHE
 
-    def __setitem__(self, name, value):
+class MetaIn(type):
+    CACHE: dict[str, dict] = {}
+
+    def __contains__(cls, name):
+        return name in cls.CACHE
+
+    def __setitem__(cls, name, value):
         if type(value) not in {list, dict}:
             return
-        EnumCache.CACHE[name] = value
+        cls.CACHE[name] = value
 
     def __getitem__(cls, name) -> dict:
-        return EnumCache.CACHE.setdefault(name, {})
+        return cls.CACHE.setdefault(name, {})
 
 
 class EnumCache(metaclass=MetaIn):
-    CACHE:dict[str, dict] = {}
+    CACHE: dict[str, dict] = {}
 
+    @staticmethod
     def reg_cache(name):
         EnumCache.CACHE[name] = {}
         return EnumCache[name]
 
+    @staticmethod
     def unreg_cache(name):
         EnumCache.CACHE.pop(name)
 
+    @staticmethod
     def clear(name=None):
         if name:
             EnumCache[name].clear()
