@@ -284,6 +284,10 @@ other = {
     "Sync Stencil Image": "同步镂板",
     "Stop Sync Stencil Image": "停止同步",
     "Fetch Node Status": "更新节点信息",
+    "Node Cache Cleared!": "节点缓存已清除!",
+    "Node Cache Clear Failed!": "节点缓存清除失败!",
+    "Clear Node Cache": "清除节点缓存",
+    "If node parsing error, you can delete node cache by this button, then restart blender to use it normally": "当节点解析错误时可以通过此按钮删除节点缓存, 删除后重启blender即可正常使用",
     # ui.py
     "ClearTask": "清理任务",
     "Cancel": "取消任务",

@@ -2,7 +2,7 @@ import bpy
 import platform
 from bl_ui.properties_paint_common import UnifiedPaintPanel
 from bpy.types import Context
-from .ops import Ops, Load_History, Copy_Tree, Load_Batch, Fetch_Node_Status
+from .ops import Ops, Load_History, Copy_Tree, Load_Batch, Fetch_Node_Status, Clear_Node_Cache
 from .translations import ctxt
 from .SDNode import TaskManager, FakeServer
 from .SDNode.tree import TREE_TYPE
@@ -25,8 +25,11 @@ class Panel(bpy.types.Panel):
         return context.space_data.tree_type == TREE_TYPE
 
     def draw_header(self, context):
-        sdn = bpy.context.scene.sdn
         row = self.layout.row(align=True)
+        if not hasattr(bpy.context.scene, "sdn"):
+            row.operator(Clear_Node_Cache.bl_idname, text="", icon="MODIFIER", text_ctxt=ctxt)
+            return
+        sdn = bpy.context.scene.sdn
         row.prop(sdn, 'open_pref', text="", icon="PREFERENCES", text_ctxt=ctxt)
         if platform.system() != "Darwin":
             row.operator("wm.console_toggle", text="", icon="CONSOLE", text_ctxt=ctxt)
@@ -41,9 +44,16 @@ class Panel(bpy.types.Panel):
         row.operator(Fetch_Node_Status.bl_idname, text="", icon="FILE_REFRESH", text_ctxt=ctxt)
         row.operator(Ops.bl_idname, text="", icon="RECOVER_LAST", text_ctxt=ctxt).action = "Restart"
         row.prop(sdn, "open_webui", text="", icon="URL", text_ctxt=ctxt)
+        row.operator(Clear_Node_Cache.bl_idname, text="", icon="MODIFIER", text_ctxt=ctxt)
 
     def draw(self, context: bpy.types.Context):
         layout = self.layout
+        if not hasattr(bpy.context.scene, "sdn"):
+            row = layout.row()
+            row.operator(Clear_Node_Cache.bl_idname, text="Clear Node Cache", icon="MODIFIER")
+            row.alert = True
+            row.scale_y = 2
+            return
         if get_pref().debug:
             self.show_debug(layout)
         elif TaskManager.server == FakeServer._instance:

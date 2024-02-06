@@ -768,6 +768,24 @@ class NodeSearch(bpy.types.Operator):
         return {"FINISHED"}
 
 
+class Clear_Node_Cache(bpy.types.Operator):
+    bl_idname = "sdn.clear_node_cache"
+    bl_label = "Clear Node Cache"
+    bl_description = "If node parsing error, you can delete node cache by this button, then restart blender to use it normally"
+    bl_translation_context = ctxt
+
+    def execute(self, context):
+        node_cache_path = Path(__file__).parent.joinpath("SDNode", "object_info.json")
+        if not node_cache_path.exists():
+            return {"FINISHED"}
+        try:
+            node_cache_path.unlink()
+            self.report({"INFO"}, _T("Node Cache Cleared!"))
+        except Exception as e:
+            self.report({"ERROR"}, _T("Node Cache Clear Failed!") + f" {e}")
+        return {"FINISHED"}
+
+
 class Sync_Stencil_Image(bpy.types.Operator):
     bl_idname = "sdn.sync_stencil_image"
     bl_label = "Sync Stencil Image"
