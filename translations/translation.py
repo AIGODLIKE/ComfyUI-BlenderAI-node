@@ -203,6 +203,7 @@ other = {
     "ParseNode Time:": "解析节点耗时:",
     "Changed Node": "变更节点",
     "SDNGroup": "组",
+    "NoCategory": "无分类",
     # SDNode/utils.py
     "Gen Mask": "遮罩生成",
     "Relink failed: %s": "重连失败: %s",

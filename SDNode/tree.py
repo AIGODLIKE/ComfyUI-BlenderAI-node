@@ -913,6 +913,15 @@ class CFNodeCategory(NodeCategory):
         self.draw_fns = kwargs.pop("draw_fns", [])
         super().__init__(*args, **kwargs)
 
+    def __repr__(self) -> str:
+        info = f"\nCFNodeCategory({self.name})"
+        info += f"\n\tdescription: {self.description}"
+        info += f"\n\tidentifier: {self.identifier}"
+        info += f"\n\tname: {self.name}"
+        info += f"\n\titems: {self.items}"
+        info += f"\n\tmenus: {self.menus}"
+        info += f"\n\tdraw_fns: {self.draw_fns}"
+        return info
 
 def gen_cat_id(idstr):
     while idstr[0] == "_":
@@ -983,6 +992,10 @@ def load_node(nodetree_desc, root="", proot=""):
             cat_id = f"{root}_{cat}_{hash_root}"
         if len(cat_id) > 50:
             cat_id = f"{cat}_{hash_root}"
+        if not cat_id:
+            cat_id = "NoCategory"
+        if not ocat:
+            ocat = "NoCategory"
         cfn_cat = CFNodeCategory(cat_id, name=ocat, items=items, menus=menus)
         node_cat.append(cfn_cat)
     return node_cat
