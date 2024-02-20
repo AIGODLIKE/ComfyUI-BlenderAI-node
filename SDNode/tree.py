@@ -1160,12 +1160,15 @@ def rtnode_reg():
     clss.append(CFNodeTree)
     t1 = time.time()
     # nt_desc = {name: {items:[], menus:[nt_desc...]}}
-    nt_desc, node_clss, socket_clss = NodeParser().parse()
-    t2 = time.time()
-    logger.info(_T("ParseNode Time:") + f" {t2-t1:.2f}s")
-    node_cat = load_node(nodetree_desc=nt_desc)
-    clss.extend(node_clss)
-    clss.extend(socket_clss)
+    try:
+        nt_desc, node_clss, socket_clss = NodeParser().parse()
+        t2 = time.time()
+        logger.info(_T("ParseNode Time:") + f" {t2-t1:.2f}s")
+        node_cat = load_node(nodetree_desc=nt_desc)
+        clss.extend(node_clss)
+        clss.extend(socket_clss)
+    except Exception:
+        node_cat = []
     reg()
     reg_nodetree(TREE_NAME, node_cat)  # register_node_categories(TREE_NAME, node_cat)
     set_draw_intern(reg=True)

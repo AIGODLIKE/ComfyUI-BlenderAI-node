@@ -1310,9 +1310,21 @@ class NodeParser:
             self.SOCKET_TYPE.clear()
             self.load_internal()
         # self.CACHED_OBJECT_INFO.update(deepcopy(self.ori_object_info))
-        socket_clss = self._parse_sockets_clss()
-        node_clss = self._parse_node_clss()
-        nodetree_desc = self._get_nt_desc()
+        try:
+            socket_clss = self._parse_sockets_clss()
+        except Exception as e:
+            logger.error("socket模板解析失败, 请联系开发者")
+            raise Exception("socket模板解析失败") from e
+        try:
+            node_clss = self._parse_node_clss()
+        except Exception as e:
+            logger.error("节点模板解析失败, 可能由不标准的第三方节点导致, 请联系开发者")
+            raise Exception("节点模板解析失败") from e
+        try:
+            nodetree_desc = self._get_nt_desc()
+        except Exception as e:
+            logger.error("节点树解析失败, 可能由不标准的第三方节点导致, 请联系开发者")
+            raise Exception("节点树解析失败") from e
         if not diff:
             logger.warning("Parsing Node Finished!")
         return nodetree_desc, node_clss, socket_clss
@@ -1361,7 +1373,7 @@ class NodeParser:
     def _get_nt_desc(self):
         _desc = {}
         for name, desc in self.object_info.items():
-            cpath = desc["category"].split("/")
+            cpath = desc.get("category", "").split("/")
             ncur = _desc
             while cpath:
                 ccur = cpath.pop(0)
