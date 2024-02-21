@@ -44,7 +44,7 @@ class Panel(bpy.types.Panel):
         row.operator(Fetch_Node_Status.bl_idname, text="", icon="FILE_REFRESH", text_ctxt=ctxt)
         row.operator(Ops.bl_idname, text="", icon="RECOVER_LAST", text_ctxt=ctxt).action = "Restart"
         row.prop(sdn, "open_webui", text="", icon="URL", text_ctxt=ctxt)
-        row.operator(Clear_Node_Cache.bl_idname, text="", icon="MODIFIER", text_ctxt=ctxt)
+        row.operator(Clear_Node_Cache.bl_idname, text="", icon="BRUSH_DATA", text_ctxt=ctxt)
 
     def draw(self, context: bpy.types.Context):
         layout = self.layout
