@@ -169,11 +169,11 @@ class Prop(bpy.types.PropertyGroup):
     render_layer: bpy.props.CollectionProperty(type=RenderLayerString)
     show_pref_general: bpy.props.BoolProperty(default=False, name="General Setting", description="Show General Setting")
 
-    def import_bookmark_set(self, value):
+    def import_bookmark_update(self, context):
         from .kclogger import logger
         from .utils import PngParse, _T
-        from .SDNode.tree import get_tree, TREE_TYPE
-
+        from .SDNode.tree import TREE_TYPE
+        value = self.import_bookmark
         path = Path(value)
         if not path.exists() or path.suffix.lower() not in {".png", ".json"}:
             logger.error(_T("Image not found or format error(png/json)"))
@@ -190,10 +190,10 @@ class Prop(bpy.types.PropertyGroup):
         elif path.suffix.lower() == ".json":
             data = path.read_text()
 
-        tree = get_tree(current=True)
+        tree = getattr(bpy.context.space_data, "node_tree", None)
         if not tree:
             bpy.ops.node.new_node_tree(type=TREE_TYPE, name="NodeTree")
-            tree = get_tree(current=True)
+            tree = getattr(bpy.context.space_data, "node_tree", None)
         if not tree:
             return
         data = json.loads(data)
@@ -201,7 +201,7 @@ class Prop(bpy.types.PropertyGroup):
             data = data["workflow"]
         tree.load_json(data)
 
-    import_bookmark: bpy.props.StringProperty(name="Preset Bookmark", default=str(Path.cwd()), subtype="FILE_PATH", set=import_bookmark_set)
+    import_bookmark: bpy.props.StringProperty(name="Preset Bookmark", default=str(Path.cwd()), subtype="FILE_PATH",update=import_bookmark_update)
 
 
 def render_layer_update():

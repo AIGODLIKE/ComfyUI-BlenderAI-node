@@ -1,0 +1,14 @@
+# wmpp to WebUI folder
+# wmp to WebUI/models folder
+a111:
+    base_path: {wmpp}
+
+    checkpoints: {wmp}/Stable-diffusion
+    configs: {wmp}/Stable-diffusion
+    vae: {wmp}/VAE
+    loras: {wmp}/Lora
+    upscale_models: |
+                  {wmp}/ESRGAN
+                  {wmp}/SwinIR
+    embeddings: {wmpp}/embeddings
+    controlnet: {wmp}/ControlNet

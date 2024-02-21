@@ -1,0 +1,386 @@
+{
+    "last_node_id": 7,
+    "last_link_id": 9,
+    "nodes": [
+        {
+            "id": 3,
+            "type": "KSampler (Efficient)",
+            "pos": [
+                1124.20556640625,
+                399.589599609375
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 100.0
+            },
+            "flags": {},
+            "order": 3,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "model",
+                    "type": "MODEL",
+                    "link": 2
+                },
+                {
+                    "name": "positive",
+                    "type": "CONDITIONING",
+                    "link": 3
+                },
+                {
+                    "name": "negative",
+                    "type": "CONDITIONING",
+                    "link": 4
+                },
+                {
+                    "name": "latent_image",
+                    "type": "LATENT",
+                    "link": 5
+                },
+                {
+                    "name": "optional_vae",
+                    "type": "VAE",
+                    "link": 6
+                },
+                {
+                    "name": "script",
+                    "type": "SCRIPT",
+                    "link": 0
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "MODEL",
+                    "type": "MODEL",
+                    "slot_index": 0
+                },
+                {
+                    "name": "CONDITIONING+",
+                    "type": "CONDITIONING+",
+                    "slot_index": 1
+                },
+                {
+                    "name": "CONDITIONING-",
+                    "type": "CONDITIONING-",
+                    "slot_index": 2
+                },
+                {
+                    "name": "LATENT",
+                    "type": "LATENT",
+                    "slot_index": 3
+                },
+                {
+                    "name": "VAE",
+                    "type": "VAE",
+                    "slot_index": 4
+                },
+                {
+                    "name": "IMAGE",
+                    "type": "IMAGE",
+                    "links": [
+                        8
+                    ],
+                    "slot_index": 5
+                }
+            ],
+            "title": "KSampler (Efficient)",
+            "properties": {},
+            "widgets_values": [
+                "0",
+                "fixed",
+                20,
+                7.0,
+                "euler",
+                "normal",
+                1.0,
+                "auto",
+                "true"
+            ]
+        },
+        {
+            "id": 4,
+            "type": "XY Plot",
+            "pos": [
+                818.86376953125,
+                766.3429565429688
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 100.0
+            },
+            "flags": {},
+            "order": 2,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "dependencies",
+                    "type": "DEPENDENCIES",
+                    "link": 1
+                },
+                {
+                    "name": "X",
+                    "type": "XY",
+                    "link": 7
+                },
+                {
+                    "name": "Y",
+                    "type": "XY",
+                    "link": null
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "SCRIPT",
+                    "type": "SCRIPT",
+                    "links": [
+                        0
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "XY Plot",
+            "properties": {},
+            "widgets_values": [
+                5,
+                "False",
+                "Vertical",
+                "True",
+                "Plot"
+            ]
+        },
+        {
+            "id": 5,
+            "type": "Efficient Loader",
+            "pos": [
+                509.95452880859375,
+                410.10137939453125
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 100.0
+            },
+            "flags": {},
+            "order": 1,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "lora_stack",
+                    "type": "LORA_STACK",
+                    "link": null
+                },
+                {
+                    "name": "cnet_stack",
+                    "type": "CONTROL_NET_STACK",
+                    "link": null
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "MODEL",
+                    "type": "MODEL",
+                    "links": [
+                        2
+                    ],
+                    "slot_index": 0
+                },
+                {
+                    "name": "CONDITIONING+",
+                    "type": "CONDITIONING+",
+                    "links": [
+                        3
+                    ],
+                    "slot_index": 1
+                },
+                {
+                    "name": "CONDITIONING-",
+                    "type": "CONDITIONING-",
+                    "links": [
+                        4
+                    ],
+                    "slot_index": 2
+                },
+                {
+                    "name": "LATENT",
+                    "type": "LATENT",
+                    "links": [
+                        5
+                    ],
+                    "slot_index": 3
+                },
+                {
+                    "name": "VAE",
+                    "type": "VAE",
+                    "links": [
+                        6
+                    ],
+                    "slot_index": 4
+                },
+                {
+                    "name": "CLIP",
+                    "type": "CLIP",
+                    "slot_index": 5
+                },
+                {
+                    "name": "DEPENDENCIES",
+                    "type": "DEPENDENCIES",
+                    "links": [
+                        1
+                    ],
+                    "slot_index": 6
+                }
+            ],
+            "title": "Efficient Loader",
+            "properties": {},
+            "widgets_values": [
+                "Anything_v5PrtRE1.safetensors",
+                "YOZORA.vae.pt",
+                -1,
+                "None",
+                1.0,
+                1.0,
+                "1girl",
+                "blurry",
+                "none",
+                "comfy",
+                512,
+                768,
+                1
+            ]
+        },
+        {
+            "id": 7,
+            "type": "XY Input: Seeds++ Batch",
+            "pos": [
+                511.30120849609375,
+                1028.320068359375
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 100.0
+            },
+            "flags": {},
+            "order": 0,
+            "mode": 0,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "X or Y",
+                    "type": "X or Y",
+                    "links": [
+                        7
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "XY Input: Seeds++ Batch",
+            "properties": {},
+            "widgets_values": [
+                2
+            ]
+        },
+        {
+            "id": 6,
+            "type": "PreviewImage",
+            "pos": [
+                1422.367919921875,
+                403.10546875
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 100.0
+            },
+            "flags": {},
+            "order": 4,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "images",
+                    "type": "IMAGE",
+                    "link": 8
+                }
+            ],
+            "outputs": [],
+            "title": "预览",
+            "properties": {},
+            "widgets_values": []
+        }
+    ],
+    "links": [
+        [
+            0,
+            4,
+            0,
+            3,
+            5,
+            "KSampler (Efficient)"
+        ],
+        [
+            1,
+            5,
+            6,
+            4,
+            0,
+            "XY Plot"
+        ],
+        [
+            2,
+            5,
+            0,
+            3,
+            0,
+            "KSampler (Efficient)"
+        ],
+        [
+            3,
+            5,
+            1,
+            3,
+            1,
+            "KSampler (Efficient)"
+        ],
+        [
+            4,
+            5,
+            2,
+            3,
+            2,
+            "KSampler (Efficient)"
+        ],
+        [
+            5,
+            5,
+            3,
+            3,
+            3,
+            "KSampler (Efficient)"
+        ],
+        [
+            6,
+            5,
+            4,
+            3,
+            4,
+            "KSampler (Efficient)"
+        ],
+        [
+            7,
+            7,
+            0,
+            4,
+            1,
+            "XY Plot"
+        ],
+        [
+            8,
+            3,
+            5,
+            6,
+            0,
+            "预览"
+        ]
+    ],
+    "groups": [],
+    "config": {},
+    "extra": {},
+    "version": 0.4
+}

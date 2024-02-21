@@ -3,8 +3,8 @@
         "title": "K采样器(效率)",
         "inputs": {
             "model": "模型",
-            "positive": "正面提示词",
-            "negative": "负面提示词",
+            "positive": "正面条件",
+            "negative": "负面条件",
             "latent_image": "Latent",
             "optional_vae": "VAE",
             "script": "脚本"
@@ -53,8 +53,8 @@
         "title": "K采样器(高级效率)",
         "inputs": {
             "model": "模型",
-            "positive": "正面提示词",
-            "negative": "负面提示词",
+            "positive": "正面条件",
+            "negative": "负面条件",
             "latent_image": "Latent",
             "optional_vae": "VAE",
             "script": "脚本"
@@ -129,7 +129,7 @@
             "sampler_name": "采样器",
             "scheduler": "调度器",
             "start_at_step": "开始降噪步数",
-            "refine_at_step": "开始优化步数",
+            "refine_at_step": "Refiner开始步数",
             "preview_method": "预览方法",
                 "none": "无(最快)",
                 "auto": "自动",
@@ -162,8 +162,8 @@
             "lora_name": "LoRA",
             "lora_model_strength": "LoRA模型强度",
             "lora_clip_strength": "LoRACLIP强度",
-            "positive": "正面提示词",
-            "negative": "负面提示词",
+            "positive": "正面条件",
+            "negative": "负面条件",
             "token_normalization": "Token规格化",
                 "none": "无",
                 "length": "长度",
@@ -191,15 +191,15 @@
             "cnet_stack": "ControlNet堆"
         },
         "widgets": {
-            "base_ckpt_name": "基础模型",
-            "base_clip_skip": "基础CLIP Skip",
-            "refiner_ckpt_name": "优化模型",
-            "refiner_clip_skip": "优化CLIP Skip",
+            "base_ckpt_name": "模型",
+            "base_clip_skip": "CLIP Skip",
+            "refiner_ckpt_name": "模型(Refiner)",
+            "refiner_clip_skip": "CLIP Skip(Refiner)",
             "positive_ascore": "正面美学分数",
             "negative_ascore": "负面美学分数",
             "vae_name": "VAE",
-            "positive": "正面提示词",
-            "negative": "负面提示词",
+            "positive": "正面条件",
+            "negative": "负面条件",
             "token_normalization": "Token规格化",
                 "none": "无",
                 "length": "长度",
@@ -472,8 +472,8 @@
         "title": "应用ControlNet堆",
         "inputs": {
             "conditioning": "条件",
-            "positive": "正面提示词",
-            "negative": "负面提示词",
+            "positive": "正面条件",
+            "negative": "负面条件",
             "cnet_stack": "ControlNet堆"
         },
         "outputs": {
@@ -488,14 +488,14 @@
     "Pack SDXL Tuple": {
         "title": "打包SDXL元组",
         "inputs": {
-            "base_model": "基础模型",
-            "base_clip": "基础CLIP",
-            "base_positive": "基础正面提示词",
-            "base_negative": "负面提示词",
-            "refiner_model": "模型",
-            "refiner_clip": "CLIP",
-            "refiner_positive": "正面提示词",
-            "refiner_negative": "负面提示词"
+            "base_model": "模型",
+            "base_clip": "CLIP",
+            "base_positive": "正面条件",
+            "base_negative": "负面条件",
+            "refiner_model": "模型(Refiner)",
+            "refiner_clip": "CLIP(Refiner)",
+            "refiner_positive": "正面条件(Refiner)",
+            "refiner_negative": "负面条件(Refiner)"
         },
         "outputs": {
             "SDXL_TUPLE": "SDXL元组"
@@ -507,14 +507,14 @@
             "sdxl_tuple": "SDXL元组"
         },
         "outputs": {
-            "BASE_MODEL": "基础模型",
-            "BASE_CLIP": "基础CLIP",
-            "REFINER_MODEL": "优化模型",
-            "REFINER_CLIP": "优化CLIP",
-            "BASE_CONDITIONING+": "基础正面条件",
-            "BASE_CONDITIONING-": "基础负面条件",
-            "REFINER_CONDITIONING+": "优化正面条件",
-            "REFINER_CONDITIONING-": "优化负面条件"
+            "BASE_MODEL": "模型",
+            "BASE_CLIP": "CLIP",
+            "REFINER_MODEL": "模型(Refiner)",
+            "REFINER_CLIP": "CLIP(Refiner)",
+            "BASE_CONDITIONING+": "正面条件",
+            "BASE_CONDITIONING-": "负面条件",
+            "REFINER_CONDITIONING+": "正面条件(Refiner)",
+            "REFINER_CONDITIONING-": "负面条件(Refiner)"
         }
     },
 
@@ -567,7 +567,7 @@
                 "nearest-exact": "邻近-精确",
                 "bilinear": "双线性插值",
                 "area": "区域",
-                "bislerp": "球面线性",
+                "bislerp": "双球面线性",
                 "bicubic": "双三次插值",
             "upscale_by": "缩放系数",
             "hires_steps": "高清修复步数",
@@ -651,8 +651,8 @@
             "last_start_step": "最终开始步数",
             "first_end_step": "起始结束步数",
             "last_end_step": "最终结束步数",
-            "first_refine_step": "起始优化步数",
-            "last_refine_step": "最终优化步数"
+            "first_refine_step": "Refiner起始步数",
+            "last_refine_step": "Refiner最终步数"
         }
     },
     "XY Input: Start at Step": {
@@ -949,7 +949,7 @@
         }
     },
     "XY Input: Positive Prompt S/R": {
-        "title": "替换正面提示词",
+        "title": "替换正面条件",
         "widgets": {
             "search_txt": "检索",
             "replace_count": "替换数量",
@@ -961,7 +961,7 @@
         }
     },
     "XY Input: Negative Prompt S/R": {
-        "title": "替换负面提示词",
+        "title": "替换负面条件",
         "widgets": {
             "search_txt": "检索",
             "replace_count": "替换数量",
@@ -982,9 +982,9 @@
         }
     },
     "XY Input: Refiner On/Off": {
-        "title": "优化开关",
+        "title": "Refiner开关",
         "widgets": {
-            "refine_at_percent": "开始优化时间"
+            "refine_at_percent": "Refiner开始时间"
         }
     },
     "XY Input: Checkpoint": {
@@ -1468,8 +1468,8 @@
                 "Scheduler": "调度器",
                 "Denoise": "降噪",
                 "VAE": "VAE",
-                "Positive Prompt S/R": "正面提示词替换",
-                "Negative Prompt S/R": "负面提示词替换",
+                "Positive Prompt S/R": "正面条件替换",
+                "Negative Prompt S/R": "负面条件替换",
                 "Checkpoint": "模型",
                 "Clip Skip": "CLIP Skip",
                 "LoRA": "LoRA",

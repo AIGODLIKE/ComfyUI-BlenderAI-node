@@ -1,0 +1,77 @@
+{
+    "ZFPreviewText": {
+        "title": "预览文本",
+        "inputs": {
+            "text": "文本"
+        },
+        "outputs": {
+            "text": "文本",
+            "unique_id": "唯一ID"
+        }
+    },
+    "ZFPreviewTextMultiline": {
+        "title": "预览文本 (多行)",
+        "inputs": {
+            "text": "文本"
+        },
+        "outputs": {
+            "text": "文本",
+            "unique_id": "唯一ID"
+        }
+    },
+    "ZFTextTranslation": {
+        "title": "文本翻译",
+        "inputs": {
+            "text": "文本"
+        },
+        "widgets": {
+            "platform": "平台",
+            "source": "源",
+            "target": "目标"
+        },
+        "outputs": {
+            "text": "文本",
+            "platform": "平台",
+            "source": "源",
+            "target": "目标"
+        }
+    },
+    "ZFLoadImagePath": {
+        "title": "加载图像 (路径)",
+        "inputs": {
+            "default_image": "默认图像"
+        },
+        "widgets": {
+            "image_path": "图像路径",
+            "RGBA": "RGBA"
+        },
+        "outputs": {
+            "image": "图像",
+            "mask": "遮罩",
+            "filename": "图像文件名"
+        }
+    },
+    "ZFShareScreen": {
+        "title": "分享屏幕",
+        "inputs": {
+            "default_image": "默认图像"
+        },
+        "widgets": {
+            "RGBA": "RGBA",
+            "prompt": "提示词",
+            "weight": "权重",
+            "seed": "随机种",
+            "control_after_generate": "运行后操作",
+                "fixed": "固定",
+                "increment": "增加",
+                "decrement": "减少",
+                "randomize": "随机"
+        },
+        "outputs": {
+            "image": "图像",
+            "prompt": "提示词",
+            "weight": "权重",
+            "seed": "随机种"
+        }
+    }
+}

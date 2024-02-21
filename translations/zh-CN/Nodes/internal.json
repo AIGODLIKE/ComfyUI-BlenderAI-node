@@ -16,8 +16,8 @@
         "title": "K采样器",
         "inputs": {
             "model": "模型",
-            "positive": "正面提示词",
-            "negative": "负面提示词",
+            "positive": "正面条件",
+            "negative": "负面条件",
             "latent_image": "Latent"
         },
         "widgets": {
@@ -41,8 +41,8 @@
         "title": "K采样器(高级)",
         "inputs": {
             "model": "模型",
-            "positive": "正面提示词",
-            "negative": "负面提示词",
+            "positive": "正面条件",
+            "negative": "负面条件",
             "latent_image": "Latent"
         },
         "widgets": {
@@ -70,8 +70,8 @@
         "title": "自定义采样器",
         "inputs": {
             "model": "模型",
-            "positive": "正面提示词",
-            "negative": "负面提示词",
+            "positive": "正面条件",
+            "negative": "负面条件",
             "sampler": "采样器",
             "sigmas": "Sigmas",
             "latent_image": "Latent"
@@ -174,6 +174,19 @@
         },
         "widgets": {
             "scheduler": "调度器",
+            "steps": "步数",
+            "denoise": "降噪"
+        },
+        "outputs": {
+            "SIGMAS": "Sigmas"
+        }
+    },
+    "SDTurboScheduler": {
+        "title": "SDTurbo调度器",
+        "inputs": {
+            "model": "模型"
+        },
+        "widgets": {
             "steps": "步数"
         },
         "outputs": {
@@ -192,8 +205,55 @@
             "SIGMAS": "Sigmas"
         }
     },
+    "FlipSigmas": {
+        "title": "翻转Sigmas",
+        "inputs": {
+            "sigmas": "Sigmas"
+        },
+        "outputs": {
+            "SIGMAS": "Sigmas"
+        }
+    },
 
 
+    "VideoLinearCFGGuidance": {
+        "title": "线性CFG引导",
+        "inputs": {
+            "model": "模型"
+        },
+        "widgets": {
+            "min_cfg": "最小CFG"
+        },
+        "outputs": {
+            "MODEL": "模型"
+        }
+    },
+
+
+    "ImageOnlyCheckpointLoader": {
+        "title": "Checkpoint加载器(仅图像)",
+        "widgets": {
+            "ckpt_name": "Checkpoint名称"
+        },
+        "outputs": {
+            "MODEL": "模型",
+            "CLIP_VISION": "CLIP视觉",
+            "VAE": "VAE"
+        }
+    },
+    "LoraLoaderModelOnly": {
+        "title": "LoRA加载器(仅模型)",
+        "inputs": {
+            "model": "模型"
+        },
+        "widgets": {
+            "lora_name": "LoRA名称",
+            "strength_model": "模型强度"
+        },
+        "outputs": {
+            "MODEL": "模型"
+        }
+    },
 
 
     "CheckpointLoaderSimple": {
@@ -348,6 +408,106 @@
             "CONDITIONING": "条件"
         }
     },
+    "InpaintModelConditioning": {
+        "title": "内补模型条件",
+        "inputs": {
+            "positive": "正面条件",
+            "negative": "负面条件",
+            "vae": "VAE",
+            "pixels": "图像",
+            "mask": "遮罩"
+        },
+        "outputs": {
+            "positive": "正面条件",
+            "negative": "负面条件",
+            "latent": "Latent"
+        }
+    },
+    "SVD_img2vid_Conditioning": {
+        "title": "SVD_图像到视频_条件",
+        "inputs": {
+            "clip_vision": "CLIP视觉",
+            "init_image": "图像",
+            "VAE": "VAE"
+        },
+        "widgets": {
+            "width": "宽度",
+            "height": "高度",
+            "video_frames": "帧数",
+            "motion_bucket_id": "动态bucketID",
+            "fps": "帧率",
+            "augmentation_level": "增强"
+        },
+        "outputs": {
+            "positive": "正面条件",
+            "negative": "负面条件",
+            "latent": "Latent"
+        }
+    },
+    "StableZero123_Conditioning": {
+        "title": "SZ123条件",
+        "inputs": {
+            "clip_vision": "CLIP视觉",
+            "init_image": "图像",
+            "VAE": "VAE"
+        },
+        "widgets": {
+            "width": "宽度",
+            "height": "高度",
+            "batch_size": "批次大小",
+            "elevation": "俯仰角",
+            "azimuth": "方位角"
+        },
+        "outputs": {
+            "positive": "正面条件",
+            "negative": "负面条件",
+            "latent": "Latent"
+        }
+    },
+    "StableZero123_Conditioning_Batched": {
+        "title": "SZ123条件(批次)",
+        "inputs": {
+            "clip_vision": "CLIP视觉",
+            "init_image": "图像",
+            "VAE": "VAE"
+        },
+        "widgets": {
+            "width": "宽度",
+            "height": "高度",
+            "batch_size": "批次大小",
+            "elevation": "俯仰角",
+            "azimuth": "方位角",
+            "elevation_batch_increment": "俯仰角增量",
+            "azimuth_batch_increment": "方位角增量"
+        },
+        "outputs": {
+            "positive": "正面条件",
+            "negative": "负面条件",
+            "latent": "Latent"
+        }
+    },
+
+
+    "SD_4XUpscale_Conditioning": {
+        "title": "SD4X放大条件",
+        "inputs": {
+            "images": "图像",
+            "positive": "正面条件",
+            "negative": "负面条件"
+        },
+        "widgets": {
+            "scale_ratio": "缩放系数",
+            "noise_augmentation": "噪波增强"
+        },
+        "outputs": {
+            "positive": "正面条件",
+            "negative": "负面条件",
+            "latent": "Latent"
+        }
+    },
+
+
+
     "CLIPTextEncode": {
         "title": "CLIP文本编码器",
         "inputs": {
@@ -450,6 +610,18 @@
             "CONDITIONING": "条件"
         }
     },
+    "ConditioningSetAreaStrength": {
+        "title": "条件采样区域强度",
+        "inputs": {
+            "conditioning": "条件"
+        },
+        "widgets": {
+            "strength": "强度"
+        },
+        "outputs": {
+            "CONDITIONING": "条件"
+        }
+    },
     "ConditioningSetMask": {
         "title": "条件设置遮罩",
         "inputs": {
@@ -507,8 +679,8 @@
     "ControlNetApplyAdvanced": {
         "title": "ControlNet应用(高级)",
         "inputs": {
-            "positive": "正面提示词",
-            "negative": "负面提示词",
+            "positive": "正面条件",
+            "negative": "负面条件",
             "control_net": "ControlNet",
             "image": "图像"
         },
@@ -518,8 +690,8 @@
             "end_percent": "结束时间"
         },
         "outputs": {
-            "positive": "正面提示词",
-            "negative": "负面提示词"
+            "positive": "正面条件",
+            "negative": "负面条件"
         }
     },
 
@@ -566,7 +738,7 @@
         }
     },
     "RepeatLatentBatch": {
-        "title": "复制批次",
+        "title": "复制Latent批次",
         "inputs": {
             "samples": "Latent"
         },
@@ -578,7 +750,7 @@
         }
     },
     "RebatchLatents": {
-        "title": "重设批次",
+        "title": "重设Latent批次",
         "inputs": {
             "latents": "Latent"
         },
@@ -670,6 +842,31 @@
             "LATENT": "Latent"
         }
     },
+    "LatentInterpolate": {
+        "title": "Latent插值",
+        "inputs": {
+            "samples1": "Latent1",
+            "samples2": "Latent2"
+        },
+        "widgets": {
+            "ratio": "比率"
+        },
+        "outputs": {
+            "Latent": "Latent"
+        }
+    },
+    "LatentBatchSeedBehavior": {
+        "title": "Latent批次随机种操作",
+        "inputs": {
+            "samples": "Latent"
+        },
+        "widgets": {
+            "seed_behavior": "随机种操作"
+        },
+        "outputs": {
+            "LATENT": "Latent"
+        }
+    },
 
 
     "VAEDecode": {
@@ -713,7 +910,7 @@
                 "nearest-exact": "邻近-精确",
                 "bilinear": "双线性插值",
                 "area": "区域",
-                "bislerp": "球面线性",
+                "bislerp": "双球面线性",
                 "bicubic": "双三次插值",
             "width": "宽度",
             "height": "高度",
@@ -735,7 +932,7 @@
                 "nearest-exact": "邻近-精确",
                 "bilinear": "双线性插值",
                 "area": "区域",
-                "bislerp": "球面线性",
+                "bislerp": "双球面线性",
                 "bicubic": "双三次插值",
             "scale_by": "系数"
         },
@@ -923,6 +1120,73 @@
     },
 
 
+    "ImageCrop": {
+        "title": "图像裁剪",
+        "inputs": {
+            "image": "图像"
+        },
+        "widgets": {
+            "width": "宽度",
+            "height": "高度",
+            "x": "X",
+            "y": "Y"
+        },
+        "outputs": {
+            "IMAGE": "图像"
+        }
+    },
+    "RepeatImageBatch": {
+        "title": "复制图像批次",
+        "inputs": {
+            "image": "图像"
+        },
+        "widgets": {
+            "amount": "次数"
+        },
+        "outputs": {
+            "IMAGE": "图像"
+        }
+    },
+    "RebatchImages": {
+        "title": "重设图像批次",
+        "inputs": {
+            "images": "图像"
+        },
+        "widgets": {
+            "batch_size": "批次大小"
+        },
+        "outputs": {
+            "IMAGE": "图像"
+        }
+    },
+    "SaveAnimatedWEBP": {
+        "title": "保存WEBP",
+        "inputs": {
+            "images": "图像"
+        },
+        "widgets": {
+            "filename_prefix": "文件名前缀",
+            "fps": "帧率",
+            "lossless": "无损",
+            "quality": "质量",
+            "method": "方法",
+                "fastest": "最快",
+                "slowest": "最慢"
+        }
+    },
+    "SaveAnimatedPNG": {
+        "title": "保存APNG",
+        "inputs": {
+            "images": "图像"
+        },
+        "widgets": {
+            "filename_prefix": "文件名前缀",
+            "fps": "帧率",
+            "compress_level": "压缩等级"
+        }
+    },
+
+
     "SaveImage": {
         "title": "保存图像",
         "inputs": {
@@ -1011,6 +1275,16 @@
         },
         "outputs": {
             "IMAGE": "图像"
+        }
+    },
+    "SaveImageWithAlpha": {
+        "title": "保存图像(Alpha)",
+        "inputs": {
+            "images": "图像",
+            "mask": "遮罩"
+        },
+        "widgets": {
+            "filename_prefix": "文件名前缀"
         }
     },
 
@@ -1184,8 +1458,66 @@
             "MASK": "遮罩"
         }
     },
-    
 
+
+    
+    "PhotoMakerLoader": {
+        "title": "PhotoMaker加载器",
+        "widgets": {
+            "photomaker_model_name": "PhotoMaker模型"
+        },
+        "outputs": {
+            "PHOTOMAKER": "PhotoMaker"
+        }
+    },
+    "PhotoMakerEncode": {
+        "title": "PhotoMaker编码",
+        "inputs": {
+            "photomaker": "PhotoMaker",
+            "image": "图像",
+            "clip": "CLIP"
+        }
+    },
+
+
+    "CLIPTextEncodeControlnet": {
+        "title": "CLIP文本编码ControlNet",
+        "inputs": {
+            "clip": "CLIP",
+            "conditioning": "条件"
+        },
+        "widgets": {
+            "text": "文本"
+        },
+        "outputs": {
+            "CONDITIONING": "条件"
+        }
+    },
+
+
+    "StableCascade_EmptyLatentImage": {
+        "title": "StableCascade_空Latent",
+        "widgets": {
+            "width": "宽度",
+            "height": "高度",
+            "compression": "压缩等级",
+            "batch_size": "批次大小"
+        },
+        "outputs": {
+            "stage_c": "Stage_C",
+            "stage_b": "Stage_B"
+        }
+    },
+    "StableCascade_StageB_Conditioning": {
+        "title": "StableCascade_StageB条件",
+        "inputs": {
+            "conditioning": "条件",
+            "stage_c": "Stage_C"
+        },
+        "outputs": {
+            "CONDITIONING": "条件"
+        }
+    },
 
 
     "VAEDecodeTiled": {
@@ -1300,6 +1632,59 @@
             "scale_depth": "缩放深度"
         }
     },
+    "PatchModelAddDownscale": {
+        "title": "收缩模型UNET",
+        "inputs": {
+            "model": "模型"
+        },
+        "widgets": {
+            "block_number": "层编号",
+            "downscale_factor": "收缩系数",
+            "start_percent": "开始时间",
+            "end_percent": "结束时间",
+            "downscale_after_skip": "跳过后收缩"
+        },
+        "outputs": {
+            "MODEL": "模型"
+        }
+    },
+    "ImageOnlyCheckpointSave": {
+        "title": "保存Checkpoint(仅图像)",
+        "inputs": {
+            "model": "模型",
+            "clip_vision": "CLIP视觉",
+            "vae": "VAE"
+        },
+        "widgets": {
+            "filename_prefix": "文件名前缀"
+        }
+    },
+    "SelfAttentionGuidance": {
+        "title": "自注意力引导",
+        "inputs": {
+            "model": "模型"
+        },
+        "widgets": {
+            "scale": "缩放",
+            "blur_sigma": "模糊"
+        },
+        "outputs": {
+            "MODEL": "模型"
+        }
+    },
+    "PerpNeg": {
+        "title": "重塑负提示",
+        "inputs": {
+            "model": "模型",
+            "empty_conditioning": "空条件"
+        },
+        "widgets": {
+            "neg_scale": "负面缩放"
+        },
+        "outputs": {
+            "MODEL": "模型"
+        }
+    },
 
 
 
@@ -1399,7 +1784,7 @@
         }
     },
     "CLIPTextEncodeSDXLRefiner": {
-        "title": "CLIP文本编码SDXL优化",
+        "title": "CLIP文本编码SDXL(Refiner)",
         "inputs": {
             "clip": "CLIP"
         },
@@ -1439,7 +1824,7 @@
         }
     },
     "CheckpointSave": {
-        "title": "保存模型",
+        "title": "保存Checkpoint",
         "inputs": {
             "model": "模型",
             "clip": "CLIP",
@@ -1544,7 +1929,7 @@
     },
 
     "ModelSamplingDiscrete": {
-        "title": "模型离散采样方法",
+        "title": "模型离散采样算法",
         "inputs": {
             "model": "模型"
         },
@@ -1553,6 +1938,31 @@
                 "eps": "等概率抽样",
                 "v-prediction": "V预测",
                 "zsnr": "规格化信噪比"
+        }
+    },
+    "ModelSamplingContinuousEDM": {
+        "title": "模型连续采样算法EDM",
+        "inputs": {
+            "model": "模型"
+        },
+        "widgets": {
+            "sampling": "采样",
+                "v_prediction": "V预测",
+                "eps": "等概率抽样",
+            "sigma_max": "最大Sigma",
+            "sigma_min": "最小Sigma"
+        }
+    },
+    "RescaleCFG": {
+        "title": "缩放CFG",
+        "inputs": {
+            "model": "模型"
+        },
+        "widgets": {
+            "multiplier": "系数"
+        },
+        "outputs": {
+            "MODEL": "模型"
         }
     }
 }

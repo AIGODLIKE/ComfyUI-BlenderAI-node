@@ -9,6 +9,7 @@ SDNode/PATH_CFG.json
 SDNode/object_info.json
 SDNode/diff_object_info.json
 SDNode/config.yaml
+SDNode/yaml/config.yaml
 SDNode/history/history.json
 presets/00测试
 groups/00测试

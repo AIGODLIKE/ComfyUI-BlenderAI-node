@@ -1,0 +1,18 @@
+# cmpp to ComfyUI folder
+# cmp to ComfyUI/models folder
+mycomfyui:
+    base_path: {cmpp}
+    checkpoints: {cmp}/checkpoints
+    configs: {cmp}/configs
+    loras: {cmp}/loras
+    vae: {cmp}/vae
+    clip: {cmp}/clip
+    clip_vision: {cmp}/clip_vision
+    style_models: {cmp}/style_models
+    embeddings: {cmp}/embeddings
+    diffusers: {cmp}/diffusers
+    controlnet: {cmp}/controlnet
+    gligen: {cmp}/gligen
+    upscale_models: {cmp}/upscale_models
+    hypernetworks: {cmp}/hypernetworks
+    #custom_nodes: {cmpp}/custom_nodes

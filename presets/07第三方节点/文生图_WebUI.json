@@ -1,0 +1,394 @@
+{
+  "last_node_id": 27,
+  "last_link_id": 9,
+  "nodes": [
+    {
+      "id": 19,
+      "type": "BNK_CLIPTextEncodeAdvanced",
+      "pos": [
+        1759.86865234375,
+        1414.32275390625
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 7
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            8
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "BNK_CLIPTextEncodeAdvanced",
+      "properties": {},
+      "widgets_values": [
+        "",
+        "none",
+        "A1111"
+      ]
+    },
+    {
+      "id": 20,
+      "type": "KSampler",
+      "pos": [
+        2050.70556640625,
+        1417.478271484375
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 0
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 8
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 2
+        },
+        {
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 3
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            4
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "K采样器",
+      "properties": {},
+      "widgets_values": [
+        "0",
+        "fixed",
+        20,
+        8.0,
+        "euler",
+        "normal",
+        1.0
+      ]
+    },
+    {
+      "id": 21,
+      "type": "VAEDecode",
+      "pos": [
+        2334.400390625,
+        1421.0352783203125
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 4
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 5
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            6
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "VAE解码",
+      "properties": {},
+      "widgets_values": []
+    },
+    {
+      "id": 22,
+      "type": "VAELoader",
+      "pos": [
+        2051.475830078125,
+        1729.5699462890625
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "links": [
+            5
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "VAE加载器",
+      "properties": {},
+      "widgets_values": [
+        "pastel-waifu-diffusion.vae.pt"
+      ]
+    },
+    {
+      "id": 23,
+      "type": "PreviewImage",
+      "pos": [
+        2623.186767578125,
+        1419.559326171875
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 6
+        }
+      ],
+      "outputs": [],
+      "title": "预览.002",
+      "properties": {},
+      "widgets_values": []
+    },
+    {
+      "id": 25,
+      "type": "CLIPTextEncode",
+      "pos": [
+        1761.0599365234375,
+        1583.836669921875
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            2
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "CLIP文本编码器.001",
+      "properties": {},
+      "widgets_values": [
+        ""
+      ]
+    },
+    {
+      "id": 26,
+      "type": "CheckpointLoaderSimple",
+      "pos": [
+        1477.3587646484375,
+        1417.478271484375
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            0
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            1,
+            7
+          ],
+          "slot_index": 1
+        },
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "links": [],
+          "slot_index": 2
+        }
+      ],
+      "title": "Checkpoint加载器(简易)",
+      "properties": {},
+      "widgets_values": [
+        "AIGODLIKE华丽_4000.ckpt"
+      ]
+    },
+    {
+      "id": 27,
+      "type": "EmptyLatentImage",
+      "pos": [
+        1762.6146240234375,
+        1702.1673583984375
+      ],
+      "size": {
+        "0": 200.0,
+        "1": 30.0
+      },
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            3
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "空Latent",
+      "properties": {},
+      "widgets_values": [
+        512,
+        512,
+        1
+      ]
+    }
+  ],
+  "links": [
+    [
+      0,
+      26,
+      0,
+      20,
+      0,
+      "KSampler"
+    ],
+    [
+      1,
+      26,
+      1,
+      25,
+      0,
+      "CLIPTextEncode"
+    ],
+    [
+      2,
+      25,
+      0,
+      20,
+      2,
+      "KSampler"
+    ],
+    [
+      3,
+      27,
+      0,
+      20,
+      3,
+      "KSampler"
+    ],
+    [
+      4,
+      20,
+      0,
+      21,
+      0,
+      "VAEDecode"
+    ],
+    [
+      5,
+      22,
+      0,
+      21,
+      1,
+      "VAEDecode"
+    ],
+    [
+      6,
+      21,
+      0,
+      23,
+      0,
+      "预览"
+    ],
+    [
+      7,
+      26,
+      1,
+      19,
+      0,
+      "BNK_CLIPTextEncodeAdvanced"
+    ],
+    [
+      8,
+      19,
+      0,
+      20,
+      1,
+      "KSampler"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {},
+  "version": 0.4
+}

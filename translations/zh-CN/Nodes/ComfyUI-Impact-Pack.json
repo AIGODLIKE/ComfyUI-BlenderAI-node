@@ -68,8 +68,67 @@
             "BBOX_DETECTOR": "BBox检测"
         }
     },
+    "SEGSOrderedFilterDetailerHookProvider": {
+        "title": "Seg次序过滤细化约束器",
+        "widgets": {
+            "target": "目标",
+            "order": "顺序",
+            "take_start": "开始序号",
+            "take_count": "数量"
+        },
+        "outputs": {
+            "DETAILER_HOOK": "细化约束"
+        }
+    },
+    "SEGSRangeFilterDetailerHookProvider": {
+        "title": "Seg范围过滤细化约束器",
+        "widgets": {
+            "target": "目标",
+            "mode": "模式",
+            "min_value": "最小值",
+            "max_value": "最大值"
+        },
+        "outputs": {
+            "DETAILER_HOOK": "细化约束"
+        }
+    },
+    "SEGSLabelFilterDetailerHookProvider": {
+        "title": "Seg标签过滤细化约束器",
+        "inputs": {
+            "segs": "Seg"
+        },
+        "widgets": {
+            "preset": "预设",
+            "labels": "标签"
+        },
+        "outputs": {
+            "DETAILER_HOOK": "细化约束"
+        }
+    },
     "EmptySegs": {
         "title": "空Seg",
+        "outputs": {
+            "SEGS": "Seg"
+        }
+    },
+    "SetDefaultImageForSEGS": {
+        "title": "设置Seg默认图像",
+        "inputs": {
+            "segs": "Seg",
+            "image": "图像"
+        },
+        "widgets": {
+            "override": "覆盖"
+        },
+        "outputs": {
+            "SEGS": "Seg"
+        }
+    },
+    "RemoveImageFromSEGS": {
+        "title": "Seg移除图像",
+        "inputs": {
+            "segs": "Seg"
+        },
         "outputs": {
             "SEGS": "Seg"
         }
@@ -83,6 +142,15 @@
         },
         "widgets": {
             "strength": "强度"
+        },
+        "outputs": {
+            "SEGS": "Seg"
+        }
+    },
+    "ImpactControlNetClearSEGS": {
+        "title": "ControlNet移除Seg",
+        "inputs": {
+            "segs": "Seg"
         },
         "outputs": {
             "SEGS": "Seg"
@@ -118,7 +186,7 @@
             "cropped_image": "裁剪图像",
             "cropped_mask": "裁剪遮罩",
             "crop_region": "裁剪区域",
-            "bbox": "BBox",
+            "bbox": "Seg_ELT_bbox",
             "control_net_wrapper": "ControlNet置换",
             "confidence": "置信度",
             "label": "标签"
@@ -131,7 +199,7 @@
             "cropped_image_opt": "裁剪图像",
             "cropped_mask_opt": "裁剪遮罩",
             "crop_region_opt": "裁剪区域",
-            "bbox_opt": "BBox",
+            "bbox_opt": "Seg_ELT_bbox",
             "control_net_wrapper_opt": "ControlNet置换"
         },
         "widgets": {
@@ -166,6 +234,44 @@
             "MASK": "遮罩"
         }
     },
+    "ImpactGaussianBlurMask": {
+        "title": "遮罩高斯模糊",
+        "inputs": {
+            "mask": "遮罩"
+        },
+        "widgets": {
+            "kernel_size": "大小",
+            "sigma": "Sigma"
+        },
+        "outputs": {
+            "MASK": "遮罩"
+        }
+    },
+    "ImpactDilateMaskInSEGS": {
+        "title": "Seg遮罩膨胀",
+        "inputs": {
+            "segs": "Seg"
+        },
+        "widgets": {
+            "dilation": "膨胀"
+        },
+        "outputs": {
+            "SEGS": "Seg"
+        }
+    },
+    "ImpactGaussianBlurMaskInSEGS": {
+        "title": "Seg遮罩高斯模糊",
+        "inputs": {
+            "segs": "Seg"
+        },
+        "widgets": {
+            "kernel_size": "大小",
+            "sigma": "Sigma"
+        },
+        "outputs": {
+            "SEGS": "Seg"
+        }   
+    },
     "ImpactScaleBy_BBOX_SEG_ELT": {
         "title": "SegELT缩放",
         "inputs": {
@@ -188,7 +294,7 @@
         }
     },
     "PreviewBridge": {
-        "title": "桥接预览",
+        "title": "桥接预览图像",
         "inputs": {
             "images": "图像"
         },
@@ -197,6 +303,21 @@
         },
         "outputs": {
             "IMAGE": "图像",
+            "MASK": "遮罩"
+        }
+    },
+    "PreviewBridgeLatent": {
+        "title": "桥接预览Latent",
+        "inputs": {
+            "latent": "Latent",
+            "vae_opt": "VAE"
+        },
+        "widgets": {
+            "image": "图像",
+            "preview_method": "预览方法"
+        },
+        "outputs": {
+            "LATENT": "Latent",
             "MASK": "遮罩"
         }
     },
@@ -583,6 +704,26 @@
             "MASK": "遮罩"
         }
     },
+    "ImpactSegsAndMask": {
+        "title": "Seg遮罩",
+        "inputs": {
+            "segs": "Seg",
+            "mask": "遮罩"
+        },
+        "outputs": {
+            "SEGS": "Seg"
+        }
+    },
+    "ImpactSegsAndMaskForEach": {
+        "title": "Seg遮罩(批量)",
+        "inputs": {
+            "segs": "Seg",
+            "masks": "遮罩"
+        },
+        "outputs": {
+            "SEGS": "Seg"
+        }
+    },
     "Segs & Mask": {
         "title": "Seg遮罩",
         "inputs": {
@@ -623,6 +764,26 @@
             "right_eyebrow": "右眉毛",
             "right_eye": "右眼",
             "right_pupil": "右瞳孔"
+        },
+        "outputs": {
+            "SEGS": "Seg"
+        }
+    },
+    "MaskToSEGS_for_AnimateDiff": {
+        "title": "遮罩到Seg(动态扩散)",
+        "inputs": {
+            "mask": "遮罩"
+        },
+        "widgets": {
+            "crop_factor": "裁剪系数",
+            "combined": "是否合并",
+                "False": "否",
+                "True": "是",
+            "bbox_fill": "填充BBox",
+                "disabled": "关闭",
+                "enabled": "开启",
+            "drop_size": "最小尺寸",
+            "contour_fill": "填充轮廓"
         },
         "outputs": {
             "SEGS": "Seg"
@@ -718,8 +879,8 @@
             "model": "模型",
             "clip": "CLIP",
             "vae": "VAE",
-            "positive": "正面提示词",
-            "negative": "负面提示词",
+            "positive": "正面条件",
+            "negative": "负面条件",
             "detailer_hook": "细化约束"
         },
         "widgets": {
@@ -796,8 +957,8 @@
             "model": "模型",
             "clip": "CLIP",
             "vae": "VAE",
-            "positive": "正面提示词",
-            "negative": "负面提示词",
+            "positive": "正面条件",
+            "negative": "负面条件",
             "detailer_hook": "细化约束"
         },
         "widgets": {
@@ -911,6 +1072,37 @@
         },
         "outputs": {
             "PK_HOOK": "约束"
+        }
+    },
+    "UnsamplerDetailerHookProvider": {
+        "title": "逆采样细化约束器",
+        "inputs": {
+            "model": "模型",
+            "positive": "正面条件",
+            "negative": "负面条件"
+        },
+        "widgets": {
+            "steps": "步数",
+            "start_at_step": "开始步数",
+            "end_end_at_step": "结束步数",
+            "cfg": "CFG",
+            "sampler_name": "采样器",
+            "scheduler": "调度器",
+            "normalize": "规格化",
+            "scheduler_for_cycle": "调度循环"
+        },
+        "outputs": {
+            "DETAILER_HOOK": "细化约束"
+        }
+    },
+    "DenoiseSchedulerDetailerHookProvider": {
+        "title": "降噪调度细化约束器",
+        "widgets": {
+            "scheduler_for_cycle": "调度循环",
+            "target_denoise": "目标降噪"
+        },
+        "outputs": {
+            "DETAILER_HOOK": "细化约束"
         }
     },
     "SEGSDetailer": {
@@ -1212,8 +1404,8 @@
             "model": "模型",
             "clip": "CLIP",
             "vae": "VAE",
-            "positive": "正面提示词",
-            "negative": "负面提示词",
+            "positive": "正面条件",
+            "negative": "负面条件",
             "bbox_detector": "BBox检测",
             "sam_model_opt": "SAM模型",
             "segm_detector_opt": "Segm检测",
@@ -1373,8 +1565,8 @@
             "model": "模型",
             "clip": "CLIP",
             "vae": "VAE",
-            "positive": "正面提示词",
-            "negative": "负面提示词",
+            "positive": "正面条件",
+            "negative": "负面条件",
             "bbox_detector": "BBox检测",
             "sam_model_opt": "SAM模型",
             "segm_detector_opt": "Segm检测",
@@ -1393,12 +1585,12 @@
             "model": "模型",
             "clip": "CLIP",
             "vae": "VAE",
-            "positive": "正面提示词",
-            "negative": "负面提示词",
-            "refiner_model": "优化模型",
-            "refiner_clip": "优化CLIP",
-            "refiner_positive": "优化正面提示词",
-            "refiner_negative": "优化负面提示词",
+            "positive": "正面条件",
+            "negative": "负面条件",
+            "refiner_model": "模型(Refiner)",
+            "refiner_clip": "CLIP(Refiner)",
+            "refiner_positive": "正面条件(Refiner)",
+            "refiner_negative": "负面条件(Refiner)",
             "bbox_detector": "BBox检测",
             "sam_model_opt": "SAM模型",
             "segm_detector_opt": "Segm检测",
@@ -1422,8 +1614,8 @@
             "model": "模型",
             "clip": "CLIP",
             "vae": "VAE",
-            "positive": "正面提示词",
-            "negative": "负面提示词",
+            "positive": "正面条件",
+            "negative": "负面条件",
             "bbox_detector": "BBox检测",
             "sam_model_opt": "SAM模型",
             "segm_detector_opt": "Segm检测",
@@ -1440,8 +1632,8 @@
             "model": "模型",
             "clip": "CLIP",
             "vae": "VAE",
-            "positive": "正面提示词",
-            "negative": "负面提示词",
+            "positive": "正面条件",
+            "negative": "负面条件",
             "bbox_detector": "BBox检测",
             "sam_model_opt": "SAM模型",
             "segm_detector_opt": "Segm检测",
@@ -1458,16 +1650,16 @@
             "model": "模型",
             "clip": "CLIP",
             "vae": "VAE",
-            "positive": "正面提示词",
-            "negative": "负面提示词",
+            "positive": "正面条件",
+            "negative": "负面条件",
             "bbox_detector": "BBox检测",
             "sam_model_opt": "SAM模型",
             "segm_detector_opt": "Segm检测",
             "detailer_hook": "细化约束",
-            "refiner_model": "优化模型",
-            "refiner_clip": "优化CLIP",
-            "refiner_positive": "优化正面提示词",
-            "refiner_negative": "优化负面提示词"
+            "refiner_model": "模型(Refiner)",
+            "refiner_clip": "CLIP(Refiner)",
+            "refiner_positive": "正面条件(Refiner)",
+            "refiner_negative": "负面条件(Refiner)"
         }
     },
     "EditDetailerPipe": {
@@ -1477,8 +1669,8 @@
             "model": "模型",
             "clip": "CLIP",
             "vae": "VAE",
-            "positive": "正面提示词",
-            "negative": "负面提示词",
+            "positive": "正面条件",
+            "negative": "负面条件",
             "bbox_detector": "BBox检测",
             "sam_model_opt": "SAM模型",
             "sam_model": "SAM模型",
@@ -1512,8 +1704,8 @@
             "model": "模型",
             "clip": "CLIP",
             "vae": "VAE",
-            "positive": "正面提示词",
-            "negative": "负面提示词"
+            "positive": "正面条件",
+            "negative": "负面条件"
         },
         "outputs": {
             "BASIC_PIPE": "基础节点束",
@@ -1529,8 +1721,8 @@
             "model": "模型",
             "clip": "CLIP",
             "vae": "VAE",
-            "positive": "正面提示词",
-            "negative": "负面提示词"
+            "positive": "正面条件",
+            "negative": "负面条件"
         }
     },
     "FromBasicPipe_v2": {
@@ -1545,8 +1737,8 @@
             "model": "模型",
             "clip": "CLIP",
             "vae": "VAE",
-            "positive": "正面提示词",
-            "negative": "负面提示词"
+            "positive": "正面条件",
+            "negative": "负面条件"
         }
     },
     "EditBasicPipe": {
@@ -1557,8 +1749,8 @@
             "model": "模型",
             "clip": "CLIP",
             "vae": "VAE",
-            "positive": "正面提示词",
-            "negative": "负面提示词"
+            "positive": "正面条件",
+            "negative": "负面条件"
         },
         "outputs": {
             "BASIC_PIPE": "基础节点束",
@@ -1612,18 +1804,18 @@
             "model": "模型",
             "clip": "CLIP",
             "vae": "VAE",
-            "positive": "正面提示词",
-            "negative": "负面提示词",
+            "positive": "正面条件",
+            "negative": "负面条件",
             "bbox_detector": "BBox检测",
             "sam_model_opt": "SAM模型",
             "sam_model": "SAM模型",
             "segm_detector_opt": "Segm检测",
             "segm_detector": "Segm检测",
             "detailer_hook": "细化约束",
-            "refiner_model": "优化模型",
-            "refiner_clip": "优化CLIP",
-            "refiner_positive": "优化正面提示词",
-            "refiner_negative": "优化负面提示词"
+            "refiner_model": "模型(Refiner)",
+            "refiner_clip": "CLIP(Refiner)",
+            "refiner_positive": "正面条件(Refiner)",
+            "refiner_negative": "负面条件(Refiner)"
         },
         "widgets": {
             "wildcard": "通配符",
@@ -1662,8 +1854,8 @@
         "inputs": {
             "model": "模型",
             "vae": "VAE",
-            "positive": "正面提示词",
-            "negative": "负面提示词",
+            "positive": "正面条件",
+            "negative": "负面条件",
             "upscale_model_opt": "放大模型",
             "pk_hook_opt": "约束"
         },
@@ -1756,8 +1948,8 @@
         "inputs": {
             "model": "模型",
             "vae": "VAE",
-            "positive": "正面提示词",
-            "negative": "负面提示词",
+            "positive": "正面条件",
+            "negative": "负面条件",
             "upscale_model_opt": "放大模型",
             "pk_hook_opt": "约束"
         },
@@ -1793,8 +1985,8 @@
         "inputs": {
             "model": "模型",
             "vae": "VAE",
-            "positive": "正面提示词",
-            "negative": "负面提示词",
+            "positive": "正面条件",
+            "negative": "负面条件",
             "upscale_model_opt": "放大模型",
             "pk_hook_opt": "约束",
             "basic_pipe": "基础节点束"
@@ -1919,6 +2111,37 @@
         "widgets": {
             "scheduler_for_iteration": "调度插值",
             "target_cfg": "目标CFG"
+        },
+        "outputs": {
+            "PK_HOOK": "约束"
+        }
+    },
+    "DetailerHookCombine": {
+        "title": "细化约束合并",
+        "inputs": {
+            "hook1": "约束1",
+            "hook2": "约束2"
+        },
+        "outputs": {
+            "DETAILER_HOOK": "细化约束"
+        }
+    },
+    "UnsamplerHookProvider": {
+        "title": "逆采样约束器",
+        "inputs": {
+            "model": "模型",
+            "positive": "正面条件",
+            "negative": "负面条件"
+        },
+        "widgets": {
+            "steps": "步数",
+            "start_end_at_step": "开始步数",
+            "end_end_at_step": "结束步数",
+            "cfg": "CFG",
+            "sampler_name": "采样器",
+            "scheduler": "调度器",
+            "normalize": "规格化",
+            "scheduler_for_cycle": "调度循环"
         },
         "outputs": {
             "PK_HOOK": "约束"
@@ -2151,11 +2374,34 @@
 
 
 
+    "ImpactConcatConditionings": {
+        "title": "条件联结",
+        "inputs": {
+            "conditioning": "条件"
+        },
+        "outputs": {
+            "CONDITIONING": "条件"
+        }
+    },
+
+
 
     "ImpactImageInfo": {
         "title": "图像信息",
         "inputs": {
             "value": "图像"
+        },
+        "outputs": {
+            "batch": "批次大小",
+            "height": "高度",
+            "width": "宽度",
+            "channel": "通道"
+        }
+    },
+    "ImpactLatentInfo": {
+        "title": "Latent信息",
+        "inputs": {
+            "value": "Latent"
         },
         "outputs": {
             "batch": "批次大小",
@@ -2187,6 +2433,19 @@
             "signal_opt": "信号"
         }
     },
+    "ImpactQueueTriggerCountdown": {
+        "title": "队列触发器(计数)",
+        "inputs": {
+            "signal": "信号"
+        },
+        "widgets": {
+            "count": "计数"
+        },
+        "outputs": {
+            "signal_opt": "信号",
+            "count": "计数"
+        }
+    },
     "ImpactSetWidgetValue": {
         "title": "设置组件值",
         "inputs": {
@@ -2215,6 +2474,34 @@
         },
         "outputs": {
             "signal_opt": "信号"
+        }
+    },
+    "ImpactSleep": {
+        "title": "休眠",
+        "inputs": {
+            "signal": "信号"
+        },
+        "widgets": {
+            "seconds": "秒数"
+        },
+        "outputs": {
+            "signal_opt": "信号"
+        }
+    },
+    "ImpactRemoteBoolean": {
+        "title": "远程布尔",
+        "widgets": {
+            "node_id": "节点ID",
+            "widget_name": "组件名称",
+            "value": "值"
+        }
+    },
+    "ImpactRemoteInt": {
+        "title": "远程整数",
+        "widgets": {
+            "node_id": "节点ID",
+            "widget_name": "组件名称",
+            "value": "值"
         }
     },
     "ImpactControlBridge": {
@@ -2262,6 +2549,15 @@
         },
         "outputs": {
             "INT": "整数"
+        }
+    },
+    "ImpactFloat": {
+        "title": "浮点",
+        "widgets": {
+            "value": "值"
+        },
+        "outputs": {
+            "FLOAT": "浮点"
         }
     },
     "ImpactValueSender": {

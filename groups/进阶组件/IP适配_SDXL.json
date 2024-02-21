@@ -1,0 +1,263 @@
+{
+    "last_node_id": 17,
+    "last_link_id": 13,
+    "nodes": [
+        {
+            "id": 7,
+            "type": "IPAdapterApply",
+            "pos": [
+                1762.070068359375,
+                2049.656005859375
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 100.0
+            },
+            "flags": {},
+            "order": 8,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "ipadapter",
+                    "type": "IPADAPTER",
+                    "link": 1
+                },
+                {
+                    "name": "clip_vision",
+                    "type": "CLIP_VISION",
+                    "link": 2
+                },
+                {
+                    "name": "image",
+                    "type": "IMAGE",
+                    "link": null
+                },
+                {
+                    "name": "model",
+                    "type": "MODEL",
+                    "link": 3
+                },
+                {
+                    "name": "attn_mask",
+                    "type": "MASK",
+                    "link": null
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "MODEL",
+                    "type": "MODEL",
+                    "links": [
+                        0
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "IPAdapterApply",
+            "properties": {},
+            "widgets_values": [
+                1.0,
+                0.0,
+                "original"
+            ]
+        },
+        {
+            "id": 8,
+            "type": "KSampler",
+            "pos": [
+                2061.339111328125,
+                2045.6207275390625
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 100.0
+            },
+            "flags": {},
+            "order": 9,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "model",
+                    "type": "MODEL",
+                    "link": 0
+                },
+                {
+                    "name": "positive",
+                    "type": "CONDITIONING",
+                    "link": null
+                },
+                {
+                    "name": "negative",
+                    "type": "CONDITIONING",
+                    "link": null
+                },
+                {
+                    "name": "latent_image",
+                    "type": "LATENT",
+                    "link": null
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "LATENT",
+                    "type": "LATENT",
+                    "links": [],
+                    "slot_index": 0
+                }
+            ],
+            "title": "KSampler",
+            "properties": {},
+            "widgets_values": [
+                "0",
+                "fixed",
+                20,
+                8.0,
+                "euler",
+                "normal",
+                1.0
+            ]
+        },
+        {
+            "id": 10,
+            "type": "IPAdapterModelLoader",
+            "pos": [
+                1436.221923828125,
+                1936.622802734375
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 100.0
+            },
+            "flags": {},
+            "order": 7,
+            "mode": 0,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "IPADAPTER",
+                    "type": "IPADAPTER",
+                    "links": [
+                        1
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "IPAdapterModelLoader",
+            "properties": {},
+            "widgets_values": [
+                "ip-adapter_sdxl.bin"
+            ]
+        },
+        {
+            "id": 9,
+            "type": "CLIPVisionLoader",
+            "pos": [
+                1436.2220458984375,
+                2048.8017578125
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 100.0
+            },
+            "flags": {},
+            "order": 6,
+            "mode": 0,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "CLIP_VISION",
+                    "type": "CLIP_VISION",
+                    "links": [
+                        2
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "CLIPVisionLoader",
+            "properties": {},
+            "widgets_values": [
+                "clip_vision_g.safetensors"
+            ]
+        },
+        {
+            "id": 11,
+            "type": "CheckpointLoaderSimple",
+            "pos": [
+                1441.1075439453125,
+                2247.26904296875
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 100.0
+            },
+            "flags": {},
+            "order": 3,
+            "mode": 0,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "MODEL",
+                    "type": "MODEL",
+                    "links": [
+                        3
+                    ],
+                    "slot_index": 0
+                },
+                {
+                    "name": "CLIP",
+                    "type": "CLIP",
+                    "links": [],
+                    "slot_index": 1
+                },
+                {
+                    "name": "VAE",
+                    "type": "VAE",
+                    "slot_index": 2
+                }
+            ],
+            "title": "CheckpointLoaderSimple",
+            "properties": {},
+            "widgets_values": [
+                "sd_xl_base_1.0.safetensors"
+            ]
+        }
+    ],
+    "links": [
+        [
+            0,
+            7,
+            0,
+            8,
+            0,
+            "KSampler"
+        ],
+        [
+            1,
+            10,
+            0,
+            7,
+            0,
+            "IPAdapterApply"
+        ],
+        [
+            2,
+            9,
+            0,
+            7,
+            1,
+            "IPAdapterApply"
+        ],
+        [
+            3,
+            11,
+            0,
+            7,
+            3,
+            "IPAdapterApply"
+        ]
+    ],
+    "groups": [],
+    "config": {},
+    "extra": {},
+    "version": 0.4
+}

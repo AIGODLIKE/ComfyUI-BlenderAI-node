@@ -359,5 +359,32 @@
         "outputs": {
             "text": "文本"
         }
+    },
+
+    "ArgosTranslateCLIPTextEncodeNode": {
+        "title": "CLIP文本编码器(Argos翻译)",
+        "inputs": {
+            "clip": "CLIP"
+        },
+        "widgets": {
+            "from_translate": "从",
+            "to_translate": "到",
+            "text": "文本"
+        },
+        "outputs": {
+            "CONDITIONING": "条件",
+            "STRING": "字符串"
+        }
+    },
+    "ArgosTranslateTextNode": {
+        "title": "翻译文本(Argos翻译)",
+        "widgets": {
+            "from_translate": "从",
+            "to_translate": "到",
+            "text": "文本"
+        },
+        "outputs": {
+            "text": "文本"
+        }
     }
 }

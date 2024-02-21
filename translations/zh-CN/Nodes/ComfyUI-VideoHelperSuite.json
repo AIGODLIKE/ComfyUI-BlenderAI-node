@@ -30,7 +30,7 @@
                 "nearest-exact": "邻近-精确",
                 "bilinear": "双线性插值",
                 "area": "区域",
-                "bislerp": "球面线性",
+                "bislerp": "双球面线性",
                 "bicubic": "双三次插值",
             "crop": "裁剪",
                 "disabled": "关闭",
@@ -109,7 +109,7 @@
                 "nearest-exact": "邻近-精确",
                 "bilinear": "双线性插值",
                 "area": "区域",
-                "bislerp": "球面线性",
+                "bislerp": "双球面线性",
                 "bicubic": "双三次插值",
             "crop": "裁剪",
                 "disabled": "关闭",
@@ -158,10 +158,110 @@
 
 
 
+    "VHS_SplitMasks": {
+        "title": "分割遮罩",
+        "inputs": {
+            "mask": "遮罩"
+        },
+        "widgets": {
+            "split_index": "拆分索引"
+        },
+        "outputs": {
+            "MASK_A": "遮罩_A",
+            "A_count": "A组计数",
+            "MASK_B": "遮罩_B",
+            "B_count": "B组计数"
+        }
+    },
+    "VHS_MergeMasks": {
+        "title": "融合遮罩",
+        "inputs": {
+            "mask_A": "遮罩_A",
+            "mask_B": "遮罩_B"
+        },
+        "widgets": {
+            "merge_strategy": "融合策略",
+            "scale_method": "缩放方法",
+            "crop": "裁剪"
+        },
+        "outputs": {
+            "MASK": "遮罩",
+            "count": "计数"
+        }
+    },
+    "VHS_SelectEveryNthMask": {
+        "title": "遮罩模选",
+        "inputs": {
+            "mask": "遮罩"
+        },
+        "widgets": {
+            "select_every_nth": "模选"
+        },
+        "outputs": {
+            "MASK": "遮罩",
+            "count": "计数"
+        }
+    },
+    "VHS_GetMaskCount": {
+        "title": "遮罩计数",
+        "inputs": {
+            "mask": "遮罩"
+        },
+        "outputs": {
+            "count": "计数"
+        }
+    },
+    "VHS_DuplicateMasks": {
+        "title": "遮罩复制",
+        "inputs": {
+            "mask": "遮罩"
+        },
+        "widgets": {
+            "multiply_by": "系数"
+        },
+        "outputs": {
+            "MASK": "遮罩",
+            "count": "计数"
+        }
+    },
+
+
+
+    "VHS_VAEEncodeBatched": {
+        "title": "VAE编码(批次)",
+        "inputs": {
+            "pixels": "图像",
+            "vae": "VAE"
+        },
+        "widgets": {
+            "per_batch": "每批"
+        },
+        "outputs": {
+            "LATENT": "Latent"
+        }
+    },
+    "VHS_VAEDecodeBatched": {
+        "title": "VAE解码(批次)",
+        "inputs": {
+            "samples": "Latent",
+            "vae": "VAE"
+        },
+        "widgets": {
+            "per_batch": "每批"
+        },
+        "outputs": {
+            "IMAGE": "图像"
+        }
+    },
+
+
+
     "VHS_VideoCombine": {
         "title": "合并为视频",
         "inputs": {
-            "images": "图像"
+            "images": "图像",
+            "audio": "音频",
+            "batch_manager": "批次管理"
         },
         "widgets": {
             "frame_rate": "帧率",
@@ -170,7 +270,13 @@
             "format": "格式",
             "pingpong": "Ping-Pong",
             "save_image": "保存图像",
-            "Sync playback": ""
+            "Sync playback": "同步播放",
+            "save_metadata": "保存元数据",
+            "audio_file": "音频文件",
+            "save_output": "保存到输出文件夹"
+        },
+        "outputs": {
+            "Filenames": "文件名"
         }
     },
 
@@ -181,6 +287,7 @@
         "widgets": {
             "video": "视频",
             "choose file to upload": "选择文件上传",
+            "choose video to upload": "选择视频上传",
             "force_rate": "强制帧率",
             "force_size": "强制尺寸",
                 "Disabled": "关闭",
@@ -236,6 +343,34 @@
             "IMAGE": "图像",
             "MASK": "遮罩",
             "INT": "整数"
+        }
+    },
+    "VHS_LoadAudio": {
+        "title": "加载音频",
+        "widgets": {
+            "audio_file": "音频文件",
+            "seek_secods": "起始秒数"
+        },
+        "outputs": {
+            "audio": "音频"
+        }
+    },
+    "VHS_PruneOutputs": {
+        "title": "调整输出",
+        "inputs": {
+            "filenames": "文件名"
+        },
+        "widgets": {
+            "options": "选项"
+        }
+    },
+    "VHS_BatchManager": {
+        "title": "批次管理",
+        "widgets": {
+            "frames_per_batch": "每批次帧数"
+        },
+        "outputs": {
+            "VHS_BatchManager": "批次管理"
         }
     }
 }

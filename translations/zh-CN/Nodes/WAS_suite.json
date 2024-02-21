@@ -148,7 +148,7 @@
         }
     },
     "Perlin Power Fractal Latent": {
-        "title": "柏林幂律分形噪波",
+        "title": "柏林乘方分形噪波",
         "inputs": {
             "VAE": "VAE"
         },
@@ -157,8 +157,8 @@
             "height": "高度",
             "scale": "缩放",
             "octaves": "八度",
-            "persistence": "持久",
-            "lacunarity": "间隙度",
+            "persistence": "持续",
+            "lacunarity": "间隔",
             "exponent": "指数",
             "seed": "随机种",
             "control_after_generate": "运行后操作",
@@ -221,16 +221,16 @@
             "model": "模型",
             "clip": "CLIP",
             "vae": "VAE",
-            "positive": "正面提示词",
-            "negative": "负面提示词"
+            "positive": "正面条件",
+            "negative": "负面条件"
         },
         "outputs": {
             "bus": "总线",
             "model": "模型",
             "clip": "CLIP",
             "vae": "VAE",
-            "positive": "正面提示词",
-            "negative": "负面提示词"
+            "positive": "正面条件",
+            "negative": "负面条件"
         }
     },
     
@@ -1848,7 +1848,7 @@
 
 
     "Image Power Noise": {
-        "title": "生成幂律噪波",
+        "title": "生成乘方噪波",
         "widgets": {
             "width": "宽度",
             "height": "高度",
@@ -1879,7 +1879,7 @@
             "height": "高度",
             "scale": "缩放",
             "octaves": "八度",
-            "persistence": "持久",
+            "persistence": "持续",
             "seed": "随机种",
             "control_after_generate": "运行后操作",
                 "fixed": "固定",
@@ -1898,8 +1898,8 @@
             "height": "高度",
             "scale": "缩放",
             "octaves": "八度",
-            "persistence": "持久",
-            "lacunarity": "间隙度",
+            "persistence": "持续",
+            "lacunarity": "间隔",
             "exponent": "指数",
             "seed": "随机种",
             "control_after_generate": "运行后操作",
@@ -1937,7 +1937,7 @@
         }
     },
     "Image Voronoi Noise Filter": {
-        "title": "Voronoi噪声",
+        "title": "Voronoi噪波",
         "widgets": {
             "width": "宽度",
             "height": "高度",
@@ -2430,6 +2430,18 @@
             "samples": "Latent"
         }
     },
+    "Image Bounds to Console": {
+        "title": "输出图像边界到控制台",
+        "inputs": {
+            "image_bounds": "边界"
+        },
+        "widgets": {
+            "label": "标签"
+        },
+        "outputs": {
+            "IMAGE_BOUNDS": "边界"
+        }
+    },
     "Text to Console": {
         "title": "输出文本到控制台",
         "inputs": {
@@ -2490,8 +2502,8 @@
         "inputs": {
             "model": "模型",
             "seed": "随机种",
-            "positive": "正面提示词",
-            "negative": "负面提示词",
+            "positive": "正面条件",
+            "negative": "负面条件",
             "latent_image": "Latent"
         },
         "widgets": {
@@ -2511,8 +2523,8 @@
         "inputs": {
             "model": "模型",
             "seed": "随机种",
-            "positive": "正面提示词",
-            "negative": "负面提示词",
+            "positive": "正面条件",
+            "negative": "负面条件",
             "latent_image": "Latent"
         },
         "widgets": {
@@ -2531,8 +2543,8 @@
         "title": "K采样器(Cycle)",
         "inputs": {
             "model": "模型",
-            "positive": "正面提示词",
-            "negative": "负面提示词",
+            "positive": "正面条件",
+            "negative": "负面条件",
             "latent_image": "Latent",
             "vae": "VAE",
             "secondary_model": "第二模型",
@@ -2898,6 +2910,18 @@
         },
         "outputs": {
             "LIST": "列表"
+        }
+    },
+    "Text List to Text": {
+        "title": "文本列表到文本",
+        "inputs": {
+            "text_list": "文本列表"
+        },
+        "widgets": {
+            "delimiter": "分隔符"
+        },
+        "outputs": {
+            "STRING": "字符串"
         }
     },
     "Text Load Line From File": {

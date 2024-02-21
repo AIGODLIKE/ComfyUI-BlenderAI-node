@@ -1,7 +1,7 @@
 bl_info = {
     'name': '无限圣杯-节点',
     'author': '幻之境开发小组-会飞的键盘侠、只剩一瓶辣椒酱',
-    'version': (1, 3, 7),
+    'version': (1, 4, 3),
     'blender': (3, 0, 0),
     'location': '3DView->Panel',
     'category': '辣椒出品',
@@ -20,14 +20,15 @@ from .translations import translations_dict
 from .utils import Icon, FSWatcher, ScopeTimer
 from .timer import timer_reg, timer_unreg
 from .preference import pref_register, pref_unregister
-from .ops import Ops, Ops_Mask, Load_History, Popup_Load, Copy_Tree, Load_Batch, Fetch_Node_Status, Sync_Stencil_Image, NodeSearch
+from .ops import Ops, Ops_Mask, Load_History, Popup_Load, Copy_Tree, Load_Batch, Fetch_Node_Status, Clear_Node_Cache, Sync_Stencil_Image, NodeSearch
 from .ui import Panel, HISTORY_UL_UIList, HistoryItem
 from .SDNode.history import History
 from .SDNode.rt_tracker import reg_tracker, unreg_tracker
+from .SDNode.nodegroup import nodegroup_reg, nodegroup_unreg
 from .prop import RenderLayerString, Prop
 from .Linker import linker_register, linker_unregister
 from .hook import use_hook
-clss = [Panel, Ops, RenderLayerString, Prop, HISTORY_UL_UIList, HistoryItem, Ops_Mask, Load_History, Popup_Load, Copy_Tree, Load_Batch, Fetch_Node_Status, Sync_Stencil_Image, NodeSearch, EnableMLT]
+clss = [Panel, Ops, RenderLayerString, Prop, HISTORY_UL_UIList, HistoryItem, Ops_Mask, Load_History, Popup_Load, Copy_Tree, Load_Batch, Fetch_Node_Status, Clear_Node_Cache, Sync_Stencil_Image, NodeSearch, EnableMLT]
 reg, unreg = bpy.utils.register_classes_factory(clss)
 
 
@@ -51,10 +52,9 @@ def track_ae():
 
 
 def disable_reload():
-    for nmod in sys.modules:
+    for nmod, mod in sys.modules.items():
         if nmod == __package__ or not nmod.startswith(__package__):
             continue
-        mod = sys.modules[nmod]
         if not hasattr(mod, "__addon_enabled__"):
             mod.__addon_enabled__ = False
     if bpy.app.timers.is_registered(track_ae):
@@ -98,6 +98,7 @@ def register():
     use_hook()
     FSWatcher.init()
     disable_reload()
+    nodegroup_reg()
     print(f"{__package__} Launch Time: {time.time() - ts:.4f}s")
 
 
@@ -118,15 +119,15 @@ def unregister():
     modules_update()
     linker_unregister()
     use_hook(False)
+    nodegroup_unreg()
     FSWatcher.stop()
 
 
 def modules_update():
     from .kclogger import close_logger
     close_logger()
-    import sys
     modules = []
-    for i in sys.modules.keys():
+    for i in sys.modules:
         if i.startswith(__package__) and i != __package__:
             modules.append(i)
     for i in modules:

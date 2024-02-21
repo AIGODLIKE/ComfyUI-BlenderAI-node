@@ -1,0 +1,376 @@
+{
+    "last_node_id": 17,
+    "last_link_id": 16,
+    "nodes": [
+        {
+            "id": 11,
+            "type": "BNK_CutoffSetRegions",
+            "pos": [
+                258.2025146484375,
+                38.45160675048828
+            ],
+            "size": {
+                "0": 210.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 3,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "clip_regions",
+                    "type": "CLIPREGION",
+                    "link": 4
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "CLIPREGION",
+                    "type": "CLIPREGION",
+                    "links": [
+                        5
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "BNK_CutoffSetRegions",
+            "properties": {},
+            "widgets_values": [
+                "white shirt",
+                "white",
+                1.0
+            ]
+        },
+        {
+            "id": 12,
+            "type": "BNK_CutoffSetRegions",
+            "pos": [
+                516.2025756835938,
+                35.451602935791016
+            ],
+            "size": {
+                "0": 210.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 4,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "clip_regions",
+                    "type": "CLIPREGION",
+                    "link": 5
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "CLIPREGION",
+                    "type": "CLIPREGION",
+                    "links": [
+                        6
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "BNK_CutoffSetRegions.001",
+            "properties": {},
+            "widgets_values": [
+                "green tie",
+                "green",
+                1.0
+            ]
+        },
+        {
+            "id": 13,
+            "type": "BNK_CutoffSetRegions",
+            "pos": [
+                255.4666748046875,
+                234.23800659179688
+            ],
+            "size": {
+                "0": 210.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 5,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "clip_regions",
+                    "type": "CLIPREGION",
+                    "link": 6
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "CLIPREGION",
+                    "type": "CLIPREGION",
+                    "links": [
+                        7
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "BNK_CutoffSetRegions.002",
+            "properties": {},
+            "widgets_values": [
+                "red shoes",
+                "red",
+                1.0
+            ]
+        },
+        {
+            "id": 15,
+            "type": "BNK_CutoffSetRegions",
+            "pos": [
+                521.0038452148438,
+                436.0879211425781
+            ],
+            "size": {
+                "0": 210.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 8,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "clip_regions",
+                    "type": "CLIPREGION",
+                    "link": 9
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "CLIPREGION",
+                    "type": "CLIPREGION",
+                    "links": [
+                        10
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "BNK_CutoffSetRegions.003",
+            "properties": {},
+            "widgets_values": [
+                "pink skirt",
+                "pink",
+                1.0
+            ]
+        },
+        {
+            "id": 16,
+            "type": "BNK_CutoffSetRegions",
+            "pos": [
+                253.33363342285156,
+                439.590087890625
+            ],
+            "size": {
+                "0": 210.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 7,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "clip_regions",
+                    "type": "CLIPREGION",
+                    "link": 8
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "CLIPREGION",
+                    "type": "CLIPREGION",
+                    "links": [
+                        9
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "BNK_CutoffSetRegions.004",
+            "properties": {},
+            "widgets_values": [
+                "yellow eyes",
+                "yellow",
+                1.0
+            ]
+        },
+        {
+            "id": 14,
+            "type": "BNK_CutoffSetRegions",
+            "pos": [
+                519.0704956054688,
+                238.13414001464844
+            ],
+            "size": {
+                "0": 210.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 6,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "clip_regions",
+                    "type": "CLIPREGION",
+                    "link": 7
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "CLIPREGION",
+                    "type": "CLIPREGION",
+                    "links": [
+                        8
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "BNK_CutoffSetRegions.005",
+            "properties": {},
+            "widgets_values": [
+                "blue hair",
+                "blue",
+                1.0
+            ]
+        },
+        {
+            "id": 17,
+            "type": "BNK_CutoffRegionsToConditioning",
+            "pos": [
+                795.8920288085938,
+                34.61955261230469
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 9,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "clip_regions",
+                    "type": "CLIPREGION",
+                    "link": 10
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "CONDITIONING",
+                    "type": "CONDITIONING",
+                    "links": [],
+                    "slot_index": 0
+                }
+            ],
+            "title": "BNK_CutoffRegionsToConditioning",
+            "properties": {},
+            "widgets_values": [
+                "",
+                1.0,
+                1.0
+            ]
+        },
+        {
+            "id": 10,
+            "type": "BNK_CutoffBasePrompt",
+            "pos": [
+                -30.99681282043457,
+                30.2247371673584
+            ],
+            "size": {
+                "0": 200.0,
+                "1": 30.0
+            },
+            "flags": {},
+            "order": 2,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "clip",
+                    "type": "CLIP",
+                    "link": null
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "CLIPREGION",
+                    "type": "CLIPREGION",
+                    "links": [
+                        4
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "BNK_CutoffBasePrompt",
+            "properties": {},
+            "widgets_values": [
+                "a cute girl, white shirt with green tie, red shoes, blue hair, yellow eyes, pink skirt"
+            ]
+        }
+    ],
+    "links": [
+        [
+            4,
+            10,
+            0,
+            11,
+            0,
+            "BNK_CutoffSetRegions"
+        ],
+        [
+            5,
+            11,
+            0,
+            12,
+            0,
+            "BNK_CutoffSetRegions"
+        ],
+        [
+            6,
+            12,
+            0,
+            13,
+            0,
+            "BNK_CutoffSetRegions"
+        ],
+        [
+            7,
+            13,
+            0,
+            14,
+            0,
+            "BNK_CutoffSetRegions"
+        ],
+        [
+            8,
+            14,
+            0,
+            16,
+            0,
+            "BNK_CutoffSetRegions"
+        ],
+        [
+            9,
+            16,
+            0,
+            15,
+            0,
+            "BNK_CutoffSetRegions"
+        ],
+        [
+            10,
+            15,
+            0,
+            17,
+            0,
+            "BNK_CutoffRegionsToConditioning"
+        ]
+    ],
+    "groups": [],
+    "config": {},
+    "extra": {},
+    "version": 0.4
+}

@@ -6,24 +6,21 @@ import sys
 import json
 import time
 import atexit
-import signal
 from concurrent.futures import ThreadPoolExecutor
-from urllib.parse import urlparse
-from mathutils import Color
-from functools import lru_cache
 from copy import deepcopy
 from shutil import rmtree
 from urllib import request
+from urllib.parse import urlparse
 from urllib.error import URLError
 from threading import Thread
-from subprocess import Popen, PIPE, STDOUT, DEVNULL
+from subprocess import Popen, PIPE, STDOUT
 from pathlib import Path
 from queue import Queue
-from ..utils import rmtree as rt, logger, _T, PkgInstaller, FSWatcher
+from ..utils import rmtree as rt, logger, _T, PkgInstaller
 from ..timer import Timer
 from ..preference import get_pref
 from .history import History
-from .websocket import WebSocketApp
+from ..External.websocket import WebSocketApp
 
 
 def get_ip():
@@ -41,42 +38,6 @@ def get_url():
 WITH_PROXY = False
 if not WITH_PROXY:
     request.install_opener(request.build_opener(request.ProxyHandler({})))
-# wmpp 指定到WebUI路径
-# wmp 指定到 WebUI/models 路径
-a111_yaml = """
-a111:
-    base_path: {wmpp}
-
-    checkpoints: {wmp}/Stable-diffusion
-    configs: {wmp}/Stable-diffusion
-    vae: {wmp}/VAE
-    loras: {wmp}/Lora
-    upscale_models: |
-                  {wmp}/ESRGAN
-                  {wmp}/SwinIR
-    embeddings: {wmpp}/embeddings
-    controlnet: {wmp}/ControlNet
-            """
-# cmpp 指定到ComfyUI路径
-# cmp 指定到 ComfyUI/models 路径
-custom_comfyui = """
-mycomfyui:
-    base_path: {cmpp}
-    checkpoints: {cmp}/checkpoints
-    configs: {cmp}/configs
-    loras: {cmp}/loras
-    vae: {cmp}/vae
-    clip: {cmp}/clip
-    clip_vision: {cmp}/clip_vision
-    style_models: {cmp}/style_models
-    embeddings: {cmp}/embeddings
-    diffusers: {cmp}/diffusers
-    controlnet: {cmp}/controlnet
-    gligen: {cmp}/gligen
-    upscale_models: {cmp}/upscale_models
-    hypernetworks: {cmp}/hypernetworks
-    #custom_nodes: {cmpp}/custom_nodes
-            """
 
 
 class Task:
@@ -86,9 +47,10 @@ class Task:
         self._pre = pre
         self._post = post
         from .tree import CFNodeTree
+        from .nodes import NodeBase
         self.tree: CFNodeTree = tree
         self.executing_node_id = ""
-        self.executing_node = None
+        self.executing_node: NodeBase = None
         self.is_finished = False
         self.process = {}
         # 记录node的类型 防止节点树变更
@@ -130,28 +92,29 @@ class Task:
             for n in self.tree.nodes:
                 if not n.label.endswith("-EXEC"):
                     continue
-                n.use_custom_color = False
-                n.label = ""
+                n.restore_appearance()
         Timer.put((f, self))
 
     def set_executing_node_id(self, node_id):
         self.executing_node_id = node_id
 
         def f(self: Task):
+            from .nodes import NodeBase
             if not self.is_tree_valid():
                 return
             self.process = {}
             if self.executing_node:
-                self.executing_node.use_custom_color = False
-                self.executing_node.label = ""
+                self.executing_node.restore_appearance()
             self.executing_node = None
+            pnode_id = node_id.split(":")[0]
             for n in self.tree.nodes:
                 if not hasattr(n, "id"):
                     continue
-                if n.id == node_id and n.bl_idname == self.node_ref_map.get(node_id, ""):
+                if n.id == pnode_id and n.bl_idname == self.node_ref_map.get(pnode_id, ""):
                     self.executing_node = n
                     break
-            n = self.executing_node
+            n: NodeBase = self.executing_node
+            n.store_appearance()
             n.use_custom_color = True
             n.color = (0, 0, 0)
             n.label = n.name + "-EXEC"
@@ -388,6 +351,9 @@ class TaskErrPaser:
             }
             return self.__print__(info)
 
+    def __init__(self) -> None:
+        self.error_info = {}
+
     def decode_info(self, e: request.HTTPError):
         try:
             self.error_info = json.loads(e.read().decode())
@@ -397,7 +363,7 @@ class TaskErrPaser:
     def parse(self, e):
         if isinstance(e, request.HTTPError):
             self.decode_info(e)
-        elif isinstance(e, dict()):
+        elif isinstance(e, dict):
             self.error_info = e
         if not self.error_info:
             return
@@ -440,7 +406,7 @@ class TaskErrPaser:
                            "class_type": "VAELoader"}}
         node_errors = self.error_info["node_errors"]
         import bpy
-        from .tree import get_tree
+        from .utils import get_tree
         logger.error("Node Error Parse")
         for sc in bpy.data.screens:
             try:
@@ -454,8 +420,9 @@ class TaskErrPaser:
                 print(f"Node:{node}")
                 for n in tree.nodes:
                     if n.id == str(node):
-                        n.use_custom_color = True
+                        n.store_appearance()
                         n.color = (1, 0, 0)
+                        n.use_custom_color = True
                         n.label = n.name + "-ERROR"
                         TaskManager.put_error_msg(n.name)
                 for err in node_errors[node]["errors"]:
@@ -468,7 +435,6 @@ class TaskErrPaser:
 
 class Server:
     _instance: Server = None
-    stdout_listen_exited = False
     uid = 0
 
     def __new__(cls, *args, **kw):
@@ -515,6 +481,9 @@ class Server:
             return self.launch_url
         return f"http://{get_ip()}:{get_port()}"
 
+    def exited(self):
+        return False
+
 
 class FakeServer(Server):
     ...
@@ -538,7 +507,7 @@ class RemoteServer(Server):
     def wait_connect(self) -> bool:
         import requests
         try:
-            if requests.get(f"{self.get_url()}/object_info", proxies={"http": None, "https": None}).status_code == 200:
+            if requests.get(f"{self.get_url()}/object_info", proxies={"http": None, "https": None}, timeout=10).status_code == 200:
                 self.server_connected = True
                 return True
         except requests.exceptions.ConnectionError as e:
@@ -553,14 +522,15 @@ class RemoteServer(Server):
 
     def close(self):
         self.server_connected = False
-        logger.warn(_T("Remote Server Closed"))
+        logger.warning(_T("Remote Server Closed"))
 
 
 class LocalServer(Server):
+    exited_status = {}
+
     def __init__(self) -> None:
         self.pid = -1
         self.child: Popen = None
-        self.stdout_listen_exited = False
         super().__init__()
 
     def run(self) -> bool:
@@ -577,15 +547,15 @@ class LocalServer(Server):
             logger.error(_T("ComfyUI Path Not Found"))
             TaskManager.put_error_msg(_T("ComfyUI Path Not Found"))
             return
-        logger.debug(f"{_T('Model Path')}: {model_path}")
-        python = self.get_python()
+        logger.debug("%s: %s", _T("Model Path"), model_path)
+        python = pref.get_python()
         if pref.install_deps:
-            self.run_pre(model_path)
+            self.run_pre()
 
-        logger.warn(_T("Server Launching"))
+        logger.warning(_T("Server Launching"))
         if sys.platform == "win32" and not python.exists():
-            logger.error(f"{_T('python interpreter not found')}:")
-            logger.error(f"   ↳{_T('Ensure that the python_embeded located in the same level as ComfyUI dir')}:")
+            logger.error("%s:", _T("python interpreter not found"))
+            logger.error("   ↳%s:", _T("Ensure that the python_embeded located in the same level as ComfyUI dir"))
             logger.error("      SomeDirectory")
             logger.error("      ├─ ComfyUI")
             logger.error("      ├─ python_embeded")
@@ -595,12 +565,12 @@ class LocalServer(Server):
             return
 
         # custom_nodes
-        for file in (Path(__file__).parent / "custom_nodes").iterdir():
+        for file in Path(__file__).parent.joinpath("custom_nodes").iterdir():
+            dst = Path(model_path).joinpath("custom_nodes", file.name)
             if file.is_dir():
-                dst = Path(model_path) / "custom_nodes" / file.name
                 if dst.exists():
                     rt(dst)
-                shutil.copytree(file, Path(model_path) / "custom_nodes" / file.name, dirs_exist_ok=True)
+                shutil.copytree(file, dst, dirs_exist_ok=True)
                 continue
             if not file.suffix == ".py":
                 continue
@@ -608,23 +578,20 @@ class LocalServer(Server):
                 t = file.read_text(encoding="utf-8")
                 t = t.replace("XXXHOST-PATHXXX", Path(__file__).parent.as_posix())
                 t = t.replace("FORCE_LOG = False", f"FORCE_LOG = {get_pref().force_log}")
-                (Path(model_path) / "custom_nodes" / file.name).write_text(t, encoding="utf-8")
+                Path(model_path).joinpath("custom_nodes", file.name).write_text(t, encoding="utf-8")
                 continue
-            shutil.copyfile(file, Path(model_path) / "custom_nodes" / file.name)
-        args = self.create_args(python, Path(model_path))
+            shutil.copyfile(file, dst)
+        args = pref.parse_server_args(self)
         self.launch_ip = get_ip()
         self.launch_port = get_port()
         self.launch_url = f"http://{self.launch_ip}:{self.launch_port}"
         # cmd = " ".join([str(python), arg])
         # 加了 stderr后 无法获取 进度?
         # logger.debug(" ".join(args))
-        import bpy
-        if bpy.app.version >= (3, 6):
-            p = Popen(args, stdout=PIPE, stderr=STDOUT, cwd=Path(model_path).resolve().as_posix())
-        else:
-            p = Popen(args, stdout=PIPE, cwd=Path(model_path).resolve().as_posix())
+        p = Popen(args, stdout=PIPE, stderr=STDOUT, cwd=Path(model_path).resolve().as_posix())
         self.child = p
         self.pid = p.pid
+        self.exited_status[self.pid] = False
         pidpath.write_text(str(p.pid))
         atexit.register(self.child.kill)
         Thread(target=self.stdout_listen, daemon=True).start()
@@ -638,10 +605,15 @@ class LocalServer(Server):
 
         if self.child:
             self.child.kill()
+        self.exited_status[self.pid] = True
         self.child = None
         self.pid = -1
 
+    def exited(self):
+        return self.exited_status.get(self.pid, False)
+
     def wait_connect(self) -> bool:
+        pid = self.pid
         while True:
             import requests
             try:
@@ -651,7 +623,7 @@ class LocalServer(Server):
                 ...
             except Exception as e:
                 logger.error(e)
-            if self.stdout_listen_exited:
+            if self.exited_status.get(pid, False):
                 break
             time.sleep(0.1)
         return False
@@ -692,31 +664,16 @@ class LocalServer(Server):
         else:
             ...
             # os.kill(pid, signal.SIGKILL)
-        logger.error(f"{_T('Kill Last ComfyUI Process')} id -> {pid}")
+        logger.error("%s id -> %s", _T("Kill Last ComfyUI Process"), pid)
 
-    def get_python(self):
-        python = Path("python3")
-        custom_python = Path(get_pref().python_path)
-        if get_pref().python_path and custom_python.exists():
-            if custom_python.is_dir():
-                if sys.platform == "win32":
-                    python = custom_python / "python.exe"
-                else:
-                    python = custom_python / "python3"
-            else:
-                python = custom_python
-        elif sys.platform == "win32":
-            model_path = get_pref().model_path
-            python = Path(model_path).parent / "python_embeded/python.exe"
-        return python
-
-    def run_pre(self, model_path):
+    def run_pre(self):
         """
         Check pre install
         """
         # controlnet check
-        logger.warn(_T("ControlNet Init...."))
-        python = self.get_python()
+        logger.warning(_T("ControlNet Init...."))
+        python = get_pref().get_python()
+        model_path = get_pref().model_path
 
         controlnet = Path(model_path) / "custom_nodes/comfy_controlnet_preprocessors"
         if controlnet.exists():
@@ -741,107 +698,12 @@ class LocalServer(Server):
                 proc = Popen(command, cwd=model_path)
                 proc.wait()
 
-        logger.warn(_T("ControlNet Init Finished."))
-        logger.warn(_T("If controlnet still not worked, install manually by double clicked {}").format((controlnet / "install.bat").as_posix()))
-
-    def create_args(self, python: Path, model_path: Path):
-        pref = get_pref()
-        args = [python.as_posix()]
-        # arg = f"-s {str(model_path)}/main.py"
-        args.append("-s")
-
-        # 备份main.py 为 main-bak.py
-        # 为main-bak.py新增 sys.path代码
-        try:
-            with open(model_path.joinpath("main.py"), "r", encoding="utf-8") as f:
-                mainpy = f.read()
-                mainpy = "sys.path.append(r\"{}\")\n".format(model_path.as_posix()) + mainpy
-                mainpy = "import sys\n" + mainpy
-                Path(model_path.joinpath("main-bak.py")).write_text(mainpy, encoding="utf-8")
-        except BaseException:
-            ...
-        if get_pref().python_path and Path(get_pref().python_path).exists() and Path(model_path.joinpath("main-bak.py")).exists():
-            args.append(f"{model_path.joinpath('main-bak.py').resolve().as_posix()}")
-        else:
-            args.append(f"{model_path.joinpath('main.py').resolve().as_posix()}")
-
-        def parse_comfyUIStart():
-            config = []
-            try:
-                path = Path(sys.argv[sys.argv.index("comfyUIStart") + 1])
-                if not path.exists():
-                    logger.error(_T("Invalid Config File Path"))
-                    return []
-                config = json.loads(path.read_text(encoding="utf-8"))
-                if not isinstance(config, list):
-                    return []
-                for piece in config:
-                    # --listen 127.0.0.1 --port 8188
-                    if ip := re.match(r"--listen\s+([0-9.]+)", piece):
-                        ip = ip.group(1)
-                        ip = {"0.0.0.0": "127.0.0.1"}.get(ip, ip)
-                        get_pref().ip = ip
-                    if port := re.match(r".*?--port\s+([0-9]+)", piece):
-                        get_pref().port = int(port.group(1))
-                config = " ".join(config)
-                config = re.split(r"\s(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)", config)
-                logger.info(f"{_T('Reparse Config')}: {config}")
-                # config = " ".join(config).split(" ")  # resplit
-                for i, piece in enumerate(config):
-                    if piece[0] == piece[-1] == "\"":
-                        piece = Path(piece.replace("\"", "")).resolve()
-                        piece = FSWatcher.to_str(piece)
-                        config[i] = piece
-                if "--auto-launch" in config:
-                    config.remove("--auto-launch")
-                if "--disable-auto-launch" in config:
-                    config.remove("--disable-auto-launch")
-                if "--windows-standalone-build" in config:
-                    config.remove("--windows-standalone-build")
-                logger.info(f"{_T('Find Config')}: {config}")
-            except IndexError:
-                logger.error(_T("No Config File Found"))
-            except Exception as e:
-                logger.error(_T("Parse Config Error: {e}").format(e))
-            return config
-        # [ 'comfyUIStart', 'startConfigureFile.json']
-        if "comfyUIStart" in sys.argv:
-            args.extend(parse_comfyUIStart())
-        else:
-            args.append("--listen")
-            args.append(get_ip())
-            args.append("--port")
-            args.append(f"{get_port()}")
-            if pref.cuda.isdigit():
-                args.append("--cuda-device")
-                args.append(pref.cuda)
-            if pref.cpu_only:
-                # arg += " --cpu"
-                args.append("--cpu")
-            else:
-                # arg += f" {pref.mem_level}"
-                args.append(f"{pref.mem_level}")
-            yaml = ""
-            if pref.with_webui_model and Path(pref.with_webui_model).exists():
-                wmp = Path(pref.with_webui_model).as_posix()
-                wmpp = Path(pref.with_webui_model).parent.as_posix()
-                yaml += a111_yaml.format(wmp=wmp, wmpp=wmpp)
-            if pref.with_comfyui_model and Path(pref.with_comfyui_model).exists():
-                cmp = Path(pref.with_comfyui_model).as_posix()  # 指定到 models
-                cmpp = Path(pref.with_comfyui_model).parent.as_posix()
-                yaml += custom_comfyui.format(cmp=cmp, cmpp=cmpp)
-            if yaml:
-                extra_model_paths = Path(__file__).parent / "config.yaml"
-                extra_model_paths.write_text(yaml)
-                args.append("--extra-model-paths-config")
-                args.append(extra_model_paths.as_posix())
-        # 特殊处理
-        if pref.auto_launch:
-            args.append("--auto-launch")
-        return args
+        logger.warning(_T("ControlNet Init Finished."))
+        logger.warning(_T("If controlnet still not worked, install manually by double clicked {}").format((controlnet / "install.bat").as_posix()))
 
     def stdout_listen(self):
         p = self.child
+        pid = self.pid
         while p.poll() is None and self.child == p:
             line = p.stdout.readline().strip()
             if not line:
@@ -860,7 +722,7 @@ class LocalServer(Server):
                     ...
             if not proc:
                 logger.info(line)
-        self.stdout_listen_exited = True
+        self.exited_status[pid] = True
         logger.debug(_T("STDOUT Listen Thread Exit"))
 
 
@@ -885,33 +747,38 @@ class TaskManager:
             cls._instance = object.__new__(cls, *args, **kw)
         return cls._instance
 
-    def put_error_msg(error):
+    @staticmethod
+    def put_error_msg(error, with_clear=False):
+        if with_clear:
+            TaskManager.clear_error_msg()
         TaskManager.error_msg.append(str(error))
 
+    @staticmethod
     def clear_error_msg():
         TaskManager.error_msg.clear()
 
+    @staticmethod
     def get_error_msg(copy=False):
         if copy:
             return deepcopy(TaskManager.error_msg)
         return TaskManager.error_msg
 
+    @staticmethod
     def get_progress():
         return TaskManager.progress
 
+    @staticmethod
     def get_task_num():
         return TaskManager.task_queue.qsize()
 
+    @staticmethod
     def is_launched() -> bool:
         if TaskManager.server:
             return TaskManager.server.is_launched()
         return False
-        if TaskManager.connect_existing:
-            return True
-        return TaskManager.pid != -1
 
+    @staticmethod
     def run_server(fake=False):
-        import time
         from .tree import rtnode_reg, rtnode_unreg
         t1 = time.time()
         rtnode_unreg()
@@ -927,6 +794,7 @@ class TaskManager:
         t4 = time.time()
         logger.info(_T("RegNode Time:") + f" {t4-t3:.2f}s")
 
+    @staticmethod
     def init_server(fake=False):
         if fake:
             TaskManager.server = FakeServer()
@@ -936,8 +804,8 @@ class TaskManager:
         else:
             TaskManager.server = RemoteServer()
         running = TaskManager.server.run()
-        if not TaskManager.server.stdout_listen_exited and running:
-            logger.warn(_T("Server Launched"))
+        if not TaskManager.server.exited() and running:
+            logger.warning(_T("Server Launched"))
             TaskManager.start_polling()
             Timer.clear()  # timer may cause crash
         else:
@@ -945,16 +813,19 @@ class TaskManager:
             TaskManager.server.close()
         return running
 
+    @staticmethod
     def start_polling():
         Thread(target=TaskManager.poll_res, daemon=True).start()
         Thread(target=TaskManager.poll_task, daemon=True).start()
         Thread(target=TaskManager.proc_res, daemon=True).start()
 
+    @staticmethod
     def restart_server(fake=False):
         TaskManager.clear_all()
         TaskManager.server.close()
         TaskManager.run_server(fake=fake)
 
+    @staticmethod
     def close_server():
         if TaskManager.ws:
             TaskManager.ws.close()
@@ -962,6 +833,7 @@ class TaskManager:
         TaskManager.cur_task = None
         TaskManager.restart_server(fake=True)
 
+    @staticmethod
     def push_task(task, pre=None, post=None, tree=None):
         logger.debug(_T('Add Task'))
         if not TaskManager.is_launched():
@@ -971,11 +843,13 @@ class TaskManager:
             return
         TaskManager.task_queue.put(Task(task, pre=pre, post=post, tree=tree))
 
+    @staticmethod
     def push_res(res):
         logger.debug(_T("Add Result"))
         TaskManager.cur_task.res.put(res)
         TaskManager.res_queue.put(TaskManager.cur_task)
 
+    @staticmethod
     def clear_cache():
         req = request.Request(f"{TaskManager.server.get_url()}/cup/clear_cache", method="POST")
         try:
@@ -992,6 +866,7 @@ class TaskManager:
     #         ...
     #     return ""
 
+    @staticmethod
     def interrupt():
         from http.client import RemoteDisconnected
         import traceback
@@ -1005,6 +880,7 @@ class TaskManager:
         except Exception:
             traceback.print_exc()
 
+    @staticmethod
     def clear_all():
         TaskManager.interrupt()
         while not TaskManager.task_queue.empty():
@@ -1024,9 +900,15 @@ class TaskManager:
             TaskManager.progress = {'value': 0, 'max': 1}
             logger.debug(_T("Submit Task"))
             TaskManager.cur_task = task
-            TaskManager.submit(task)
+            try:
+                TaskManager.submit(task)
+            except Exception as e:
+                logger.error(e)
+                TaskManager.put_error_msg(str(e), with_clear=True)
+                TaskManager.mark_finished(with_noexe=False)
         logger.debug(_T("Poll Task Thread Exit"))
 
+    @staticmethod
     def query_server_task():
         if not TaskManager.is_launched():
             return {"queue_pending": [], "queue_running": []}
@@ -1038,6 +920,7 @@ class TaskManager:
             res = {"queue_pending": [], "queue_running": []}
         return res
 
+    @staticmethod
     def submit(task: Task):
         task.submit_pre()
         task: dict[str, tuple] = task.task
@@ -1088,6 +971,7 @@ class TaskManager:
         TaskManager.executer.submit(queue_task, task)
         # Thread(target=queue_task, args=(task, )).start()
 
+    @staticmethod
     def mark_finished(with_noexe=True):
         TaskManager.progress = {}
         TaskManager.cur_task = None
@@ -1099,6 +983,7 @@ class TaskManager:
             TaskManager.put_error_msg(f"    4.{_T('Server Not Launched')}")
         TaskManager.execute_status_record.clear()
 
+    @staticmethod
     def mark_finished_with_info(info):
         TaskManager.progress = {}
         TaskManager.cur_task = None
@@ -1106,6 +991,7 @@ class TaskManager:
             TaskManager.put_error_msg(i)
         TaskManager.execute_status_record.clear()
 
+    @staticmethod
     def proc_res():
         uid = TaskManager.server.uid
         while uid == TaskManager.server.uid:
@@ -1133,19 +1019,19 @@ class TaskManager:
             mtype = msg["type"]
             data = msg["data"]
             if mtype == "executing":
-                n = data.get('node', '')
+                n = data.get("node", "")
                 if n:
-                    logger.debug(f"{_T('Executing Node')}: {n}")
+                    logger.debug("%s: %s", _T("Executing Node"), n)
             elif mtype == "execution_start":
                 ...
             elif mtype == "execution_cached":
-                logger.debug(f"{_T('Execution Cached')}: {data.get('nodes', '')}")
+                logger.debug("%s: %s", _T("Execution Cached"), data.get("nodes", ""))
             elif mtype == "status":
                 ...
             elif mtype == "execution_error":
                 ...
-            elif mtype != 'progress':
-                logger.debug(f'{_T("got response")}: {message}')
+            elif mtype != "progress":
+                logger.debug("%s: %s", _T("Message Type"), mtype)
 
             def update():
                 import bpy
@@ -1178,7 +1064,7 @@ class TaskManager:
                 cf = "\033[92m" + "█" * v + "\033[0m"
                 cp = "\033[32m" + "░" * (m - v) + "\033[0m"
                 content = f"{v*100/m:3.0f}% " + cf + cp + f" {v}/{m}"
-                logger.info(content+"\r", extra={"same_line": True})
+                logger.info(content + "\r", extra={"same_line": True})
                 # sys.stdout.write(content)
                 # sys.stdout.flush()
                 if tm.cur_task:
@@ -1191,7 +1077,7 @@ class TaskManager:
                     sys.stdout.flush()
                     TaskManager.progress_bar = 0
                 tm.push_res(data)
-                logger.warn(f"{_T('Ran Node')}: {data['node']}", )
+                logger.warning("%s: %s", _T("Ran Node"), data["node"])
             elif mtype == "execution_error":
                 _msg = data.get("message", None)
                 if not _msg:
@@ -1226,7 +1112,7 @@ class TaskManager:
                 # tm.mark_finished(with_noexe=False)
             elif mtype == "execution_cached":
                 # {"type": "execution_cached", "data": {"nodes": ["12", "7", "10"], "prompt_id": "ddd"}}
-                # logger.warn(message)
+                # logger.warning(message)
                 ...  # pass
             else:
                 logger.error(message)
@@ -1236,6 +1122,8 @@ class TaskManager:
         ws.run_forever()
         logger.debug(_T("Poll Result Thread Exit"))
         TaskManager.ws = None
+        if TaskManager.server.is_launched():
+            Timer.put((TaskManager.restart_server, True))
 
 
 def removetemp():

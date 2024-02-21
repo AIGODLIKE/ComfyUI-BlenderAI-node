@@ -796,8 +796,7 @@ class DragLinkOps(bpy.types.Operator):
         if event.value == "PRESS" and event.type in {"ESC", "LEFTMOUSE", "ENTER"}:
             return {"FINISHED"}
         if event.value == "PRESS" and event.type in {"RIGHTMOUSE"}:
-            from ..ops import get_tree
-            tree = get_tree()
+            tree = getattr(bpy.context.space_data, "edit_tree", None)
             if tree:
                 tree.safe_remove_nodes([self.select_node])
             return {"CANCELLED"}

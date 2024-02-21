@@ -84,7 +84,7 @@ INTERNAL_NAMES = {
     "show_preview",
     "show_texture",
     "socket_value_update",
-    "switch_socket",
+    "switch_socket_widget",
     "type",
     "unique_id",
     "update",
@@ -160,7 +160,7 @@ other = {
     "Remove Link": "移除连接",
     "Parsing Node Start": "解析节点中...",
     "Server Launch Failed": "服务启动失败, 使用缓存节点信息数据",
-    "None Input": "节点输入",
+    "None Input: %s": "空节点输入",
     "Parsing Node Finished!": "解析节点完成!",
     "Parsing Failed": "解析失败",
     "Render": "渲染",
@@ -179,16 +179,42 @@ other = {
     "out_layers": "输出层",
     "Frames Directory": "序列图文件夹",
     "Image num per line": "每行图片数",
+    "Node Name: %s": "节点名称: %s",
+    "Input Name: %s": "输入项名: %s",
+    "Input Type: %s": "输入类型: %s",
+    "Input Value: %s": "输入项值: %s",
+    "Enum Hashable Error: %s": "错误枚举: %s",
+    "Skip Reg Node: %s": "跳过解析节点: %s",
+    "Warning:": "警告:",
+    "Don't link to GroupIn/Out node": "禁止手动连接到组输入/组输出节点",
+    "Corresponding link will auto connect after exiting the group editing": "对应连接将在退出组编辑后自动连接",
+    "Socket Manage": "Socket管理",
+    "Default value is too large: %s.%s -> %s": "默认值过大: %s.%s -> %s",
+    "Default value is too small: %s.%s -> %s": "默认值过小: %s.%s -> %s",
     # SDNode/blueprints.py
     "Non-Standard Enum": "非标准枚举",
     "Capture Screen": "截图",
     "Capture Screen Region": "截图区域",
+    "Error Capture Screen Region": "截图区域错误",
+    "Save Screenshot": "保存截图",
+    "No Camera in Scene": "场景像机不存在",
     # SDNode/tree.py
     "Invalid Node Type: {}": "检查到无效的节点: {}",
     "ParseNode Time:": "解析节点耗时:",
     "Changed Node": "变更节点",
+    "SDNGroup": "组",
+    "NoCategory": "无分类",
     # SDNode/utils.py
     "Gen Mask": "遮罩生成",
+    "Relink failed: %s": "重连失败: %s",
+    "Composite node not found": "未找到合成节点",
+    "Render Layer node not found": "未找到渲染层节点",
+    "Mask node not set render cam": "遮照节点未设置渲染相机",
+    "GP not set": "蜡笔未设置",
+    "GP not found in current scene": "蜡笔物体未存在当前场景中",
+    # SDNode/nodegroup.py
+    "Depth of group tree is limited to 1": "组最大深度限制为1",
+    "Node group can't be nested": "节点组不能被嵌套(最大深度限制为1)",
     # __init__.py
     "Execute Node Tree": "运行节点树",
     "Stop Loop": "终止循环",
@@ -246,7 +272,6 @@ other = {
     "Frame <{}> Add to Task!": "帧任务<{}>添加成功!",
     "Launch/Connect ComfyUI": "启动/连接 ComfyUI服务",
     "Close/Disconnect ComfyUI": "关闭/断开 ComfyUI服务",
-    "Restart ComfyUI": "重启ComfyUI",
     "ClipBoard Content Format Error": "剪切板内容格式错误",
     "Submit Task and with Clear Cache if Alt Pressed": "执行节点树, 如果按下了Alt执行 则 强制执行",
     "ComfyUI not Run,To Run?": "ComfyUI未启动,确定启动?",
@@ -259,6 +284,10 @@ other = {
     "Sync Stencil Image": "同步镂板",
     "Stop Sync Stencil Image": "停止同步",
     "Fetch Node Status": "更新节点信息",
+    "Node Cache Cleared!": "节点缓存已清除!",
+    "Node Cache Clear Failed!": "节点缓存清除失败!",
+    "Clear Node Cache": "清除节点缓存",
+    "If node parsing error, you can delete node cache by this button, then restart blender to use it normally": "当节点解析错误时可以通过此按钮删除节点缓存, 删除后重启blender即可正常使用",
     # ui.py
     "ClearTask": "清理任务",
     "Cancel": "取消任务",
@@ -279,20 +308,19 @@ other = {
     "Friendly Links" : "友情链接",
     "VRam Mode": "显存模式",
     "Gpu Only": "极高显存",
-    "Store and run everything (text encoders/CLIP models, etc... on the GPU).": "所有数据存储到显存",
+    "Store and run everything (text encoders/CLIP models, etc... on the GPU).": "全GPU模式：全部都使用GPU显存运行",
     "High VRam": "高显存",
-    "By default models will be unloaded to CPU memory after being used. This option keeps them in GPU memory.": "模型常驻显存, 减少加载时间",
+    "By default models will be unloaded to CPU memory after being used. This option keeps them in GPU memory.": "模型常驻GPU模式：模型将常驻在GPU显存中,而不是用完就自动卸载到CPU内存",
     "Normal VRam": "中显存",
-    "Used to force normal vram use if lowvram gets automatically enabled.": "自动启用 低显存 模式时强制使用normal vram",
+    "Used to force normal vram use if lowvram gets automatically enabled.": "默认调配模式：不进行节省GPU显存的处理，但模型等用完即卸载到内存",
     "Low VRam": "低显存",
-    "Split the unet in parts to use less vram.": "拆分UNet来降低显存开销",
+    "Split the unet in parts to use less vram.": "显存节省模式：通过拆分UNet来降低显存使用",
     "No VRam": "超低显存",
-    "When lowvram isn't enough.": "如果低显存依然不够",
+    "When lowvram isn't enough.": "显存超级节省模式：如果低显存依然不够",
     "Cpu Only": "仅CPU",
-    "To use the CPU for everything (slow).": "只使用CPU",
+    "To use the CPU for everything (slow).": "使用CPU运行一切(很慢)",
     "Auto Launch Browser": "启动浏览器(启动服务后)",
     "Fixed Preview Image Size": "固定预览图大小",
-    "Preview Image Size": "预览图大小",
     "Check Depencies Before Server Launch": "启动服务时检查依赖",
     "Check ComfyUI(some) Depencies Before Server Launch": "启动服务时进行ComfyUI插件(部分)依赖安装检查",
     "Force Log": "强制日志",
@@ -322,6 +350,47 @@ other = {
     "Init Custom Preset Path": "初始化自定义预设路径", 
     "Create presets/groups dir if not exists": "没有presets/groups文件夹则创建",
     "Viewport Track Frequency": "视口实时渲染频率",
+    "Use View Context": "使用视口上下文",
+    "If enalbed use scene settings, otherwise use the current 3D view for rt rendering.": """如果启用, 使用场景设置, 否则使用当前3D视图进行实时渲染
+注意: 禁用时,在多开视口时可能会导致渲染结果不匹配相机视角""",
+    "cuda-malloc": "cuda-malloc",
+    "Enable cudaMallocAsync (enabled by default for torch 2.0 and up).": "启用cudaMallocAsync(torch 2.0及以上版本已默认启用)",
+    "Disable cudaMallocAsync.": "禁用cudaMallocAsync，有的技术不支持统一动态内存分配,禁用它解决问题",
+    "dont upcast attention": "禁用upcast attention",
+    "Disable upcasting of attention. Can boost speed but increase the chances of black images.": "禁用upcast attention, 可以提高速度, 但会增加黑图的概率",
+    "Force fp32 (If this makes your GPU work better please report it).": "强制fp32",
+    "Force fp16.": "强制fp16",
+    "Run the UNET in bf16. This should only be used for testing stuff.": "在bf16下运行UNET, 仅用于测试",
+    "Store unet weights in fp16.": "在fp16下存储UNET权重",
+    "Store unet weights in fp8_e4m3fn.": "在fp8_e4m3fn下存储UNET权重",
+    "Store unet weights in fp8_e5m2.": "在fp8_e5m2下存储UNET权重",
+    "Run the VAE in fp16, might cause black images.": "在fp16下运行VAE, 可能导致黑图",
+    "Run the VAE in full precision fp32.": "在fp32下运行VAE",
+    "Run the VAE in bf16.": "在bf16下运行VAE",
+    "Store text encoder weights in fp8 (e4m3fn variant).": "在fp8_e4m3fn下存储文本编码器权重",
+    "Store text encoder weights in fp8 (e5m2 variant).": "在fp8_e5m2下存储文本编码器权重",
+    "Store text encoder weights in fp16.": "在fp16下存储文本编码器权重",
+    "Store text encoder weights in fp32.": "在fp32下存储文本编码器权重",
+    "Default preview method for sampler nodes.": "采样器节点的默认预览方法",
+    "disable ipex optimize": "禁用ipex优化",
+    "Disables ipex.optimize when loading models with Intel GPUs.": "在使用Intel GPU加载模型时禁用ipex.optimize",
+    "Use the split cross attention optimization. Ignored when xformers is used.": "使用split cross attention优化, xformers模式下忽略",
+    "Use the sub-quadratic cross attention optimization . Ignored when xformers is used.": "使用sub-quadratic cross attention优化, xformers模式下忽略",
+    "Use the new pytorch 2.0 cross attention function.": "使用新的pytorch 2.0 cross attention函数",
+    "Disable xformers": "禁用xformers",
+    "Disable xformers.": "禁用xformers",
+    "disable smart memory": "禁用智能内存",
+    "Force ComfyUI to agressively offload to regular ram instead of keeping models in vram when it can.": "强制ComfyUI将模型从显存转移到内存",
+    "Make pytorch use slower deterministic algorithms when it can. Note that this might not make images deterministic in all cases.": "使pytorch在可能的情况下使用更慢的确定性算法. 请注意, 这可能不会使图像在所有情况下都具有确定性",
+    "dont print server": "屏蔽服务输出",
+    "Don't print server output.": "不打印服务输出内容",
+    "disable metadata": "禁用元数据",
+    "Disable saving prompt metadata in files.": "禁止prompt元数保存到文件",
+    "windows standalone build": "Windows独立构建",
+    "Windows standalone build: Enable convenient things that most people using the standalone windows build will probably enjoy (like auto opening the page on startup).": "Windows独立构建: 启用大多数人使用独立Windows构建时可能会喜欢的便利功能(例如启动时自动打开页面)",
+    "Args Copied To Clipboard": "参数已复制到剪切板",
+    "Copy Args": "复制参数",
+    "Copy Args To Clipboard": "将参数复制到剪切板",
     # MLT
     " Prompts": "提示词",
     "MLT": "多行文本",
@@ -355,11 +424,16 @@ LANG_TEXT = {
         "截图": "Screenshot",
         "存储": "Save",
         "预览": "Preview",
+        "输入": "Input",
+        "渲染": "Render",
+        "序列图": "Sequence",
+        "视口": "Viewport",
     },
     get_locale_inv("zh_HANS"): {
         **other,
     }
 }
+
 
 def search_recursive(p: Path):
     if p.is_dir():
@@ -368,7 +442,8 @@ def search_recursive(p: Path):
     else:
         yield p
 
-def get_json_data(p: Path) -> dict[str,dict[str, dict]]:
+
+def get_json_data(p: Path) -> dict[str, dict[str, dict]]:
     json_files = [i for i in p.iterdir() if i.suffix == ".json"]
     json_data = {}
     for file in json_files:
@@ -380,7 +455,8 @@ def get_json_data(p: Path) -> dict[str,dict[str, dict]]:
                 pass
     return json_data
 
-def get_json_data_recursive(p: Path) -> dict[str,dict[str, dict]]:
+
+def get_json_data_recursive(p: Path) -> dict[str, dict[str, dict]]:
     json_files = [i for i in search_recursive(p) if i.suffix == ".json"]
     json_data = {}
     for file in json_files:
@@ -391,6 +467,7 @@ def get_json_data_recursive(p: Path) -> dict[str,dict[str, dict]]:
             except UnicodeDecodeError:
                 pass
     return json_data
+
 
 def read_locale(locale):
     mapped_locale = LOCALE_MAP.get(locale, locale)
@@ -414,13 +491,15 @@ def read_locale(locale):
                     data.update(sv)
     return data
 
-def reg_other_translations(translations_dict:dict, replace_dict:dict, locale:str):
+
+def reg_other_translations(translations_dict: dict, replace_dict: dict, locale: str):
     for word, translation in LANG_TEXT[locale].items():
         translations_dict[locale][(ctxt, word)] = translation
         translations_dict[locale][(None, word)] = translation
         replace_dict[locale][word] = translation
-        
-def reg_node_ctxt(translations_dict:dict, replace_dict:dict, locale:str):
+
+
+def reg_node_ctxt(translations_dict: dict, replace_dict: dict, locale: str):
     mapped_locale = LOCALE_MAP.get(locale, locale)
     # 处理节点注册, 每个节点提供一个ctxt
     # 1. 查找locale
@@ -429,7 +508,7 @@ def reg_node_ctxt(translations_dict:dict, replace_dict:dict, locale:str):
         p = Path(__file__).parent.joinpath(mapped_locale.replace("_", "-"), "Nodes")
     if not p.exists():
         return {}
-    
+
     json_data = get_json_data_recursive(p)
 
     if locale not in translations_dict:
@@ -454,8 +533,8 @@ def reg_node_ctxt(translations_dict:dict, replace_dict:dict, locale:str):
                 # if node_name == "EmptyLatentImage": print(f"{node_name} reg: {wn} -> {wv}")
 
 
-for locale in LANG_TEXT:
-    LANG_TEXT[locale].update(read_locale(locale))
+for locale, TEXT in LANG_TEXT.items():
+    TEXT.update(read_locale(locale))
 
 translations_dict = {}
 for locale in LANG_TEXT:
@@ -463,14 +542,12 @@ for locale in LANG_TEXT:
     REPLACE_DICT[locale] = {}
     reg_node_ctxt(translations_dict, REPLACE_DICT, locale)
     reg_other_translations(translations_dict, REPLACE_DICT, locale)
-    
+
+
 def get_ctxt(msgctxt):
     if msgctxt in REG_CTXT:
         return msgctxt
     return ctxt
-
-
-
 
 
 cat = {'default_real': None,

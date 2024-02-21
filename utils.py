@@ -6,11 +6,22 @@ from pathlib import Path
 from threading import Thread
 from functools import lru_cache
 from urllib.parse import urlparse
-from .kclogger import logger
+from .kclogger import logger, set_translate
 from .translations import LANG_TEXT
 from .timer import Timer
 from .datas import IMG_SUFFIX
 translation = {}
+
+
+def read_json(path: Path | str) -> dict:
+    import json
+    encodings = ["utf8", "gbk"]
+    for encoding in encodings:
+        try:
+            return json.loads(Path(path).read_text(encoding=encoding))
+        except UnicodeDecodeError:
+            continue
+    return {}
 
 
 def rmtree(path: Path):
@@ -35,6 +46,8 @@ def get_addon_name():
 
 
 def _T(word):
+    if not isinstance(word, str):
+        return word
     import bpy
     from bpy.app.translations import pgettext
     locale = bpy.context.preferences.view.language
@@ -46,6 +59,9 @@ def _T(word):
         culture[word] = pgettext(word)
     Timer.put((f, word))
     return LANG_TEXT.get(locale, {}).get(word, word)
+
+
+set_translate(_T)
 
 
 def _T2(word):
@@ -64,9 +80,22 @@ def update_screen():
         ...
 
 
+def update_node_editor():
+    try:
+        import bpy
+        for area in bpy.context.screen.areas:
+            for space in area.spaces:
+                if space.type != "NODE_EDITOR":
+                    continue
+                space.node_tree = space.node_tree
+            if area.type == "NODE_EDITOR":
+                area.tag_redraw()
+    except Exception:
+        ...
+
+
 def clear_cache(d=None):
-    from pathlib import Path
-    from shutil import rmtree
+    from shutil import rmtree as shutil_rmtree
     if not d:
         clear_cache(Path(__file__).parent)
     else:
@@ -76,23 +105,25 @@ def clear_cache(d=None):
                 continue
             clear_cache(file)
             if file.name == "__pycache__":
-                rmtree(file)
+                shutil_rmtree(file)
 
 
-def rgb2hex(r, g, b):
+def rgb2hex(r, g, b, *args):
     hex_val = f"#{int(r*256):02x}{int(g*256):02x}{int(b*256):02x}"
     return hex_val
 
 
 def hex2rgb(hex_val):
     hex_val = hex_val.lstrip('#')
-    r, g, b = tuple(int(hex_val[i:i + 2], 16) / 256 for i in (0, 2, 4))
-    return r, g, b
+    if len(hex_val) == 3:
+        return [int(h, 16) / 16 for h in hex_val]
+    return [int(hex_val[i:i + 2], 16) / 256 for i in (0, 2, 4)]
 
 
 class PrevMgr:
     __PREV__ = {}
 
+    @staticmethod
     def new():
         import bpy.utils.previews
         import random
@@ -102,14 +133,17 @@ class PrevMgr:
         PrevMgr.__PREV__[i] = prev
         return prev
 
+    @staticmethod
     def remove(prev):
         import bpy.utils.previews
         bpy.utils.previews.remove(prev)
 
+    @staticmethod
     def clear():
-        for i in list(PrevMgr.__PREV__):
-            prev = PrevMgr.__PREV__.pop(i)
-            PrevMgr.clear(prev)
+        for prev in PrevMgr.__PREV__.values():
+            prev.clear()
+            prev.close()
+        PrevMgr.__PREV__.clear()
 
 
 def __del__():
@@ -117,8 +151,8 @@ def __del__():
 
 
 class MetaIn(type):
-    def __contains__(self, name):
-        return name in Icon.PREV_DICT
+    def __contains__(cls, name):
+        return cls.__contains__(cls, name)
 
 
 class Icon(metaclass=MetaIn):
@@ -140,6 +174,7 @@ class Icon(metaclass=MetaIn):
             cls.INSTANCE = object.__new__(cls, *args, **kwargs)
         return cls.INSTANCE
 
+    @staticmethod
     def update_path2bpy():
         import bpy
         Icon.PATH2BPY.clear()
@@ -230,6 +265,7 @@ class Icon(metaclass=MetaIn):
             Icon.reg_icon_by_pixel(img, path)
             Timer.put((bpy.data.images.remove, img))  # 直接使用 bpy.data.images.remove 会导致卡死
 
+    @staticmethod
     def find_image(path):
         img = Icon.PATH2BPY.get(FSWatcher.to_str(path), None)
         if not img:
@@ -299,17 +335,16 @@ class Icon(metaclass=MetaIn):
     def __getitem__(self, name):
         return Icon.get_icon_id(name)
 
-    def __class_getitem__(cls, name):
-        return Icon.get_icon_id(name)
-
     def __contains__(self, name):
         return FSWatcher.to_str(name) in Icon.PREV_DICT
 
-    def __class_contains__(cls, name):
-        return FSWatcher.to_str(name) in Icon.PREV_DICT
+    def __class_getitem__(cls, name):
+        return cls.__getitem__(cls, name)
 
 
 class PngParse:
+
+    @staticmethod
     def read_head(pngpath):
         with open(pngpath, 'rb') as f:
             png_header = f.read(25)
@@ -328,6 +363,7 @@ class PngParse:
                 "Interlace_method": interlace_method
             }
 
+    @staticmethod
     def read_text_chunk(pngpath) -> dict[str, str]:
         data = {}
         with open(pngpath, 'rb') as file:
@@ -363,6 +399,7 @@ class PkgInstaller:
     ]
     fast_url = ""
 
+    @staticmethod
     def select_pip_source():
         if not PkgInstaller.fast_url:
             import requests
@@ -371,7 +408,7 @@ class PkgInstaller:
                 try:
                     tping = requests.get(url, timeout=1).elapsed.total_seconds()
                 except Exception as e:
-                    logger.warn(e)
+                    logger.warning(e)
                     continue
                 if tping < 0.1:
                     PkgInstaller.fast_url = url
@@ -380,6 +417,7 @@ class PkgInstaller:
                     t, PkgInstaller.fast_url = tping, url
         return PkgInstaller.fast_url
 
+    @staticmethod
     def is_installed(package):
         import importlib
         try:
@@ -387,6 +425,7 @@ class PkgInstaller:
         except ModuleNotFoundError:
             return False
 
+    @staticmethod
     def prepare_pip():
         import ensurepip
         if PkgInstaller.is_installed("pip"):
@@ -398,6 +437,7 @@ class PkgInstaller:
             ...
         return False
 
+    @staticmethod
     def try_install(*packages):
         if not PkgInstaller.prepare_pip():
             return False
@@ -408,7 +448,8 @@ class PkgInstaller:
         for pkg in need:
             try:
                 site = urlparse(url)
-                command = ['install', pkg, "-i", url]
+                # 避免build
+                command = ['install', pkg, "-i", url, "--prefer-binary"]
                 command.append("--trusted-host")
                 command.append(site.netloc)
                 main(command)
@@ -434,9 +475,11 @@ class FSWatcher:
     _watcher_queue = queue.Queue()
     _running = False
 
+    @staticmethod
     def init() -> None:
         FSWatcher._run()
 
+    @staticmethod
     def register(path, callback=None):
         path = FSWatcher.to_path(path)
         if path in FSWatcher._watcher_path:
@@ -444,11 +487,13 @@ class FSWatcher:
         FSWatcher._watcher_path[path] = False
         FSWatcher._watcher_callback[path] = callback
 
+    @staticmethod
     def unregister(path):
         path = FSWatcher.to_path(path)
         FSWatcher._watcher_path.pop(path)
         FSWatcher._watcher_callback.pop(path)
 
+    @staticmethod
     def _run():
         if FSWatcher._running:
             return
@@ -456,6 +501,7 @@ class FSWatcher:
         Thread(target=FSWatcher._loop, daemon=True).start()
         Thread(target=FSWatcher._run_ex, daemon=True).start()
 
+    @staticmethod
     def _run_ex():
         while FSWatcher._running:
             try:
@@ -467,11 +513,11 @@ class FSWatcher:
             except queue.Empty:
                 pass
 
+    @staticmethod
     def _loop():
         """
             监听所有注册的路径, 有变化时记录为changed
         """
-        import time
         while FSWatcher._running:
             # list() avoid changed while iterating
             for path, changed in list(FSWatcher._watcher_path.items()):
@@ -487,10 +533,12 @@ class FSWatcher:
                 FSWatcher._watcher_queue.put(path)
             time.sleep(0.5)
 
+    @staticmethod
     def stop():
         FSWatcher._watcher_queue.put(None)
         FSWatcher._running = False
 
+    @staticmethod
     def consume_change(path) -> bool:
         path = FSWatcher.to_path(path)
         if path in FSWatcher._watcher_path and FSWatcher._watcher_path[path]:
@@ -499,11 +547,12 @@ class FSWatcher:
         return False
 
     @lru_cache
+    @staticmethod
     def get_nas_mapping():
         if platform.system() != "Windows":
             return {}
         import subprocess
-        result = subprocess.run("net use", capture_output=True, text=True, encoding="gbk")
+        result = subprocess.run("net use", capture_output=True, text=True, encoding="gbk", check=True)
         if result.returncode != 0 or result.stdout is None:
             return {}
         nas_mapping = {}
@@ -528,7 +577,7 @@ class FSWatcher:
             res_str = p.resolve().as_posix()
         except FileNotFoundError as e:
             res_str = p.as_posix()
-            logger.warn(e)
+            logger.warning(e)
         # 处理nas路径
         for local_drive, nas_path in FSWatcher.get_nas_mapping().items():
             if not res_str.startswith(nas_path):

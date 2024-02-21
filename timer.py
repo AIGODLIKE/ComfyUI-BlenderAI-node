@@ -41,7 +41,7 @@ class Timer:
                 Timer.executor(t)
             except Exception as e:
                 traceback.print_exc()
-                logger.error(f"{type(e).__name__}: {e}")
+                logger.error("%s: %s", type(e).__name__, e)
             except KeyboardInterrupt:
                 ...
         return 0.016666666666666666
@@ -59,10 +59,17 @@ class Timer:
             q = Queue()
 
             def wrap_job(q):
-                q.put(func(*args, **kwargs))
+                try:
+                    res = func(*args, **kwargs)
+                    q.put(res)
+                except Exception as e:
+                    q.put(e)
 
             Timer.put((wrap_job, q))
-            return q.get()
+            res = q.get()
+            if isinstance(res, Exception):
+                raise res
+            return res
 
         return wrap
 
@@ -80,13 +87,16 @@ class Timer:
         except Exception:
             ...
 
+
 class WorkerFunc:
     args = {}
+
     def __init__(self) -> None:
         self.args = self.__class__.args
-        
+
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
         pass
+
 
 class Worker:
     JOB_WORK = set()
@@ -99,7 +109,7 @@ class Worker:
     @staticmethod
     def push_clear(func):
         Worker.JOB_CLEAR.put(func)
-        
+
     @staticmethod
     def remove_worker(func):
         Worker.JOB_WORK.discard(func)
@@ -111,11 +121,11 @@ class Worker:
                 Worker.executor(func)
             except Exception as e:
                 traceback.print_exc()
-                logger.error(f"{type(e).__name__}: {e}")
+                logger.error("%s: %s", type(e).__name__, e)
             except KeyboardInterrupt:
                 ...
         return 1
-    
+
     @staticmethod
     def executor(t):
         if type(t) in {list, tuple}:
@@ -144,9 +154,10 @@ class Worker:
                 func()
             except Exception as e:
                 traceback.print_exc()
-                logger.error(f"{type(e).__name__}: {e}")
+                logger.error("%s: %s", type(e).__name__, e)
             except KeyboardInterrupt:
                 ...
+
 
 def timer_reg():
     Timer.reg()

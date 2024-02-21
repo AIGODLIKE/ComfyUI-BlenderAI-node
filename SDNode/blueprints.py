@@ -11,16 +11,18 @@ from functools import partial, lru_cache
 from pathlib import Path
 from copy import deepcopy
 from bpy.types import Context, UILayout
-from .utils import gen_mask
+
+from .nodegroup import LABEL_TAG, SOCK_TAG, SDNGroup
+from .utils import gen_mask, THelper
 from .plugins.animatedimageplayer import AnimatedImagePlayer as AIP
-from .nodes import NodeBase, Ops_Add_SaveImage, Ops_Link_Mask, Ops_Active_Tex, Set_Render_Res, Ops_Swith_Socket
+from .nodes import NodeBase, Ops_Add_SaveImage, Ops_Link_Mask, Ops_Active_Tex, Set_Render_Res, Ops_Switch_Socket_Widget
 from .nodes import name2path, get_icon_path, Images
 from ..SDNode.manager import Task
 from ..timer import Timer
 from ..preference import get_pref
 from ..kclogger import logger
-from ..utils import _T, Icon, update_screen, PrevMgr
-from ..translations import ctxt, get_reg_name, get_ori_name
+from ..utils import _T, Icon, update_screen, PrevMgr, rgb2hex, hex2rgb
+from ..translations import get_reg_name, get_ori_name
 
 
 def get_sync_rand_node(tree):
@@ -54,8 +56,8 @@ def is_all_str_list(some_list: list):
     return set(type(i) for i in some_list) == {str}
 
 
-def draw_prop_with_link(layout, self, prop, swlink, row=True, pre=None, post=None, **kwargs):
-    layout = Ops_Swith_Socket.draw_prop(layout, self, prop, row, swlink)
+def draw_prop_with_link(layout, self, prop, swsock, swdisp=False, row=True, pre=None, post=None, **kwargs):
+    layout = Ops_Switch_Socket_Widget.draw_prop(layout, self, prop, row, swsock, swdisp)
     if pre:
         pre(layout)
     layout.prop(self, prop, **kwargs)
@@ -125,13 +127,13 @@ class BluePrintBase:
     def new_btn_enable(s, self, layout, context):
         return True
 
-    def draw_button(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True):
+    def draw_button(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swsock=True, swdisp=False):
         def show_model_preview(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILayout, prop: str):
             if self.class_type not in name2path:
                 return False
             if prop not in get_icon_path(self.class_type):
                 return False
-            col = draw_prop_with_link(layout, self, prop, swlink, text="", row=False)
+            col = draw_prop_with_link(layout, self, prop, swsock, swdisp, text="", row=False)
             col.template_icon_view(self, prop, show_labels=True, scale_popup=popup_scale, scale=popup_scale)
             return True
 
@@ -142,7 +144,7 @@ class BluePrintBase:
             lines = textwrap.wrap(text=str(s.getattr(self, prop)), width=width)
             for line in lines:
                 layout.label(text=line, text_ctxt=self.get_ctxt())
-            row = draw_prop_with_link(layout, self, prop, swlink)
+            row = draw_prop_with_link(layout, self, prop, swsock, swdisp)
             row.operator("sdn.enable_mlt", text="", icon="TEXT")
             return True
 
@@ -155,7 +157,7 @@ class BluePrintBase:
             return True
         if hasattr(self, "seed"):
             if prop == "seed":
-                row = draw_prop_with_link(layout, self, prop, swlink, text=prop, text_ctxt=self.get_ctxt())
+                row = draw_prop_with_link(layout, self, prop, swsock, swdisp, text=prop, text_ctxt=self.get_ctxt())
                 row.prop(self, "exe_rand", text="", icon="FILE_REFRESH", text_ctxt=self.get_ctxt())
                 row.prop(bpy.context.scene.sdn, "rand_all_seed", text="", icon="HAND", text_ctxt=self.get_ctxt())
                 row.prop(self, "sync_rand", text="", icon="MOD_WAVE", text_ctxt=self.get_ctxt())
@@ -165,24 +167,24 @@ class BluePrintBase:
         elif hasattr(self, "noise_seed"):
             if prop in {"add_noise", "return_with_leftover_noise"}:
                 def dpre(layout): layout.label(text=prop, text_ctxt=self.get_ctxt())
-                draw_prop_with_link(layout, self, prop, swlink, expand=True, pre=dpre, text_ctxt=self.get_ctxt())
+                draw_prop_with_link(layout, self, prop, swsock, swdisp, expand=True, pre=dpre, text_ctxt=self.get_ctxt())
                 return True
             if prop == "noise_seed":
                 def dpost(layout):
                     layout.prop(self, "exe_rand", text="", icon="FILE_REFRESH", text_ctxt=self.get_ctxt())
                     layout.prop(bpy.context.scene.sdn, "rand_all_seed", text="", icon="HAND", text_ctxt=self.get_ctxt())
                     layout.prop(self, "sync_rand", text="", icon="MOD_WAVE", text_ctxt=self.get_ctxt())
-                draw_prop_with_link(layout, self, prop, swlink, post=dpost, text_ctxt=self.get_ctxt())
+                draw_prop_with_link(layout, self, prop, swsock, swdisp, post=dpost, text_ctxt=self.get_ctxt())
                 return True
             if prop in {"exe_rand", "sync_rand"}:
                 return True
         elif self.class_type in {"OpenPoseFull", "OpenPoseHand", "OpenPoseMediaPipeFace", "OpenPoseDepth", "OpenPose", "OpenPoseFace", "OpenPoseLineart", "OpenPoseFullExtraLimb", "OpenPoseKeyPose", "OpenPoseCanny", }:
             return True
-        elif self.get_blueprints().spec_draw(self, context, layout, prop, swlink):
+        elif self.get_blueprints().spec_draw(self, context, layout, prop, swsock, swdisp):
             return True
         return False
 
-    def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True) -> bool:
+    def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swsock=True, swdisp=False) -> bool:
         return False
 
     def extra_properties(s, properties, nname, ndesc):
@@ -215,8 +217,8 @@ class BluePrintBase:
             winfo = str(stype)
             if len(winfo) > 40:
                 winfo = winfo[:40] + "...]"
-            logger.warn(f"{_T('Non-Standard Enum')}: {nname}.{inp} -> {winfo}")
-        for k in {"required", "optional"}:
+            logger.warning("%s: %s.%s -> %s", _T('Non-Standard Enum'), nname, inp, winfo)
+        for k in ["required", "optional"]:
             for inp, inp_desc in desc["input"].get(k, {}).items():
                 stype = deepcopy(inp_desc[0])
                 if not stype:
@@ -241,21 +243,34 @@ class BluePrintBase:
 
     def load(s, self: NodeBase, data, with_id=True):
         data = s.load_pre(self, data, with_id)
-        self.pool.discard(self.id)
+        pool = self.pool_get()
+        pool.discard(self.id)
         self.location[:] = [data["pos"][0], -data["pos"][1]]
-        if isinstance(data["size"], list):
-            self.width, self.height = [data["size"][0], -data["size"][1]]
+        size = data.get("size", [200, 200])
+        properties = data.get("properties", {})
+        self.sdn_hide = properties.get("sdn_hide", False)
+        color = data.get("bgcolor", None)
+        if color:
+            self.color = hex2rgb(color)
+            self.use_custom_color = True
+        if isinstance(size, list):
+            self.width, self.height = [size[0], -size[1]]
         else:
-            self.width, self.height = [data["size"]["0"], -data["size"]["1"]]
+            self.width, self.height = [size["0"], -size["1"]]
         title = data.get("title", "")
         if self.class_type in {"KSampler", "KSamplerAdvanced"}:
             logger.info(_T("Saved Title Name -> ") + title)  # do not replace name
         elif title:
             self.name = title
+        data["title"] = self.name  # 反向同步到metadata
         if with_id:
             try:
-                self.id = str(data["id"])
-                self.pool.add(self.id)
+                if "index" in data:
+                    old_id = str(data["index"])
+                else:
+                    old_id = str(data["id"])
+                self.id = old_id
+                pool.add(self.id)
             except BaseException:
                 self.apply_unique_id()
         # 处理 inputs
@@ -263,7 +278,7 @@ class BluePrintBase:
             name = inp.get("name", "")
             if not self.is_base_type(name):
                 continue
-            new_socket = self.switch_socket(name, True)
+            new_socket = self.switch_socket_widget(name, True)
             if si := inp.get("slot_index"):
                 new_socket.slot_index = si
             md = self.get_meta(name)
@@ -271,8 +286,9 @@ class BluePrintBase:
                 continue
             if not (default := inp.get("widget", {}).get("config", {}).get("default")):
                 continue
-            reg_name = get_reg_name(name)
-            s.setattr(self, reg_name, default)
+            # reg_name = get_reg_name(name)
+            # s.setattr(self, reg_name, default)
+            s.try_set_widget(self, name, default)
 
         s.load_specific(self, data, with_id)
         for inp_name in self.inp_types:
@@ -281,20 +297,28 @@ class BluePrintBase:
             reg_name = get_reg_name(inp_name)
             try:
                 v = data["widgets_values"].pop(0)
-                s.setattr(self, reg_name, v)
-            except TypeError as e:
-                if inp_name in {"seed", "noise_seed"}:
-                    setattr(self, reg_name, str(v))
-                elif (enum := re.findall(' enum "(.*?)" not found', str(e), re.S)):
-                    logger.warn(f"{_T('|IGNORED|')} {self.class_type} -> {inp_name} -> {_T('Not Found Item')}: {enum[0]}")
-                else:
-                    logger.error(f"|{e}|")
             except IndexError:
-                logger.info(f"{_T('|IGNORED|')} -> {_T('Load')}<{self.class_type}>{_T('Params not matching with current node')} " + reg_name)
-            except Exception as e:
-                logger.error(f"{_T('Params Loading Error')} {self.class_type} -> {self.class_type}.{inp_name}")
+                logger.info("%s -> %s<%s>%s " + reg_name, _T('|IGNORED|'), _T('Load'), self.class_type, _T('Params not matching with current node'))
+                continue
+            s.try_set_widget(self, inp_name, v)
 
-                logger.error(f" -> {e}")
+    def try_set_widget(s, self: NodeBase, inp_name, v):
+        if not self.is_base_type(inp_name):
+            return
+        reg_name = get_reg_name(inp_name)
+        try:
+            s.setattr(self, reg_name, v)
+            return True
+        except TypeError as e:
+            if inp_name in {"seed", "noise_seed"}:
+                setattr(self, reg_name, str(v))
+            elif (enum := re.findall(' enum "(.*?)" not found', str(e), re.S)):
+                logger.warning("%s %s -> %s -> %s: %s", _T('|IGNORED|'), self.class_type, inp_name, _T('Not Found Item'), enum[0])
+            else:
+                logger.error("|%s|", e)
+        except Exception as e:
+            logger.error("%s %s -> %s.%s", _T('Params Loading Error'), self.class_type, self.class_type, inp_name)
+            logger.error(" -> %s", e)
 
     def dump_specific(s, self: NodeBase = None, cfg=None, selected_only=False, **kwargs):
         """
@@ -336,6 +360,7 @@ class BluePrintBase:
             inp_info = {"name": ori_name,
                         "type": inp.bl_idname,
                         "link": None}
+            inp_info["label"] = inp.name
             link = self.get_from_link(inp)
             is_base_type = self.is_base_type(inp_name)
             if link:
@@ -364,18 +389,21 @@ class BluePrintBase:
         cfg = {
             "id": int(self.id),
             "type": self.class_type,
-            "pos": [self.location.x, -self.location.y],
-            "size": {"0": self.width, "1": self.height},
+            "pos": [int(self.location.x), -int(self.location.y)],
+            "size": {"0": int(self.width), "1": int(self.height)},
             "flags": {},
             "order": self.sdn_order,
             "mode": 0,
             "inputs": inputs,
             "outputs": outputs,
             "title": self.name,
-            "properties": {},
+            "properties": {"sdn_hide": self.sdn_hide, },
             "widgets_values": widgets_values
         }
-        __locals_copy__ = locals()
+        if self.use_custom_color:
+            color = rgb2hex(*self.color)
+            cfg["bgcolor"] = color
+        __locals_copy__ = dict(locals())
         __locals_copy__.pop("s")
         s.dump_specific(**__locals_copy__)
         return cfg
@@ -404,10 +432,85 @@ class BluePrintBase:
             cfg["inputs"]["image"] = rpath.as_posix()
             cfg["inputs"]["frame"] = bpy.context.scene.frame_current
 
-    def serialize(s, self: NodeBase, execute=False):
+    def _serialize_input(s, self: NodeBase, inp_name, inputs, parent: NodeBase = None):
+        """
+        根据 inp_name 计算输入接口或widget值
+        1. 当为接口时返回连接情况
+        2. 当为widget时返回widget值
+        """
+        reg_name = get_reg_name(inp_name)
+        inp = self.get_input(inp_name)
+        # ---------------- widget ----------------
+        # 1. 未在输入接口中
+        if not inp:
+            inputs[inp_name] = s.getattr(self, reg_name)
+            return
+
+        link = self.get_from_link(inp)
+        # 2. 在输入接口中, 但未连接
+        if not link:
+            if self.get_meta(inp_name) and hasattr(self, reg_name):
+                inputs[inp_name] = s.getattr(self, reg_name)
+            return
+        # 3. 在输入接口中, 且已连接, 但连接的是 PrimitiveNode
+        if link.from_node.bl_idname == "PrimitiveNode":
+            inputs[inp_name] = s.getattr(self, reg_name)
+            return
+
+        fnode: NodeBase = link.from_node
+        fid = fnode.id
+        sock_index = fnode.outputs[:].index(link.from_socket)
+        # ---------------- socket ----------------
+        # 1. 连接起始于组输入
+        if fnode.bl_idname == "NodeGroupInput":
+            # parent(组节点) { fnode <- self(在组内) }
+            sid = link.from_socket.identifier
+            pinp = parent.get_input(sid)
+            plink = self.get_from_link(pinp)
+            # plink为空(outer没连接)
+            if not plink:
+                if self.get_meta(inp_name) and hasattr(self, reg_name):
+                    inputs[inp_name] = s.getattr(self, reg_name)
+                return
+            pfnode = plink.from_node
+            sock_index = pfnode.outputs[:].index(plink.from_socket)
+            fid = pfnode.id
+        # 2. 连接起始于组节点
+        elif fnode.is_group():
+            # gonode(真实连接的节点) <- onode(组输出) <- fnode(组) <- self
+            fnode: SDNGroup = fnode
+            gout_id = link.from_socket[SOCK_TAG]
+            inode, onode = fnode.get_in_out_node()
+            oinp = onode.get_input(gout_id)
+            golink = self.get_from_link(oinp)
+            gonode = golink.from_node
+            sock_index = gonode.outputs[:].index(golink.from_socket)
+            fid = f"{fnode.id}:{gonode.id}"
+            # 当gonode 为组输入时: gonode <- fnode:NodeReroute <- self
+            if gonode.bl_idname == "NodeGroupInput":
+                sid = golink.from_socket.identifier
+                pinp = fnode.get_input(sid)
+                plink = self.get_from_link(pinp)
+                # plink可能为空(outer没连接)
+                if not plink:
+                    if self.get_meta(inp_name) and hasattr(self, reg_name):
+                        inputs[inp_name] = s.getattr(self, reg_name)
+                    return
+                pfnode = plink.from_node
+                sock_index = pfnode.outputs[:].index(plink.from_socket)
+                fid = pfnode.id
+        # 3. 由外部tree调用
+        elif parent:
+            fid = f"{parent.id}:{fnode.id}"
+        # fnode 可能是 NodeGroupInput 需要转换
+        inputs[inp_name] = [fid, sock_index]
+
+    def serialize(s, self: NodeBase, execute=False, parent: NodeBase = None):
         inputs = {}
         for inp_name in self.inp_types:
             # inp = self.inp_types[inp_name]
+            s._serialize_input(self, inp_name, inputs, parent)
+            continue
             reg_name = get_reg_name(inp_name)
             if inp := self.inputs.get(reg_name):
                 link = self.get_from_link(inp)
@@ -418,7 +521,51 @@ class BluePrintBase:
                         inputs[inp_name] = s.getattr(self, reg_name)
                     else:
                         # 添加 socket
-                        inputs[inp_name] = [link.from_node.id, link.from_node.outputs[:].index(link.from_socket)]
+                        fnode: NodeBase = link.from_node
+                        fid = fnode.id
+                        sock_index = fnode.outputs[:].index(link.from_socket)
+                        if fnode.bl_idname == "NodeGroupInput":
+                            # 需要拿到 NodeGroup 的 id
+                            sid = link.from_socket.identifier
+                            pinp = parent.get_input(sid)
+                            plink = self.get_from_link(pinp)
+                            # plink可能为空(outer没连接)
+                            if not plink:
+                                if self.get_meta(inp_name) and hasattr(self, reg_name):
+                                    inputs[inp_name] = s.getattr(self, reg_name)
+                                continue
+                            pfnode = plink.from_node
+                            sock_index = pfnode.outputs[:].index(plink.from_socket)
+                            fid = pfnode.id
+                        elif fnode.is_group():
+                            fnode: SDNGroup = fnode
+                            # 需要拿到 NodeGroup 的 id
+                            gout_id = link.from_socket[SOCK_TAG]
+                            inode, onode = fnode.get_in_out_node()
+                            oinp = onode.get_input(gout_id)
+                            golink = self.get_from_link(oinp)
+                            gonode = golink.from_node
+                            # 有可能 outer_inp <- node_reroute <- outer_out
+                            if gonode.bl_idname == "NodeGroupInput":
+                                logger.critical(gonode)
+                                sid = golink.from_socket.identifier
+                                pinp = fnode.get_input(sid)
+                                plink = self.get_from_link(pinp)
+                                # plink可能为空(outer没连接)
+                                if not plink:
+                                    if self.get_meta(inp_name) and hasattr(self, reg_name):
+                                        inputs[inp_name] = s.getattr(self, reg_name)
+                                    continue
+                                pfnode = plink.from_node
+                                sock_index = pfnode.outputs[:].index(plink.from_socket)
+                                fid = pfnode.id
+                            else:
+                                sock_index = gonode.outputs[:].index(golink.from_socket)
+                                fid = f"{fnode.id}:{gonode.id}"
+                        elif parent:
+                            fid = f"{parent.id}:{fnode.id}"
+                        # fnode 可能是 NodeGroupInput 需要转换
+                        inputs[inp_name] = [fid, sock_index]
                 elif self.get_meta(inp_name):
                     if hasattr(self, reg_name):
                         # 添加 widget
@@ -447,10 +594,10 @@ class BluePrintBase:
         ...
 
     def post_fn(s, self: NodeBase, t: Task, result):
-        logger.debug(f"BluePrintBase: {self.class_type} {_T('Post Function')}->{result}")
+        logger.debug("BluePrintBase: %s %s->%s", self.class_type, _T('Post Function'), result)
 
-    def make_serialze(s, self: NodeBase):
-        return (self.serialize(), self.pre_fn, self.post_fn)
+    def make_serialize(s, self: NodeBase, parent: NodeBase = None) -> dict:
+        return {self.id: (self.serialize(parent=parent), self.pre_fn, self.post_fn)}
 
     def free(s, self: NodeBase):
         ...
@@ -469,7 +616,7 @@ class WD14Tagger(BluePrintBase):
         cfg["widgets_values"] = cfg["widgets_values"][:4]
 
     def post_fn(s, self: NodeBase, t: Task, result):
-        logger.debug(f"{self.class_type}{_T('Post Function')}->{result}")
+        logger.debug("%s%s->%s", self.class_type, _T('Post Function'), result)
         text = result.get("output", {}).get("tags", [])
         text = "".join(text)
 
@@ -517,7 +664,7 @@ class PreviewTextNode(BluePrintBase):
     comfyClass = "PreviewTextNode"
 
     def post_fn(s, self: NodeBase, t: Task, result):
-        logger.debug(f"{self.class_type}{_T('Post Function')}->{result}")
+        logger.debug("%s%s->%s", self.class_type, _T('Post Function'), result)
         text = result.get("output", {}).get("string", [])
         if text and isinstance(text[0], str):
             self.text = text[0]
@@ -658,7 +805,7 @@ class MultiAreaConditioning(BluePrintBase):
         prop = bpy.props.FloatProperty(default=1.0, min=0, max=10, update=update_strength)
         properties["strength"] = prop
 
-    def spec_draw(s, self: NodeBase, context, layout, prop: str, swlink=True) -> bool:
+    def spec_draw(s, self: NodeBase, context, layout, prop: str, swsock=True, swdisp=False) -> bool:
         if prop == "config":
             return True
         return False
@@ -721,17 +868,17 @@ class KSampler(BluePrintBase):
 class KSamplerAdvanced(BluePrintBase):
     comfyClass = "KSamplerAdvanced"
 
-    def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True) -> bool:
+    def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swsock=True, swdisp=False) -> bool:
         if prop in {"add_noise", "return_with_leftover_noise"}:
             def dpre(layout): layout.label(text=prop, text_ctxt=self.get_ctxt())
-            draw_prop_with_link(layout, self, prop, swlink, expand=True, pre=dpre, text_ctxt=self.get_ctxt())
+            draw_prop_with_link(layout, self, prop, swsock, swdisp, expand=True, pre=dpre, text_ctxt=self.get_ctxt())
             return True
         if prop == "noise_seed":
             def dpost(layout):
                 layout.prop(self, "exe_rand", text="", icon="FILE_REFRESH", text_ctxt=self.get_ctxt())
                 layout.prop(bpy.context.scene.sdn, "rand_all_seed", text="", icon="HAND", text_ctxt=self.get_ctxt())
                 layout.prop(self, "sync_rand", text="", icon="MOD_WAVE", text_ctxt=self.get_ctxt())
-            draw_prop_with_link(layout, self, prop, swlink, post=dpost, text_ctxt=self.get_ctxt())
+            draw_prop_with_link(layout, self, prop, swsock, swdisp, post=dpost, text_ctxt=self.get_ctxt())
             return True
         if prop in {"exe_rand", "sync_rand"}:
             return True
@@ -759,7 +906,7 @@ class Mask(BluePrintBase):
         # prop = bpy.props.PointerProperty(type=bpy.types.Collection)
         # properties["col"] = prop
 
-    def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True) -> bool:
+    def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swsock=True, swdisp=False) -> bool:
         if prop == "mode":
             layout.prop(self, prop, expand=True, text_ctxt=self.get_ctxt())
             if self.mode == "Grease Pencil":
@@ -816,27 +963,31 @@ class Reroute(BluePrintBase):
         all_links = kwargs.get("all_links")
         inputs.clear()
         inputs.append({"name": "", "type": "*", "link": None, })
+        helper = THelper()
         if self.inputs[0].is_linked:
             if not selected_only:
                 inputs[0]["link"] = all_links.index(self.inputs[0].links[0])
             elif self.inputs[0].links[0].from_node.select:
                 inputs[0]["link"] = all_links.index(self.inputs[0].links[0])
+            from_socket = self.inputs[0].links[0].from_socket
+            if helper.is_reroute_socket(from_socket):
+                inputs[0]["name"] = ""
+                inputs[0]["type"] = "*"
         if not self.outputs[0].is_linked:
             outputs[0]["name"] = outputs[0]["type"] = "*"
         else:
-            def find_out_node(node: bpy.types.Node):
-                output = node.outputs[0]
-                if not output.is_linked:
-                    return None
-                to = output.links[0].to_node
-                to_socket = output.links[0].to_socket
-                if to.class_type == "Reroute":
-                    return find_out_node(to)
-                return to_socket
-            to_socket = find_out_node(self)
+            to_socket = helper.find_to_sock(self.outputs[0])
             if out and to_socket:
                 outputs[0]["name"] = to_socket.bl_idname
                 outputs[0]["type"] = to_socket.bl_idname
+            if helper.is_reroute_socket(to_socket):
+                outputs[0]["name"] = ""
+                outputs[0]["type"] = "*"
+            olink = self.outputs[0].links[0]
+            ilink = self.inputs[0].links[0]
+            if olink.to_node.bl_idname == "NodeGroupOutput" and ilink.from_node.bl_idname != "NodeGroupInput":
+                outputs[0]["name"] = ""
+                outputs[0]["type"] = "*"
         properties.clear()
         properties.update({"showOutputText": True, "horizontal": False})
 
@@ -848,13 +999,13 @@ class PrimitiveNode(BluePrintBase):
         prop = bpy.props.StringProperty()
         properties["prop"] = prop
 
-    def spec_draw(s, self: NodeBase, context, layout, prop: str, swlink=True):
+    def spec_draw(s, self: NodeBase, context, layout, prop: str, swsock=True, swdisp=False):
         if self.outputs[0].is_linked and self.outputs[0].links:
             node = self.outputs[0].links[0].to_node
             # 可能会导致prop在node中找不到的情况(断开连接的时候)
             if not hasattr(node, self.prop):
                 return True
-            if self.get_blueprints().draw_button(node, context, layout, self.prop, swlink=False):
+            if self.get_blueprints().draw_button(node, context, layout, self.prop, swsock=False, swdisp=swdisp):
                 return True
             layout.prop(node, get_reg_name(self.prop))
         return True
@@ -875,6 +1026,8 @@ class PrimitiveNode(BluePrintBase):
                                 }
             widgets_values.clear()
             widgets_values += [s.getattr(node, self.prop), "fixed"]
+            if self.prop not in {"seed", "noise_seed"}:
+                widgets_values.pop()
 
     def serialize_pre_specific(s, self: NodeBase):
         if not self.outputs[0].is_linked:
@@ -888,7 +1041,7 @@ def get_image_path(data, suffix="png") -> Path:
     '''data = {"filename": filename, "subfolder": subfolder, "type": folder_type}'''
     url_values = urllib.parse.urlencode(data)
     from .manager import TaskManager
-    url = "{}/view?{}".format(TaskManager.server.get_url(), url_values)
+    url = f"{TaskManager.server.get_url()}/view?{url_values}"
     # logger.debug(f'requesting {url} for image data')
     with urllib.request.urlopen(url) as response:
         img_data = response.read()
@@ -906,7 +1059,7 @@ class 预览(BluePrintBase):
         properties["prev"] = prop
         properties["lnum"] = bpy.props.IntProperty(default=3, min=1, max=10, name="Image num per line")
 
-    def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True) -> bool:
+    def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swsock=True, swdisp=False) -> bool:
         if prop == "lnum":
             return True
         if self.inputs[0].is_linked and self.inputs[0].links:
@@ -943,12 +1096,12 @@ class 预览(BluePrintBase):
         self.prev.clear()
 
     def post_fn(s, self: NodeBase, t: Task, result):
-        logger.debug(f"{self.class_type}{_T('Post Function')}->{result}")
+        logger.debug("%s%s->%s", self.class_type, _T('Post Function'), result)
         img_paths = result.get("output", {}).get("images", [])
         if not img_paths:
-            logger.error(f'response is {result}, cannot find images in it')
+            logger.error('response is %s, cannot find images in it', result)
             return
-        logger.warn(f"{_T('Load Preview Image')}: {img_paths}")
+        logger.warning("%s: %s", _T('Load Preview Image'), img_paths)
 
         def f(self, img_paths: list[dict]):
             self.prev.clear()
@@ -987,7 +1140,7 @@ class 存储(BluePrintBase):
         prop = bpy.props.PointerProperty(type=bpy.types.Image)
         properties["image"] = prop
 
-    def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True) -> bool:
+    def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swsock=True, swdisp=False) -> bool:
         if prop == "mode":
             layout.prop(self, prop, expand=True, text_ctxt=self.get_ctxt())
             if self.mode == "Save":
@@ -1026,9 +1179,9 @@ class 存储(BluePrintBase):
                 return True
         return True
 
-    def make_serialze(s, self: NodeBase):
+    def make_serialize(s, self: NodeBase, parent: NodeBase = None) -> dict:
         def __post_fn__(self: NodeBase, t: Task, result: dict, mode, image):
-            logger.debug(f"{self.class_type}{_T('Post Function')}->{result}")
+            logger.debug("%s%s->%s", self.class_type, _T('Post Function'), result)
             img_paths = result.get("output", {}).get("images", [])
             for img in img_paths:
                 if mode == "Save":
@@ -1046,13 +1199,12 @@ class 存储(BluePrintBase):
                         img_src.reload()
                 Timer.put((f, image, img))
         post_fn = partial(__post_fn__, self, mode=self.mode, image=self.image)
-        return self.serialize(), self.pre_fn, post_fn
+        return {self.id: (self.serialize(parent=parent), self.pre_fn, post_fn)}
 
     def serialize_specific(s, self: NodeBase, cfg, execute):
         if self.mode not in {"Import", "ToImage"}:
             return
         if "output_dir" in cfg.get("inputs", {}):
-            import tempfile
             cfg.get("inputs", {})["output_dir"] = tempfile.gettempdir()
         if "filename_prefix" in cfg.get("inputs", {}):
             cfg.get("inputs", {})["filename_prefix"] = "SDNode"
@@ -1089,7 +1241,7 @@ class 输入图像(BluePrintBase):
         prop = bpy.props.BoolProperty(default=False)
         properties["disable_render"] = prop
 
-    def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True) -> bool:
+    def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swsock=True, swdisp=False) -> bool:
         if prop == "mode":
             if self.mode == "序列图":
                 layout.prop(self, "frames_dir", text="")
@@ -1154,11 +1306,15 @@ class 输入图像(BluePrintBase):
             if self.mode == "视口":
                 # 使用临时文件
                 self.image = Path(tempfile.gettempdir()).joinpath("viewport.png").as_posix()
-            logger.warn(f"{_T('Render')}->{self.image}")
+            logger.warning("%s->%s", _T('Render'), self.image)
             old = bpy.context.scene.render.filepath
             bpy.context.scene.render.filepath = self.image
             if self.mode == "视口":
-                bpy.ops.render.opengl(write_still=True, view_context=False)
+                # 场景相机可能为空
+                if not bpy.context.scene.camera:
+                    err_info = _T("No Camera in Scene") + " -> " + bpy.context.scene.name
+                    raise Exception(err_info)
+                bpy.ops.render.opengl(write_still=True, view_context=get_pref().view_context)
                 bpy.context.scene.render.filepath = old
                 return
             if (cam := bpy.context.scene.camera) and (gpos := cam.get("SD_Mask", [])):
@@ -1208,7 +1364,7 @@ class 材质图(BluePrintBase):
         prop = bpy.props.PointerProperty(type=bpy.types.Collection)
         properties["collection"] = prop
 
-    def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True) -> bool:
+    def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swsock=True, swdisp=False) -> bool:
         if prop == "mode":
             layout.prop(self, prop, expand=True, text_ctxt=self.get_ctxt())
             if self.mode == "Object":
@@ -1226,7 +1382,7 @@ class 材质图(BluePrintBase):
 class 截图(BluePrintBase):
     comfyClass = "截图"
 
-    def draw_button(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True):
+    def draw_button(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swsock=True, swdisp=False):
         if prop in {"x1", "y1", "x2", "y2"}:
             return True
         if prop == "capture":
@@ -1263,12 +1419,15 @@ class 截图(BluePrintBase):
                 w = setwidth(self, w)
                 layout.template_icon(icon_id, scale=w // 20)
             return True
-        return super().draw_button(self, context, layout, prop, swlink)
+        return super().draw_button(self, context, layout, prop, swsock, swdisp)
 
     def _capture(s, self: NodeBase):
         from ..External.mss import mss
         from ..External.mss.tools import to_png
         x1, y1, x2, y2 = self.x1, self.y1, self.x2, self.y2
+        if x1 == x2 or y1 == y2:
+            logger.error("%s: %s", _T('Error Capture Screen Region'), (x1, y1, x2, y2))
+            return
         # print("GET REGION:", x1, y1, x2, y2)
         with mss() as sct:
             monitor = {"top": y1, "left": x1, "width": x2 - x1, "height": y2 - y1}
@@ -1276,10 +1435,10 @@ class 截图(BluePrintBase):
             output = Path(tempfile.gettempdir()).joinpath(output).as_posix()
             # Grab the data
             from ..utils import CtxTimer
-            with CtxTimer(f"截图: {output}"):
+            with CtxTimer(f"{_T(('Capture Screen'))}: {output}"):
                 sct_img = sct.grab(monitor)
             # Save to the picture file
-            with CtxTimer(f"保存截图: {output}"):
+            with CtxTimer(f"{_T('Save Screenshot')}: {output}"):
                 to_png(sct_img.rgb, sct_img.size, output=output, level=0)
             self.image = output
 
@@ -1291,13 +1450,17 @@ class 截图(BluePrintBase):
             from ..External.lupawrapper import get_lua_runtime
             rt = get_lua_runtime()
             hk = rt.load_dll("luahook")
-            self.x1, self.y1, self.x2, self.y2 = hk.scrcap()
+            x1, y1, x2, y2 = hk.scrcap()
+            if x1 == x2 or y1 == y2:
+                logger.error("%s: %s", _T('Error Capture Screen Region'), (x1, y1, x2, y2))
+                return
+            self.x1, self.y1, self.x2, self.y2 = x1, y1, x2, y2
             s._capture(self)
         prop = bpy.props.BoolProperty(default=False, update=update_capture, name="Capture Screen", description="Capture Screen Region")
         properties["capture"] = prop
         prop = bpy.props.PointerProperty(type=bpy.types.Image)
         properties["prev"] = prop
-        prop = bpy.props.IntProperty(default=512, min=0)
+        prop = bpy.props.IntProperty(default=512)
         properties["x1"] = prop
         properties["y1"] = prop
         properties["x2"] = prop
@@ -1315,7 +1478,7 @@ class AnimateDiffCombine(BluePrintBase):
     PREV = PrevMgr.new()
     PLAYERS: dict[str, AIP] = {}
 
-    def draw_button(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True):
+    def draw_button(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swsock=True, swdisp=False):
         if prop == "prev_name":
             prev = s.PREV.get(self.prev_name, None)
             if prev:
@@ -1323,19 +1486,19 @@ class AnimateDiffCombine(BluePrintBase):
                 scale = min(scale, 100)
                 layout.template_icon(icon_value=prev.icon_id, scale=scale)
             return True
-        super().draw_button(self, context, layout, prop, swlink)
+        super().draw_button(self, context, layout, prop, swsock, swdisp)
 
     def post_fn(s, self: NodeBase, t: Task, result):
         """
         result : {'node': '11', 'output': {'videos': [{'filename': 'img.gif', 'subfolder': '', 'type': 'output', 'format': 'image/gif'}]}, 'prompt_id': ''}
         """
-        logger.debug(f"{self.class_type}{_T('Post Function')}->{result}")
+        logger.debug("%s%s->%s", self.class_type, _T('Post Function'), result)
         # img_paths = link_get(result, "output.videos")
         img_paths = result.get("output", {}).get("videos", [])
         if not img_paths:
             logger.error(f'response is {result}, cannot find images in it')
             return
-        logger.warn(f"{_T('Load Preview Image')}: {img_paths}")
+        logger.warning("%s: %s", _T('Load Preview Image'), img_paths)
 
         def f(self, img_paths: list[dict]):
             """
@@ -1381,7 +1544,7 @@ class VHS_VideoCombine(BluePrintBase):
     PREV = PrevMgr.new()
     PLAYERS: dict[str, AIP] = {}
 
-    def draw_button(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True):
+    def draw_button(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swsock=True, swdisp=False):
         if prop == "prev_name":
             prev = s.PREV.get(self.prev_name, None)
             if prev:
@@ -1389,7 +1552,7 @@ class VHS_VideoCombine(BluePrintBase):
                 scale = min(scale, 100)
                 layout.template_icon(icon_value=prev.icon_id, scale=scale)
             return True
-        super().draw_button(self, context, layout, prop, swlink)
+        super().draw_button(self, context, layout, prop, swsock, swdisp)
 
     def post_fn(s, self: NodeBase, t: Task, result):
         """
@@ -1398,13 +1561,13 @@ class VHS_VideoCombine(BluePrintBase):
             {'node': '9', 'output': {'gifs': [{'filename': 'AnimateDiff_00002.webp', 'subfolder': '', 'type': 'output', 'format': 'image/webp'}]}, 'prompt_id': '16091f8f-cbf2-4c90-8b6c-5b3823344ccc'}
             {'node': '9', 'output': {'gifs': [{'filename': 'AnimateDiff_00003.mov', 'subfolder': '', 'type': 'output', 'format': 'video/ProRes'}]}, 'prompt_id': '462c8f2d-7e1b-4003-9a12-36b43bec6743'}
         """
-        logger.debug(f"{self.class_type}{_T('Post Function')}->{result}")
+        logger.debug("%s%s->%s", self.class_type, _T('Post Function'), result)
         # img_paths = link_get(result, "output.videos")
         img_paths = result.get("output", {}).get("gifs", [])
         if not img_paths:
             logger.error(f'response is {result}, cannot find images in it')
             return
-        logger.warn(f"{_T('Load Preview Image')}: {img_paths}")
+        logger.warning("%s: %s", _T('Load Preview Image'), img_paths)
 
         def f(self, img_paths: list[dict]):
             """
@@ -1453,7 +1616,7 @@ class SaveAnimatedPNG(BluePrintBase):
     PREV = PrevMgr.new()
     PLAYERS: dict[str, AIP] = {}
 
-    def draw_button(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True):
+    def draw_button(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swsock=True, swdisp=False):
         if prop == "prev_name":
             prev = s.PREV.get(self.prev_name, None)
             if prev:
@@ -1461,17 +1624,17 @@ class SaveAnimatedPNG(BluePrintBase):
                 scale = min(scale, 100)
                 layout.template_icon(icon_value=prev.icon_id, scale=scale)
             return True
-        super().draw_button(self, context, layout, prop, swlink)
+        super().draw_button(self, context, layout, prop, swsock, swdisp)
 
     def post_fn(s, self: NodeBase, t: Task, result):
 
-        logger.debug(f"{self.class_type}{_T('Post Function')}->{result}")
+        logger.debug("%s%s->%s", self.class_type, _T('Post Function'), result)
         # img_paths = link_get(result, "output.videos")
         img_paths = result.get("output", {}).get("images", [])
         if not img_paths:
             logger.error(f'response is {result}, cannot find images in it')
             return
-        logger.warn(f"{_T('Load Preview Image')}: {img_paths}")
+        logger.warning("%s: %s", _T('Load Preview Image'), img_paths)
 
         def f(self, img_paths: list[dict]):
             """
@@ -1521,7 +1684,7 @@ class SaveAnimatedWEBP(BluePrintBase):
     PREV = PrevMgr.new()
     PLAYERS: dict[str, AIP] = {}
 
-    def draw_button(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swlink=True):
+    def draw_button(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swsock=True, swdisp=False):
         if prop == "prev_name":
             prev = s.PREV.get(self.prev_name, None)
             if prev:
@@ -1529,16 +1692,16 @@ class SaveAnimatedWEBP(BluePrintBase):
                 scale = min(scale, 100)
                 layout.template_icon(icon_value=prev.icon_id, scale=scale)
             return True
-        super().draw_button(self, context, layout, prop, swlink)
+        super().draw_button(self, context, layout, prop, swsock, swdisp)
 
     def post_fn(s, self: NodeBase, t: Task, result):
-        logger.debug(f"{self.class_type}{_T('Post Function')}->{result}")
+        logger.debug("%s%s->%s", self.class_type, _T('Post Function'), result)
         # img_paths = link_get(result, "output.videos")
         img_paths = result.get("output", {}).get("images", [])
         if not img_paths:
             logger.error(f'response is {result}, cannot find images in it')
             return
-        logger.warn(f"{_T('Load Preview Image')}: {img_paths}")
+        logger.warning("%s: %s", _T('Load Preview Image'), img_paths)
 
         def f(self, img_paths: list[dict]):
             """
@@ -1582,6 +1745,288 @@ class SaveAnimatedWEBP(BluePrintBase):
 
     def copy(s, self: NodeBase, node):
         self.prev_name = ""
+
+
+class SDNGroupBP(BluePrintBase):
+    comfyClass = "SDNGroup"
+
+    def load_delay(s, self: NodeBase, data, with_id=True):
+        helper = THelper()
+        # widgets_values分布: widgets ->  linked_widgets
+        converted_widgets = [w for w in data.get("inputs", []) if "widget" in w]  # 可能为[]
+        num_cw = len(converted_widgets)
+        widgets: list = data["widgets_values"][:-num_cw] if num_cw else data["widgets_values"][:]
+        # linked_widget: list = data["widgets_values"][-len(inputs):]
+        # widgets_cache: dict[NodeBase, dict[str, str]] = {}
+        # for index, inp in enumerate(inputs):
+        #     name = inp["widget"].get("name", None)
+        #     if not name or " " not in name:
+        #         continue
+        #     value = linked_widget[index]
+        #     nname, vname = name.rpartition(" ")[::2]
+        #     node = self.node_tree.nodes.get(nname)
+        #     if not node:
+        #         continue
+        #     if node not in widgets_cache:
+        #         widgets_cache[node] = {}
+        #     widgets_cache[node][vname] = value
+        # group中记录的 nodes的inputs代表 有连接 或者转成了接口的widget
+        # 排除之后剩下的 widgets 存储在 widgets_values中
+        mnodes = self.__metadata__.get("nodes", [])
+        dumped_node_vname = []
+        for mnode in mnodes:
+            nname = mnode["title"]
+            # node 必定存在, 如果不存在 则之前的步骤有问题
+            node: NodeBase = self.node_tree.nodes.get(nname)
+            if node.bl_idname == "PrimitiveNode" and mnode["outputs"]:
+                out = mnode["outputs"][0]
+                if "widget" in out:
+                    inp = out["widget"]["name"]
+                    dumped_node_vname.append((node, inp))
+                continue
+            dumped_widgets = node.widgets
+            for inp in mnode["inputs"]:
+                if "widget" not in inp:
+                    continue
+                if inp["name"] in {"seed", "noise_seed"} and "control_after_generate" in dumped_widgets:
+                    dumped_widgets.remove("control_after_generate")
+                dumped_widgets.remove(inp["name"])
+            for inp in dumped_widgets:
+                dumped_node_vname.append((node, inp))
+        # logger.debug(widgets)
+        for node, inp in dumped_node_vname:
+            v = widgets.pop(0)
+            if node.bl_idname == "PrimitiveNode":
+                pnode = node
+                node = helper.find_to_node(node.outputs[0].links[0])
+                if inp in {"seed", "noise_seed"} or type(v) in {int, float}:
+                    sv = widgets.pop(0)
+                    logger.warning("%s : %s %s", pnode.name, sv, _T('|IGNORED|'))
+                # continue
+            if s.try_set_widget(node, inp, v):
+                logger.debug("%s.%s = %s", node.name, inp, v)
+
+    def load(s, self: NodeBase, data, with_id=True):
+        super().load(self, data, with_id)
+        from threading import Thread
+
+        def f(self, data, with_id):
+            import time
+            time.sleep(0.1)
+            Timer.put((s.load_delay, self, data, with_id))
+        Thread(target=f, args=(self, data, with_id)).start()
+
+    def dump(s, self: SDNGroup, selected_only=False):
+        helper = THelper()
+        tree = self.get_tree()
+        outer_all_links: list[bpy.types.NodeLink] = tree.links[:]
+        # all_links: list[bpy.types.NodeLink] = self.node_tree.links[:]
+        ordered_nodes = self.node_tree.compute_execution_order()
+        total_widgets = set()
+        for sn in ordered_nodes:
+            total_widgets.update(sn.get_widgets(exclude_converted=True))
+        inputs = []
+        outputs = []
+        widgets_values = []
+        # 组的 widgets_values 导出顺序非常重要 和 node.id及order有关
+        for sn in ordered_nodes:
+            if sn.bl_idname == "NodeReroute":
+                continue
+            # if sn.bl_idname == "NodeReroute" and sn.outputs[0].links:
+            #     tsock = helper.find_to_sock(sn.outputs[0])
+            #     sn: NodeBase = tsock.node
+            #     if sn.bl_idname == "NodeGroupOutput":
+            #         continue
+            #     if sn.is_base_type(tsock.name):
+            #         widgets_values.append(s.getattr(sn, get_reg_name(tsock.name)))
+            #         continue
+
+            if sn.bl_idname in {"NodeGroupInput", "NodeGroupOutput", "NodeUndefined"}:
+                continue
+            nwidgets = sn.dump(selected_only=selected_only).get("widgets_values")
+
+            # # 单独处理 widgets_values
+            # for inp_name in self.inp_types:
+            #     if not self.is_base_type(inp_name):
+            #         continue
+            #     widgets_values.append(s.getattr(self, get_reg_name(inp_name)))
+            # 需要将已经转为socket的widgets移除
+            rm_index = []
+            for i, inp_name in enumerate([it for it in sn.inp_types if sn.is_base_type(it)]):
+                # 转为接口且已经连接
+                if sn.query_stat(inp_name) and sn.inputs[inp_name].links:
+                    rm_index.append(i)
+                    continue
+                # 如果为 control_after_generate 则判断 seed 和 noise_seed 是否连接
+                if inp_name == "control_after_generate":
+                    if sn.query_stat("seed") and sn.inputs["seed"].links:
+                        rm_index.append(i)
+                        continue
+                    if sn.query_stat("noise_seed") and sn.inputs["noise_seed"].links:
+                        rm_index.append(i)
+                        continue
+            for i in rm_index[::-1]:
+                nwidgets.pop(i)
+            widgets_values += nwidgets
+        # widgets_values 最后补上转换后的接口对应的widget值
+        inode, onode = self.get_in_out_node()
+        for outer_inp in self.inputs:
+            sid = outer_inp[SOCK_TAG]
+            slink = inode.get_output(sid).links[0]
+            inp = slink.to_socket
+            snode: NodeBase = slink.to_node
+            inp_name = inp.name
+            ori_name = get_ori_name(inp_name)
+            if not snode.is_base_type(inp_name):
+                continue
+            md = snode.get_meta(ori_name)
+            if not snode.query_stat(inp_name) or not md:
+                continue
+            out_inp_widget = s.getattr(snode, get_reg_name(inp_name))
+            widgets_values.append(out_inp_widget)
+            if inp_name in {"seed", "noise_seed"}:
+                widgets_values.append("fixed")
+        dumped_sockets = []
+        inode, onode = self.get_in_out_node()
+        for outer_inp in self.inputs:
+            sid = outer_inp[SOCK_TAG]
+            slink = inode.get_output(sid).links[0]
+            inp = slink.to_socket
+            snode: NodeBase = slink.to_node
+            inp_name = inp.name
+            ori_name = get_ori_name(inp_name)
+            inp_info = {"name": ori_name,
+                        "type": inp.bl_idname,
+                        "link": None}
+            if LABEL_TAG in outer_inp:
+                inp_info["label"] = outer_inp[LABEL_TAG]
+            link = self.get_from_link(outer_inp)
+            is_base_type = snode.is_base_type(inp_name)
+            if link:
+                if not selected_only:
+                    inp_info["link"] = outer_all_links.index(outer_inp.links[0])
+                elif inp.links[0].from_node.select:
+                    inp_info["link"] = outer_all_links.index(outer_inp.links[0])
+                from_socket = link.from_socket
+                if helper.is_reroute_socket(from_socket):
+                    inp_info["name"] = "*"
+                    inp_info["type"] = "*"
+                    inp_info["label"] = "*"
+                else:
+                    slink = helper.find_to_link(slink)
+                    tsocket = slink.to_socket
+                    inp_info["name"] = from_socket.bl_idname
+                    if not helper.is_reroute_socket(tsocket):
+                        inp_info["name"] = tsocket.name
+                    inp_info["type"] = from_socket.bl_idname
+                    inp_info["label"] = from_socket.bl_idname
+                if "slot_index" in outer_inp:
+                    inp_info["slot_index"] = outer_inp["slot_index"]
+            elif helper.is_reroute_socket(inp):
+                tinp = helper.find_to_sock(inp)
+                if tinp.bl_idname not in {"NodeGroupInput", "NodeGroupOutput"}:
+                    inp_info["name"] = tinp.name  # f"{tinp.to_node.name} {tinp.name}"
+                    inp_info["type"] = tinp.bl_idname
+                    inp_info["label"] = tinp.name
+                if helper.is_reroute_socket(tinp):
+                    inp_info["name"] = "*"
+                    inp_info["type"] = "*"
+                    inp_info["label"] = "*"
+            if is_base_type:
+                md = snode.get_meta(ori_name)
+                if not snode.query_stat(inp.name) or not md:
+                    continue
+                # inp_info["widget"] = {"name": ori_name, "config": md}
+                full_name = f"{snode.name} {ori_name}"
+                if ori_name in total_widgets:
+                    ori_name = full_name
+                else:
+                    total_widgets.add(ori_name)
+                inp_info["widget"] = {"name": ori_name}
+                inp_info["name"] = full_name
+                inp_info["type"] = ",".join(md[0]) if isinstance(md[0], list) else md[0]
+            if snode.bl_idname == "NodeReroute":
+                inp_info["name"] = inp_info["type"]
+                tsock = helper.find_to_sock(inp)
+                if tsock.node.is_base_type(tsock.name):
+                    inp_info["widget"] = {"name": inp_info["type"]}
+            if "widget" not in inp_info:
+                if inp_info["name"] in dumped_sockets:
+                    inp_info["name"] = f"{snode.name} {inp_info['name']}"
+                else:
+                    dumped_sockets.append(inp_info["name"])
+            inp_info["label"] = inp_info["name"]
+            inputs.append(inp_info)
+        for i, out in enumerate(self.outputs):
+            out_info = {"name": out.name, "type": out.name}
+            if LABEL_TAG in out:
+                out_info["label"] = out[LABEL_TAG]
+                out_info["type"] = out[LABEL_TAG]
+            if not selected_only:
+                out_info["links"] = [outer_all_links.index(link) for link in out.links]
+            elif out.links:
+                out_info["links"] = [outer_all_links.index(link) for link in out.links if link.to_node.select]
+            if out_info["type"] == "*":
+                # 当输出节点是reroute时, 需要找到真正的输出节点
+                _, onode = self.get_in_out_node()
+                if onode and SOCK_TAG in out:
+                    inp = onode.inputs[out[SOCK_TAG]]
+                    fsock = helper.find_from_sock(inp)
+                    out_info["name"] = fsock.bl_idname
+                    out_info["label"] = fsock.bl_idname
+                    out_info["type"] = fsock.bl_idname
+                    if helper.is_reroute_socket(fsock):
+                        out_info["name"] = fsock.name + "*"
+                        out_info["label"] = "*"
+                        out_info["type"] = "*"
+            out_info["slot_index"] = i
+            outputs.append(out_info)
+        cfg = {
+            "id": int(self.id),
+            "type": f"workflow/{self.node_tree.name}",
+            "pos": [int(self.location.x), -int(self.location.y)],
+            "size": {"0": int(self.width), "1": int(self.height)},
+            "flags": {},
+            "order": self.sdn_order,
+            "mode": 0,
+            "inputs": inputs,
+            "outputs": outputs,
+            "title": self.name,
+            "properties": {"sdn_hide": self.sdn_hide, },
+            "widgets_values": widgets_values
+        }
+        if self.use_custom_color:
+            color = rgb2hex(*self.color)
+            cfg["bgcolor"] = color
+        __locals_copy__ = dict(locals())
+        __locals_copy__.pop("s")
+        s.dump_specific(**__locals_copy__)
+        return cfg
+
+    def make_serialize(s, self: NodeBase, parent: NodeBase = None) -> dict:
+        from .tree import CFNodeTree
+        tree: CFNodeTree = self.node_tree
+        if not tree:
+            return {}
+        sub_prompt = tree.serialize(parent=self)
+        prompt = {}
+        for k, v in sub_prompt.items():
+            prompt[f"{self.id}:{k}"] = v
+        return prompt
+        return {self.id: (self.serialize(), )}
+
+
+class SDParameterGenerator(BluePrintBase):
+    comfyClass = "SDParameterGenerator"
+
+    def dump_specific(s, self: NodeBase = None, cfg=None, selected_only=False, **kwargs):
+        widgets_values = cfg["widgets_values"]
+        types = self.widgets
+        if "control_after_generate" not in types:
+            return
+        rm = types.index("control_after_generate")
+        if len(widgets_values) > rm:
+            widgets_values.pop(rm)
 
 
 @lru_cache(maxsize=1024)

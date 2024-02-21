@@ -1,4 +1,3 @@
-import typing
 import bpy
 import re
 import json
@@ -11,11 +10,12 @@ from mathutils import Vector
 from functools import partial
 from .translations import ctxt
 from .prop import Prop
-from .utils import _T, logger, PngParse, FSWatcher
+from .utils import _T, logger, FSWatcher, read_json
 from .timer import Timer, Worker, WorkerFunc
 from .SDNode import TaskManager
 from .SDNode.history import History
-from .SDNode.tree import InvalidNodeType, CFNodeTree, get_tree, TREE_TYPE, rtnode_reg, rtnode_unreg
+from .SDNode.tree import InvalidNodeType, CFNodeTree, TREE_TYPE, rtnode_reg, rtnode_unreg
+from .SDNode.utils import get_default_tree
 from .datas import IMG_SUFFIX
 from .preference import get_pref
 
@@ -45,14 +45,15 @@ class LoopExec(WorkerFunc):
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
         if TaskManager.get_task_num() != 0:
             return
-        nt: CFNodeTree = LoopExec.args.get("nt", None)
+        tree: CFNodeTree = LoopExec.args.get("tree", None)
         try:
-            nt.load_json
+            tree.load_json
         except ReferenceError:
             return
         except AttributeError:
             return
-        bpy.ops.sdn.ops(action="Submit", nt_name=nt.name)
+        with bpy.context.temp_override(sdn_tree=tree):
+            bpy.ops.sdn.ops(action="Submit")
 
 
 class Ops(bpy.types.Operator):
@@ -61,7 +62,6 @@ class Ops(bpy.types.Operator):
     bl_label = "SD Node"
     bl_translation_context = ctxt
     action: bpy.props.StringProperty(default="")
-    nt_name: bpy.props.StringProperty(default="")
     save_name: bpy.props.StringProperty(name="Preset Name", default="预设")
     alt: bpy.props.BoolProperty(default=False)
     is_advanced_enable = False
@@ -117,6 +117,7 @@ class Ops(bpy.types.Operator):
             layout.prop(bpy.context.scene.sdn, "import_bookmark", text_ctxt=ctxt)
 
     def invoke(self, context, event: bpy.types.Event):
+        self.exec_tree: CFNodeTree = None
         wm = bpy.context.window_manager
         self.alt = event.alt
         self.select_nodes = []
@@ -156,9 +157,7 @@ class Ops(bpy.types.Operator):
         if event.value == "PRESS" and event.type in {"ESC", "LEFTMOUSE", "ENTER"}:
             return {"FINISHED"}
         if event.value == "PRESS" and event.type in {"RIGHTMOUSE"}:
-            tree = get_tree()
-            if tree:
-                tree.safe_remove_nodes(self.select_nodes[:])
+            self.exec_tree.safe_remove_nodes(self.select_nodes[:])
             return {"CANCELLED"}
 
         return {"RUNNING_MODAL"}
@@ -171,18 +170,15 @@ class Ops(bpy.types.Operator):
         nodes = find_nodes_by_idname(tree, "材质图")
         return nodes[0] if nodes else None
 
-    def ensure_tree(self):
-        tree = getattr(bpy.context.space_data, "edit_tree", None)
+    def ensure_tree(self) -> CFNodeTree:
+        tree = get_default_tree()
         if not tree:
             bpy.ops.node.new_node_tree(type=TREE_TYPE, name="NodeTree")
-            tree = getattr(bpy.context.space_data, "edit_tree", None)
+            tree = get_default_tree()
         return tree
 
     def submit(self):
-        tree: CFNodeTree = get_tree()
-        if self.nt_name:
-            tree = bpy.data.node_groups.get(self.nt_name, None)
-            self.nt_name = ""
+        tree: CFNodeTree = get_default_tree()
 
         def reset_error_mark(tree: CFNodeTree):
             if not tree:
@@ -203,7 +199,7 @@ class Ops(bpy.types.Operator):
             Ops.is_advanced_enable = True
             if bpy.context.scene.sdn.loop_exec:
                 loop_exec = LoopExec()
-                loop_exec.args["nt"] = tree
+                loop_exec.args["tree"] = tree
                 Worker.push_worker(loop_exec)
                 return {"FINISHED"}
             for _ in range(bpy.context.scene.sdn.batch_count):
@@ -242,8 +238,8 @@ class Ops(bpy.types.Operator):
             for frame in pframes:
                 pnode.image = pframes[frame]
                 # logger.debug(f"F {frame}: {pnode.image}")
-                for fnode in node_frames:
-                    if not (fpath := node_frames[fnode].get(frame, "")):
+                for fnode, node_frame in node_frames.items():
+                    if not (fpath := node_frame.get(frame, "")):
                         error_info = _T("Frame <{}> Not Found in <{}> Node Path!").format(frame, fnode.name)
                         # self.report({"ERROR"}, error_info)
                         logger.error(error_info)
@@ -255,9 +251,9 @@ class Ops(bpy.types.Operator):
                     logger.debug(_T("Frame Task <{}> Added!").format(frame))
                     TaskManager.push_task(get_task(tree), tree=tree)
             # restore config
-            for fnode in old_cfg:
-                setattr(fnode, "mode", old_cfg[fnode]["mode"])
-                setattr(fnode, "image", old_cfg[fnode]["image"])
+            for fnode, cfg in old_cfg.items():
+                setattr(fnode, "mode", cfg["mode"])
+                setattr(fnode, "image", cfg["image"])
             return {"FINISHED"}
         elif mat_image_node := self.find_mat_image_nodes(tree):
             def recursive_node_parent(node, find_nodes=None):
@@ -389,11 +385,11 @@ class Ops(bpy.types.Operator):
             TaskManager.launch_url = f"http://{get_pref().ip}:{get_pref().port}"
             rtnode_unreg()
             rtnode_reg()
-            CFNodeTree.instance = getattr(bpy.context.space_data, "edit_tree", None)
+            CFNodeTree.refresh_current_tree()
             TaskManager.start_polling()
 
     def Close(self):
-        if tree := getattr(bpy.context.space_data, "edit_tree", None):
+        if tree := get_default_tree():
             # 恢复节点颜色
             for n in tree.nodes:
                 if not n.label.endswith(("-EXEC", "-ERROR")):
@@ -402,16 +398,12 @@ class Ops(bpy.types.Operator):
                 n.label = ""
         TaskManager.close_server()
         # hack fix tree update crash
-        tree = getattr(bpy.context.space_data, "edit_tree", None)
-        from .SDNode.tree import CFNodeTree
-        CFNodeTree.instance = tree
+        CFNodeTree.refresh_current_tree()
 
     def Restart(self):
         TaskManager.restart_server()
         # hack fix tree update crash
-        tree = getattr(bpy.context.space_data, "edit_tree", None)
-        from .SDNode.tree import CFNodeTree
-        CFNodeTree.instance = tree
+        CFNodeTree.refresh_current_tree()
 
     def Cancel(self):
         TaskManager.interrupt()
@@ -424,10 +416,7 @@ class Ops(bpy.types.Operator):
         TaskManager.clear_all()
 
     def Save(self):
-        tree: CFNodeTree = get_tree()
-        if self.nt_name:
-            tree = bpy.data.node_groups.get(self.nt_name, None)
-            self.nt_name = ""
+        tree = get_default_tree()
 
         if not tree:
             logger.error(_T("No Node Tree Found!"))
@@ -438,7 +427,7 @@ class Ops(bpy.types.Operator):
             return
         data = tree.save_json()
         file = Path(bpy.context.scene.sdn.presets_dir) / f"{self.save_name}.json"
-        with open(file, "w") as f:
+        with open(file, "w", encoding="utf8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
         Prop.mark_dirty()
 
@@ -456,10 +445,10 @@ class Ops(bpy.types.Operator):
             self.report({"ERROR"}, _T("Preset Not Selected!"))
             return
         tree = self.ensure_tree()
-        tree.load_json(json.load(open(bpy.context.scene.sdn.presets)))
+        tree.load_json(read_json(bpy.context.scene.sdn.presets))
 
     def SaveGroup(self):
-        tree = getattr(bpy.context.space_data, "edit_tree", None)
+        tree = get_default_tree()
         if not tree:
             logger.error(_T("No Node Tree Found!"))
             self.report({"ERROR"}, _T("No Node Tree Found!"))
@@ -469,7 +458,7 @@ class Ops(bpy.types.Operator):
             return
         data = tree.save_json_group()
         file = Path(bpy.context.scene.sdn.groups_dir) / f"{self.save_name}.json"
-        with open(file, "w") as f:
+        with open(file, "w", encoding="utf8") as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
         Prop.mark_dirty()
 
@@ -487,7 +476,7 @@ class Ops(bpy.types.Operator):
             self.report({"ERROR"}, _T("Preset Not Selected!"))
             return
         tree = self.ensure_tree()
-        select_nodes = tree.load_json_group(json.load(open(bpy.context.scene.sdn.groups)))
+        select_nodes = tree.load_json_group(read_json(bpy.context.scene.sdn.groups))
         if not select_nodes:
             return
         self.select_nodes = select_nodes
@@ -500,6 +489,7 @@ class Ops(bpy.types.Operator):
             n.location += bpy.context.space_data.cursor_location - v
             self.init_node_pos[n] = n.location.copy()
         bpy.context.window_manager.modal_handler_add(self)
+        self.exec_tree = tree
         return {"RUNNING_MODAL"}
 
     def PresetFromBookmark(self):
@@ -529,7 +519,7 @@ class Ops_Mask(bpy.types.Operator):
     cam_name: bpy.props.StringProperty(default="")
 
     def execute(self, context):
-        tree = get_tree()
+        tree = get_default_tree(context)
         if not tree:
             self.report({"ERROR"}, "No NodeTree Found")
             return {"FINISHED"}
@@ -595,10 +585,10 @@ class Load_History(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context: Context):
-        return get_tree()
+        return get_default_tree(context)
 
     def execute(self, context):
-        tree = get_tree()
+        tree = get_default_tree(context)
         if not tree:
             self.report({"ERROR"}, _T("No Node Tree Found!"))
             return {"FINISHED"}
@@ -610,6 +600,7 @@ class Load_History(bpy.types.Operator):
             data = data["workflow"]
         tree.load_json(data)
         return {"FINISHED"}
+
 
 class Popup_Load(bpy.types.Operator):
     bl_idname = "sdn.popup_load"
@@ -625,6 +616,7 @@ class Popup_Load(bpy.types.Operator):
             bpy.context.scene.sdn.import_bookmark = file.as_posix()
         return {"FINISHED"}
 
+
 class Copy_Tree(bpy.types.Operator):
     bl_idname = "sdn.copy_tree"
     bl_label = "Copy Tree to ClipBoard"
@@ -637,8 +629,13 @@ class Copy_Tree(bpy.types.Operator):
         return bpy.context.space_data.edit_tree
 
     def execute(self, context):
-        tree = get_tree()
-        bpy.context.window_manager.clipboard = json.dumps(tree.save_json())
+        tree: CFNodeTree = get_default_tree(context)
+        try:
+            workflow = tree.save_json()
+        except Exception as e:
+            self.report({"ERROR"}, str(e.args))
+            return {"FINISHED"}
+        bpy.context.window_manager.clipboard = json.dumps(workflow, ensure_ascii=False)
         # 弹出提示 已复制到剪切板
 
         def draw(pm: bpy.types.UIPopupMenu, context):
@@ -673,9 +670,9 @@ class Load_Batch(bpy.types.Operator):
         csv_path = Path(self.filepath)
 
         if not csv_path.exists():
-            self.report({"ERROR"}, _T("File Not Found: ") + self.task_path)
+            self.report({"ERROR"}, _T("File Not Found: ") + self.filepath)
             return {"FINISHED"}
-        tree = get_tree()
+        tree = get_default_tree(context)
         if not tree:
             self.report({"ERROR"}, _T("No Node Tree Found!"))
             return {"FINISHED"}
@@ -741,7 +738,7 @@ class Fetch_Node_Status(bpy.types.Operator):
         rtnode_reg()
         t4 = time.time()
         logger.info(_T("RegNode Time:") + f" {t4-t3:.2f}s")
-        CFNodeTree.instance = getattr(bpy.context.space_data, "edit_tree", None)
+        CFNodeTree.refresh_current_tree()
         return {"FINISHED"}
 
 
@@ -768,6 +765,24 @@ class NodeSearch(bpy.types.Operator):
             self.report({'WARNING'}, f"未定义的节点 > {self.item}")
 
         bpy.ops.node.translate_attach("INVOKE_DEFAULT")
+        return {"FINISHED"}
+
+
+class Clear_Node_Cache(bpy.types.Operator):
+    bl_idname = "sdn.clear_node_cache"
+    bl_label = "Clear Node Cache"
+    bl_description = "If node parsing error, you can delete node cache by this button, then restart blender to use it normally"
+    bl_translation_context = ctxt
+
+    def execute(self, context):
+        node_cache_path = Path(__file__).parent.joinpath("SDNode", "object_info.json")
+        if not node_cache_path.exists():
+            return {"FINISHED"}
+        try:
+            node_cache_path.unlink()
+            self.report({"INFO"}, _T("Node Cache Cleared!"))
+        except Exception as e:
+            self.report({"ERROR"}, _T("Node Cache Clear Failed!") + f" {e}")
         return {"FINISHED"}
 
 
@@ -803,7 +818,7 @@ class Sync_Stencil_Image(bpy.types.Operator):
 
         from bl_ui.properties_paint_common import UnifiedPaintPanel
 
-        rv3d = bpy.context.space_data.region_3d
+        rv3d: bpy.types.RegionView3D = bpy.context.space_data.region_3d
         area = context.area
         # zoom to fac powf((float(M_SQRT2) + camzoom / 50.0f), 2.0f) / 4.0f;
         # max(area.width, area.height) * fac
@@ -811,7 +826,7 @@ class Sync_Stencil_Image(bpy.types.Operator):
         length = max(area.width, area.height) * fac
 
         settings = UnifiedPaintPanel.paint_settings(context)
-        brush = settings.brush  # 可能报错 没brush(settings为空)
+        brush: bpy.types.Brush = settings.brush  # 可能报错 没brush(settings为空)
         width, height = area.width, area.height
         if not brush:
             return {"PASS_THROUGH"}
@@ -835,7 +850,7 @@ class Sync_Stencil_Image(bpy.types.Operator):
             rv3d.view_perspective = "CAMERA"
         return {"PASS_THROUGH"}
 
-    def update_brush(self, brush, pos, dim):
+    def update_brush(self, brush: bpy.types.Brush, pos, dim):
         pos = Vector(pos)
         dim = Vector(dim)
         if brush.stencil_dimension != dim:
@@ -844,7 +859,7 @@ class Sync_Stencil_Image(bpy.types.Operator):
             brush.stencil_pos = pos
 
 
-def menu_sync_stencil_image(self, context):
+def menu_sync_stencil_image(self: bpy.types.Menu, context: bpy.types.Context):
     if context.space_data.type != "VIEW_3D":
         return
     if context.area in Sync_Stencil_Image.areas:

@@ -3,7 +3,7 @@ from threading import Thread
 from pathlib import Path
 from time import sleep
 from ...External.lupawrapper import get_lua_runtime
-from ...utils import update_screen, CtxTimer, ScopeTimer, PrevMgr
+from ...utils import update_screen, ScopeTimer, PrevMgr
 from ...timer import Timer
 from ...kclogger import logger
 
@@ -68,7 +68,7 @@ class AnimatedImagePlayer:
             sleep(delay)
             Timer.put(self.next_frame)
         imglib.free_image(self.imgpath)
-        logger.info(f"Freed image: {self.imgpath}")
+        logger.info("Freed image: %s", self.imgpath)
 
     def free(self):
         self.playing = False
