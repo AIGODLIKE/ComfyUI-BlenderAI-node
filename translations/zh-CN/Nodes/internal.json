@@ -610,6 +610,18 @@
             "CONDITIONING": "条件"
         }
     },
+    "ConditioningSetAreaStrength": {
+        "title": "条件采样区域强度",
+        "inputs": {
+            "conditioning": "条件"
+        },
+        "widgets": {
+            "strength": "强度"
+        },
+        "outputs": {
+            "CONDITIONING": "条件"
+        }
+    },
     "ConditioningSetMask": {
         "title": "条件设置遮罩",
         "inputs": {
@@ -843,6 +855,18 @@
             "Latent": "Latent"
         }
     },
+    "LatentBatchSeedBehavior": {
+        "title": "Latent批次随机种操作",
+        "inputs": {
+            "samples": "Latent"
+        },
+        "widgets": {
+            "seed_behavior": "随机种操作"
+        },
+        "outputs": {
+            "LATENT": "Latent"
+        }
+    },
 
 
     "VAEDecode": {
@@ -886,7 +910,7 @@
                 "nearest-exact": "邻近-精确",
                 "bilinear": "双线性插值",
                 "area": "区域",
-                "bislerp": "球面线性",
+                "bislerp": "双球面线性",
                 "bicubic": "双三次插值",
             "width": "宽度",
             "height": "高度",
@@ -908,7 +932,7 @@
                 "nearest-exact": "邻近-精确",
                 "bilinear": "双线性插值",
                 "area": "区域",
-                "bislerp": "球面线性",
+                "bislerp": "双球面线性",
                 "bicubic": "双三次插值",
             "scale_by": "系数"
         },
@@ -1434,8 +1458,66 @@
             "MASK": "遮罩"
         }
     },
-    
 
+
+    
+    "PhotoMakerLoader": {
+        "title": "PhotoMaker加载器",
+        "widgets": {
+            "photomaker_model_name": "PhotoMaker模型"
+        },
+        "outputs": {
+            "PHOTOMAKER": "PhotoMaker"
+        }
+    },
+    "PhotoMakerEncode": {
+        "title": "PhotoMaker编码",
+        "inputs": {
+            "photomaker": "PhotoMaker",
+            "image": "图像",
+            "clip": "CLIP"
+        }
+    },
+
+
+    "CLIPTextEncodeControlnet": {
+        "title": "CLIP文本编码ControlNet",
+        "inputs": {
+            "clip": "CLIP",
+            "conditioning": "条件"
+        },
+        "widgets": {
+            "text": "文本"
+        },
+        "outputs": {
+            "CONDITIONING": "条件"
+        }
+    },
+
+
+    "StableCascade_EmptyLatentImage": {
+        "title": "StableCascade_空Latent",
+        "widgets": {
+            "width": "宽度",
+            "height": "高度",
+            "compression": "压缩等级",
+            "batch_size": "批次大小"
+        },
+        "outputs": {
+            "stage_c": "Stage_C",
+            "stage_b": "Stage_B"
+        }
+    },
+    "StableCascade_StageB_Conditioning": {
+        "title": "StableCascade_StageB条件",
+        "inputs": {
+            "conditioning": "条件",
+            "stage_c": "Stage_C"
+        },
+        "outputs": {
+            "CONDITIONING": "条件"
+        }
+    },
 
 
     "VAEDecodeTiled": {
@@ -1556,7 +1638,7 @@
             "model": "模型"
         },
         "widgets": {
-            "block_number": "块编号",
+            "block_number": "层编号",
             "downscale_factor": "收缩系数",
             "start_percent": "开始时间",
             "end_percent": "结束时间",
@@ -1564,6 +1646,17 @@
         },
         "outputs": {
             "MODEL": "模型"
+        }
+    },
+    "ImageOnlyCheckpointSave": {
+        "title": "保存Checkpoint(仅图像)",
+        "inputs": {
+            "model": "模型",
+            "clip_vision": "CLIP视觉",
+            "vae": "VAE"
+        },
+        "widgets": {
+            "filename_prefix": "文件名前缀"
         }
     },
     "SelfAttentionGuidance": {
@@ -1691,7 +1784,7 @@
         }
     },
     "CLIPTextEncodeSDXLRefiner": {
-        "title": "CLIP文本编码SDXL优化",
+        "title": "CLIP文本编码SDXL(Refiner)",
         "inputs": {
             "clip": "CLIP"
         },
@@ -1731,7 +1824,7 @@
         }
     },
     "CheckpointSave": {
-        "title": "保存模型",
+        "title": "保存Checkpoint",
         "inputs": {
             "model": "模型",
             "clip": "CLIP",

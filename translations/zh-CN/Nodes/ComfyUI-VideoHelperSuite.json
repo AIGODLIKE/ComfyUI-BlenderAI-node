@@ -30,7 +30,7 @@
                 "nearest-exact": "邻近-精确",
                 "bilinear": "双线性插值",
                 "area": "区域",
-                "bislerp": "球面线性",
+                "bislerp": "双球面线性",
                 "bicubic": "双三次插值",
             "crop": "裁剪",
                 "disabled": "关闭",
@@ -109,7 +109,7 @@
                 "nearest-exact": "邻近-精确",
                 "bilinear": "双线性插值",
                 "area": "区域",
-                "bislerp": "球面线性",
+                "bislerp": "双球面线性",
                 "bicubic": "双三次插值",
             "crop": "裁剪",
                 "disabled": "关闭",
@@ -259,7 +259,9 @@
     "VHS_VideoCombine": {
         "title": "合并为视频",
         "inputs": {
-            "images": "图像"
+            "images": "图像",
+            "audio": "音频",
+            "batch_manager": "批次管理"
         },
         "widgets": {
             "frame_rate": "帧率",
@@ -270,7 +272,11 @@
             "save_image": "保存图像",
             "Sync playback": "同步播放",
             "save_metadata": "保存元数据",
-            "audio_file": "音频文件"
+            "audio_file": "音频文件",
+            "save_output": "保存到输出文件夹"
+        },
+        "outputs": {
+            "Filenames": "文件名"
         }
     },
 
@@ -347,6 +353,24 @@
         },
         "outputs": {
             "audio": "音频"
+        }
+    },
+    "VHS_PruneOutputs": {
+        "title": "调整输出",
+        "inputs": {
+            "filenames": "文件名"
+        },
+        "widgets": {
+            "options": "选项"
+        }
+    },
+    "VHS_BatchManager": {
+        "title": "批次管理",
+        "widgets": {
+            "frames_per_batch": "每批次帧数"
+        },
+        "outputs": {
+            "VHS_BatchManager": "批次管理"
         }
     }
 }
