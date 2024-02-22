@@ -149,7 +149,9 @@ class PropGen:
                 continue
             # 直接搜索 prev_path_list + item文件名 + jpg/png后缀
             for suffix in IMG_SUFFIX:
-                pimg = pp / Path(item).with_suffix(suffix).as_posix()
+                ipath = pp.joinpath(item)
+                pimg = ipath.with_suffix(suffix)
+                pimg = pimg if pimg.exists() else Path(ipath.as_posix() + suffix)
                 if not pimg.exists():
                     continue
                 return Icon.reg_icon(pimg.absolute())
