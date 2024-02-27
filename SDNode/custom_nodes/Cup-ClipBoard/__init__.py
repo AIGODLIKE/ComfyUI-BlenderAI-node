@@ -48,7 +48,10 @@ def rmtree(path: Path):
             ...
 
 def register():
-    rmtree(EXT_PATH)
+    import nodes
+    if hasattr(nodes, "EXTENSION_WEB_DIRS"):
+        rmtree(EXT_PATH)
+        return
     link_func = shutil.copytree
     if os.name == "nt":
         import _winapi
@@ -69,3 +72,4 @@ def unregister():
 register()
 atexit.register(unregister)
 NODE_CLASS_MAPPINGS = {}
+WEB_DIRECTORY = "./"
