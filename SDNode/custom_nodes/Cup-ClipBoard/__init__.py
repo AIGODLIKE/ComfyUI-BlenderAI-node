@@ -24,10 +24,10 @@ CUR_PATH = Path(__file__).parent
 
 def rmtree(path: Path):
     # unlink symbolic link
+    if not path.exists():
+        return
     if Path(path.resolve()).as_posix() != path.as_posix():
         path.unlink()
-        return
-    if not path.exists():
         return
     if path.is_file():
         path.unlink()

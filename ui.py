@@ -60,6 +60,7 @@ class Panel(bpy.types.Panel):
             self.show_launch_cnn(layout)
             return
         self.show_common(layout)
+        self.show_custom(layout)
 
     def show_common(self, layout: bpy.types.UILayout):
         scale_popup = get_pref().popup_scale
@@ -131,6 +132,10 @@ class Panel(bpy.types.Panel):
         if len(sce.sdn_history_item) == 0:
             return
         layout.template_list("HISTORY_UL_UIList", "", sce, "sdn_history_item", sce, "sdn_history_item_index")
+
+    def show_custom(self, layout: bpy.types.UILayout):
+        from .SDNode import crystools_monitor
+        crystools_monitor.draw(layout)
 
     def show_launch_cnn(self, layout: bpy.types.UILayout):
         if TaskManager.server != FakeServer._instance:

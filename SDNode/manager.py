@@ -569,8 +569,16 @@ class LocalServer(Server):
             dst = Path(model_path).joinpath("custom_nodes", file.name)
             if file.is_dir():
                 if dst.exists():
-                    rt(dst)
-                shutil.copytree(file, dst, dirs_exist_ok=True)
+                    try:
+                        rt(dst)
+                    except Exception as e:
+                        # 可能会删除失败
+                        ...
+                try:
+                    shutil.copytree(file, dst, dirs_exist_ok=True)
+                except Exception as e:
+                    # 可能会拷贝失败(权限问题)
+                    ...
                 continue
             if not file.suffix == ".py":
                 continue
@@ -1016,6 +1024,12 @@ class TaskManager:
 
         def on_message(ws, message):
             msg = json.loads(message)
+            try:
+                from .custom_support import crystools_monitor
+                if crystools_monitor.process_msg(msg):
+                    return
+            except Exception:
+                ...
             mtype = msg["type"]
             data = msg["data"]
             if mtype == "executing":
