@@ -1,14 +1,26 @@
 import bpy
 import blf
-from ..utils import Timer, update_screen
+from ..utils import Timer, update_screen, _T
+
+
+class CrystoolsMonitorGPUProp(bpy.types.PropertyGroup):
+    gpu: bpy.props.FloatProperty(name="GPU Usage", default=0.0, min=0, max=100, subtype="PERCENTAGE")
+    vram: bpy.props.FloatProperty(name="VRAM Usage", default=0.0, min=0, max=100, subtype="PERCENTAGE")
+
+
+class CrystoolsMonitorProp(bpy.types.PropertyGroup):
+    cpu: bpy.props.FloatProperty(name="CPU Usage", default=0.0, min=0, max=100, subtype="PERCENTAGE")
+    ram: bpy.props.FloatProperty(name="RAM Usage", default=0.0, min=0, max=100, subtype="PERCENTAGE")
+    hdd: bpy.props.FloatProperty(name="HDD Usage", default=0.0, min=0, max=100, subtype="PERCENTAGE")
+    gpus: bpy.props.CollectionProperty(type=CrystoolsMonitorGPUProp)
 
 
 class CrystoolsMonitor:
-    def __init__(self) -> None:
-        self.cpu = None
-        self.ram = None
-        self.hdd = None
-        self.gpus = []
+    # def __init__(self) -> None:
+    #     self.cpu = None
+    #     self.ram = None
+    #     self.hdd = None
+    #     self.gpus = []
 
     def process_msg(self, msg) -> bool:
         mtype = msg.get("type", None)
@@ -33,46 +45,95 @@ class CrystoolsMonitor:
             }
         }
         data = msg.get("data", {})
-        self.cpu = data.get("cpu_utilization", None)
-        self.ram = data.get("ram_used_percent", None)
-        self.hdd = data.get("hdd_used_percent", None)
-        self.gpus = data.get("gpus", [])
-        Timer.put(update_screen)
+
+        def f(data):
+            p = bpy.context.scene.crystools_monitor_prop
+            p.cpu = data.get("cpu_utilization", 0)
+            p.ram = data.get("ram_used_percent", 0)
+            p.hdd = data.get("hdd_used_percent", 0)
+            gpus = data.get("gpus", [])
+            if len(p.gpus) < len(gpus):
+                for i in range(len(p.gpus), len(gpus)):
+                    p.gpus.add()
+            for i, g in enumerate(gpus):
+                p.gpus[i].gpu = g.get("gpu_utilization", 0)
+                p.gpus[i].vram = g.get("vram_used_percent", 0)
+            update_screen()
+        # self.gpus = data.get("gpus", [])
+        Timer.put((f, data))
         return True
 
     def draw(self, layout: bpy.types.UILayout):
+        box = layout.box()
+        box.label(text="CrystoolsMonitor")
+        col = box.column(align=True)
+        col.prop(bpy.context.scene.crystools_monitor_prop, "cpu")
+        col.prop(bpy.context.scene.crystools_monitor_prop, "ram")
+        col.prop(bpy.context.scene.crystools_monitor_prop, "hdd")
+        for g in bpy.context.scene.crystools_monitor_prop.gpus:
+            col.prop(g, "gpu")
+            col.prop(g, "vram")
+        return
         if self.cpu is None:
             return
         box = layout.box()
         box.label(text="CrystoolsMonitor")
         row = box.row()
         row.alignment = "CENTER"
-        row.label(text="CPU Usage: " + self.make_progress_bar(self.cpu / 100, len("CPU Usage: ")))
+        t = _T("CPU Usage: ")
+        row.label(text=self.make_progress_bar(self.cpu / 100, t))
 
         row = box.row()
         row.alignment = "CENTER"
-        row.label(text="RAM Usage: " + self.make_progress_bar(self.ram / 100, len("RAM Usage: ")))
+        t = _T("RAM Usage: ")
+        row.label(text=self.make_progress_bar(self.ram / 100, t))
 
         row = box.row()
         row.alignment = "CENTER"
-        row.label(text="HDD Usage: " + self.make_progress_bar(self.hdd / 100, len("HDD Usage: ")))
+        t = _T("HDD Usage: ")
+        row.label(text=self.make_progress_bar(self.hdd / 100, t))
 
         for gpu in self.gpus:
             row = box.row()
             row.alignment = "CENTER"
-            row.label(text="GPU Usage: " + self.make_progress_bar(gpu.get("gpu_utilization", 0) / 100, len("GPU Usage: ")))
+            t = _T("GPU Usage: ")
+            row.label(text=self.make_progress_bar(gpu.get("gpu_utilization", 0) / 100, t))
             row = box.row()
-            row.alignment = "CENTER"
-            row.label(text="VRAM Usage: " + self.make_progress_bar(gpu.get("vram_used_percent", 0) / 100, len("VRAM Usage: ")))
 
-    def make_progress_bar(self, per, ocp=0, bt1="█", bt2="░"):
-        content = f"{per*100:3.0f}% "
-        lnum = int(bpy.context.region.width / bpy.context.preferences.view.ui_scale / 7 - 21)
-        lnum = int(lnum * 0.3)
-        lnum = int((bpy.context.region.width - blf.dimensions(0, content + bt1 * ocp)[0]) / blf.dimensions(0, bt1)[0]) - 10
+            row.alignment = "CENTER"
+            t = _T("VRAM Usage:")
+            row.label(text=self.make_progress_bar(gpu.get("vram_used_percent", 0) / 100, t))
+        row = box.row()
+        # row.label(text="| A B  C  D   E|")
+
+    def make_progress_bar(self, per, head="", tail="", bt1="█", bt2="░"):
+        "A"  # 15
+        " "  # 6
+        "█"  # 22
+        content = f"{head}{per*100:　>4.1f}% "
+        # 面板宽度(dim)
+        pwidth = bpy.context.region.width - 21
+        bt1w = blf.dimensions(0, bt1)[0]
+        bt2w = blf.dimensions(0, bt2)[0]
+
+        lnum = int(pwidth)
+        # lnum = int(lnum * 0.3)
+        lnum = int((bpy.context.region.width - blf.dimensions(0, content)[0]) / bt1w) - 10
         v = int(per * lnum)
         content = content + bt1 * v + bt2 * (lnum - v)
         return content[:134]
 
 
 crystools_monitor = CrystoolsMonitor()
+
+
+def custom_support_reg():
+    bpy.utils.register_class(CrystoolsMonitorGPUProp)
+    bpy.utils.register_class(CrystoolsMonitorProp)
+    bpy.types.Scene.crystools_monitor_prop = bpy.props.PointerProperty(type=CrystoolsMonitorProp)
+
+
+def custom_support_unreg():
+    del bpy.types.Scene.crystools_monitor_prop
+    bpy.utils.unregister_class(CrystoolsMonitorProp)
+    bpy.utils.unregister_class(CrystoolsMonitorGPUProp)

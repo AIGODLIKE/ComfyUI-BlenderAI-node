@@ -215,6 +215,17 @@ other = {
     # SDNode/nodegroup.py
     "Depth of group tree is limited to 1": "组最大深度限制为1",
     "Node group can't be nested": "节点组不能被嵌套(最大深度限制为1)",
+    # SDNode/custom_support.py
+    "CPU Usage: ": "CPU占用:",
+    "RAM Usage: ": "内存占用:",
+    "HDD Usage: ": "硬盘占用:",
+    "GPU Usage: ": "显卡占用:",
+    "VRAM Usage:": "显存占用:",
+    "CPU Usage": "CPU占用",
+    "RAM Usage": "内存占用",
+    "HDD Usage": "硬盘占用",
+    "GPU Usage": "显卡占用",
+    "VRAM Usage": "显存占用",
     # __init__.py
     "Execute Node Tree": "运行节点树",
     "Stop Loop": "终止循环",
