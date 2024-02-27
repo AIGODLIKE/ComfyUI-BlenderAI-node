@@ -16,16 +16,16 @@ class CrystoolsMonitorProp(bpy.types.PropertyGroup):
 
 
 class CrystoolsMonitor:
-    # def __init__(self) -> None:
-    #     self.cpu = None
-    #     self.ram = None
-    #     self.hdd = None
-    #     self.gpus = []
+    def __init__(self) -> None:
+        self.enable = False
 
     def process_msg(self, msg) -> bool:
         mtype = msg.get("type", None)
         if mtype is None:
             return False
+        if mtype != "crystools.monitor":
+            return False
+        self.enable = True
         data_example = {
             "type": "crystools.monitor",
             "data": {
@@ -48,6 +48,7 @@ class CrystoolsMonitor:
 
         def f(data):
             p = bpy.context.scene.crystools_monitor_prop
+            p.enabled = True
             p.cpu = data.get("cpu_utilization", 0)
             p.ram = data.get("ram_used_percent", 0)
             p.hdd = data.get("hdd_used_percent", 0)
@@ -64,13 +65,16 @@ class CrystoolsMonitor:
         return True
 
     def draw(self, layout: bpy.types.UILayout):
+        if not self.enable:
+            return
         box = layout.box()
         box.label(text="CrystoolsMonitor")
         col = box.column(align=True)
-        col.prop(bpy.context.scene.crystools_monitor_prop, "cpu")
-        col.prop(bpy.context.scene.crystools_monitor_prop, "ram")
-        col.prop(bpy.context.scene.crystools_monitor_prop, "hdd")
-        for g in bpy.context.scene.crystools_monitor_prop.gpus:
+        p = bpy.context.scene.crystools_monitor_prop
+        col.prop(p, "cpu")
+        col.prop(p, "ram")
+        col.prop(p, "hdd")
+        for g in p.gpus:
             col.prop(g, "gpu")
             col.prop(g, "vram")
         return
