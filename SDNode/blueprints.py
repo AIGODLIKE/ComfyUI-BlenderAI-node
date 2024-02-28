@@ -146,6 +146,23 @@ class BluePrintBase:
                 layout.label(text=line, text_ctxt=self.get_ctxt())
             row = draw_prop_with_link(layout, self, prop, swsock, swdisp)
             row.operator("sdn.enable_mlt", text="", icon="TEXT")
+            if not swdisp:
+                return True
+            stat = self.mlt_stats.get(prop)
+            enable = bool(stat and stat.enable)
+            op = row.operator("sdn.adv_text_edit", text="", icon="OPTIONS", depress=enable)
+            op.prop = prop
+            op.action = "Switch"
+            if enable:
+                box = layout.box()
+                col = box.column()
+                sdn = bpy.context.scene.sdn
+                col.prop(stat, "addtext", icon="ADD", text="")
+                col.template_list("MLTWords_UL_UIList", prop, sdn, "mlt_words", sdn, "mlt_words_index", columns=2, type="GRID")
+                # col.prop_search(stat, "addtext", sdn, "mlt_words", icon="ADD", text="")
+                # else:
+                #     col.prop(stat, "addtext", icon="ADD", text="")
+                col.template_list("MLTText_UL_UIList", "", stat, "texts", stat, "tindex")
             return True
 
         popup_scale = 5

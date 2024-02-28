@@ -261,10 +261,32 @@ class PropGen:
         {'default': 'ComfyUI', 'multiline': True}
         subtype = "NONE"
 
+        def update_default_wrap(n):
+            inp_name = n
+
+            def wrap(self: NodeBase, context):
+                stat = self.mlt_stats.get(inp_name)
+                if not stat or not stat.enable:
+                    return
+                stat.freeze = True
+                try:
+                    stat.texts.clear()
+                    for text in self[inp_name].split(","):
+                        i = stat.texts.add()
+                        i.name = text.strip()
+                except Exception:
+                    import traceback
+                    traceback.print_exc()
+                stat.freeze = False
+            return wrap
+        update_default = update_default_wrap(inp_name)
+
         def update_wrap(n=""):
             i_name = n
+            update_default = update_default_wrap(n)
 
             def wrap(self, context):
+                update_default(self, context)
                 if not self[i_name]:
                     return
                 if not self[i_name].startswith("//"):
@@ -272,7 +294,6 @@ class PropGen:
                 self[i_name] = bpy.path.abspath(self[i_name])
             return wrap
 
-        def update_default(_, __): ...
         update = update_wrap(inp_name)
         if inp_name == "image":
             subtype = "FILE_PATH"
@@ -338,6 +359,89 @@ class SDNConfig(bpy.types.PropertyGroup):
     converted: bpy.props.BoolProperty(default=False)
 
 
+class MLTText(bpy.types.PropertyGroup):
+    def set_content(self, v):
+        # v format: '[xxx]key'
+        if "]" in v:
+            self["name"] = v.split("]")[1].strip()
+        else:
+            self["name"] = v
+
+    def get_content(self):
+        if "name" not in self:
+            self["name"] = ""
+        return self["name"]
+
+    def update_content(self, context):
+        node: NodeBase = context.node
+        # 合并text
+        for stat in node.mlt_stats:
+            if not stat.enable or stat.freeze:
+                continue
+            if not hasattr(node, stat.name):
+                continue
+            ct = ",".join([t.name for t in stat.texts])
+            if ct == getattr(node, stat.name):
+                continue
+            setattr(node, stat.name, ct)
+
+    name: bpy.props.StringProperty(update=update_content, set=set_content, get=get_content)
+
+
+class MLTRec(bpy.types.PropertyGroup):
+    name: bpy.props.StringProperty()
+    enable: bpy.props.BoolProperty(default=False)
+    texts: bpy.props.CollectionProperty(type=MLTText)
+    tindex: bpy.props.IntProperty(default=0)
+    freeze: bpy.props.BoolProperty(default=False)
+
+    def add_text_update(self, context):
+        if not self.addtext:
+            return
+        t = self.addtext.strip()
+        self.addtext = ""
+        if t not in self.texts:
+            i = self.texts.add()
+            i.name = t
+        else:
+            def pop_error(self, context):
+                self.layout.label(text="Text already exists", icon="ERROR")
+            bpy.context.window_manager.popup_menu(pop_error, title="ERROR", icon="ERROR")
+    addtext: bpy.props.StringProperty(name="ADD", update=add_text_update)
+
+
+class MLTWords_UL_UIList(bpy.types.UIList):
+
+    def draw_item(self,
+                  context: bpy.types.Context,
+                  layout: bpy.types.UILayout,
+                  data, item, icon, active_data, active_property, index=0, flt_flag=0):
+        row = layout.row()
+        row.label(text=str(item.freq), icon="SOLO_ON")
+        row.label(text=item.value)
+        op = row.operator(AdvTextEdit.bl_idname, text="", icon="ADD")
+        op.text_name = item.value
+        op.prop = self.list_id
+        op.action = "Add"
+
+
+class MLTText_UL_UIList(bpy.types.UIList):
+    def draw_item(self,
+                  context: bpy.types.Context,
+                  layout: bpy.types.UILayout,
+                  data, item, icon, active_data, active_property, index=0, flt_flag=0):
+        row = layout.row(align=True)
+        row.label(text="", icon="KEYTYPE_KEYFRAME_VEC")
+        if getattr(data, active_property) == index:
+            row.prop_search(item, "name", bpy.context.scene.sdn, "mlt_words", text="", results_are_suggestions=True)
+        else:
+            row.label(text=item.name)
+        op = row.operator(AdvTextEdit.bl_idname, text="", icon="X")
+        op.text_name = item.name
+        op.prop = data.name
+        op.action = "Remove"
+
+
 class NodeBase(bpy.types.Node):
     bl_width_min = 200.0
     bl_width_max = 2000.0
@@ -348,7 +452,7 @@ class NodeBase(bpy.types.Node):
     sdn_socket_visible_in: bpy.props.CollectionProperty(type=SDNConfig)
     sdn_socket_visible_out: bpy.props.CollectionProperty(type=SDNConfig)
     id: bpy.props.StringProperty(default="-1")
-    builtin__stat__: bpy.props.StringProperty(subtype="BYTE_STRING")  # ori name: True/False
+    mlt_stats: bpy.props.CollectionProperty(type=MLTRec)
     class_type: str
     # for pylint
     inp_types: list[str]
@@ -457,9 +561,9 @@ class NodeBase(bpy.types.Node):
         return get_ctxt(self.class_type)
 
     def query_stats(self) -> dict:
-        if not self.builtin__stat__:
+        if "BUILTIN_STAT" not in self:
             return {}
-        return pickle.loads(self.builtin__stat__)
+        return self["BUILTIN_STAT"]
 
     def query_stat(self, name):
         stat = self.query_stats()
@@ -467,9 +571,26 @@ class NodeBase(bpy.types.Node):
         return stat.get(name, None)
 
     def set_stat(self, name, value):
+        if "BUILTIN_STAT" not in self:
+            self["BUILTIN_STAT"] = {}
         stat = self.query_stats()
         stat[name] = value
-        self.builtin__stat__ = pickle.dumps(stat)
+
+    def query_mlt_stats(self) -> dict:
+        if "BUILTIN_MLT_STAT" not in self:
+            return {}
+        return self["BUILTIN_MLT_STAT"]
+
+    def query_mlt_stat(self, name):
+        return self.query_mlt_stats().get(name, False)
+
+    def set_mlt_stat(self, name, stat):
+        if "BUILTIN_MLT_STAT" not in self:
+            self["BUILTIN_MLT_STAT"] = {}
+        stat = self.query_mlt_stats()
+        if name not in stat:
+            stat[name] = {}
+        stat[name]["stat"]
 
     def is_base_type(self, name):
         """
@@ -1215,6 +1336,79 @@ class GetSelCol(bpy.types.Operator):
         return {'FINISHED'}
 
 
+class AdvTextEdit(bpy.types.Operator):
+    bl_idname = "sdn.adv_text_edit"
+    bl_label = ""
+    bl_translation_context = ctxt
+    prop: bpy.props.StringProperty(default="")
+    text_name: bpy.props.StringProperty(default="")
+    action: bpy.props.EnumProperty(items=[("Switch", "Switch", "", 0),
+                                          ("Remove", "Remove", "", 1),
+                                          ("Add", "Add", "", 2)],
+                                   default="Switch")
+
+    @classmethod
+    def poll(cls, context):
+        from .tree import TREE_TYPE
+        return context.space_data.tree_type == TREE_TYPE
+
+    def execute(self, context):
+        node: NodeBase = bpy.context.node
+        if not node:
+            return {"FINISHED"}
+        stat: MLTRec = None
+        if self.action == "Switch":
+            if self.prop not in node.mlt_stats:
+                stat = node.mlt_stats.add()
+                stat.name = self.prop
+                stat.enable = True
+            else:
+                stat = node.mlt_stats.get(self.prop)
+                stat.enable ^= True
+            self.update_list(node, stat)
+        elif self.action == "Remove":
+            stat = node.mlt_stats.get(self.prop)
+            if stat:
+                tindex = stat.texts.find(self.text_name)
+                stat.texts.remove(tindex)
+                self.dump_list(node, stat)
+        elif self.action == "Add":
+            stat = node.mlt_stats.get(self.prop)
+            if stat:
+                if self.text_name not in stat.texts:
+                    stat.texts.add().name = self.text_name
+                    self.update_list(node, stat)
+                else:
+                    self.report({"ERROR"}, "Text already exists")
+        return {'FINISHED'}
+
+    def dump_list(self, node, stat):
+        if not stat.enable:
+            return
+        if not hasattr(node, stat.name):
+            return
+        ct = ",".join([t.name for t in stat.texts])
+        if ct == getattr(node, stat.name):
+            return
+        setattr(node, stat.name, ct)
+        self.update_list(node, stat)
+
+    def update_list(self, node, stat):
+        if not stat or not node:
+            return
+        stat.texts.clear()
+        rm = False
+        for text in getattr(node, self.prop).split(","):
+            text = text.strip()
+            if not text:
+                rm = True
+                continue
+            i = stat.texts.add()
+            i.name = text.strip()
+        if rm:
+            self.dump_list(node, stat)
+
+
 class NodeParser:
     CACHED_OBJECT_INFO = {}
     SOCKET_TYPE = {}  # NodeType: {PropName: SocketType}
@@ -1602,7 +1796,7 @@ class Images(bpy.types.PropertyGroup):
     image: bpy.props.PointerProperty(type=bpy.types.Image)
 
 
-clss = [SDNConfig, Ops_Switch_Socket_Disp, Ops_Switch_Socket_Widget, Ops_Add_SaveImage, Set_Render_Res, GetSelCol, Ops_Active_Tex, Ops_Link_Mask, Images]
+clss = [SDNConfig, MLTText, MLTRec, MLTWords_UL_UIList, MLTText_UL_UIList, Ops_Switch_Socket_Disp, Ops_Switch_Socket_Widget, Ops_Add_SaveImage, Set_Render_Res, GetSelCol, AdvTextEdit, Ops_Active_Tex, Ops_Link_Mask, Images]
 
 reg, unreg = bpy.utils.register_classes_factory(clss)
 

@@ -16,8 +16,15 @@ class RenderLayerString(bpy.types.PropertyGroup):
     name: bpy.props.StringProperty(name="Render Layer Name")
 
 
+class MLTWord(bpy.types.PropertyGroup):
+    value: bpy.props.StringProperty(name="Value")
+    freq: bpy.props.IntProperty(name="Frequency")
+
+
 class Prop(bpy.types.PropertyGroup):
     cache = PROP_CACHE
+    mlt_words: bpy.props.CollectionProperty(type=MLTWord)
+    mlt_words_index: bpy.props.IntProperty()
 
     def mark_dirty():
         Prop.cache["presets_dir"].clear()
@@ -201,7 +208,7 @@ class Prop(bpy.types.PropertyGroup):
             data = data["workflow"]
         tree.load_json(data)
 
-    import_bookmark: bpy.props.StringProperty(name="Preset Bookmark", default=str(Path.cwd()), subtype="FILE_PATH",update=import_bookmark_update)
+    import_bookmark: bpy.props.StringProperty(name="Preset Bookmark", default=str(Path.cwd()), subtype="FILE_PATH", update=import_bookmark_update)
 
 
 def render_layer_update():

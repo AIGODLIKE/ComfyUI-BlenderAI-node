@@ -1,4 +1,5 @@
 import bpy
+from .words_collection import words
 from ..utils import PkgInstaller
 from ..translations import ctxt
 REGISTERED = [False]
@@ -38,5 +39,6 @@ class EnableMLT(bpy.types.Operator):
     def execute(self, context):
         if not enable_multiline_text():
             self.report({"ERROR"}, "MultiLineText Not Enabled")
+            return {"FINISHED"}
         bpy.ops.sdn.multiline_text("INVOKE_DEFAULT")
         return {"FINISHED"}

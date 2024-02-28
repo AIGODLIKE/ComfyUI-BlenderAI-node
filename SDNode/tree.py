@@ -1053,7 +1053,6 @@ def reg_node_reroute():
 
         inode.class_type = inode.__name__
         inode.__metadata__ = {}
-        inode.builtin__stat__ = pickle.dumps({})
         inode.inp_types = []
         inode.out_types = []
         # funcs = inspect.getmembers(NodeBase, predicate=inspect.isfunction)

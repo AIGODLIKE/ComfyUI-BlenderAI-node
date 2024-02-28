@@ -191,6 +191,7 @@ other = {
     "Socket Manage": "Socket管理",
     "Default value is too large: %s.%s -> %s": "默认值过大: %s.%s -> %s",
     "Default value is too small: %s.%s -> %s": "默认值过小: %s.%s -> %s",
+    "Text already exists": "词条已存在",
     # SDNode/blueprints.py
     "Non-Standard Enum": "非标准枚举",
     "Capture Screen": "截图",
