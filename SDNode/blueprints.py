@@ -1054,7 +1054,7 @@ class PrimitiveNode(BluePrintBase):
             setattr(link.to_node, get_reg_name(link.to_socket.name), prop)
 
 
-def get_image_path(data, suffix="png") -> Path:
+def get_image_path(data, suffix="png", save_path="") -> Path:
     '''data = {"filename": filename, "subfolder": subfolder, "type": folder_type}'''
     url_values = urllib.parse.urlencode(data)
     from .manager import TaskManager
@@ -1062,10 +1062,11 @@ def get_image_path(data, suffix="png") -> Path:
     # logger.debug(f'requesting {url} for image data')
     with urllib.request.urlopen(url) as response:
         img_data = response.read()
-        img_path = Path(tempfile.gettempdir()) / data.get('filename', f'preview.{suffix}')
-        with open(img_path, "wb") as f:
+        if not save_path:
+            save_path = Path(tempfile.gettempdir()) / data.get('filename', f'preview.{suffix}')
+        with open(save_path, "wb") as f:
             f.write(img_data)
-        return img_path
+        return save_path
 
 
 class 预览(BluePrintBase):
@@ -1202,9 +1203,24 @@ class 存储(BluePrintBase):
             img_paths = result.get("output", {}).get("images", [])
             for img in img_paths:
                 if mode == "Save":
+                    filename_prefix = img.get("filename", self.filename_prefix)
+                    output_dir = self.output_dir
+                    if not output_dir or not Path(output_dir).is_dir():
+                        output_dir = tempfile.gettempdir()
+                    save_path = Path(output_dir).joinpath(filename_prefix)
+                    img = get_image_path(img, img_path=save_path).as_posix()
+                    if save_path.exists():
+                        output_dir = save_path.parent.as_posix()
+
+                        def save_out_dir(self, output_dir):
+                            self.output_dir = output_dir
+                        Timer.put((save_out_dir, self, output_dir))
+
                     def f(_, img):
                         return bpy.data.images.load(img)
                 elif mode in {"Import", "ToImage"}:
+                    img = get_image_path(img).as_posix()
+
                     def f(img_src, img):
                         if not img_src:
                             return
