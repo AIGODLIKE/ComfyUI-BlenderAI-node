@@ -152,7 +152,7 @@ class BluePrintBase:
             enable = bool(stat and stat.enable)
             op = row.operator("sdn.adv_text_edit", text="", icon="OPTIONS", depress=enable)
             op.prop = prop
-            op.action = "Switch"
+            op.action = "SwitchAdvText"
             if enable:
                 box = layout.box()
                 col = box.column()

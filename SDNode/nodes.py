@@ -3,7 +3,7 @@ import bpy
 import os
 import json
 import math
-import pickle
+import re
 from hashlib import md5
 from math import ceil
 from typing import Set, Any
@@ -269,15 +269,25 @@ class PropGen:
                 if not stat or not stat.enable:
                     return
                 stat.freeze = True
+                rm = False
                 try:
                     stat.texts.clear()
                     for text in self[inp_name].split(","):
+                        t = text.strip()
+                        if t in stat.texts:
+                            rm = True
+                            continue
                         i = stat.texts.add()
-                        i.name = text.strip()
+                        i.name = t
                 except Exception:
                     import traceback
                     traceback.print_exc()
                 stat.freeze = False
+                # if rm:
+                #     ct = ",".join([t.name for t in stat.texts])
+                #     if ct == self[inp_name]:
+                #         return
+                #     self[inp_name] = ct
             return wrap
         update_default = update_default_wrap(inp_name)
 
@@ -360,12 +370,32 @@ class SDNConfig(bpy.types.PropertyGroup):
 
 
 class MLTText(bpy.types.PropertyGroup):
+    def find_stat(self, node: NodeBase):
+        if not node:
+            return
+        for stat in node.mlt_stats:
+            if not stat.enable or stat.freeze:
+                continue
+            if not hasattr(node, stat.name):
+                continue
+            for t in stat.texts:
+                if t != self:
+                    continue
+                return stat
+
     def set_content(self, v):
         # v format: '[xxx]key'
+        # 如果v已经存在则弹出报错
         if "]" in v:
-            self["name"] = v.split("]")[1].strip()
-        else:
-            self["name"] = v
+            v = v.split("]")[1].strip()
+        node: NodeBase = bpy.context.active_node
+        stat = self.find_stat(node)
+        if stat and v in stat.texts:
+            def pop_error(self, context):
+                self.layout.label(text="Text already exists", icon="ERROR")
+            bpy.context.window_manager.popup_menu(pop_error, title="ERROR", icon="ERROR")
+            return
+        self["name"] = v
 
     def get_content(self):
         if "name" not in self:
@@ -375,15 +405,13 @@ class MLTText(bpy.types.PropertyGroup):
     def update_content(self, context):
         node: NodeBase = context.node
         # 合并text
-        for stat in node.mlt_stats:
-            if not stat.enable or stat.freeze:
-                continue
-            if not hasattr(node, stat.name):
-                continue
-            ct = ",".join([t.name for t in stat.texts])
-            if ct == getattr(node, stat.name):
-                continue
-            setattr(node, stat.name, ct)
+        stat = self.find_stat(node)
+        if not stat:
+            return
+        ct = ",".join([t.name for t in stat.texts])
+        if ct == getattr(node, stat.name):
+            return
+        setattr(node, stat.name, ct)
 
     name: bpy.props.StringProperty(update=update_content, set=set_content, get=get_content)
 
@@ -407,7 +435,7 @@ class MLTRec(bpy.types.PropertyGroup):
             def pop_error(self, context):
                 self.layout.label(text="Text already exists", icon="ERROR")
             bpy.context.window_manager.popup_menu(pop_error, title="ERROR", icon="ERROR")
-    addtext: bpy.props.StringProperty(name="ADD", update=add_text_update)
+    addtext: bpy.props.StringProperty(name="Add Tag By Input", update=add_text_update)
 
 
 class MLTWords_UL_UIList(bpy.types.UIList):
@@ -422,7 +450,7 @@ class MLTWords_UL_UIList(bpy.types.UIList):
         op = row.operator(AdvTextEdit.bl_idname, text="", icon="ADD")
         op.text_name = item.value
         op.prop = self.list_id
-        op.action = "Add"
+        op.action = "AddTag"
 
 
 class MLTText_UL_UIList(bpy.types.UIList):
@@ -436,10 +464,26 @@ class MLTText_UL_UIList(bpy.types.UIList):
             row.prop_search(item, "name", bpy.context.scene.sdn, "mlt_words", text="", results_are_suggestions=True)
         else:
             row.label(text=item.name)
+
+        op = row.operator(AdvTextEdit.bl_idname, text="", icon="ADD")
+        op.text_name = item.name
+        op.prop = data.name
+        op.action = "UpTagWeight"
+
+        op = row.operator(AdvTextEdit.bl_idname, text="", icon="REMOVE")
+        op.text_name = item.name
+        op.prop = data.name
+        op.action = "DownTagWeight"
+
+        op = row.operator(AdvTextEdit.bl_idname, text="", icon="RADIOBUT_OFF")
+        op.text_name = item.name
+        op.prop = data.name
+        op.action = "RemoveTagWeight"
+
         op = row.operator(AdvTextEdit.bl_idname, text="", icon="X")
         op.text_name = item.name
         op.prop = data.name
-        op.action = "Remove"
+        op.action = "RemoveTag"
 
 
 class NodeBase(bpy.types.Node):
@@ -1342,10 +1386,22 @@ class AdvTextEdit(bpy.types.Operator):
     bl_translation_context = ctxt
     prop: bpy.props.StringProperty(default="")
     text_name: bpy.props.StringProperty(default="")
-    action: bpy.props.EnumProperty(items=[("Switch", "Switch", "", 0),
-                                          ("Remove", "Remove", "", 1),
-                                          ("Add", "Add", "", 2)],
-                                   default="Switch")
+    action: bpy.props.EnumProperty(items=[("SwitchAdvText", "SwitchAdvText", "", 0),
+                                          ("RemoveTag", "RemoveTag", "", 1),
+                                          ("AddTag", "AddTag", "", 2),
+                                          ("UpTagWeight", "UpTagWeight", "", 3),
+                                          ("DownTagWeight", "DownTagWeight", "", 4),
+                                          ("RemoveTagWeight", "RemoveTagWeight", "", 5),
+                                          ],
+                                   default="SwitchAdvText")
+
+    @classmethod
+    def description(cls, context: bpy.types.Context,
+                    properties: bpy.types.OperatorProperties) -> str:
+        desc = "Adv Text Action"
+        if action := getattr(properties, "action", ""):
+            desc = action
+        return _T(desc)
 
     @classmethod
     def poll(cls, context):
@@ -1356,30 +1412,60 @@ class AdvTextEdit(bpy.types.Operator):
         node: NodeBase = bpy.context.node
         if not node:
             return {"FINISHED"}
-        stat: MLTRec = None
-        if self.action == "Switch":
-            if self.prop not in node.mlt_stats:
+        stat: MLTRec = node.mlt_stats.get(self.prop)
+        if self.action == "SwitchAdvText":
+            if not stat:
                 stat = node.mlt_stats.add()
                 stat.name = self.prop
                 stat.enable = True
             else:
-                stat = node.mlt_stats.get(self.prop)
                 stat.enable ^= True
             self.update_list(node, stat)
-        elif self.action == "Remove":
-            stat = node.mlt_stats.get(self.prop)
+        elif self.action == "RemoveTag":
             if stat:
                 tindex = stat.texts.find(self.text_name)
                 stat.texts.remove(tindex)
                 self.dump_list(node, stat)
-        elif self.action == "Add":
-            stat = node.mlt_stats.get(self.prop)
+        elif self.action == "AddTag":
             if stat:
                 if self.text_name not in stat.texts:
                     stat.texts.add().name = self.text_name
                     self.update_list(node, stat)
                 else:
                     self.report({"ERROR"}, "Text already exists")
+        elif self.action == "UpTagWeight":
+            if stat and self.text_name in stat.texts:
+                t = self.text_name.strip()
+                # 权重格式 tag -> (tag:xxx), 其中xxx为权重值
+                match = re.match(r"\((.*?):(.*?)\)", t)
+                if match:
+                    ot, weight = match.group(1, 2)
+                    weight = float(weight)
+                else:
+                    ot, weight = t, 1
+                weight += 0.1
+                t = f"({ot}:{weight:.1f})"
+                stat.texts[self.text_name].name = t
+        elif self.action == "DownTagWeight":
+            if stat and self.text_name in stat.texts:
+                t = self.text_name.strip()
+                # 权重格式 tag -> (tag:xxx), 其中xxx为权重值
+                match = re.match(r"\((.*?):(.*?)\)", t)
+                if match:
+                    ot, weight = match.group(1, 2)
+                    weight = float(weight)
+                else:
+                    ot, weight = t, 1
+                weight -= 0.1
+                t = f"({ot}:{weight:.1f})"
+                stat.texts[self.text_name].name = t
+        elif self.action == "RemoveTagWeight":
+            if stat and self.text_name in stat.texts:
+                t = self.text_name.strip()
+                # 权重格式 tag -> (tag:xxx), 其中xxx为权重值
+                match = re.match(r"\((.*?):(.*?)\)", t)
+                ot = t if not match else match.group(1)
+                stat.texts[self.text_name].name = ot
         return {'FINISHED'}
 
     def dump_list(self, node, stat):
