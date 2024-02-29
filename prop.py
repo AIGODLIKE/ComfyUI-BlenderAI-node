@@ -58,6 +58,7 @@ class Prop(bpy.types.PropertyGroup):
                 fpath = p.resolve().as_posix()
                 items.append((fpath, f"{p.name} {dpn}", abspath, len(items)))
         if items:
+            items.sort(key=lambda x: x[1])
             Prop.cache[f"{t}_dir"].clear()
             Prop.cache[f"{t}_dir"].extend(items)
 
@@ -83,6 +84,7 @@ class Prop(bpy.types.PropertyGroup):
                     continue
                 icon_id = Icon.reg_icon(img)
             items.append((str(file), file.stem, "", icon_id, len(items)))
+        items.sort(key=lambda x: x[1])
         Prop.cache["presets"][pd] = items
         return Prop.cache["presets"][pd]
     presets: bpy.props.EnumProperty(items=presets_items, name="Presets")
@@ -116,6 +118,7 @@ class Prop(bpy.types.PropertyGroup):
                     continue
                 icon_id = Icon.reg_icon(img)
             items.append((str(file), file.stem, "", icon_id, len(items)))
+        items.sort(key=lambda x: x[1])
         Prop.cache["groups"][gd] = items
         return Prop.cache["groups"][gd]
     groups: bpy.props.EnumProperty(items=groups_items, name="Presets")
