@@ -59,6 +59,15 @@ class Panel(bpy.types.Panel):
         elif TaskManager.server == FakeServer._instance:
             self.show_launch_cnn(layout)
             return
+        elif TaskManager.is_launching():
+            row = layout.column()
+            row.alert = True
+            row.scale_y = 2
+            box = row.box()
+            row = box.row()
+            row.alignment = "CENTER"
+            row.label(text="ComfyUI Launching/Connecting...", icon="INFO")
+            return
         self.show_common(layout)
         self.show_custom(layout)
 

@@ -749,6 +749,7 @@ class TaskManager:
     progress_bar = 0
     executer = ThreadPoolExecutor(max_workers=1)
     ws: WebSocketApp = None
+    is_server_launching = False
 
     def __new__(cls, *args, **kw):
         if cls._instance is None:
@@ -780,6 +781,10 @@ class TaskManager:
         return TaskManager.task_queue.qsize()
 
     @staticmethod
+    def is_launching() -> bool:
+        return TaskManager.is_server_launching
+
+    @staticmethod
     def is_launched() -> bool:
         if TaskManager.server:
             return TaskManager.server.is_launched()
@@ -787,23 +792,43 @@ class TaskManager:
 
     @staticmethod
     def run_server(fake=False):
-        from .tree import rtnode_reg, rtnode_unreg
-        t1 = time.time()
-        rtnode_unreg()
-        t2 = time.time()
-        logger.info(_T("UnregNode Time:") + f" {t2-t1:.2f}s")
-        run_success = TaskManager.init_server(fake=fake)
-        if not fake and not run_success:
-            TaskManager.init_server(fake=True)
-        t3 = time.time()
-        logger.info(_T("Launch Time:") + f" {t3-t2:.2f}s")
-        t3 = time.time()
-        rtnode_reg()
-        t4 = time.time()
-        logger.info(_T("RegNode Time:") + f" {t4-t3:.2f}s")
+        def refresh_node():
+            Timer.clear()  # timer may cause crash
+            from .tree import rtnode_reg, rtnode_unreg
+            t1 = time.time()
+            rtnode_unreg()
+            t2 = time.time()
+            logger.info(_T("UnregNode Time:") + f" {t2-t1:.2f}s")
+            rtnode_reg()
+            t3 = time.time()
+            logger.info(_T("RegNode Time:") + f" {t3-t2:.2f}s")
+        if TaskManager.is_launching():
+            return
+
+        def callback():
+            Timer.put(refresh_node)
+
+        def job():
+            t1 = time.time()
+            TaskManager.is_server_launching = True
+            run_success = TaskManager.init_server(fake=fake, callback=callback)
+            if not fake and not run_success:
+                TaskManager.init_server(fake=True, callback=callback)
+            TaskManager.is_server_launching = False
+            t2 = time.time()
+            logger.info(_T("Launch Time:") + f" {t2-t1:.2f}s")
+        if fake:
+            job()
+            refresh_node()
+        else:
+            t = Thread(target=job, daemon=True)
+            t.start()
+        # logger.info(_T("UnregNode Time:") + f" {t2-t1:.2f}s")
+        # logger.info(_T("Launch Time:") + f" {t3-t2:.2f}s")
+        # logger.info(_T("RegNode Time:") + f" {t4-t3:.2f}s")
 
     @staticmethod
-    def init_server(fake=False):
+    def init_server(fake=False, callback=lambda: ...):
         if fake:
             TaskManager.server = FakeServer()
             return
@@ -815,7 +840,7 @@ class TaskManager:
         if not TaskManager.server.exited() and running:
             logger.warning(_T("Server Launched"))
             TaskManager.start_polling()
-            Timer.clear()  # timer may cause crash
+            callback()
         else:
             logger.error(_T("Server Launch Failed"))
             TaskManager.server.close()
@@ -1148,11 +1173,3 @@ def removetemp():
 
 removetemp()
 atexit.register(removetemp)
-
-
-def run_server():
-    if "--background" in sys.argv or "-b" in sys.argv:
-        return
-
-    atexit.register(removetemp)
-    TaskManager.run_server()

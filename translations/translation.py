@@ -10,6 +10,7 @@ LOCALE_MAP = {
 # 3.0 zh_HANS -> zh_CN
 LOCALE_MAP_INV = {}
 
+
 def is_zh_HANS_version():
     try:
         bpy.context.preferences.view.language = "XXXXX"
@@ -21,13 +22,16 @@ def is_zh_HANS_version():
         return "zh_HANS" in str(e)
     return False
 
+
 if not is_zh_HANS_version():
     LOCALE_MAP_INV = {
         "zh_HANS": "zh_CN"
     }
 
+
 def get_locale_inv(locale):
     return LOCALE_MAP_INV.get(locale, locale)
+
 
 REG_CTXT = {ctxt, }
 REPLACE_DICT = {}
@@ -312,6 +316,7 @@ other = {
     "ClearTask": "清理任务",
     "Cancel": "取消任务",
     "↓↓ComfyUI Not Launched, Click to Launch↓↓": "↓↓服务未启动, 点击启动↓↓",
+    "ComfyUI Launching/Connecting...": "ComfyUI服务启动/连接中...",
     # preference.py
     "Server Type": "服务类型",
     "LocalServer": "本机启动",
@@ -325,7 +330,7 @@ other = {
     "With ComfyUI Model": "兼容ComfyUI模型",
     "General": "通用",
     "Common Path": "常用路径",
-    "Friendly Links" : "友情链接",
+    "Friendly Links": "友情链接",
     "VRam Mode": "显存模式",
     "Gpu Only": "极高显存",
     "Store and run everything (text encoders/CLIP models, etc... on the GPU).": "全GPU模式：全部都使用GPU显存运行",
@@ -367,7 +372,7 @@ other = {
     "Is Enabled?": "是否启用?",
     "Add Custom Presets Dir": "添加自定义预设路径",
     "Custom Preset Path already exists": "自定义预设路径已存在",
-    "Init Custom Preset Path": "初始化自定义预设路径", 
+    "Init Custom Preset Path": "初始化自定义预设路径",
     "Create presets/groups dir if not exists": "没有presets/groups文件夹则创建",
     "Viewport Track Frequency": "视口实时渲染频率",
     "Use View Context": "使用视口上下文",
