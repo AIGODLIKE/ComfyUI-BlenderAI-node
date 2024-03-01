@@ -16,7 +16,7 @@ from threading import Thread
 from subprocess import Popen, PIPE, STDOUT
 from pathlib import Path
 from queue import Queue
-from ..utils import rmtree as rt, logger, _T, PkgInstaller
+from ..utils import rmtree as rt, logger, _T, PkgInstaller, update_screen
 from ..timer import Timer
 from ..preference import get_pref
 from .history import History
@@ -446,11 +446,18 @@ class Server:
         self.launch_ip = "127.0.0.1"
         self.launch_port = 8188
         self.launch_url = "http://127.0.0.1:8188"
+        self.elapsed_time = 0
+        self.tstart = 0
 
     def run(self) -> bool:
+        self.tstart = time.time()
         self.uid = time.time_ns()
         TaskManager.clear_error_msg()
         return True
+
+    def get_running_info(self):
+        self.elapsed_time = time.time() - self.tstart
+        return f"{_T('Time Elapsed')}: {self.elapsed_time:.2f}s"
 
     def close(self):
         ...
@@ -496,6 +503,7 @@ class RemoteServer(Server):
         super().__init__()
 
     def run(self) -> bool:
+        self.tstart = time.time()
         self.server_connected = False
         TaskManager.clear_error_msg()
         self.uid = time.time_ns()
@@ -509,6 +517,7 @@ class RemoteServer(Server):
         try:
             if requests.get(f"{self.get_url()}/object_info", proxies={"http": None, "https": None}, timeout=10).status_code == 200:
                 self.server_connected = True
+                update_screen()
                 return True
         except requests.exceptions.ConnectionError as e:
             TaskManager.put_error_msg(str(e))
@@ -534,6 +543,7 @@ class LocalServer(Server):
         super().__init__()
 
     def run(self) -> bool:
+        self.tstart = time.time()
         TaskManager.clear_error_msg()
         self.uid = time.time_ns()
         pidpath = Path(__file__).parent / "pid"
@@ -623,6 +633,7 @@ class LocalServer(Server):
     def wait_connect(self) -> bool:
         pid = self.pid
         while True:
+            update_screen()
             import requests
             try:
                 if requests.get(f"{self.get_url()}/object_info", proxies={"http": None, "https": None}, timeout=1).status_code == 200:
@@ -809,6 +820,11 @@ class TaskManager:
             Timer.put(refresh_node)
 
         def job():
+            def update_screen_timer():
+                update_screen()
+                return 0.01
+            import bpy
+            bpy.app.timers.register(update_screen_timer)
             t1 = time.time()
             TaskManager.is_server_launching = True
             run_success = TaskManager.init_server(fake=fake, callback=callback)
@@ -817,6 +833,7 @@ class TaskManager:
             TaskManager.is_server_launching = False
             t2 = time.time()
             logger.info(_T("Launch Time:") + f" {t2-t1:.2f}s")
+            bpy.app.timers.unregister(update_screen_timer)
         if fake:
             job()
             refresh_node()
@@ -1072,11 +1089,7 @@ class TaskManager:
             elif mtype != "progress":
                 logger.debug("%s: %s", _T("Message Type"), mtype)
 
-            def update():
-                import bpy
-                for area in bpy.context.screen.areas:
-                    area.tag_redraw()
-            Timer.put(update)
+            Timer.put(update_screen)
 
             if hasattr(tm, mtype):
                 setattr(tm, mtype, data)

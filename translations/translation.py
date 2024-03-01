@@ -151,6 +151,7 @@ other = {
     "Poll Result Thread Exit": "响应轮询线程关闭",
     "Poll Task Thread Exit": "任务轮询线程关闭",
     "STDOUT Listen Thread Exit": "输出监听线程关闭",
+    "Time Elapsed": "已耗时",
     # SDNode/node_process.py
     "Executing": "执行中",
     # SDNode/nodes.py

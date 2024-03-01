@@ -60,13 +60,15 @@ class Panel(bpy.types.Panel):
             self.show_launch_cnn(layout)
             return
         elif TaskManager.is_launching():
-            row = layout.column()
-            row.alert = True
-            row.scale_y = 2
-            box = row.box()
+            box = layout.box()
+            box.alert = True
+            box.scale_y = 2
             row = box.row()
             row.alignment = "CENTER"
             row.label(text="ComfyUI Launching/Connecting...", icon="INFO")
+            row = box.row()
+            row.alignment = "CENTER"
+            row.label(text=TaskManager.server.get_running_info(), icon="TIME")
             return
         self.show_common(layout)
         self.show_custom(layout)
