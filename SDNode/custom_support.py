@@ -47,7 +47,8 @@ class CrystoolsMonitor:
         data = msg.get("data", {})
 
         def f(data):
-            p = bpy.context.scene.crystools_monitor_prop
+            cp = bpy.context.screen.sdn_custom
+            p = cp.crystools
             p.enabled = True
             p.cpu = data.get("cpu_utilization", 0)
             p.ram = data.get("ram_used_percent", 0)
@@ -70,7 +71,8 @@ class CrystoolsMonitor:
         box = layout.box()
         box.label(text="CrystoolsMonitor")
         col = box.column(align=True)
-        p = bpy.context.scene.crystools_monitor_prop
+        cp = bpy.context.screen.sdn_custom
+        p = cp.crystools
         col.prop(p, "cpu")
         col.prop(p, "ram")
         col.prop(p, "hdd")
@@ -127,6 +129,8 @@ class CrystoolsMonitor:
         content = content + bt1 * v + bt2 * (lnum - v)
         return content[:134]
 
+class CustomPropGroup(bpy.types.PropertyGroup):
+    crystools: bpy.props.PointerProperty(type=CrystoolsMonitorProp)
 
 crystools_monitor = CrystoolsMonitor()
 
@@ -134,10 +138,11 @@ crystools_monitor = CrystoolsMonitor()
 def custom_support_reg():
     bpy.utils.register_class(CrystoolsMonitorGPUProp)
     bpy.utils.register_class(CrystoolsMonitorProp)
-    bpy.types.Scene.crystools_monitor_prop = bpy.props.PointerProperty(type=CrystoolsMonitorProp)
+    bpy.utils.register_class(CustomPropGroup)
+    bpy.types.Screen.sdn_custom = bpy.props.PointerProperty(type=CustomPropGroup)
 
 
 def custom_support_unreg():
-    del bpy.types.Scene.crystools_monitor_prop
+    del bpy.types.Screen.sdn_custom
     bpy.utils.unregister_class(CrystoolsMonitorProp)
     bpy.utils.unregister_class(CrystoolsMonitorGPUProp)
