@@ -1208,7 +1208,7 @@ class 存储(BluePrintBase):
                     if not output_dir or not Path(output_dir).is_dir():
                         output_dir = tempfile.gettempdir()
                     save_path = Path(output_dir).joinpath(filename_prefix)
-                    img = get_image_path(img, img_path=save_path).as_posix()
+                    img = get_image_path(img, save_path=save_path).as_posix()
                     if save_path.exists():
                         output_dir = save_path.parent.as_posix()
 
