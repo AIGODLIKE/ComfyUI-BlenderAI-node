@@ -156,12 +156,9 @@ class BluePrintBase:
             if enable:
                 box = layout.box()
                 col = box.column()
-                sdn = bpy.context.scene.sdn
+                mgr = bpy.context.window_manager
                 col.prop(stat, "addtext", icon="ADD", text="")
-                col.template_list("MLTWords_UL_UIList", prop, sdn, "mlt_words", sdn, "mlt_words_index", columns=2, type="GRID")
-                # col.prop_search(stat, "addtext", sdn, "mlt_words", icon="ADD", text="")
-                # else:
-                #     col.prop(stat, "addtext", icon="ADD", text="")
+                col.template_list("MLTWords_UL_UIList", prop, mgr, "mlt_words", mgr, "mlt_words_index", columns=2, type="GRID")
                 col.template_list("MLTText_UL_UIList", "", stat, "texts", stat, "tindex")
             return True
 

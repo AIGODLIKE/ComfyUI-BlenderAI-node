@@ -461,7 +461,7 @@ class MLTText_UL_UIList(bpy.types.UIList):
         row = layout.row(align=True)
         row.label(text="", icon="KEYTYPE_KEYFRAME_VEC")
         if getattr(data, active_property) == index:
-            row.prop_search(item, "name", bpy.context.scene.sdn, "mlt_words", text="", results_are_suggestions=True)
+            row.prop_search(item, "name", bpy.context.window_manager, "mlt_words", text="", results_are_suggestions=True)
         else:
             row.label(text=item.name)
 

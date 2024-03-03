@@ -91,6 +91,9 @@ def register():
     Icon.set_hq_preview()
     TaskManager.run_server(fake=True)
     timer_reg()
+    # mlt_words注册到 sdn中会导致访问其他属性卡顿 what?
+    bpy.types.WindowManager.mlt_words = bpy.props.CollectionProperty(type=MLTWord, options={"SKIP_SAVE"})
+    bpy.types.WindowManager.mlt_words_index = bpy.props.IntProperty()
     bpy.types.Scene.sdn = bpy.props.PointerProperty(type=Prop)
     bpy.types.Scene.sdn_history_item = bpy.props.CollectionProperty(type=HistoryItem)
     bpy.types.Scene.sdn_history_item_index = bpy.props.IntProperty(default=0)

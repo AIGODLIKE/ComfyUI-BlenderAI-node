@@ -4,7 +4,7 @@ import bpy
 import time
 import pickle
 from pathlib import Path
-
+from ..kclogger import logger
 
 def timeit(func):
     def wrap(*args, **kwargs):
@@ -96,10 +96,11 @@ words = Words()
 words.read_tags()
 
 
-def f():
-    mtw = bpy.context.scene.sdn.mlt_words
+@bpy.app.handlers.persistent
+def f(_):
+    mtw = bpy.context.window_manager.mlt_words
     if len(mtw) != 0:
-        return 1
+        return
     ts = time.time()
     count = 0
     for word in words.word_list:
@@ -108,8 +109,8 @@ def f():
         it.name = f"[★{word[1]}] {word[0]}"
         it.freq = int(word[1])
         count += 1
-    print(f"Load MLT Words: {time.time()-ts:.4f}s")
-    return 1
+    logger.info(f"Load MLT Words: {time.time()-ts:.4f}s")
 
 
-bpy.app.timers.register(f, persistent=True)
+if f not in bpy.app.handlers.load_post:
+    bpy.app.handlers.load_post.append(f)

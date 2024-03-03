@@ -23,8 +23,6 @@ class MLTWord(bpy.types.PropertyGroup):
 
 class Prop(bpy.types.PropertyGroup):
     cache = PROP_CACHE
-    mlt_words: bpy.props.CollectionProperty(type=MLTWord)
-    mlt_words_index: bpy.props.IntProperty()
 
     def mark_dirty():
         Prop.cache["presets_dir"].clear()
