@@ -1137,7 +1137,75 @@ class 预览(BluePrintBase):
         Timer.put((f, self, img_paths))
 
 
-PreviewImage = 预览
+class PreviewImage(BluePrintBase):
+    comfyClass = "PreviewImage"
+
+    def spec_extra_properties(s, properties, nname, ndesc):
+        prop = bpy.props.CollectionProperty(type=Images)
+        properties["prev"] = prop
+        properties["lnum"] = bpy.props.IntProperty(default=3, min=1, max=10, name="Image num per line")
+
+    def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swsock=True, swdisp=False) -> bool:
+        if prop == "lnum":
+            return True
+        if self.inputs[0].is_linked and self.inputs[0].links:
+            for link in self.inputs[0].links[0].from_socket.links:
+                if link.to_node.bl_idname == "存储":
+                    break
+            else:
+                layout.operator(Ops_Add_SaveImage.bl_idname, text="", icon="FILE_TICK").node_name = self.name
+        if prop == "prev":
+            layout.prop(self, "lnum")
+            pnum = len(self.prev)
+            if pnum == 0:
+                return True
+            p0 = self.prev[0].image
+            w = max(p0.size[0], p0.size[1])
+            if w == 0:
+                return True
+            w = setwidth(self, w, count=min(self.lnum, pnum))
+            layout.label(text=f"{p0.file_format} : [{p0.size[0]} x {p0.size[1]}]")
+            col = layout.column(align=True)
+            for i, p in enumerate(self.prev):
+                if i % self.lnum == 0:
+                    fcol = col.column_flow(columns=min(self.lnum, pnum), align=True)
+                prev = p.image
+                if prev.name not in Icon:
+                    Icon.reg_icon_by_pixel(prev, prev.name)
+                icon_id = Icon[prev.name]
+                fcol.template_icon(icon_id, scale=w // 20)
+            return True
+
+    def serialize_pre_specific(s, self: NodeBase):
+        if self.inputs[0].is_linked:
+            return
+        self.prev.clear()
+
+    def post_fn(s, self: NodeBase, t: Task, result):
+        logger.debug("%s%s->%s", self.class_type, _T('Post Function'), result)
+        img_paths = result.get("output", {}).get("images", [])
+        if not img_paths:
+            logger.error('response is %s, cannot find images in it', result)
+            return
+        logger.warning("%s: %s", _T('Load Preview Image'), img_paths)
+
+        def f(self, img_paths: list[dict]):
+            self.prev.clear()
+            for data in img_paths:
+                img_path = get_image_path(data)
+                if not img_path:
+                    continue
+                img_path = Path(img_path).as_posix()
+                # if isinstance(img_path, dict):
+                #     img_path = Path(d).joinpath(img_path.get("filename")).as_posix()
+                if not Path(img_path).exists():
+                    continue
+                try:
+                    p = self.prev.add()
+                    p.image = bpy.data.images.load(img_path)
+                except TypeError:
+                    ...
+        Timer.put((f, self, img_paths))
 
 
 class 存储(BluePrintBase):
@@ -1238,6 +1306,49 @@ class 存储(BluePrintBase):
             cfg.get("inputs", {})["output_dir"] = tempfile.gettempdir()
         if "filename_prefix" in cfg.get("inputs", {}):
             cfg.get("inputs", {})["filename_prefix"] = "SDNode"
+
+
+class SaveImage(BluePrintBase):
+    comfyClass = "SaveImage"
+
+    def spec_extra_properties(s, properties, nname, ndesc):
+        desktop = Path.home().joinpath("Desktop").as_posix()
+        prop = bpy.props.StringProperty(default=desktop, subtype="DIR_PATH")
+        properties["output_dir"] = prop
+        prop = bpy.props.PointerProperty(type=bpy.types.Image)
+        properties["image"] = prop
+
+    def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swsock=True, swdisp=False) -> bool:
+        if prop == "output_dir":
+            layout.prop(self, prop, text="")
+            return True
+        if prop == "image":
+            return True
+        return False
+
+    def make_serialize(s, self: NodeBase, parent: NodeBase = None) -> dict:
+        def __post_fn__(self: NodeBase, t: Task, result: dict, image):
+            logger.debug("%s%s->%s", self.class_type, _T('Post Function'), result)
+            img_paths = result.get("output", {}).get("images", [])
+            for img in img_paths:
+                filename_prefix = img.get("filename", self.filename_prefix)
+                output_dir = self.output_dir
+                if not output_dir or not Path(output_dir).is_dir():
+                    output_dir = tempfile.gettempdir()
+                save_path = Path(output_dir).joinpath(filename_prefix)
+                img = get_image_path(img, save_path=save_path).as_posix()
+                if save_path.exists():
+                    output_dir = save_path.parent.as_posix()
+
+                    def save_out_dir(self, output_dir):
+                        self.output_dir = output_dir
+                    Timer.put((save_out_dir, self, output_dir))
+
+                def f(_, img):
+                    return bpy.data.images.load(img)
+                Timer.put((f, image, img))
+        post_fn = partial(__post_fn__, self, image=self.image)
+        return {self.id: (self.serialize(parent=parent), self.pre_fn, post_fn)}
 
 
 class 输入图像(BluePrintBase):
