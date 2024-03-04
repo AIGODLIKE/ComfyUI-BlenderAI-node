@@ -6,7 +6,7 @@ from pathlib import Path
 from threading import Thread
 from functools import lru_cache
 from urllib.parse import urlparse
-from .kclogger import logger, set_translate
+from .kclogger import logger
 from .translations import LANG_TEXT
 from .timer import Timer
 from .datas import IMG_SUFFIX
@@ -61,7 +61,7 @@ def _T(word):
     return LANG_TEXT.get(locale, {}).get(word, word)
 
 
-set_translate(_T)
+logger.set_translate(_T)
 
 
 def _T2(word):
