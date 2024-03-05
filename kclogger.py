@@ -14,8 +14,8 @@ if DEBUG:
 FMTDICT = {
     'DEBUG': ["[36m", "DBG"],
     'INFO': ["[37m", "INF"],
-    'WARN': ["[33m", "WAR"],
-    'WARNING': ["[33m", "WAR"],
+    'WARN': ["[33m", "WRN"],
+    'WARNING': ["[33m", "WRN"],
     'ERROR': ["[31m", "ERR"],
     'CRITICAL': ["[35m", "CRT"],
 }
@@ -48,21 +48,17 @@ class KcHandler(logging.StreamHandler):
 
 
 class KcFilter(logging.Filter):
-    translate: Callable = lambda _: None
-
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
-        self.translate_func = None
+        self.translate_func = lambda _: _
 
     def fill_color(self, color_code="[37m", msg=""):
         return f'\033{color_code}{msg}\033[0m'
 
     def filter(self, record: logging.LogRecord) -> bool:
         # 颜色map
-
         color_code, level_shortname = FMTDICT.get(record.levelname, ["[37m", "UN"])
-        if self.translate_func:
-            record.msg = self.translate_func(record.msg)
+        record.msg = self.translate_func(record.msg)
         record.msg = self.fill_color(color_code, record.msg)
         record.levelname = self.fill_color(color_code, level_shortname)
         return True
@@ -71,15 +67,27 @@ class KcFilter(logging.Filter):
 class KcLogger(logging.Logger):
     def __init__(self, name, level=logging.NOTSET):
         super().__init__(name, level)
-        self.translate_func = None  # 默认没有翻译函数
 
     def set_translate(self, translate_func):
-        self.translate_func = translate_func
         for handler in self.handlers:
             for filter in handler.filters:
                 if not isinstance(filter, KcFilter):
                     continue
                 filter.translate_func = translate_func
+
+    def close(self):
+        for h in reversed(self.handlers[:]):
+            try:
+                try:
+                    h.acquire()
+                    h.flush()
+                    h.close()
+                except (OSError, ValueError):
+                    pass
+                finally:
+                    h.release()
+            except BaseException:
+                ...
 
 
 def getLogger(name="CLOG", level=logging.INFO, fmt='[%(name)s-%(levelname)s]: %(message)s', fmt_date="%H:%M:%S") -> KcLogger:
@@ -101,32 +109,9 @@ def getLogger(name="CLOG", level=logging.INFO, fmt='[%(name)s-%(levelname)s]: %(
     # 防止卸载模块后重新加载导致 重复打印
     if not l.hasHandlers():
         # 注意添加顺序, ch有filter, 如果fh后添加 则会默认带上ch的filter
-        # l.addHandler(fh)
         l.addHandler(dfh)
         l.addHandler(ch)
     return l
 
 
 logger = getLogger(NAME, L)
-# logger.debug("DEBUG")
-# logger.info("INFO")
-# logger.warn("WARN")
-# logger.error("ERROR")
-# logger.critical("CRITICAL")
-
-
-def close_logger(l=None):
-    if l is None:
-        l = logger
-    for h in reversed(l.handlers[:]):
-        try:
-            try:
-                h.acquire()
-                h.flush()
-                h.close()
-            except (OSError, ValueError):
-                pass
-            finally:
-                h.release()
-        except BaseException:
-            ...

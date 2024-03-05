@@ -130,8 +130,8 @@ def unregister():
 
 
 def modules_update():
-    from .kclogger import close_logger
-    close_logger()
+    from .kclogger import logger
+    logger.close()
     modules = []
     for i in sys.modules:
         if i.startswith(__package__) and i != __package__:
