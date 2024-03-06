@@ -10,6 +10,28 @@ bl_info = {
 __dict__ = {}
 import time
 ts = time.time()
+
+
+def clear_pyc(path=None, depth=2):
+    # 递归删除 所有文件夹__pycache__
+    if depth == 0:
+        return
+    import shutil
+    from pathlib import Path
+    if path is None:
+        path = Path(__file__).parent
+    for f in path.iterdir():
+        if f.is_dir() and f.name == "__pycache__":
+            try:
+                shutil.rmtree(f)
+            except:
+                ...
+            continue
+        if f.is_dir():
+            clear_pyc(f, depth - 1)
+
+
+clear_pyc()
 import bpy
 import sys
 from addon_utils import disable
@@ -63,6 +85,7 @@ def disable_reload():
     bpy.app.timers.register(track_ae, persistent=True)
     # reset disable
     _disable = disable
+
     def hd(mod, *, default_set=False, handle_error=None):
         if default_set and mod == __package__:
             __dict__["NOT_RELOAD_BUILTIN"] = True
@@ -70,6 +93,7 @@ def disable_reload():
         if default_set and mod == __package__:
             __dict__.pop("NOT_RELOAD_BUILTIN")
     sys.modules["addon_utils"].disable = hd
+
 
 def reload_builtin():
     if "NOT_RELOAD_BUILTIN" in __dict__:
