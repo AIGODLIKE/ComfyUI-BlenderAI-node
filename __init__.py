@@ -24,7 +24,7 @@ def clear_pyc(path=None, depth=2):
         if f.is_dir() and f.name == "__pycache__":
             try:
                 shutil.rmtree(f)
-            except:
+            except Exception:
                 ...
             continue
         if f.is_dir():
