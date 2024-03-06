@@ -1051,7 +1051,7 @@ class PrimitiveNode(BluePrintBase):
             setattr(link.to_node, get_reg_name(link.to_socket.name), prop)
 
 
-def get_image_path(data, suffix="png", save_path="") -> Path:
+def cache_to_local(data, suffix="png", save_path="") -> Path:
     '''data = {"filename": filename, "subfolder": subfolder, "type": folder_type}'''
     url_values = urllib.parse.urlencode(data)
     from .manager import TaskManager
@@ -1121,7 +1121,7 @@ class 预览(BluePrintBase):
         def f(self, img_paths: list[dict]):
             self.prev.clear()
             for data in img_paths:
-                img_path = get_image_path(data)
+                img_path = cache_to_local(data)
                 if not img_path:
                     continue
                 img_path = Path(img_path).as_posix()
@@ -1192,7 +1192,7 @@ class PreviewImage(BluePrintBase):
         def f(self, img_paths: list[dict]):
             self.prev.clear()
             for data in img_paths:
-                img_path = get_image_path(data)
+                img_path = cache_to_local(data)
                 if not img_path:
                     continue
                 img_path = Path(img_path).as_posix()
@@ -1273,7 +1273,7 @@ class 存储(BluePrintBase):
                     if not output_dir or not Path(output_dir).is_dir():
                         output_dir = tempfile.gettempdir()
                     save_path = Path(output_dir).joinpath(filename_prefix)
-                    img = get_image_path(img, save_path=save_path).as_posix()
+                    img = cache_to_local(img, save_path=save_path).as_posix()
                     if save_path.exists():
                         output_dir = save_path.parent.as_posix()
 
@@ -1284,7 +1284,7 @@ class 存储(BluePrintBase):
                     def f(_, img):
                         return bpy.data.images.load(img)
                 elif mode in {"Import", "ToImage"}:
-                    img = get_image_path(img).as_posix()
+                    img = cache_to_local(img).as_posix()
 
                     def f(img_src, img):
                         if not img_src:
@@ -1336,7 +1336,7 @@ class SaveImage(BluePrintBase):
                 if not output_dir or not Path(output_dir).is_dir():
                     output_dir = tempfile.gettempdir()
                 save_path = Path(output_dir).joinpath(filename_prefix)
-                img = get_image_path(img, save_path=save_path).as_posix()
+                img = cache_to_local(img, save_path=save_path).as_posix()
                 if save_path.exists():
                     output_dir = save_path.parent.as_posix()
 
@@ -1647,7 +1647,7 @@ class AnimateDiffCombine(BluePrintBase):
             """
             # self.prev.clear()
             for data in img_paths:
-                img_path = get_image_path(data, suffix="gif").as_posix()
+                img_path = cache_to_local(data, suffix="gif").as_posix()
                 # 和上次的相同则不管
                 if img_path == self.prev_name:
                     return
@@ -1719,7 +1719,7 @@ class VHS_VideoCombine(BluePrintBase):
                 file_type = data.get("format", None)
                 if file_type not in {"image/gif", "image/webp"}:
                     continue
-                img_path = get_image_path(data, suffix=file_type.split("/")[1]).as_posix()
+                img_path = cache_to_local(data, suffix=file_type.split("/")[1]).as_posix()
                 # 和上次的相同则不管
                 if img_path == self.prev_name:
                     return
@@ -1787,7 +1787,7 @@ class SaveAnimatedPNG(BluePrintBase):
                 file_type = Path(data.get("filename", "None")).suffix
                 if file_type != ".png":
                     continue
-                img_path = get_image_path(data, suffix=file_type[1:]).as_posix()
+                img_path = cache_to_local(data, suffix=file_type[1:]).as_posix()
                 # 和上次的相同则不管
                 if img_path == self.prev_name:
                     return
@@ -1855,7 +1855,7 @@ class SaveAnimatedWEBP(BluePrintBase):
                 file_type = Path(data.get("filename", "None")).suffix
                 if file_type != ".webp":
                     continue
-                img_path = get_image_path(data, suffix=file_type[1:]).as_posix()
+                img_path = cache_to_local(data, suffix=file_type[1:]).as_posix()
                 # 和上次的相同则不管
                 if img_path == self.prev_name:
                     return
@@ -1886,6 +1886,34 @@ class SaveAnimatedWEBP(BluePrintBase):
 
     def copy(s, self: NodeBase, node):
         self.prev_name = ""
+
+
+class TripoSRViewer(BluePrintBase):
+    comfyClass = "TripoSRViewer"
+
+    def spec_extra_properties(s, properties, nname, ndesc):
+        desktop = Path.home().joinpath("Desktop").as_posix()
+        prop = bpy.props.StringProperty(default=desktop, subtype="DIR_PATH")
+        properties["output_dir"] = prop
+
+    def post_fn(s, self: NodeBase, t: Task, result):
+        logger.debug("%s%s->%s", self.class_type, _T('Post Function'), result)
+        # result = {'node': '4', 'output': {'mesh': [{'filename': 'meshsave_00002_.obj', 'type': 'output', 'subfolder': ''}]}}
+        output = result.get("output", {})
+        meshes = output.get("mesh", [])
+        if not meshes:
+            return
+
+        def f(self, meshes):
+            for data in meshes:
+                filename = data.get("filename", "")
+                if not filename.lower().endswith(".obj"):
+                    logger.warning(f"Not process {filename}")
+                    continue
+                save_path = Path(self.output_dir).joinpath(filename)
+                obj = cache_to_local(data, suffix=".obj", save_path=save_path).as_posix()
+                bpy.ops.wm.obj_import(filepath=obj)
+        Timer.put((f, self, meshes))
 
 
 class SDNGroupBP(BluePrintBase):
