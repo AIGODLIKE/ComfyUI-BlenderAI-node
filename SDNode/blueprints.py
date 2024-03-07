@@ -25,6 +25,39 @@ from ..utils import _T, Icon, update_screen, PrevMgr, rgb2hex, hex2rgb
 from ..translations import get_reg_name, get_ori_name
 
 
+def get_next_filename(save_path, max_len=4):
+    save_path = Path(save_path)
+    directory = save_path.parent
+    basename = save_path.stem
+    ext = save_path.suffix
+
+    # 移除文件名末尾的数字序号（如果有的话）
+    match = re.match(r"(.+)_(\d+)$", basename)
+    if match:
+        basename, _ = match.groups()
+
+    pattern = f"{basename}_*{ext}"
+    existing_files = list(directory.glob(pattern))
+
+    # 初始化最大序号长度为默认值或已存在文件中的最大长度
+    numbers = [0]
+    for file in existing_files:
+        match = re.search(rf"{re.escape(basename)}_(\d+){re.escape(ext)}$", file.name)
+        if match:
+            num = int(match.group(1))
+            num_str = str(num)
+            numbers.append(num)
+            max_len = max(max_len, len(num_str))
+
+    next_number = max(numbers) + 1
+
+    # 使用检测到的最大序号长度来格式化新的文件名
+    new_filename = f"{basename}_{next_number:0{max_len}d}{ext}"
+    new_save_path = directory / new_filename
+
+    return new_save_path
+
+
 def get_sync_rand_node(tree):
     for node in tree.get_nodes():
         # node不是KSampler、KSamplerAdvanced 跳过
@@ -1893,8 +1926,83 @@ class TripoSRViewer(BluePrintBase):
 
     def spec_extra_properties(s, properties, nname, ndesc):
         desktop = Path.home().joinpath("Desktop").as_posix()
-        prop = bpy.props.StringProperty(default=desktop, subtype="DIR_PATH")
+        prop = bpy.props.StringProperty(name="Output Path", default=desktop, subtype="DIR_PATH")
         properties["output_dir"] = prop
+        items = [("Import", "Import", "", "", 0),
+                 ("Replace", "Replace", "", "", 1),
+                 ("Export", "Export", "", "", 2),
+                 ]
+        prop = bpy.props.EnumProperty(items=items)
+        properties["mode"] = prop
+        prop = bpy.props.StringProperty(default="model.obj")
+        properties["filename"] = prop
+
+    def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swsock=True, swdisp=False) -> bool:
+        if prop == "mode":
+            layout.prop(self, prop, expand=True, text_ctxt=self.get_ctxt())
+            if self.mode == "Import":
+                layout.prop(self, "output_dir", expand=True, text_ctxt=self.get_ctxt())
+            elif self.mode == "Replace":
+                o = bpy.context.object
+                if o:
+                    layout.label(text=_T('Current Object: %s') % o.name)
+            elif self.mode == "Export":
+                layout.prop(self, "filename", expand=True, text_ctxt=self.get_ctxt())
+                layout.prop(self, "output_dir", expand=True, text_ctxt=self.get_ctxt())
+        return True
+
+    def create_mat(s) -> bpy.types.Material:
+        name = "TripoSR Material"
+        if name in bpy.data.materials:
+            return bpy.data.materials[name]
+        mat = bpy.data.materials.new(name="TripoSR Material")
+        mat.use_nodes = True
+        nodetree = mat.node_tree
+        # 创建3个节点 ShaderNodeVertexColor ShaderNodeBsdfPrincipled 和 ShaderNodeOutputMaterial
+        nodetree.nodes.clear()
+        n1 = nodetree.nodes.new(type='ShaderNodeVertexColor')
+        n1.location = -200, 300
+        n2 = nodetree.nodes.new(type='ShaderNodeBsdfPrincipled')
+        n2.location = 10, 300
+        n3 = nodetree.nodes.new(type='ShaderNodeOutputMaterial')
+        n3.location = 300, 300
+        # 依次连接n1-n2-n3 均连接第一个接口
+        nodetree.links.new(n1.outputs[0], n2.inputs[0])
+        nodetree.links.new(n2.outputs[0], n3.inputs[0])
+        return mat
+
+    def set_origin(s, obj: bpy.types.Object):
+        import numpy as np
+        from mathutils import Vector
+        # obj = bpy.context.active_object
+        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+        mesh: bpy.types.Mesh = obj.data
+        # 使用numpy加速获取所有顶点的Z坐标
+        verts = np.zeros(len(mesh.vertices) * 3)
+        mesh.vertices.foreach_get("co", verts)
+        verts = verts.reshape((-1, 3))
+        # 计算中心点
+        center = verts.sum(axis=0) / len(mesh.vertices)
+        center[2] = verts[:, 2].min()
+        lowest_point = Vector(center)
+        # 将原点设置到底部中心点
+        # 首先，将3D光标移动到底部中心点位置
+        cursor_loc = bpy.context.scene.cursor.location
+        bpy.context.scene.cursor.location = lowest_point
+        # 然后，将原点设置到3D光标的位置
+        bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
+        bpy.context.scene.cursor.location = cursor_loc
+
+    def import_obj(s, filepath) -> list[bpy.types.Object]:
+        rec_objs = set(bpy.context.scene.objects)
+        bpy.ops.wm.obj_import(filepath=filepath)
+        new_objs = set(bpy.context.scene.objects) - rec_objs
+        for obj in new_objs:
+            bpy.context.view_layer.objects.active = obj
+            obj.active_material = s.create_mat()
+            s.set_origin(obj)
+            bpy.ops.object.shade_smooth()
+        return list(new_objs)
 
     def post_fn(s, self: NodeBase, t: Task, result):
         logger.debug("%s%s->%s", self.class_type, _T('Post Function'), result)
@@ -1910,9 +2018,19 @@ class TripoSRViewer(BluePrintBase):
                 if not filename.lower().endswith(".obj"):
                     logger.warning(f"Not process {filename}")
                     continue
-                save_path = Path(self.output_dir).joinpath(filename)
-                obj = cache_to_local(data, suffix=".obj", save_path=save_path).as_posix()
-                bpy.ops.wm.obj_import(filepath=obj)
+
+                if self.mode in {"Import", "Replace"}:
+                    active_object = bpy.context.object
+                    save_path = Path(self.output_dir).joinpath(filename)
+                    obj = cache_to_local(data, suffix=".obj", save_path=save_path).as_posix()
+                    imp_objs = s.import_obj(obj)
+                    if self.mode == "Replace" and active_object and imp_objs:
+                        active_object.data, imp_objs[0].data = imp_objs[0].data, active_object.data
+                        bpy.data.objects.remove(imp_objs[0])
+                elif self.mode == "Export":
+                    save_path = Path(self.output_dir).joinpath(self.filename).with_suffix(".obj")
+                    save_path = get_next_filename(save_path)
+                    obj = cache_to_local(data, suffix=".obj", save_path=save_path).as_posix()
         Timer.put((f, self, meshes))
 
 
