@@ -15,6 +15,7 @@ import execution
 import folder_paths
 import nodes
 import time
+import asyncio
 import logging as logger
 from comfy.cli_args import args
 from threading import Thread
@@ -27,6 +28,8 @@ FORCE_LOG = False
 CATEGORY_ = "Blender"
 TEMPDIR = Path(__file__).parent.parent / "SDNodeTemp"
 HOST_PATH = Path("XXXHOST-PATHXXX")
+if not HOST_PATH.parent.exists():
+    HOST_PATH = Path(__file__).parent
 
 
 def removetemp():
@@ -130,7 +133,7 @@ def node_info(node_class):
     info['display_name'] = nodes.NODE_DISPLAY_NAME_MAPPINGS[node_class] if node_class in nodes.NODE_DISPLAY_NAME_MAPPINGS.keys() else node_class
     info['description'] = ''
     info['category'] = 'sd'
-    if hasattr(obj_class, 'OUTPUT_NODE') and obj_class.OUTPUT_NODE == True:
+    if hasattr(obj_class, 'OUTPUT_NODE') and obj_class.OUTPUT_NODE is True:
         info['output_node'] = True
     else:
         info['output_node'] = False
@@ -139,31 +142,55 @@ def node_info(node_class):
     return info
 
 
-CACHED_NODES = {}
+class NodeCacheManager:
+    def __init__(self):
+        self.cached_nodes = {}
+        self.diff = {}
+        self.filter_node = {"Note", "PrimitiveNode", "Cache Node"}
+
+    def calc_diff(self):
+        if self.diff:
+            return self.diff
+
+        for x in list(nodes.NODE_CLASS_MAPPINGS):
+            if x in self.filter_node:
+                continue
+            ni = node_info(x)
+            if x not in self.cached_nodes or self.cached_nodes[x] != ni:
+                self.diff[x] = ni
+            self.cached_nodes[x] = ni
+        return self.diff
+
+    def update_cached_nodes(self, remote=False):
+        # 本地部署 但差异路径不存在
+        if not remote and not HOST_PATH.parent.exists():
+            return {}
+        from copy import deepcopy
+        self.calc_diff()
+        diff = self.diff
+        if remote:
+            diff = deepcopy(self.diff)
+            self.diff.clear()
+        else:
+            try:
+                # 本地部署时写入差异后清理
+                diff_path = HOST_PATH.joinpath("diff_object_info.json")
+                with diff_path.open("w", encoding="utf-8") as f:
+                    f.write(json.dumps(self.diff))
+                self.diff.clear()
+            except Exception as e:
+                # 写入失败后
+                print(f"Failed to write diff: {e}")
+        return diff
 
 
-def update_cached_nodes():
-    filter_node = {"Note", "PrimitiveNode", "Cache Node"}
-    diff = {}
-    for x in nodes.NODE_CLASS_MAPPINGS:
-        if x in filter_node:
-            continue
-        ni = node_info(x)
-        if x not in CACHED_NODES:
-            diff[x] = ni
-        elif CACHED_NODES[x] != ni:
-            diff[x] = ni
-        CACHED_NODES[x] = ni
-    if not diff or diff == CACHED_NODES:
-        return
-    with HOST_PATH.joinpath("diff_object_info.json").open("w+") as fp:
-        json.dump(diff, fp)
+cache_manager = NodeCacheManager()
 
 
 def diff_listen_loop():
     while True:
         time.sleep(5)
-        update_cached_nodes()
+        cache_manager.update_cached_nodes()
 
 
 Thread(target=diff_listen_loop, daemon=True).start()
@@ -172,6 +199,28 @@ Thread(target=diff_listen_loop, daemon=True).start()
 @server.PromptServer.instance.routes.post("/cup/get_temp_directory")
 async def get_temp_directory(request):
     return web.Response(status=200, body=folder_paths.get_temp_directory())
+
+
+async def queue_msg():
+    queue = {}
+    current_queue = server.PromptServer.instance.prompt_queue.get_current_queue()
+    queue['queue_running'] = current_queue[0]
+    queue['queue_pending'] = current_queue[1]
+    server.PromptServer.instance.send_sync("cup.queue", queue)
+
+
+async def diff_msg():
+    diff = cache_manager.update_cached_nodes(remote=True)
+    server.PromptServer.instance.send_sync("cup.diff", diff)
+
+
+async def msg_loop():
+    while True:
+        await queue_msg()
+        await diff_msg()
+        await asyncio.sleep(1)
+
+Thread(target=asyncio.run, args=(msg_loop(),), daemon=True).start()
 
 
 class ToBlender:

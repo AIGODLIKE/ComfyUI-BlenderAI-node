@@ -1,5 +1,6 @@
 import bpy
 import blf
+import json
 from ..utils import Timer, update_screen, _T
 
 
@@ -65,7 +66,7 @@ class CrystoolsMonitor:
         Timer.put((f, data))
         return True
 
-    def draw(self, layout: bpy.types.UILayout):
+    def draw(self, layout: bpy.types.UILayout, ctxt=""):
         if not self.enable:
             return
         box = layout.box()
@@ -129,20 +130,89 @@ class CrystoolsMonitor:
         content = content + bt1 * v + bt2 * (lnum - v)
         return content[:134]
 
+
+class CupMonitorProp(bpy.types.PropertyGroup):
+    queue_running: bpy.props.IntProperty(default=0, min=0)
+    queue_pending: bpy.props.IntProperty(default=0, min=0)
+
+
+class CupMonitor:
+    def __init__(self) -> None:
+        self.enable = False
+
+    def process_msg(self, msg) -> bool:
+        mtype = msg.get("type", None)
+        if mtype is None:
+            return False
+        if not mtype.startswith("cup."):
+            return False
+        self.enable = True
+        data = msg.get("data", {})
+
+        def f(data, mtype):
+            if mtype == "cup.diff":
+                if not data:
+                    return
+                try:
+                    from .nodes import NodeParser
+                    NodeParser.DIFF_PATH.write_text(json.dumps(data))
+                except Exception:
+                    ...
+            elif mtype == "cup.queue":
+                cp = bpy.context.screen.sdn_custom
+                p: CupMonitorProp = cp.cup
+                p.queue_running = len(data.get("queue_running", []))
+                p.queue_pending = len(data.get("queue_pending", []))
+                update_screen()
+
+        Timer.put((f, data, mtype))
+        return True
+
+    def draw(self, layout: bpy.types.UILayout, ctxt=""):
+        from . import TaskManager
+        if self.enable:
+            cp = bpy.context.screen.sdn_custom
+            p: CupMonitorProp = cp.cup
+            qr_num = p.queue_running
+        else:
+            qr_num = len(TaskManager.query_server_task().get('queue_running', []))
+        qp_num = TaskManager.get_task_num()
+        row = layout.row(align=True)
+        row.alert = True
+        row.alignment = "CENTER"
+        row.label(text="Pending / Running", text_ctxt=ctxt)
+        row.label(text=f": {qp_num} / {qr_num}", text_ctxt=ctxt)
+        prog = TaskManager.get_progress()
+        if prog and prog.get("value"):
+            import blf
+            per = prog["value"] / prog["max"]
+            content = f"{per*100:3.0f}% "
+            lnum = int(bpy.context.region.width / bpy.context.preferences.view.ui_scale / 7 - 21)
+            lnum = int(lnum * 0.3)
+            lnum = int((bpy.context.region.width - blf.dimensions(0, content)[0]) / blf.dimensions(0, "█")[0]) - 10
+            v = int(per * lnum)
+            content = content + "█" * v + "░" * (lnum - v)
+            row = layout.row()
+            row.alignment = "CENTER"
+            row.label(text=content[:134], text_ctxt=ctxt)
+
+
 class CustomPropGroup(bpy.types.PropertyGroup):
     crystools: bpy.props.PointerProperty(type=CrystoolsMonitorProp)
+    cup: bpy.props.PointerProperty(type=CupMonitorProp)
+
 
 crystools_monitor = CrystoolsMonitor()
+cup_monitor = CupMonitor()
+clss = [CrystoolsMonitorGPUProp, CrystoolsMonitorProp, CupMonitorProp, CustomPropGroup]
+reg, unreg = bpy.utils.register_classes_factory(clss)
 
 
 def custom_support_reg():
-    bpy.utils.register_class(CrystoolsMonitorGPUProp)
-    bpy.utils.register_class(CrystoolsMonitorProp)
-    bpy.utils.register_class(CustomPropGroup)
+    reg()
     bpy.types.Screen.sdn_custom = bpy.props.PointerProperty(type=CustomPropGroup)
 
 
 def custom_support_unreg():
     del bpy.types.Screen.sdn_custom
-    bpy.utils.unregister_class(CrystoolsMonitorProp)
-    bpy.utils.unregister_class(CrystoolsMonitorGPUProp)
+    unreg()

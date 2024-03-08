@@ -178,26 +178,8 @@ class Panel(bpy.types.Panel):
 
     def show_progress(self, layout: bpy.types.UILayout):
         layout = layout.box()
-        qr_num = len(TaskManager.query_server_task().get('queue_running', []))
-        qp_num = TaskManager.get_task_num()
-        row = layout.row(align=True)
-        row.alert = True
-        row.alignment = "CENTER"
-        row.label(text="Pending / Running", text_ctxt=ctxt)
-        row.label(text=f": {qp_num} / {qr_num}", text_ctxt=ctxt)
-        prog = TaskManager.get_progress()
-        if prog and prog.get("value"):
-            import blf
-            per = prog["value"] / prog["max"]
-            content = f"{per*100:3.0f}% "
-            lnum = int(bpy.context.region.width / bpy.context.preferences.view.ui_scale / 7 - 21)
-            lnum = int(lnum * 0.3)
-            lnum = int((bpy.context.region.width - blf.dimensions(0, content)[0]) / blf.dimensions(0, "█")[0]) - 10
-            v = int(per * lnum)
-            content = content + "█" * v + "░" * (lnum - v)
-            row = layout.row()
-            row.alignment = "CENTER"
-            row.label(text=content[:134], text_ctxt=ctxt)
+        from .SDNode.custom_support import cup_monitor
+        cup_monitor.draw(layout)
         self.show_error(layout)
         if TaskManager.get_error_msg():
             row = layout.box().row()
