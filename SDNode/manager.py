@@ -758,6 +758,7 @@ class TaskManager:
     execute_status_record = []
     error_msg = []
     progress_bar = 0
+    timers = []
     executer = ThreadPoolExecutor(max_workers=1)
     ws: WebSocketApp = None
     is_server_launching = False
@@ -766,6 +767,23 @@ class TaskManager:
         if cls._instance is None:
             cls._instance = object.__new__(cls, *args, **kw)
         return cls._instance
+
+    @staticmethod
+    def register_timer(timer):
+        if timer in TaskManager.timers:
+            return
+        TaskManager.timers.append(timer)
+
+    @staticmethod
+    def unregister_timer(timer):
+        try:
+            TaskManager.timers.remove(timer)
+        except ValueError:
+            ...
+
+    @staticmethod
+    def clear_timer():
+        TaskManager.timers.clear()
 
     @staticmethod
     def put_error_msg(error, with_clear=False):
@@ -868,6 +886,7 @@ class TaskManager:
         Thread(target=TaskManager.poll_res, daemon=True).start()
         Thread(target=TaskManager.poll_task, daemon=True).start()
         Thread(target=TaskManager.proc_res, daemon=True).start()
+        Thread(target=TaskManager.proc_timer, daemon=True).start()
 
     @staticmethod
     def restart_server(fake=False):
@@ -1060,6 +1079,18 @@ class TaskManager:
         logger.debug(_T("Proc Task Thread Exit"))
 
     @staticmethod
+    def proc_timer():
+        uid = TaskManager.server.uid
+        while uid == TaskManager.server.uid:
+            time.sleep(1)
+            for timer in TaskManager.timers:
+                try:
+                    timer()
+                except Exception as e:
+                    logger.info(e)
+        logger.debug(_T("Proc Timer Thread Exit"))
+
+    @staticmethod
     def poll_res():
         tm = TaskManager
         SessionId = TaskManager.SessionId
@@ -1067,8 +1098,10 @@ class TaskManager:
         def on_message(ws, message):
             msg = json.loads(message)
             try:
-                from .custom_support import crystools_monitor
+                from .custom_support import crystools_monitor, cup_monitor
                 if crystools_monitor.process_msg(msg):
+                    return
+                if cup_monitor.process_msg(msg):
                     return
             except Exception:
                 ...
