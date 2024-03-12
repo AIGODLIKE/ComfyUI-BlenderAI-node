@@ -262,6 +262,7 @@ class Icon(metaclass=MetaIn):
             return
         if p.exists() and p.suffix.lower() in IMG_SUFFIX:
             img = bpy.data.images.load(path)
+            img.alpha_mode = "STRAIGHT"
             Icon.reg_icon_by_pixel(img, path)
             Timer.put((bpy.data.images.remove, img))  # 直接使用 bpy.data.images.remove 会导致卡死
 
@@ -294,6 +295,7 @@ class Icon(metaclass=MetaIn):
             return img
         elif p.suffix.lower() in IMG_SUFFIX:
             img = bpy.data.images.load(path)
+            img.alpha_mode = "STRAIGHT"
             img.filepath = path
             Icon.update_path2bpy()
             # img.name = path
