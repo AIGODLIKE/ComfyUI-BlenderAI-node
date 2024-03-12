@@ -1084,6 +1084,36 @@ class PrimitiveNode(BluePrintBase):
             setattr(link.to_node, get_reg_name(link.to_socket.name), prop)
 
 
+def upload_image(img_path):
+    from .manager import TaskManager
+
+    url = f"{TaskManager.server.get_url()}/upload/image"
+    img_path = Path(img_path)
+    if img_path.is_dir() or not img_path.exists():
+        return
+
+    # 准备文件数据
+    try:
+        import requests
+        from urllib3.util import Timeout
+        data = {"overwrite": "true", "subfolder": "SDN"}
+        img_type = f"image/{img_path.suffix.replace('.', '')}"
+        files = {'image': (img_path.name, img_path.read_bytes(), img_type)}
+        timeout = Timeout(connect=5, read=5)
+        url = url.replace("0.0.0.0", "127.0.0.1")
+        response = requests.post(url, data=data, files=files, timeout=timeout)
+
+        # 检查响应
+        if response.status_code == 200:
+            logger.info("图片上传成功")
+            logger.info(response.json())
+        else:
+            logger.error("图片上传失败")
+            logger.error(response.text)
+    except Exception as e:
+        logger.error(f"图片上传失败: {e}")
+
+
 def cache_to_local(data, suffix="png", save_path="") -> Path:
     '''data = {"filename": filename, "subfolder": subfolder, "type": folder_type}'''
     url_values = urllib.parse.urlencode(data)
@@ -1470,13 +1500,11 @@ class 输入图像(BluePrintBase):
             return True
 
     def pre_fn(s, self: NodeBase):
-        if self.mode not in {"渲染", "视口"}:
-            return
-        if self.disable_render or bpy.context.scene.sdn.disable_render_all:
-            return
-
-        @Timer.wait_run
-        def r():
+        def render():
+            if self.mode not in {"渲染", "视口"}:
+                return
+            if self.disable_render or bpy.context.scene.sdn.disable_render_all:
+                return
             if self.mode == "视口":
                 # 使用临时文件
                 self.image = Path(tempfile.gettempdir()).joinpath("viewport.png").as_posix()
@@ -1513,6 +1541,12 @@ class 输入图像(BluePrintBase):
             else:
                 bpy.ops.render.render(write_still=True)
             bpy.context.scene.render.filepath = old
+
+        @Timer.wait_run
+        def r():
+            render()
+            # 上传图片
+            upload_image(self.image)
         r()
 
 
