@@ -21,7 +21,7 @@ from comfy.cli_args import args
 from threading import Thread
 from aiohttp import web
 from pathlib import Path
-from PIL import Image
+from PIL import Image, ImageOps, ImageSequence
 from PIL.PngImagePlugin import PngInfo
 
 FORCE_LOG = False
@@ -30,6 +30,15 @@ TEMPDIR = Path(__file__).parent.parent / "SDNodeTemp"
 HOST_PATH = Path("XXXHOST-PATHXXX")
 if not HOST_PATH.parent.exists():
     HOST_PATH = Path(__file__).parent
+
+
+def remove_old_version():
+    cup = Path(__file__).parent.parent.joinpath("cup.py")
+    if cup.exists():
+        cup.unlink()
+
+
+remove_old_version()
 
 
 def removetemp():
@@ -336,6 +345,35 @@ class LoadImage:
     FUNCTION = "load_image"
 
     def load_image(self, image, mode=None):
+        image = Path(image).name
+        image_path = folder_paths.get_annotated_filepath(image, default_dir="input/SDN")
+        # image_path = image
+        img = Image.open(image_path)
+        output_images = []
+        output_masks = []
+        for i in ImageSequence.Iterator(img):
+            i = ImageOps.exif_transpose(i)
+            if i.mode == 'I':
+                i = i.point(lambda i: i * (1 / 255))
+            image = i.convert("RGB")
+            image = np.array(image).astype(np.float32) / 255.0
+            image = torch.from_numpy(image)[None,]
+            if 'A' in i.getbands():
+                mask = np.array(i.getchannel('A')).astype(np.float32) / 255.0
+                mask = 1. - torch.from_numpy(mask)
+            else:
+                mask = torch.zeros((64,64), dtype=torch.float32, device="cpu")
+            output_images.append(image)
+            output_masks.append(mask.unsqueeze(0))
+
+        if len(output_images) > 1:
+            output_image = torch.cat(output_images, dim=0)
+            output_mask = torch.cat(output_masks, dim=0)
+        else:
+            output_image = output_images[0]
+            output_mask = output_masks[0]
+
+        return (output_image, output_mask)
         try:
             image_path = image
             i = Image.open(image_path)
@@ -585,3 +623,4 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "存储": "Save",
     "预览": "Preview",
 }
+WEB_DIRECTORY = "./"
