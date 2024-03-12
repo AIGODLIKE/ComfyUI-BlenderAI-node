@@ -1193,7 +1193,11 @@ class 预览(BluePrintBase):
                     continue
                 try:
                     p = self.prev.add()
-                    p.image = bpy.data.images.load(img_path)
+                    # p.image = bpy.data.images.load(img_path)
+                    Icon.load_icon(img_path)
+                    if not (img := Icon.find_image(img_path)):
+                        return
+                    p.image = img
                 except TypeError:
                     ...
         Timer.put((f, self, img_paths))
@@ -1264,7 +1268,11 @@ class PreviewImage(BluePrintBase):
                     continue
                 try:
                     p = self.prev.add()
-                    p.image = bpy.data.images.load(img_path)
+                    # p.image = bpy.data.images.load(img_path)
+                    Icon.load_icon(img_path)
+                    if not (img := Icon.find_image(img_path)):
+                        return
+                    p.image = img
                 except TypeError:
                     ...
         Timer.put((f, self, img_paths))

@@ -183,10 +183,9 @@ class Icon(metaclass=MetaIn):
 
     @staticmethod
     def apply_alpha(img):
-        if img.file_format != "PNG":
+        if img.file_format != "PNG" or img.channels < 4:
             return
         # 预乘alpha 到rgb
-        t = time.time()
         import numpy as np
         pixels = np.zeros(img.size[0] * img.size[1] * 4, dtype=np.float32)
         img.pixels.foreach_get(pixels)
