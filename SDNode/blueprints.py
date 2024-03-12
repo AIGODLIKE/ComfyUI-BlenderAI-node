@@ -1102,16 +1102,15 @@ def upload_image(img_path):
         timeout = Timeout(connect=5, read=5)
         url = url.replace("0.0.0.0", "127.0.0.1")
         response = requests.post(url, data=data, files=files, timeout=timeout)
-
         # 检查响应
         if response.status_code == 200:
-            logger.info("图片上传成功")
-            logger.info(response.json())
+            logger.info("Upload Image Success")
+            # {'name': 'icon.png', 'subfolder': 'SDN', 'type': 'input'}
+            return response.json()
         else:
-            logger.error("图片上传失败")
-            logger.error(response.text)
+            logger.error(f"{_T('Upload Image Fail')}: {response.text}")
     except Exception as e:
-        logger.error(f"图片上传失败: {e}")
+        logger.error(f"{_T('Upload Image Fail')}: {e}")
 
 
 def cache_to_local(data, suffix="png", save_path="") -> Path:

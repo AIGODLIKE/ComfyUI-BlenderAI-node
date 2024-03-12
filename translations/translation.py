@@ -212,6 +212,8 @@ other = {
     "Error Capture Screen Region": "截图区域错误",
     "Save Screenshot": "保存截图",
     "No Camera in Scene": "场景像机不存在",
+    "Upload Image Success": "图片上传成功",
+    "Upload Image Fail": "图片上传失败",
     # SDNode/tree.py
     "Invalid Node Type: {}": "检查到无效的节点: {}",
     "ParseNode Time:": "解析节点耗时:",
