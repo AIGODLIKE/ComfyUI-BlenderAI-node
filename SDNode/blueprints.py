@@ -2061,6 +2061,8 @@ class TripoSRViewer(BluePrintBase):
                     if self.mode == "Replace" and active_object and imp_objs:
                         active_object.data, imp_objs[0].data = imp_objs[0].data, active_object.data
                         bpy.data.objects.remove(imp_objs[0])
+                        bpy.context.view_layer.objects.active = active_object
+                        active_object.select_set(True)
                 elif self.mode == "Export":
                     save_path = Path(self.output_dir).joinpath(self.filename).with_suffix(".obj")
                     save_path = get_next_filename(save_path)
