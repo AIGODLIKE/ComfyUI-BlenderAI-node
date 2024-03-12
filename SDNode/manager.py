@@ -577,28 +577,28 @@ class LocalServer(Server):
         # custom_nodes
         for file in Path(__file__).parent.joinpath("custom_nodes").iterdir():
             dst = Path(model_path).joinpath("custom_nodes", file.name)
-            if file.is_dir():
-                if dst.exists():
-                    try:
-                        rt(dst)
-                    except Exception as e:
-                        # 可能会删除失败
-                        ...
+            if not file.is_dir():
+                continue
+            if dst.exists():
                 try:
-                    shutil.copytree(file, dst, dirs_exist_ok=True)
+                    rt(dst)
                 except Exception as e:
-                    # 可能会拷贝失败(权限问题)
+                    # 可能会删除失败
                     ...
-                continue
-            if not file.suffix == ".py":
-                continue
-            if file.name == "cup.py":
-                t = file.read_text(encoding="utf-8")
-                t = t.replace("XXXHOST-PATHXXX", Path(__file__).parent.as_posix())
-                t = t.replace("FORCE_LOG = False", f"FORCE_LOG = {get_pref().force_log}")
-                Path(model_path).joinpath("custom_nodes", file.name).write_text(t, encoding="utf-8")
-                continue
-            shutil.copyfile(file, dst)
+            try:
+                shutil.copytree(file, dst, dirs_exist_ok=True)
+                cup_py = file.joinpath("cup.py")
+                old_cup_py = Path(model_path).joinpath("custom_nodes", cup_py.name)
+                if cup_py.exists():
+                    t = cup_py.read_text(encoding="utf-8")
+                    t = t.replace("XXXHOST-PATHXXX", Path(__file__).parent.as_posix())
+                    t = t.replace("FORCE_LOG = False", f"FORCE_LOG = {get_pref().force_log}")
+                    Path(model_path).joinpath("custom_nodes", file.name, cup_py.name).write_text(t, encoding="utf-8")
+                if old_cup_py.exists():
+                    Path(model_path).joinpath("custom_nodes", cup_py.name).unlink()
+            except Exception as e:
+                # 可能会拷贝失败(权限问题)
+                ...
         args = pref.parse_server_args(self)
         self.launch_ip = get_ip()
         self.launch_port = get_port()
