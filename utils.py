@@ -182,6 +182,19 @@ class Icon(metaclass=MetaIn):
             Icon.PATH2BPY[FSWatcher.to_str(i.filepath)] = i
 
     @staticmethod
+    def apply_alpha(img):
+        if img.file_format != "PNG":
+            return
+        # 预乘alpha 到rgb
+        t = time.time()
+        import numpy as np
+        pixels = np.zeros(img.size[0] * img.size[1] * 4, dtype=np.float32)
+        img.pixels.foreach_get(pixels)
+        sized_pixels = pixels.reshape(-1, 4)
+        sized_pixels[:, :3] *= sized_pixels[:, 3].reshape(-1, 1)
+        img.pixels.foreach_set(pixels)
+
+    @staticmethod
     def clear():
         Icon.PREV_DICT.clear()
         Icon.IMG_STATUS.clear()
@@ -262,7 +275,7 @@ class Icon(metaclass=MetaIn):
             return
         if p.exists() and p.suffix.lower() in IMG_SUFFIX:
             img = bpy.data.images.load(path)
-            img.alpha_mode = "STRAIGHT"
+            Icon.apply_alpha(img)
             Icon.reg_icon_by_pixel(img, path)
             Timer.put((bpy.data.images.remove, img))  # 直接使用 bpy.data.images.remove 会导致卡死
 
@@ -295,8 +308,8 @@ class Icon(metaclass=MetaIn):
             return img
         elif p.suffix.lower() in IMG_SUFFIX:
             img = bpy.data.images.load(path)
-            img.alpha_mode = "STRAIGHT"
             img.filepath = path
+            Icon.apply_alpha(img)
             Icon.update_path2bpy()
             # img.name = path
             return img
