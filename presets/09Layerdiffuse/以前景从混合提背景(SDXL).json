@@ -1,0 +1,776 @@
+{
+  "last_node_id": 40,
+  "last_link_id": 20,
+  "nodes": [
+    {
+      "id": 14,
+      "type": "VAEDecode",
+      "pos": [
+        1286,
+        187
+      ],
+      "size": {
+        "0": 210,
+        "1": 30
+      },
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 3,
+          "label": "samples"
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 4,
+          "label": "vae"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            15
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "VAE解码",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 20,
+      "type": "PreviewImage",
+      "pos": [
+        1800,
+        190
+      ],
+      "size": {
+        "0": 256,
+        "1": 30
+      },
+      "flags": {},
+      "order": 12,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 16,
+          "label": "images"
+        }
+      ],
+      "outputs": [],
+      "title": "预览",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 29,
+      "type": "VAEEncode",
+      "pos": [
+        210,
+        -20
+      ],
+      "size": {
+        "0": 210,
+        "1": 30
+      },
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "pixels",
+          "type": "IMAGE",
+          "link": 19,
+          "label": "pixels"
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 5,
+          "label": "vae"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            11
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "VAE编码.001",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 3,
+      "type": "KSampler",
+      "pos": [
+        913,
+        182
+      ],
+      "size": {
+        "0": 315,
+        "1": 30
+      },
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 12,
+          "label": "model"
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 13,
+          "label": "positive"
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 14,
+          "label": "negative"
+        },
+        {
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 0,
+          "label": "latent_image"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            3,
+            17
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "K采样器",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "3212263371",
+        "fixed",
+        20,
+        8.0,
+        "euler",
+        "normal",
+        1.0
+      ]
+    },
+    {
+      "id": 37,
+      "type": "LayeredDiffusionDiffApply",
+      "pos": [
+        511,
+        -178
+      ],
+      "size": {
+        "0": 342,
+        "1": 30
+      },
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 6,
+          "label": "model"
+        },
+        {
+          "name": "cond",
+          "type": "CONDITIONING",
+          "link": 7,
+          "label": "cond"
+        },
+        {
+          "name": "uncond",
+          "type": "CONDITIONING",
+          "link": 8,
+          "label": "uncond"
+        },
+        {
+          "name": "blended_latent",
+          "type": "LATENT",
+          "link": 10,
+          "label": "blended_latent"
+        },
+        {
+          "name": "latent",
+          "type": "LATENT",
+          "link": 11,
+          "label": "latent"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            12
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            13
+          ],
+          "slot_index": 1
+        },
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            14
+          ],
+          "slot_index": 2
+        }
+      ],
+      "title": "LayeredDiffusionDiffApply",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "SDXL, Background",
+        1.0
+      ]
+    },
+    {
+      "id": 39,
+      "type": "VAEEncode",
+      "pos": [
+        201,
+        -391
+      ],
+      "size": {
+        "0": 210,
+        "1": 30
+      },
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "pixels",
+          "type": "IMAGE",
+          "link": 18,
+          "label": "pixels"
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 9,
+          "label": "vae"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            10
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "VAE编码",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 4,
+      "type": "CheckpointLoaderSimple",
+      "pos": [
+        5,
+        479
+      ],
+      "size": {
+        "0": 315,
+        "1": 30
+      },
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            6
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            1,
+            2
+          ],
+          "slot_index": 1
+        },
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "links": [
+            4,
+            5,
+            9
+          ],
+          "slot_index": 2
+        }
+      ],
+      "title": "Checkpoint加载器(简易)",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "sd_xl_base_1.0.safetensors"
+      ]
+    },
+    {
+      "id": 40,
+      "type": "LayeredDiffusionDecodeRGBA",
+      "pos": [
+        1533,
+        189
+      ],
+      "size": {
+        "0": 243,
+        "1": 30
+      },
+      "flags": {},
+      "order": 11,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 17,
+          "label": "samples"
+        },
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 15,
+          "label": "images"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            16
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "LayeredDiffusionDecodeRGBA",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "SDXL",
+        16
+      ],
+      "bgcolor": "#305030"
+    },
+    {
+      "id": 5,
+      "type": "EmptyLatentImage",
+      "pos": [
+        475,
+        666
+      ],
+      "size": {
+        "0": 315,
+        "1": 30
+      },
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            0
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "空Latent",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        1024,
+        1024,
+        1
+      ]
+    },
+    {
+      "id": 6,
+      "type": "CLIPTextEncode",
+      "pos": [
+        387,
+        219
+      ],
+      "size": {
+        "0": 422,
+        "1": 30
+      },
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 1,
+          "label": "clip"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            7
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "CLIP文本编码器.001",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "an old man sitting, high quality\n\n"
+      ]
+    },
+    {
+      "id": 7,
+      "type": "CLIPTextEncode",
+      "pos": [
+        413,
+        389
+      ],
+      "size": {
+        "0": 425,
+        "1": 30
+      },
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 2,
+          "label": "clip"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            8
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "CLIP文本编码器",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "text, watermark"
+      ]
+    },
+    {
+      "id": 8,
+      "type": "输入图像",
+      "pos": [
+        -172,
+        -383
+      ],
+      "size": {
+        "0": 256,
+        "1": 100
+      },
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            18
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": [],
+          "slot_index": 1
+        }
+      ],
+      "title": "输入图像",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "",
+        "输入"
+      ]
+    },
+    {
+      "id": 9,
+      "type": "输入图像",
+      "pos": [
+        -165,
+        25
+      ],
+      "size": {
+        "0": 256,
+        "1": 100
+      },
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            19
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": [],
+          "slot_index": 1
+        }
+      ],
+      "title": "输入图像.001",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "",
+        "输入"
+      ]
+    }
+  ],
+  "links": [
+    [
+      0,
+      5,
+      0,
+      3,
+      3,
+      "LATENT"
+    ],
+    [
+      1,
+      4,
+      1,
+      6,
+      0,
+      "CLIP"
+    ],
+    [
+      2,
+      4,
+      1,
+      7,
+      0,
+      "CLIP"
+    ],
+    [
+      3,
+      3,
+      0,
+      14,
+      0,
+      "LATENT"
+    ],
+    [
+      4,
+      4,
+      2,
+      14,
+      1,
+      "VAE"
+    ],
+    [
+      5,
+      4,
+      2,
+      29,
+      1,
+      "VAE"
+    ],
+    [
+      6,
+      4,
+      0,
+      37,
+      0,
+      "MODEL"
+    ],
+    [
+      7,
+      6,
+      0,
+      37,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      8,
+      7,
+      0,
+      37,
+      2,
+      "CONDITIONING"
+    ],
+    [
+      9,
+      4,
+      2,
+      39,
+      1,
+      "VAE"
+    ],
+    [
+      10,
+      39,
+      0,
+      37,
+      3,
+      "LATENT"
+    ],
+    [
+      11,
+      29,
+      0,
+      37,
+      4,
+      "LATENT"
+    ],
+    [
+      12,
+      37,
+      0,
+      3,
+      0,
+      "MODEL"
+    ],
+    [
+      13,
+      37,
+      1,
+      3,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      14,
+      37,
+      2,
+      3,
+      2,
+      "CONDITIONING"
+    ],
+    [
+      15,
+      14,
+      0,
+      40,
+      1,
+      "IMAGE"
+    ],
+    [
+      16,
+      40,
+      0,
+      20,
+      0,
+      "IMAGE"
+    ],
+    [
+      17,
+      3,
+      0,
+      40,
+      0,
+      "LATENT"
+    ],
+    [
+      18,
+      8,
+      0,
+      39,
+      0,
+      "IMAGE"
+    ],
+    [
+      19,
+      9,
+      0,
+      29,
+      0,
+      "IMAGE"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "groupNodes": {}
+  },
+  "version": 0.4
+}

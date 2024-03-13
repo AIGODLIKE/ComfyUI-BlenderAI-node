@@ -1,0 +1,251 @@
+{
+  "last_node_id": 10,
+  "last_link_id": 5,
+  "nodes": [
+    {
+      "id": 10,
+      "type": "TripoSRModelLoader",
+      "pos": [
+        1290,
+        690
+      ],
+      "size": {
+        "0": 200,
+        "1": 100
+      },
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "TRIPOSR_MODEL",
+          "type": "TRIPOSR_MODEL",
+          "links": [
+            0
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "TripoSRModelLoader",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "TripoSR.ckpt",
+        8192
+      ]
+    },
+    {
+      "id": 3,
+      "type": "输入图像",
+      "pos": [
+        1234,
+        849
+      ],
+      "size": {
+        "0": 256,
+        "1": 100
+      },
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            2
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": [
+            4
+          ],
+          "slot_index": 1
+        }
+      ],
+      "title": "输入图像",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "",
+        "输入"
+      ]
+    },
+    {
+      "id": 4,
+      "type": "InvertMask",
+      "pos": [
+        1603,
+        935
+      ],
+      "size": {
+        "0": 200,
+        "1": 100
+      },
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "mask",
+          "type": "MASK",
+          "link": 4,
+          "label": "mask"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": [
+            3
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "InvertMask",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 8,
+      "type": "TripoSRViewer",
+      "pos": [
+        2113,
+        756
+      ],
+      "size": {
+        "0": 376,
+        "1": 100
+      },
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "mesh",
+          "type": "MESH",
+          "link": 1,
+          "label": "mesh"
+        }
+      ],
+      "outputs": [],
+      "title": "TripoSRViewer",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 9,
+      "type": "TripoSRSampler",
+      "pos": [
+        1862,
+        786
+      ],
+      "size": {
+        "0": 200,
+        "1": 100
+      },
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "TRIPOSR_MODEL",
+          "link": 0,
+          "label": "model"
+        },
+        {
+          "name": "reference_image",
+          "type": "IMAGE",
+          "link": 2,
+          "label": "reference_image"
+        },
+        {
+          "name": "reference_mask",
+          "type": "MASK",
+          "link": 3,
+          "label": "reference_mask"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MESH",
+          "type": "MESH",
+          "links": [
+            1
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "TripoSRSampler",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        256,
+        25.0
+      ],
+      "bgcolor": "#1000000"
+    }
+  ],
+  "links": [
+    [
+      0,
+      10,
+      0,
+      9,
+      0,
+      "TRIPOSR_MODEL"
+    ],
+    [
+      1,
+      9,
+      0,
+      8,
+      0,
+      "MESH"
+    ],
+    [
+      2,
+      3,
+      0,
+      9,
+      1,
+      "IMAGE"
+    ],
+    [
+      3,
+      4,
+      0,
+      9,
+      2,
+      "MASK"
+    ],
+    [
+      4,
+      3,
+      1,
+      4,
+      0,
+      "MASK"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "groupNodes": {}
+  },
+  "version": 0.4
+}

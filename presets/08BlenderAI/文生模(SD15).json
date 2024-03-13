@@ -1,0 +1,680 @@
+{
+  "last_node_id": 36,
+  "last_link_id": 16,
+  "nodes": [
+    {
+      "id": 10,
+      "type": "TripoSRModelLoader",
+      "pos": [
+        1290,
+        690
+      ],
+      "size": {
+        "0": 200,
+        "1": 30
+      },
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "TRIPOSR_MODEL",
+          "type": "TRIPOSR_MODEL",
+          "links": [
+            12
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "TripoSRModelLoader",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "TripoSR.ckpt",
+        8192
+      ]
+    },
+    {
+      "id": 13,
+      "type": "LayeredDiffusionApply",
+      "pos": [
+        485,
+        -5
+      ],
+      "size": {
+        "0": 327,
+        "1": 30
+      },
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 5,
+          "label": "model"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            6
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "LayeredDiffusionApply",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "SD15, Attention Injection, attn_sharing",
+        1.0
+      ]
+    },
+    {
+      "id": 14,
+      "type": "VAEDecode",
+      "pos": [
+        1292,
+        194
+      ],
+      "size": {
+        "0": 210,
+        "1": 30
+      },
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 7,
+          "label": "samples"
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 15,
+          "label": "vae"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            8,
+            10,
+            14
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "VAEDecode",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 20,
+      "type": "PreviewImage",
+      "pos": [
+        1608,
+        336
+      ],
+      "size": {
+        "0": 256,
+        "1": 30
+      },
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 8,
+          "label": "images"
+        }
+      ],
+      "outputs": [],
+      "title": "预览.001",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 27,
+      "type": "PreviewImage",
+      "pos": [
+        1947,
+        193
+      ],
+      "size": {
+        "0": 256,
+        "1": 30
+      },
+      "flags": {},
+      "order": 11,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 11,
+          "label": "images"
+        }
+      ],
+      "outputs": [],
+      "title": "预览",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 3,
+      "type": "KSampler",
+      "pos": [
+        928,
+        194
+      ],
+      "size": {
+        "0": 315,
+        "1": 30
+      },
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 6,
+          "label": "model"
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 2,
+          "label": "positive"
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 4,
+          "label": "negative"
+        },
+        {
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 0,
+          "label": "latent_image"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            7,
+            9
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "K采样器",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "2000336921",
+        "randomize",
+        20,
+        8.0,
+        "euler",
+        "normal",
+        1.0
+      ]
+    },
+    {
+      "id": 36,
+      "type": "LayeredDiffusionDecodeRGBA",
+      "pos": [
+        1606,
+        195
+      ],
+      "size": {
+        "0": 243,
+        "1": 30
+      },
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 9,
+          "label": "samples"
+        },
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 10,
+          "label": "images"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            11
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "LayeredDiffusionDecodeRGBA",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "SD15",
+        16
+      ]
+    },
+    {
+      "id": 4,
+      "type": "CheckpointLoaderSimple",
+      "pos": [
+        22,
+        475
+      ],
+      "size": {
+        "0": 315,
+        "1": 30
+      },
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            5
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            1,
+            3
+          ],
+          "slot_index": 1
+        },
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "links": [
+            15
+          ],
+          "slot_index": 2
+        }
+      ],
+      "title": "CheckpointLoaderSimple",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "天空之境.safetensors"
+      ]
+    },
+    {
+      "id": 5,
+      "type": "EmptyLatentImage",
+      "pos": [
+        497,
+        687
+      ],
+      "size": {
+        "0": 315,
+        "1": 30
+      },
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            0
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "EmptyLatentImage",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        768,
+        768,
+        1
+      ]
+    },
+    {
+      "id": 6,
+      "type": "CLIPTextEncode",
+      "pos": [
+        432,
+        182
+      ],
+      "size": {
+        "0": 422,
+        "1": 30
+      },
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 1,
+          "label": "clip"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            2
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "CLIPTextEncode.001",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "1hamburger, best quality, masterpiece, high-definition, ultimate detail"
+      ]
+    },
+    {
+      "id": 7,
+      "type": "CLIPTextEncode",
+      "pos": [
+        430,
+        385
+      ],
+      "size": {
+        "0": 425,
+        "1": 30
+      },
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 3,
+          "label": "clip"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            4
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "CLIPTextEncode",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "embedding:ng_deepnegative_v1_75t, "
+      ]
+    },
+    {
+      "id": 8,
+      "type": "TripoSRViewer",
+      "pos": [
+        2113,
+        756
+      ],
+      "size": {
+        "0": 376,
+        "1": 30
+      },
+      "flags": {},
+      "order": 12,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "mesh",
+          "type": "MESH",
+          "link": 13,
+          "label": "mesh"
+        }
+      ],
+      "outputs": [],
+      "title": "TripoSRViewer",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 9,
+      "type": "TripoSRSampler",
+      "pos": [
+        1862,
+        786
+      ],
+      "size": {
+        "0": 200,
+        "1": 30
+      },
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "TRIPOSR_MODEL",
+          "link": 12,
+          "label": "model"
+        },
+        {
+          "name": "reference_image",
+          "type": "IMAGE",
+          "link": 14,
+          "label": "reference_image"
+        },
+        {
+          "name": "reference_mask",
+          "type": "MASK",
+          "link": null,
+          "label": "reference_mask"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MESH",
+          "type": "MESH",
+          "links": [
+            13
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "TripoSRSampler",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        256,
+        25.0
+      ]
+    }
+  ],
+  "links": [
+    [
+      0,
+      5,
+      0,
+      3,
+      3,
+      "LATENT"
+    ],
+    [
+      1,
+      4,
+      1,
+      6,
+      0,
+      "CLIP"
+    ],
+    [
+      2,
+      6,
+      0,
+      3,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      3,
+      4,
+      1,
+      7,
+      0,
+      "CLIP"
+    ],
+    [
+      4,
+      7,
+      0,
+      3,
+      2,
+      "CONDITIONING"
+    ],
+    [
+      5,
+      4,
+      0,
+      13,
+      0,
+      "MODEL"
+    ],
+    [
+      6,
+      13,
+      0,
+      3,
+      0,
+      "MODEL"
+    ],
+    [
+      7,
+      3,
+      0,
+      14,
+      0,
+      "LATENT"
+    ],
+    [
+      8,
+      14,
+      0,
+      20,
+      0,
+      "IMAGE"
+    ],
+    [
+      9,
+      3,
+      0,
+      36,
+      0,
+      "LATENT"
+    ],
+    [
+      10,
+      14,
+      0,
+      36,
+      1,
+      "IMAGE"
+    ],
+    [
+      11,
+      36,
+      0,
+      27,
+      0,
+      "IMAGE"
+    ],
+    [
+      12,
+      10,
+      0,
+      9,
+      0,
+      "TRIPOSR_MODEL"
+    ],
+    [
+      13,
+      9,
+      0,
+      8,
+      0,
+      "MESH"
+    ],
+    [
+      14,
+      14,
+      0,
+      9,
+      1,
+      "IMAGE"
+    ],
+    [
+      15,
+      4,
+      2,
+      14,
+      1,
+      "VAE"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "groupNodes": {}
+  },
+  "version": 0.4
+}
