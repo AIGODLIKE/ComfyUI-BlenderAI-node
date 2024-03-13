@@ -1816,6 +1816,20 @@ class VHS_VideoCombine(BluePrintBase):
         prop = bpy.props.StringProperty()
         properties["prev_name"] = prop
 
+    def pre_filter(s, nname, desc):
+        cmb_format = desc["input"]["required"].get("format", [])
+        if not cmb_format:
+            return
+        cmb_format = cmb_format[0]
+        if not cmb_format:
+            return
+        support_fmt = []
+        if "image/gif" in cmb_format:
+            support_fmt.append("image/gif")
+        if "image/webp" in cmb_format:
+            support_fmt.append("image/webp")
+        desc["input"]["required"]["format"] = [support_fmt]
+
     def free(s, self: NodeBase):
         if self.prev_name in s.PLAYERS:
             player = s.PLAYERS.pop(self.prev_name)
