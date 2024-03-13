@@ -179,7 +179,10 @@ class Ops(bpy.types.Operator):
 
     def submit(self):
         tree: CFNodeTree = get_default_tree()
-
+        if not tree:
+            logger.error(_T("No Node Tree Found!"))
+            self.report({"ERROR"}, _T("No Node Tree Found!"))
+            return
         def reset_error_mark(tree: CFNodeTree):
             if not tree:
                 return
