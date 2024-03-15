@@ -1579,7 +1579,7 @@ class NodeParser:
         # 获取差异object_info
         if self.DIFF_PATH.exists():
             self.diff_object_info = json.load(self.DIFF_PATH.open("r"))
-        for name in ["Note", "PrimitiveNode", "Cache Node"]:
+        for name in ["Note", "PrimitiveNode", "Cache Node", "LayerUtility: TextImage"]:
             self.diff_object_info.pop(name, None)
         return self.diff_object_info
 
