@@ -21,6 +21,8 @@ def read_json(path: Path | str) -> dict:
             return json.loads(Path(path).read_text(encoding=encoding))
         except UnicodeDecodeError:
             continue
+        except json.JSONDecodeError:
+            continue
     return {}
 
 

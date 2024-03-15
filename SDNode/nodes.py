@@ -13,7 +13,7 @@ from functools import lru_cache
 from mathutils import Vector, Matrix
 from bpy.types import Context, Event
 from .utils import SELECTED_COLLECTIONS, get_default_tree
-from ..utils import logger, Icon, _T
+from ..utils import logger, Icon, _T, read_json
 from ..datas import ENUM_ITEMS_CACHE, IMG_SUFFIX
 from ..timer import Timer
 from ..translations import ctxt, get_reg_name, get_ori_name
@@ -1547,9 +1547,9 @@ class NodeParser:
     def fetch_object(self):
         self.ori_object_info.clear()
         if self.INTERNAL_PATH.exists():
-            self.ori_object_info.update(json.load(self.INTERNAL_PATH.open("r")))
+            self.ori_object_info.update(read_json(self.INTERNAL_PATH))
         if self.PATH.exists():
-            self.ori_object_info.update(json.load(self.PATH.open("r")))
+            self.ori_object_info.update(read_json(self.PATH))
         from .manager import TaskManager, FakeServer
         if TaskManager.server != FakeServer._instance:
             self._fetch_object_from_server()
@@ -1578,7 +1578,7 @@ class NodeParser:
     def find_diff(self):
         # 获取差异object_info
         if self.DIFF_PATH.exists():
-            self.diff_object_info = json.load(self.DIFF_PATH.open("r"))
+            self.diff_object_info = read_json(self.DIFF_PATH)
         for name in ["Note", "PrimitiveNode", "Cache Node", "LayerUtility: TextImage"]:
             self.diff_object_info.pop(name, None)
         return self.diff_object_info
