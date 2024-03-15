@@ -435,6 +435,7 @@ class TaskErrPaser:
 
 class Server:
     _instance: Server = None
+    server_type = "Base"
     uid = 0
 
     def __new__(cls, *args, **kw):
@@ -493,24 +494,89 @@ class Server:
 
 
 class FakeServer(Server):
-    ...
+    server_type = "Fake"
 
 
 class RemoteServer(Server):
+    server_type = "Remote"
 
     def __init__(self) -> None:
         self.server_connected = False
+        self.cs_support = "UNKNOWN"
+        self.covers = {}
         super().__init__()
 
     def run(self) -> bool:
         self.tstart = time.time()
         self.server_connected = False
+        self.cs_support = "UNKNOWN"
+        self.covers.clear()
         TaskManager.clear_error_msg()
         self.uid = time.time_ns()
         self.launch_ip = get_ip()
         self.launch_port = get_port()
         self.launch_url = f"http://{self.launch_ip}:{self.launch_port}"
         return self.wait_connect()
+
+    def is_cs_support(self):
+        if self.cs_support in {"NO", "YES"}:
+            return self.cs_support == "YES"
+        self.cs_support = "NO"
+        try:
+            import requests
+            url = f"{get_url()}/cs/fetch_config"
+            if WITH_PROXY:
+                req = requests.post(url=url, json={}, timeout=5)
+            else:
+                req = requests.post(url=url, json={}, proxies={"http": None, "https": None}, timeout=5)
+            if req.status_code == 200:
+                self.cs_support = "YES"
+        except Exception as e:
+            logger.error(e)
+        return self.cs_support == "YES"
+
+    def cache_model_icon(self, mtype, model) -> str | None:
+        if model in self.covers:
+            return self.covers[model]
+        if not mtype:
+            return
+        if not self.is_cs_support():
+            return
+        self.covers[model] = None
+        try:
+            import requests
+            from tempfile import gettempdir
+            from urllib3.util import Timeout
+            timeout = Timeout(connect=0.1, read=2)
+            url = f"{get_url()}/cs/fetch_config"
+            req_json = {"mtype": mtype, "models": [model]}
+            if WITH_PROXY:
+                req = requests.post(url=url, json=req_json, timeout=timeout)
+            else:
+                req = requests.post(url=url,
+                                    json=req_json,
+                                    proxies={"http": None, "https": None},
+                                    timeout=timeout)
+            if req.status_code != 200:
+                return
+            data = req.json().get(model, {})
+            cover = data.get("cover", "")
+            img_quote = cover.split("?t=")[0]
+            cover_url = f"{get_url()}{img_quote}"
+            img_data = requests.get(cover_url, timeout=5).content
+            if not img_data:
+                return
+            img_path = Path(gettempdir()).joinpath(model).with_suffix(Path(img_quote).suffix)
+            with open(img_path, "wb") as f:
+                f.write(img_data)
+            self.covers[model] = img_path
+        except requests.exceptions.ConnectionError:
+            logger.warning("Server Launch Failed")
+        except ModuleNotFoundError:
+            logger.error("Module: requests import error!")
+        except Exception as e:
+            logger.error(e)
+        return self.covers[model]
 
     def wait_connect(self) -> bool:
         import requests
@@ -535,6 +601,7 @@ class RemoteServer(Server):
 
 
 class LocalServer(Server):
+    server_type = "Local"
     exited_status = {}
 
     def __init__(self) -> None:

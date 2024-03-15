@@ -252,7 +252,7 @@ class Icon(metaclass=MetaIn):
         Icon.reg_icon(Icon.NONE_IMAGE)
 
     @staticmethod
-    def reg_icon(path):
+    def reg_icon(path, reload=False):
         path = FSWatcher.to_str(path)
         if not Icon.can_mark_image(path):
             return Icon[path]
@@ -265,6 +265,8 @@ class Icon(metaclass=MetaIn):
         else:
             if path not in Icon:
                 Icon.PREV_DICT.load(path, path, 'IMAGE')
+            if reload:
+                Timer.put(Icon.PREV_DICT[path].reload)
             return Icon[path]
 
     @staticmethod

@@ -52,6 +52,18 @@ name2path = {
     "GLIGENLoader": {"gligen_name": "gligen"}
 }
 
+name2type = {
+    "ckpt_name": "checkpoints",
+    "vae_name": "vae",
+    "clip_name": "clip",
+    "gligen_name": "gligen",
+    "control_net_name": "controlnet",
+    "lora_name": "loras",
+    "style_model_name": "style_models",
+    "hypernetwork_name": "hypernetworks",
+    "unet_name": "unets",
+}
+
 
 def ui_scale():
     return bpy.context.preferences.system.ui_scale
@@ -135,9 +147,8 @@ def calc_hash_type(stype):
 
 
 class PropGen:
-
     @staticmethod
-    def _find_icon(nname, inp_name, item):
+    def _find_icon_local(nname, inp_name, item):
         prev_path_list = get_icon_path(nname).get(inp_name)
         if not prev_path_list:
             return 0
@@ -168,6 +179,28 @@ class PropGen:
             return Icon.reg_icon(file.absolute())
         # logger.info(f"🌚 No Icon <- {file.name}")
         return Icon["NONE"]
+
+    @staticmethod
+    def _find_icon_remote(nname, inp_name, item):
+        from .manager import TaskManager, RemoteServer
+        server: RemoteServer = TaskManager.server
+        mtype = name2type.get(inp_name, "")
+        path: Path = server.cache_model_icon(mtype, item)
+        if not path:
+            return
+        return Icon.reg_icon(path.absolute(), reload=True)
+
+    @staticmethod
+    def _find_icon(nname, inp_name, item):
+        from .manager import TaskManager
+        server = TaskManager.server
+        if server and server.server_type == "Remote":
+            icon = PropGen._find_icon_remote(nname, inp_name, item)
+        else:
+            icon = PropGen._find_icon_local(nname, inp_name, item)
+        if not icon:
+            icon = Icon["NONE"]
+        return icon
 
     @staticmethod
     def Gen(proptype, nname, inp_name, inp):
