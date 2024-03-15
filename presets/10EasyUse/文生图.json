@@ -1,0 +1,418 @@
+{
+  "last_node_id": 9,
+  "last_link_id": 6,
+  "nodes": [
+    {
+      "id": 3,
+      "type": "PreviewImage",
+      "pos": [
+        1480,
+        -49
+      ],
+      "size": {
+        "0": 256,
+        "1": 100
+      },
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 4,
+          "label": "images"
+        }
+      ],
+      "outputs": [],
+      "title": "预览",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 4,
+      "type": "easy preSampling",
+      "pos": [
+        932,
+        15
+      ],
+      "size": {
+        "0": 228,
+        "1": 30
+      },
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "pipe",
+          "type": "PIPE_LINE",
+          "link": 1,
+          "label": "pipe"
+        },
+        {
+          "name": "image_to_latent",
+          "type": "IMAGE",
+          "link": null,
+          "label": "image_to_latent"
+        },
+        {
+          "name": "latent",
+          "type": "LATENT",
+          "link": null,
+          "label": "latent"
+        },
+        {
+          "name": "seed_num",
+          "type": "INT",
+          "link": 5,
+          "label": "seed_num",
+          "widget": {
+            "name": "seed_num",
+            "config": [
+              "INT",
+              {
+                "default": 0,
+                "min": 0,
+                "max": 2147483647,
+                "step": 1
+              }
+            ]
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "pipe",
+          "type": "pipe",
+          "links": [
+            0
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "预采样参数（基础）",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        35,
+        5.0,
+        "dpmpp_2m_sde_gpu",
+        "karras",
+        1.0,
+        265
+      ]
+    },
+    {
+      "id": 5,
+      "type": "easy kSampler",
+      "pos": [
+        1173,
+        15
+      ],
+      "size": {
+        "0": 264,
+        "1": 30
+      },
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "pipe",
+          "type": "PIPE_LINE",
+          "link": 0,
+          "label": "pipe"
+        },
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": null,
+          "label": "model"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "pipe",
+          "type": "pipe",
+          "links": [],
+          "slot_index": 0
+        },
+        {
+          "name": "image",
+          "type": "image",
+          "links": [
+            4
+          ],
+          "slot_index": 1
+        }
+      ],
+      "title": "简易K采样器",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "Preview",
+        0,
+        "ComfyUI"
+      ]
+    },
+    {
+      "id": 6,
+      "type": "Seed Everywhere",
+      "pos": [
+        955,
+        -77
+      ],
+      "size": {
+        "0": 200,
+        "1": 100
+      },
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "INT",
+          "type": "INT",
+          "links": [
+            5
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "全局随机种",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "2539488547",
+        "fixed"
+      ]
+    },
+    {
+      "id": 7,
+      "type": "easy a1111Loader",
+      "pos": [
+        706,
+        15
+      ],
+      "size": {
+        "0": 210,
+        "1": 30
+      },
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "optional_lora_stack",
+          "type": "LORA_STACK",
+          "link": null,
+          "label": "optional_lora_stack"
+        },
+        {
+          "name": "positive",
+          "type": "STRING",
+          "link": 2,
+          "label": "positive",
+          "widget": {
+            "name": "positive",
+            "config": [
+              "STRING",
+              {
+                "default": "Positive",
+                "multiline": true
+              }
+            ]
+          }
+        },
+        {
+          "name": "negative",
+          "type": "STRING",
+          "link": 3,
+          "label": "negative",
+          "widget": {
+            "name": "negative",
+            "config": [
+              "STRING",
+              {
+                "default": "Negative",
+                "multiline": true
+              }
+            ]
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "pipe",
+          "type": "pipe",
+          "links": [
+            1
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "model",
+          "type": "model",
+          "links": [],
+          "slot_index": 1
+        },
+        {
+          "name": "vae",
+          "type": "vae",
+          "links": [],
+          "slot_index": 2
+        }
+      ],
+      "title": "简易加载器（A1111）",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "天空之境.safetensors",
+        "pastel-waifu-diffusion.vae.pt",
+        -1,
+        "None",
+        1.0,
+        1.0,
+        "768 x 1024",
+        512,
+        512,
+        "Positive",
+        "Negative",
+        1,
+        true
+      ]
+    },
+    {
+      "id": 8,
+      "type": "easy positive",
+      "pos": [
+        338,
+        15
+      ],
+      "size": {
+        "0": 348,
+        "1": 30
+      },
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "positive",
+          "type": "positive",
+          "links": [
+            2
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "正面提示词",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "close-up shot of 1pikachu with ((beautiful face)) in the studio with a (yellow:1.2) suite, (white and yellow  lightning:1.2), attack dynamic_pose, "
+      ],
+      "bgcolor": "#305030"
+    },
+    {
+      "id": 9,
+      "type": "easy negative",
+      "pos": [
+        341,
+        194
+      ],
+      "size": {
+        "0": 343,
+        "1": 30
+      },
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "negative",
+          "type": "negative",
+          "links": [
+            3
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "负面提示词",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "text, watermark,"
+      ],
+      "bgcolor": "#503030"
+    }
+  ],
+  "links": [
+    [
+      0,
+      4,
+      0,
+      5,
+      0,
+      "PIPE_LINE"
+    ],
+    [
+      1,
+      7,
+      0,
+      4,
+      0,
+      "PIPE_LINE"
+    ],
+    [
+      2,
+      8,
+      0,
+      7,
+      1,
+      "STRING"
+    ],
+    [
+      3,
+      9,
+      0,
+      7,
+      2,
+      "STRING"
+    ],
+    [
+      4,
+      5,
+      1,
+      3,
+      0,
+      "IMAGE"
+    ],
+    [
+      5,
+      6,
+      0,
+      4,
+      3,
+      "INT"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "groupNodes": {}
+  },
+  "version": 0.4
+}

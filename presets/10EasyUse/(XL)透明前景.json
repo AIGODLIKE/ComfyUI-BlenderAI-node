@@ -1,0 +1,451 @@
+{
+  "last_node_id": 11,
+  "last_link_id": 7,
+  "nodes": [
+    {
+      "id": 10,
+      "type": "PreviewImage",
+      "pos": [
+        1801,
+        -616
+      ],
+      "size": {
+        "0": 512,
+        "1": 30
+      },
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 5,
+          "label": "images"
+        }
+      ],
+      "outputs": [],
+      "title": "预览.002",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 11,
+      "type": "Seed Everywhere",
+      "pos": [
+        564,
+        -145
+      ],
+      "size": {
+        "0": 200,
+        "1": 100
+      },
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "INT",
+          "type": "INT",
+          "links": [
+            6
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "全局随机种",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "1002212317",
+        "fixed"
+      ]
+    },
+    {
+      "id": 3,
+      "type": "easy comfyLoader",
+      "pos": [
+        274,
+        -80
+      ],
+      "size": {
+        "0": 252,
+        "1": 30
+      },
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "optional_lora_stack",
+          "type": "LORA_STACK",
+          "link": null,
+          "label": "optional_lora_stack"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "pipe",
+          "type": "pipe",
+          "links": [
+            0
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "model",
+          "type": "model",
+          "links": [],
+          "slot_index": 1
+        },
+        {
+          "name": "vae",
+          "type": "vae",
+          "links": [],
+          "slot_index": 2
+        }
+      ],
+      "title": "简易加载器（Comfy）.001",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "sd_xl_base_1.0.safetensors",
+        "Baked VAE",
+        -1,
+        "None",
+        1.0,
+        1.0,
+        "768 x 1024",
+        512,
+        512,
+        "1dog,",
+        "text, watermark, embedding:badhandv4, embedding:ng_deepnegative_v1_75t, ",
+        6
+      ]
+    },
+    {
+      "id": 4,
+      "type": "easy preSamplingLayerDiffusion",
+      "pos": [
+        555,
+        -54
+      ],
+      "size": {
+        "0": 235,
+        "1": 30
+      },
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "pipe",
+          "type": "PIPE_LINE",
+          "link": 0,
+          "label": "pipe"
+        },
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": null,
+          "label": "image"
+        },
+        {
+          "name": "blended_image",
+          "type": "IMAGE",
+          "link": null,
+          "label": "blended_image"
+        },
+        {
+          "name": "seed_num",
+          "type": "INT",
+          "link": 6,
+          "label": "seed_num",
+          "widget": {
+            "name": "seed_num",
+            "config": [
+              "INT",
+              {
+                "default": 0,
+                "min": 0,
+                "max": 2147483647,
+                "step": 1
+              }
+            ]
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "pipe",
+          "type": "pipe",
+          "links": [
+            1
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "预采样参数（LayerDiffusion）.001",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "Attention Injection",
+        1.0,
+        20,
+        8.0,
+        "euler_ancestral",
+        "simple",
+        1.0,
+        0
+      ]
+    },
+    {
+      "id": 6,
+      "type": "easy kSamplerLayerDiffusion",
+      "pos": [
+        868,
+        -56
+      ],
+      "size": {
+        "0": 277,
+        "1": 30
+      },
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "pipe",
+          "type": "PIPE_LINE",
+          "link": 1,
+          "label": "pipe"
+        },
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": null,
+          "label": "model"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "pipe",
+          "type": "pipe",
+          "links": [],
+          "slot_index": 0
+        },
+        {
+          "name": "final_image",
+          "type": "final_image",
+          "links": [
+            2
+          ],
+          "slot_index": 1
+        },
+        {
+          "name": "original_image",
+          "type": "original_image",
+          "links": [],
+          "slot_index": 2
+        },
+        {
+          "name": "alpha",
+          "type": "alpha",
+          "links": [],
+          "slot_index": 3
+        }
+      ],
+      "title": "简易k采样器（LayerDiffusion）",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "Preview",
+        0,
+        "ComfyUI"
+      ]
+    },
+    {
+      "id": 7,
+      "type": "easy imageSplitList",
+      "pos": [
+        1238,
+        -68
+      ],
+      "size": {
+        "0": 210,
+        "1": 30
+      },
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 2,
+          "label": "images"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "images",
+          "type": "images",
+          "links": [
+            5
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "images",
+          "type": "images",
+          "links": [
+            4
+          ],
+          "slot_index": 1
+        },
+        {
+          "name": "images",
+          "type": "images",
+          "links": [
+            3
+          ],
+          "slot_index": 2
+        }
+      ],
+      "title": "图像拆分",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 8,
+      "type": "PreviewImage",
+      "pos": [
+        1795,
+        116
+      ],
+      "size": {
+        "0": 512,
+        "1": 30
+      },
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 3,
+          "label": "images"
+        }
+      ],
+      "outputs": [],
+      "title": "预览",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 9,
+      "type": "PreviewImage",
+      "pos": [
+        1794,
+        -246
+      ],
+      "size": {
+        "0": 512,
+        "1": 30
+      },
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 4,
+          "label": "images"
+        }
+      ],
+      "outputs": [],
+      "title": "预览.001",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": []
+    }
+  ],
+  "links": [
+    [
+      0,
+      3,
+      0,
+      4,
+      0,
+      "PIPE_LINE"
+    ],
+    [
+      1,
+      4,
+      0,
+      6,
+      0,
+      "PIPE_LINE"
+    ],
+    [
+      2,
+      6,
+      1,
+      7,
+      0,
+      "IMAGE"
+    ],
+    [
+      3,
+      7,
+      2,
+      8,
+      0,
+      "IMAGE"
+    ],
+    [
+      4,
+      7,
+      1,
+      9,
+      0,
+      "IMAGE"
+    ],
+    [
+      5,
+      7,
+      0,
+      10,
+      0,
+      "IMAGE"
+    ],
+    [
+      6,
+      11,
+      0,
+      4,
+      3,
+      "INT"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "groupNodes": {}
+  },
+  "version": 0.4
+}

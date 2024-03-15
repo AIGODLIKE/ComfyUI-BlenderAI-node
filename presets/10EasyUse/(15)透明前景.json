@@ -1,0 +1,294 @@
+{
+  "last_node_id": 7,
+  "last_link_id": 4,
+  "nodes": [
+    {
+      "id": 3,
+      "type": "easy comfyLoader",
+      "pos": [
+        1767,
+        214
+      ],
+      "size": {
+        "0": 332,
+        "1": 30
+      },
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "optional_lora_stack",
+          "type": "LORA_STACK",
+          "link": null,
+          "label": "optional_lora_stack"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "pipe",
+          "type": "pipe",
+          "links": [
+            0
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "model",
+          "type": "model",
+          "links": [],
+          "slot_index": 1
+        },
+        {
+          "name": "vae",
+          "type": "vae",
+          "links": [],
+          "slot_index": 2
+        }
+      ],
+      "title": "简易加载器（Comfy）.003",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "AIGODLIKE华丽_4000.ckpt",
+        "Baked VAE",
+        -1,
+        "None",
+        1.0,
+        1.0,
+        "512 x 512",
+        512,
+        512,
+        "The author has a grey husky, very stupid, anime",
+        "text, watermark",
+        1
+      ]
+    },
+    {
+      "id": 4,
+      "type": "easy preSamplingLayerDiffusion",
+      "pos": [
+        2113,
+        207
+      ],
+      "size": {
+        "0": 235,
+        "1": 30
+      },
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "pipe",
+          "type": "PIPE_LINE",
+          "link": 0,
+          "label": "pipe"
+        },
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": null,
+          "label": "image"
+        },
+        {
+          "name": "blended_image",
+          "type": "IMAGE",
+          "link": null,
+          "label": "blended_image"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "pipe",
+          "type": "pipe",
+          "links": [
+            1
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "预采样参数（LayerDiffusion）",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "Attention Injection",
+        1.0,
+        20,
+        8.0,
+        "euler_ancestral",
+        "simple",
+        1.0,
+        0
+      ]
+    },
+    {
+      "id": 5,
+      "type": "easy kSamplerLayerDiffusion",
+      "pos": [
+        2364,
+        211
+      ],
+      "size": {
+        "0": 274,
+        "1": 30
+      },
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "pipe",
+          "type": "PIPE_LINE",
+          "link": 1,
+          "label": "pipe"
+        },
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": null,
+          "label": "model"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "pipe",
+          "type": "pipe",
+          "links": [],
+          "slot_index": 0
+        },
+        {
+          "name": "final_image",
+          "type": "final_image",
+          "links": [
+            3
+          ],
+          "slot_index": 1
+        },
+        {
+          "name": "original_image",
+          "type": "original_image",
+          "links": [
+            2
+          ],
+          "slot_index": 2
+        },
+        {
+          "name": "alpha",
+          "type": "alpha",
+          "links": [],
+          "slot_index": 3
+        }
+      ],
+      "title": "简易k采样器（LayerDiffusion）",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "Preview",
+        0,
+        "ComfyUI"
+      ]
+    },
+    {
+      "id": 6,
+      "type": "PreviewImage",
+      "pos": [
+        2778,
+        90
+      ],
+      "size": {
+        "0": 256,
+        "1": 100
+      },
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 2,
+          "label": "images"
+        }
+      ],
+      "outputs": [],
+      "title": "预览",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 7,
+      "type": "PreviewImage",
+      "pos": [
+        2787,
+        457
+      ],
+      "size": {
+        "0": 256,
+        "1": 100
+      },
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 3,
+          "label": "images"
+        }
+      ],
+      "outputs": [],
+      "title": "预览.001",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": []
+    }
+  ],
+  "links": [
+    [
+      0,
+      3,
+      0,
+      4,
+      0,
+      "PIPE_LINE"
+    ],
+    [
+      1,
+      4,
+      0,
+      5,
+      0,
+      "PIPE_LINE"
+    ],
+    [
+      2,
+      5,
+      2,
+      6,
+      0,
+      "IMAGE"
+    ],
+    [
+      3,
+      5,
+      1,
+      7,
+      0,
+      "IMAGE"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "groupNodes": {}
+  },
+  "version": 0.4
+}
