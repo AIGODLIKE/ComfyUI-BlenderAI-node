@@ -26,7 +26,7 @@ from PIL.PngImagePlugin import PngInfo
 
 FORCE_LOG = False
 CATEGORY_ = "Blender"
-TEMPDIR = Path(__file__).parent.parent / "SDNodeTemp"
+TEMPDIR = Path(__file__).parent.parent.parent / "SDNodeTemp"
 HOST_PATH = Path("XXXHOST-PATHXXX")
 if not HOST_PATH.parent.exists():
     HOST_PATH = Path(__file__).parent
@@ -134,7 +134,10 @@ def node_info(node_class):
     """
     obj_class = nodes.NODE_CLASS_MAPPINGS[node_class]
     info = {}
-    info['input'] = obj_class.INPUT_TYPES()
+    try:
+        info['input'] = obj_class.INPUT_TYPES()
+    except Exception:
+        ...
     info['output'] = obj_class.RETURN_TYPES
     info['output_is_list'] = obj_class.OUTPUT_IS_LIST if hasattr(obj_class, 'OUTPUT_IS_LIST') else [False] * len(obj_class.RETURN_TYPES)
     info['output_name'] = obj_class.RETURN_NAMES if hasattr(obj_class, 'RETURN_NAMES') else info['output']
