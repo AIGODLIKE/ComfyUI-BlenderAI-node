@@ -192,7 +192,8 @@ class NodeCacheManager:
                 self.diff.clear()
             except Exception as e:
                 # 写入失败后
-                print(f"Failed to write diff: {e}")
+                # print(f"Failed to write diff: {e}")
+                ...
         return diff
 
 
