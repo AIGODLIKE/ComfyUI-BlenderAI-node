@@ -167,6 +167,36 @@
             "SAMPLER": "采样器"
         }
     },
+    "SamplerEulerAncestral": {
+        "title": "Euler_A采样器",
+        "widgets": {
+            "eta": "eta",
+            "s_noise": "s_noise"
+        },
+        "outputs": {
+            "SAMPLER": "采样器"
+        }
+    },
+    "SamplerLMS": {
+        "title": "LMS采样器",
+        "widgets": {
+            "order": "order"
+        },
+        "outputs": {
+            "SAMPLER": "采样器"
+        }
+    },
+    "SamplerDPMPP_3M_SDE": {
+        "title": "DPMPP_3M_SDE采样器",
+        "widgets": {
+            "eta": "eta",
+            "s_noise": "s_noise",
+            "noise_device": "设备"
+        },
+        "outputs": {
+            "SAMPLER": "采样器"
+        }
+    },
     "BasicScheduler": {
         "title": "基础调度器",
         "inputs": {
@@ -506,6 +536,17 @@
         }
     },
 
+
+    "StableCascade_StageB_Conditioning": {
+        "title": "StableCascade_StageB条件",
+        "inputs": {
+            "conditioning": "条件",
+            "stage_c": "Stage_C"
+        },
+        "outputs": {
+            "CONDITIONING": "条件"
+        }
+    },
 
 
     "CLIPTextEncode": {
@@ -869,6 +910,35 @@
     },
 
 
+    "StableCascade_EmptyLatentImage": {
+        "title": "StableCascade_空Latent",
+        "widgets": {
+            "width": "宽度",
+            "height": "高度",
+            "compression": "压缩等级",
+            "batch_size": "批次大小"
+        },
+        "outputs": {
+            "stage_c": "Stage_C",
+            "stage_b": "Stage_B"
+        }
+    },
+    "StableCascade_StageC_VAEEncode": {
+        "title": "StableCascade_StageC_VAE编码",
+        "inputs": {
+            "image": "图像",
+            "vae": "VAE"
+        },
+        "widgets": {
+            "compression": "压缩等级"
+        },
+        "outputs": {
+            "stage_b": "Stage_B",
+            "stage_c": "Stage_C"
+        }
+    },
+
+
     "VAEDecode": {
         "title": "VAE解码",
         "inputs": {
@@ -1103,6 +1173,19 @@
             "IMAGE": "图像"
         }
     },
+    "ImageMorphology": {
+        "title": "图像形态学",
+        "inputs": {
+            "image": "图像"
+        },
+        "widgets": {
+            "operation": "操作",
+            "kernel_size": "Kernel_Size"
+        },
+        "outputs": {
+            "IMAGE": "图像"
+        }
+    },
 
 
     "Canny": {
@@ -1142,6 +1225,19 @@
         },
         "widgets": {
             "amount": "次数"
+        },
+        "outputs": {
+            "IMAGE": "图像"
+        }
+    },
+    "ImageFromBatch": {
+        "title": "从批次获取图像",
+        "inputs": {
+            "image": "图像"
+        },
+        "widgets": {
+            "batch_index": "批次索引",
+            "length": "长度"
         },
         "outputs": {
             "IMAGE": "图像"
@@ -1458,6 +1554,18 @@
             "MASK": "遮罩"
         }
     },
+    "ThresholdMask": {
+        "title": "遮罩阈值",
+        "inputs": {
+            "mask": "遮罩"
+        },
+        "widgets": {
+            "value": "明度"
+        },
+        "outputs": {
+            "MASK": "遮罩"
+        }
+    },
 
 
     
@@ -1495,27 +1603,16 @@
     },
 
 
-    "StableCascade_EmptyLatentImage": {
-        "title": "StableCascade_空Latent",
-        "widgets": {
-            "width": "宽度",
-            "height": "高度",
-            "compression": "压缩等级",
-            "batch_size": "批次大小"
-        },
-        "outputs": {
-            "stage_c": "Stage_C",
-            "stage_b": "Stage_B"
-        }
-    },
-    "StableCascade_StageB_Conditioning": {
-        "title": "StableCascade_StageB条件",
+    "StableCascade_SuperResolutionControlnet": {
+        "title": "StableCascade_超分ControlNet",
         "inputs": {
-            "conditioning": "条件",
-            "stage_c": "Stage_C"
+            "image": "图像",
+            "vae": "VAE"
         },
         "outputs": {
-            "CONDITIONING": "条件"
+            "controlnet_input": "ControlNet图像",
+            "stage_b": "Stage_B",
+            "stage_c": "Stage_C"
         }
     },
 
@@ -1685,6 +1782,15 @@
             "MODEL": "模型"
         }
     },
+    "Differential Diffusion": {
+        "title": "Differential Diffusion",
+        "inputs": {
+            "model": "模型"
+        },
+        "outputs": {
+            "MODEL": "模型"
+        }
+    },
 
 
 
@@ -1844,6 +1950,30 @@
             "ratio": "比率"
         },
         "outputs": {
+            "CLIP": "CLIP"
+        }
+    },
+    "CLIPMergeSubtract": {
+        "title": "融合CLIP（相减）",
+        "inputs": {
+            "clip1": "CLIP1",
+            "clip2": "CLIP2"
+        },
+        "widgets": {
+            "multiplier": "系数"
+        },
+        "outputs": {
+            "CLIP": "CLIP"
+        }
+    },
+    "CLIPMergeAdd": {
+        "title": "融合CLIP（相加）",
+        "inputs": {
+            "clip1": "CLIP1",
+            "clip2": "CLIP2"
+        },
+        "outputs": {
+            "CLIP": "CLIP"
         }
     },
     "VAESave": {
@@ -1951,6 +2081,18 @@
                 "eps": "等概率抽样",
             "sigma_max": "最大Sigma",
             "sigma_min": "最小Sigma"
+        }
+    },
+    "ModelSamplingStableCascade": {
+        "title": "模型采样算法Cascade",
+        "inputs": {
+            "model": "模型"
+        },
+        "widgets": {
+            "shift": "偏移"
+        },
+        "outputs": {
+            "MODEL": "模型"
         }
     },
     "RescaleCFG": {

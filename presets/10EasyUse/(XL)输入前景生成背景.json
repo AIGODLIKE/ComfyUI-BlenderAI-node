@@ -1,0 +1,457 @@
+{
+  "last_node_id": 8,
+  "last_link_id": 6,
+  "nodes": [
+    {
+      "id": 3,
+      "type": "easy comfyLoader",
+      "pos": [
+        93,
+        -143
+      ],
+      "size": {
+        "0": 320,
+        "1": 30
+      },
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "optional_lora_stack",
+          "type": "LORA_STACK",
+          "link": null,
+          "label": "optional_lora_stack"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "pipe",
+          "type": "pipe",
+          "links": [
+            2
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "model",
+          "type": "model",
+          "links": [
+            3
+          ],
+          "slot_index": 1
+        },
+        {
+          "name": "vae",
+          "type": "vae",
+          "links": [],
+          "slot_index": 2
+        }
+      ],
+      "title": "简易加载器（Comfy）",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "sd_xl_base_1.0.safetensors",
+        "Baked VAE",
+        -1,
+        "None",
+        1.0,
+        1.0,
+        "自定义 x 自定义",
+        512,
+        512,
+        "A donut on the table",
+        "text, watermark, embedding:badhandv4, embedding:ng_deepnegative_v1_75t, ",
+        1
+      ]
+    },
+    {
+      "id": 4,
+      "type": "easy pipeEdit",
+      "pos": [
+        598,
+        -299
+      ],
+      "size": {
+        "0": 278,
+        "1": 30
+      },
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "pipe",
+          "type": "PIPE_LINE",
+          "link": 2,
+          "label": "pipe"
+        },
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 3,
+          "label": "model"
+        },
+        {
+          "name": "pos",
+          "type": "CONDITIONING",
+          "link": null,
+          "label": "pos"
+        },
+        {
+          "name": "neg",
+          "type": "CONDITIONING",
+          "link": null,
+          "label": "neg"
+        },
+        {
+          "name": "latent",
+          "type": "LATENT",
+          "link": null,
+          "label": "latent"
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": null,
+          "label": "vae"
+        },
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": null,
+          "label": "clip"
+        },
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": null,
+          "label": "image"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "pipe",
+          "type": "pipe",
+          "links": [
+            0
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "model",
+          "type": "model",
+          "links": [],
+          "slot_index": 1
+        },
+        {
+          "name": "pos",
+          "type": "pos",
+          "links": [],
+          "slot_index": 2
+        },
+        {
+          "name": "neg",
+          "type": "neg",
+          "links": [],
+          "slot_index": 3
+        },
+        {
+          "name": "latent",
+          "type": "latent",
+          "links": [],
+          "slot_index": 4
+        },
+        {
+          "name": "vae",
+          "type": "vae",
+          "links": [],
+          "slot_index": 5
+        },
+        {
+          "name": "clip",
+          "type": "clip",
+          "links": [],
+          "slot_index": 6
+        },
+        {
+          "name": "image",
+          "type": "image",
+          "links": [],
+          "slot_index": 7
+        }
+      ],
+      "title": "节点束编辑",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        -2,
+        "(a huge cute cartoon cat) sitting in the room, high quality, ",
+        "none",
+        "comfy",
+        "orange",
+        "none",
+        "comfy",
+        false,
+        "replace",
+        1.0,
+        0.0,
+        1.0,
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "id": 5,
+      "type": "easy preSamplingLayerDiffusion",
+      "pos": [
+        958,
+        -289
+      ],
+      "size": {
+        "0": 241,
+        "1": 30
+      },
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "pipe",
+          "type": "PIPE_LINE",
+          "link": 0,
+          "label": "pipe"
+        },
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 4,
+          "label": "image"
+        },
+        {
+          "name": "blended_image",
+          "type": "IMAGE",
+          "link": null,
+          "label": "blended_image"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "pipe",
+          "type": "pipe",
+          "links": [
+            1
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "预采样参数（LayerDiffusion）",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "Foreground",
+        0.800000011920929,
+        20,
+        8.0,
+        "euler",
+        "normal",
+        1.0,
+        175
+      ]
+    },
+    {
+      "id": 6,
+      "type": "easy kSampler",
+      "pos": [
+        1265,
+        -274
+      ],
+      "size": {
+        "0": 370,
+        "1": 30
+      },
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "pipe",
+          "type": "PIPE_LINE",
+          "link": 1,
+          "label": "pipe"
+        },
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": null,
+          "label": "model"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "pipe",
+          "type": "pipe",
+          "links": [],
+          "slot_index": 0
+        },
+        {
+          "name": "image",
+          "type": "image",
+          "links": [
+            5
+          ],
+          "slot_index": 1
+        }
+      ],
+      "title": "简易K采样器",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "Preview",
+        0,
+        "ComfyUI"
+      ]
+    },
+    {
+      "id": 7,
+      "type": "输入图像",
+      "pos": [
+        69,
+        -504
+      ],
+      "size": {
+        "0": 256,
+        "1": 30
+      },
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            4
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": [],
+          "slot_index": 1
+        }
+      ],
+      "title": "输入图像",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "D:\\Blender_ComfyUI\\ComfyUI\\temp\\ComfyUI_temp_tmgtu_00001_.png",
+        "输入"
+      ]
+    },
+    {
+      "id": 8,
+      "type": "PreviewImage",
+      "pos": [
+        1751,
+        -337
+      ],
+      "size": {
+        "0": 256,
+        "1": 30
+      },
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 5,
+          "label": "images"
+        }
+      ],
+      "outputs": [],
+      "title": "预览",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": []
+    }
+  ],
+  "links": [
+    [
+      0,
+      4,
+      0,
+      5,
+      0,
+      "PIPE_LINE"
+    ],
+    [
+      1,
+      5,
+      0,
+      6,
+      0,
+      "PIPE_LINE"
+    ],
+    [
+      2,
+      3,
+      0,
+      4,
+      0,
+      "PIPE_LINE"
+    ],
+    [
+      3,
+      3,
+      1,
+      4,
+      1,
+      "MODEL"
+    ],
+    [
+      4,
+      7,
+      0,
+      5,
+      1,
+      "IMAGE"
+    ],
+    [
+      5,
+      6,
+      1,
+      8,
+      0,
+      "IMAGE"
+    ]
+  ],
+  "groups": [
+    {
+      "title": "输入前景图片(尺寸要和生成尺寸一致)",
+      "bounding": [
+        3.0,
+        -631.0,
+        402.0000305175781,
+        407.0
+      ],
+      "color": "#25767b"
+    }
+  ],
+  "config": {},
+  "extra": {
+    "groupNodes": {}
+  },
+  "version": 0.4
+}

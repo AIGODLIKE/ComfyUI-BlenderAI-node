@@ -1,0 +1,554 @@
+{
+  "last_node_id": 99,
+  "last_link_id": 8,
+  "nodes": [
+    {
+      "id": 3,
+      "type": "输入图像",
+      "pos": [
+        712,
+        181
+      ],
+      "size": {
+        "0": 256,
+        "1": 30
+      },
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            5
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": [],
+          "slot_index": 1
+        }
+      ],
+      "title": "输入图像",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "",
+        "输入"
+      ]
+    },
+    {
+      "id": 4,
+      "type": "输入图像",
+      "pos": [
+        1105,
+        127
+      ],
+      "size": {
+        "0": 256,
+        "1": 30
+      },
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            6
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": [],
+          "slot_index": 1
+        }
+      ],
+      "title": "输入图像.001",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "",
+        "输入"
+      ]
+    },
+    {
+      "id": 5,
+      "type": "PreviewImage",
+      "pos": [
+        1822,
+        233
+      ],
+      "size": {
+        "0": 256,
+        "1": 30
+      },
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 7,
+          "label": "images"
+        }
+      ],
+      "outputs": [],
+      "title": "预览",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 69,
+      "type": "easy positive",
+      "pos": [
+        54,
+        120
+      ],
+      "size": {
+        "0": 364,
+        "1": 30
+      },
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "positive",
+          "type": "positive",
+          "links": [
+            0
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "正面提示词",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "cute 1girl,Exaggerated perspective,upper body,Give a \"V\" victory sign,foreshortening,on the Hokkaido city,realistic,highres,real photo,scarf,bear hat,flying snow,Mamiya photography,Sharp High-Quality Photo,girlfriend feel,solo,deep blue sky,chinese young actress,good memory, best fingers"
+      ],
+      "bgcolor": "#305030"
+    },
+    {
+      "id": 70,
+      "type": "easy negative",
+      "pos": [
+        73,
+        462
+      ],
+      "size": {
+        "0": 369,
+        "1": 30
+      },
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "negative",
+          "type": "negative",
+          "links": [
+            4
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "负面提示词",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "worst fingers, (embedding:badhandv4:1.2), (long neck:1.45)"
+      ],
+      "bgcolor": "#503030"
+    },
+    {
+      "id": 90,
+      "type": "easy kSampler",
+      "pos": [
+        1511,
+        224
+      ],
+      "size": {
+        "0": 262,
+        "1": 30
+      },
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "pipe",
+          "type": "PIPE_LINE",
+          "link": 3,
+          "label": "pipe"
+        },
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": null,
+          "label": "model"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "pipe",
+          "type": "pipe",
+          "links": [],
+          "slot_index": 0
+        },
+        {
+          "name": "image",
+          "type": "image",
+          "links": [
+            7
+          ],
+          "slot_index": 1
+        }
+      ],
+      "title": "简易K采样器",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "Preview",
+        0,
+        "ComfyUI"
+      ]
+    },
+    {
+      "id": 95,
+      "type": "easy instantIDApply",
+      "pos": [
+        1156,
+        433
+      ],
+      "size": {
+        "0": 242,
+        "1": 30
+      },
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "pipe",
+          "type": "PIPE_LINE",
+          "link": 1,
+          "label": "pipe"
+        },
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 5,
+          "label": "image"
+        },
+        {
+          "name": "image_kps",
+          "type": "IMAGE",
+          "link": 6,
+          "label": "image_kps"
+        },
+        {
+          "name": "mask",
+          "type": "MASK",
+          "link": null,
+          "label": "mask"
+        },
+        {
+          "name": "control_net",
+          "type": "CONTROL_NET",
+          "link": null,
+          "label": "control_net"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "pipe",
+          "type": "pipe",
+          "links": [
+            2
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "model",
+          "type": "model",
+          "links": [],
+          "slot_index": 1
+        },
+        {
+          "name": "positive",
+          "type": "positive",
+          "links": [],
+          "slot_index": 2
+        },
+        {
+          "name": "negative",
+          "type": "negative",
+          "links": [],
+          "slot_index": 3
+        }
+      ],
+      "title": "应用InstantID",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "ip-adapter.bin",
+        "CUDA",
+        "diffusion_pytorch_model.safetensors",
+        1.0,
+        0.824999988079071,
+        0.800000011920929,
+        0.0,
+        1.0,
+        0.30000001192092896
+      ]
+    },
+    {
+      "id": 98,
+      "type": "easy a1111Loader",
+      "pos": [
+        701,
+        609
+      ],
+      "size": {
+        "0": 260,
+        "1": 30
+      },
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "optional_lora_stack",
+          "type": "LORA_STACK",
+          "link": null,
+          "label": "optional_lora_stack"
+        },
+        {
+          "name": "positive",
+          "type": "STRING",
+          "link": 0,
+          "label": "positive",
+          "widget": {
+            "name": "positive",
+            "config": [
+              "STRING",
+              {
+                "default": "Positive",
+                "multiline": true
+              }
+            ]
+          }
+        },
+        {
+          "name": "negative",
+          "type": "STRING",
+          "link": 4,
+          "label": "negative",
+          "widget": {
+            "name": "negative",
+            "config": [
+              "STRING",
+              {
+                "default": "Negative",
+                "multiline": true
+              }
+            ]
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "pipe",
+          "type": "pipe",
+          "links": [
+            1
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "model",
+          "type": "model",
+          "links": [],
+          "slot_index": 1
+        },
+        {
+          "name": "vae",
+          "type": "vae",
+          "links": [],
+          "slot_index": 2
+        }
+      ],
+      "title": "简易加载器（A1111）",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "sd_xl_base_1.0.safetensors",
+        "Baked VAE",
+        -1,
+        "None",
+        1.0,
+        1.0,
+        "768 x 1344",
+        512,
+        512,
+        "Positive",
+        "Negative",
+        1,
+        true
+      ]
+    },
+    {
+      "id": 99,
+      "type": "easy preSamplingDynamicCFG",
+      "pos": [
+        1506,
+        717
+      ],
+      "size": {
+        "0": 210,
+        "1": 30
+      },
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "pipe",
+          "type": "PIPE_LINE",
+          "link": 2,
+          "label": "pipe"
+        },
+        {
+          "name": "image_to_latent",
+          "type": "IMAGE",
+          "link": null,
+          "label": "image_to_latent"
+        },
+        {
+          "name": "latent",
+          "type": "LATENT",
+          "link": null,
+          "label": "latent"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "pipe",
+          "type": "pipe",
+          "links": [
+            3
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "预采样参数（动态CFG）",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        7,
+        5.5,
+        "Sawtooth",
+        1.5,
+        "dpmpp_sde",
+        "karras",
+        1.0,
+        0
+      ]
+    }
+  ],
+  "links": [
+    [
+      0,
+      69,
+      0,
+      98,
+      1,
+      "STRING"
+    ],
+    [
+      1,
+      98,
+      0,
+      95,
+      0,
+      "PIPE_LINE"
+    ],
+    [
+      2,
+      95,
+      0,
+      99,
+      0,
+      "PIPE_LINE"
+    ],
+    [
+      3,
+      99,
+      0,
+      90,
+      0,
+      "PIPE_LINE"
+    ],
+    [
+      4,
+      70,
+      0,
+      98,
+      2,
+      "STRING"
+    ],
+    [
+      5,
+      3,
+      0,
+      95,
+      1,
+      "IMAGE"
+    ],
+    [
+      6,
+      4,
+      0,
+      95,
+      2,
+      "IMAGE"
+    ],
+    [
+      7,
+      90,
+      1,
+      5,
+      0,
+      "IMAGE"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "groupNodes": {}
+  },
+  "version": 0.4
+}

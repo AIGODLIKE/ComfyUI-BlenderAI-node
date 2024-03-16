@@ -65,7 +65,10 @@ class TrackerStatus:
         else:
             tree = self.args.get("tree", None)
             with bpy.context.temp_override(sdn_tree=tree):
-                bpy.ops.sdn.ops(action="Submit")
+                try:
+                    bpy.ops.sdn.ops(action="Submit")
+                except RuntimeError:
+                    pass
             self.last_time = ct
 
 

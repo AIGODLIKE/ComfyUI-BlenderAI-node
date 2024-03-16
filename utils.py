@@ -6,7 +6,7 @@ from pathlib import Path
 from threading import Thread
 from functools import lru_cache
 from urllib.parse import urlparse
-from .kclogger import logger, set_translate
+from .kclogger import logger
 from .translations import LANG_TEXT
 from .timer import Timer
 from .datas import IMG_SUFFIX
@@ -20,6 +20,8 @@ def read_json(path: Path | str) -> dict:
         try:
             return json.loads(Path(path).read_text(encoding=encoding))
         except UnicodeDecodeError:
+            continue
+        except json.JSONDecodeError:
             continue
     return {}
 
@@ -61,7 +63,7 @@ def _T(word):
     return LANG_TEXT.get(locale, {}).get(word, word)
 
 
-set_translate(_T)
+logger.set_translate(_T)
 
 
 def _T2(word):
@@ -182,6 +184,18 @@ class Icon(metaclass=MetaIn):
             Icon.PATH2BPY[FSWatcher.to_str(i.filepath)] = i
 
     @staticmethod
+    def apply_alpha(img):
+        if img.file_format != "PNG" or img.channels < 4:
+            return
+        # 预乘alpha 到rgb
+        import numpy as np
+        pixels = np.zeros(img.size[0] * img.size[1] * 4, dtype=np.float32)
+        img.pixels.foreach_get(pixels)
+        sized_pixels = pixels.reshape(-1, 4)
+        sized_pixels[:, :3] *= sized_pixels[:, 3].reshape(-1, 1)
+        img.pixels.foreach_set(pixels)
+
+    @staticmethod
     def clear():
         Icon.PREV_DICT.clear()
         Icon.IMG_STATUS.clear()
@@ -238,7 +252,7 @@ class Icon(metaclass=MetaIn):
         Icon.reg_icon(Icon.NONE_IMAGE)
 
     @staticmethod
-    def reg_icon(path):
+    def reg_icon(path, reload=False):
         path = FSWatcher.to_str(path)
         if not Icon.can_mark_image(path):
             return Icon[path]
@@ -251,6 +265,8 @@ class Icon(metaclass=MetaIn):
         else:
             if path not in Icon:
                 Icon.PREV_DICT.load(path, path, 'IMAGE')
+            if reload:
+                Timer.put(Icon.PREV_DICT[path].reload)
             return Icon[path]
 
     @staticmethod
@@ -262,6 +278,7 @@ class Icon(metaclass=MetaIn):
             return
         if p.exists() and p.suffix.lower() in IMG_SUFFIX:
             img = bpy.data.images.load(path)
+            Icon.apply_alpha(img)
             Icon.reg_icon_by_pixel(img, path)
             Timer.put((bpy.data.images.remove, img))  # 直接使用 bpy.data.images.remove 会导致卡死
 
@@ -295,6 +312,7 @@ class Icon(metaclass=MetaIn):
         elif p.suffix.lower() in IMG_SUFFIX:
             img = bpy.data.images.load(path)
             img.filepath = path
+            Icon.apply_alpha(img)
             Icon.update_path2bpy()
             # img.name = path
             return img

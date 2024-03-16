@@ -10,6 +10,7 @@ LOCALE_MAP = {
 # 3.0 zh_HANS -> zh_CN
 LOCALE_MAP_INV = {}
 
+
 def is_zh_HANS_version():
     try:
         bpy.context.preferences.view.language = "XXXXX"
@@ -21,13 +22,16 @@ def is_zh_HANS_version():
         return "zh_HANS" in str(e)
     return False
 
+
 if not is_zh_HANS_version():
     LOCALE_MAP_INV = {
         "zh_HANS": "zh_CN"
     }
 
+
 def get_locale_inv(locale):
     return LOCALE_MAP_INV.get(locale, locale)
+
 
 REG_CTXT = {ctxt, }
 REPLACE_DICT = {}
@@ -147,6 +151,7 @@ other = {
     "Poll Result Thread Exit": "响应轮询线程关闭",
     "Poll Task Thread Exit": "任务轮询线程关闭",
     "STDOUT Listen Thread Exit": "输出监听线程关闭",
+    "Time Elapsed": "已耗时",
     # SDNode/node_process.py
     "Executing": "执行中",
     # SDNode/nodes.py
@@ -191,6 +196,15 @@ other = {
     "Socket Manage": "Socket管理",
     "Default value is too large: %s.%s -> %s": "默认值过大: %s.%s -> %s",
     "Default value is too small: %s.%s -> %s": "默认值过小: %s.%s -> %s",
+    "Text already exists": "词条已存在",
+    "Add Tag By Input": "手动输入添加词条(Enter确定)",
+    "Adv Text Action": "高级文本编辑",
+    "SwitchAdvText": "切换文本编辑",
+    "RemoveTag": "删除词条",
+    "AddTag": "添加词条",
+    "UpTagWeight": "增加权重",
+    "DownTagWeight": "降低权重",
+    "RemoveTagWeight": "删除权重",
     # SDNode/blueprints.py
     "Non-Standard Enum": "非标准枚举",
     "Capture Screen": "截图",
@@ -198,6 +212,8 @@ other = {
     "Error Capture Screen Region": "截图区域错误",
     "Save Screenshot": "保存截图",
     "No Camera in Scene": "场景像机不存在",
+    "Upload Image Success": "图片上传成功",
+    "Upload Image Fail": "图片上传失败",
     # SDNode/tree.py
     "Invalid Node Type: {}": "检查到无效的节点: {}",
     "ParseNode Time:": "解析节点耗时:",
@@ -215,6 +231,17 @@ other = {
     # SDNode/nodegroup.py
     "Depth of group tree is limited to 1": "组最大深度限制为1",
     "Node group can't be nested": "节点组不能被嵌套(最大深度限制为1)",
+    # SDNode/custom_support.py
+    "CPU Usage: ": "CPU占用:",
+    "RAM Usage: ": "内存占用:",
+    "HDD Usage: ": "硬盘占用:",
+    "GPU Usage: ": "显卡占用:",
+    "VRAM Usage:": "显存占用:",
+    "CPU Usage": "CPU占用",
+    "RAM Usage": "内存占用",
+    "HDD Usage": "硬盘占用",
+    "GPU Usage": "显卡占用",
+    "VRAM Usage": "显存占用",
     # __init__.py
     "Execute Node Tree": "运行节点树",
     "Stop Loop": "终止循环",
@@ -292,6 +319,7 @@ other = {
     "ClearTask": "清理任务",
     "Cancel": "取消任务",
     "↓↓ComfyUI Not Launched, Click to Launch↓↓": "↓↓服务未启动, 点击启动↓↓",
+    "ComfyUI Launching/Connecting...": "ComfyUI服务启动/连接中...",
     # preference.py
     "Server Type": "服务类型",
     "LocalServer": "本机启动",
@@ -305,7 +333,7 @@ other = {
     "With ComfyUI Model": "兼容ComfyUI模型",
     "General": "通用",
     "Common Path": "常用路径",
-    "Friendly Links" : "友情链接",
+    "Friendly Links": "友情链接",
     "VRam Mode": "显存模式",
     "Gpu Only": "极高显存",
     "Store and run everything (text encoders/CLIP models, etc... on the GPU).": "全GPU模式：全部都使用GPU显存运行",
@@ -347,7 +375,7 @@ other = {
     "Is Enabled?": "是否启用?",
     "Add Custom Presets Dir": "添加自定义预设路径",
     "Custom Preset Path already exists": "自定义预设路径已存在",
-    "Init Custom Preset Path": "初始化自定义预设路径", 
+    "Init Custom Preset Path": "初始化自定义预设路径",
     "Create presets/groups dir if not exists": "没有presets/groups文件夹则创建",
     "Viewport Track Frequency": "视口实时渲染频率",
     "Use View Context": "使用视口上下文",

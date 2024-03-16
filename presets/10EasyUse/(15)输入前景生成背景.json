@@ -1,0 +1,513 @@
+{
+  "last_node_id": 10,
+  "last_link_id": 8,
+  "nodes": [
+    {
+      "id": 10,
+      "type": "Seed Everywhere",
+      "pos": [
+        1556,
+        -194
+      ],
+      "size": {
+        "0": 210,
+        "1": 30
+      },
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "INT",
+          "type": "INT",
+          "links": [
+            7
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "全局随机种",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "241574098",
+        "fixed"
+      ]
+    },
+    {
+      "id": 3,
+      "type": "输入图像",
+      "pos": [
+        810,
+        -80
+      ],
+      "size": {
+        "0": 256,
+        "1": 30
+      },
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            5
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": [],
+          "slot_index": 1
+        }
+      ],
+      "title": "输入图像",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "",
+        "输入"
+      ]
+    },
+    {
+      "id": 4,
+      "type": "easy positive",
+      "pos": [
+        978,
+        362
+      ],
+      "size": {
+        "0": 259,
+        "1": 30
+      },
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "positive",
+          "type": "positive",
+          "links": [
+            3,
+            4
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "正面提示词",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "The author has a grey husky sitting in a coze living room, very stupid, anime"
+      ],
+      "bgcolor": "#305030"
+    },
+    {
+      "id": 5,
+      "type": "easy comfyLoader",
+      "pos": [
+        1255,
+        -69
+      ],
+      "size": {
+        "0": 252,
+        "1": 30
+      },
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "optional_lora_stack",
+          "type": "LORA_STACK",
+          "link": null,
+          "label": "optional_lora_stack"
+        },
+        {
+          "name": "positive",
+          "type": "STRING",
+          "link": 3,
+          "label": "positive",
+          "widget": {
+            "name": "positive",
+            "config": [
+              "STRING",
+              {
+                "default": "Positive",
+                "multiline": true
+              }
+            ]
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "pipe",
+          "type": "pipe",
+          "links": [
+            0
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "model",
+          "type": "model",
+          "links": [],
+          "slot_index": 1
+        },
+        {
+          "name": "vae",
+          "type": "vae",
+          "links": [],
+          "slot_index": 2
+        }
+      ],
+      "title": "简易加载器（Comfy）",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "AIGODLIKE华丽_4000.ckpt",
+        "Baked VAE",
+        -1,
+        "None",
+        1.0,
+        1.0,
+        "512 x 512",
+        512,
+        512,
+        "",
+        "text, watermark",
+        2
+      ]
+    },
+    {
+      "id": 6,
+      "type": "easy preSamplingLayerDiffusion",
+      "pos": [
+        1535,
+        -94
+      ],
+      "size": {
+        "0": 230,
+        "1": 30
+      },
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "pipe",
+          "type": "PIPE_LINE",
+          "link": 0,
+          "label": "pipe"
+        },
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 5,
+          "label": "image"
+        },
+        {
+          "name": "blended_image",
+          "type": "IMAGE",
+          "link": null,
+          "label": "blended_image"
+        },
+        {
+          "name": "seed_num",
+          "type": "INT",
+          "link": 7,
+          "label": "seed_num",
+          "widget": {
+            "name": "seed_num",
+            "config": [
+              "INT",
+              {
+                "default": 0,
+                "min": 0,
+                "max": 2147483647,
+                "step": 1
+              }
+            ]
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "pipe",
+          "type": "pipe",
+          "links": [
+            1
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "预采样参数（LayerDiffusion）",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "Foreground",
+        1.0,
+        20,
+        8.0,
+        "euler",
+        "normal",
+        1.0,
+        0
+      ]
+    },
+    {
+      "id": 7,
+      "type": "easy preSamplingLayerDiffusionADDTL",
+      "pos": [
+        1507,
+        242
+      ],
+      "size": {
+        "0": 268,
+        "1": 30
+      },
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "pipe",
+          "type": "PIPE_LINE",
+          "link": 1,
+          "label": "pipe"
+        },
+        {
+          "name": "optional_fg_cond",
+          "type": "CONDITIONING",
+          "link": null,
+          "label": "optional_fg_cond"
+        },
+        {
+          "name": "optional_bg_cond",
+          "type": "CONDITIONING",
+          "link": null,
+          "label": "optional_bg_cond"
+        },
+        {
+          "name": "optional_blended_cond",
+          "type": "CONDITIONING",
+          "link": null,
+          "label": "optional_blended_cond"
+        },
+        {
+          "name": "blended_prompt",
+          "type": "STRING",
+          "link": 4,
+          "label": "blended_prompt",
+          "widget": {
+            "name": "blended_prompt",
+            "config": [
+              "STRING",
+              {
+                "default": "",
+                "multiline": true
+              }
+            ]
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "pipe",
+          "type": "pipe",
+          "links": [
+            2
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "预采样参数（LayerDiffusion前景背景）",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "",
+        "a coze living room",
+        "The author has a grey husky sitting in a coze living room, very stupid, anime"
+      ]
+    },
+    {
+      "id": 8,
+      "type": "easy kSampler",
+      "pos": [
+        1826,
+        -31
+      ],
+      "size": {
+        "0": 290,
+        "1": 30
+      },
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "pipe",
+          "type": "PIPE_LINE",
+          "link": 2,
+          "label": "pipe"
+        },
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": null,
+          "label": "model"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "pipe",
+          "type": "pipe",
+          "links": [],
+          "slot_index": 0
+        },
+        {
+          "name": "image",
+          "type": "image",
+          "links": [
+            6
+          ],
+          "slot_index": 1
+        }
+      ],
+      "title": "简易K采样器",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "Preview",
+        0,
+        "ComfyUI"
+      ]
+    },
+    {
+      "id": 9,
+      "type": "PreviewImage",
+      "pos": [
+        2147,
+        -116
+      ],
+      "size": {
+        "0": 256,
+        "1": 30
+      },
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 6,
+          "label": "images"
+        }
+      ],
+      "outputs": [],
+      "title": "预览",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": []
+    }
+  ],
+  "links": [
+    [
+      0,
+      5,
+      0,
+      6,
+      0,
+      "PIPE_LINE"
+    ],
+    [
+      1,
+      6,
+      0,
+      7,
+      0,
+      "PIPE_LINE"
+    ],
+    [
+      2,
+      7,
+      0,
+      8,
+      0,
+      "PIPE_LINE"
+    ],
+    [
+      3,
+      4,
+      0,
+      5,
+      1,
+      "STRING"
+    ],
+    [
+      4,
+      4,
+      0,
+      7,
+      4,
+      "STRING"
+    ],
+    [
+      5,
+      3,
+      0,
+      6,
+      1,
+      "IMAGE"
+    ],
+    [
+      6,
+      8,
+      1,
+      9,
+      0,
+      "IMAGE"
+    ],
+    [
+      7,
+      10,
+      0,
+      6,
+      3,
+      "INT"
+    ]
+  ],
+  "groups": [
+    {
+      "title": "输入前景图片(尺寸要和生成尺寸一致)",
+      "bounding": [
+        779.0,
+        -160.0,
+        351.99993896484375,
+        294.0
+      ],
+      "color": "#23789b"
+    }
+  ],
+  "config": {},
+  "extra": {
+    "groupNodes": {}
+  },
+  "version": 0.4
+}

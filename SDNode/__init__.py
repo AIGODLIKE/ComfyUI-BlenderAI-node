@@ -1,6 +1,7 @@
 from .tree import rtnode_reg, rtnode_unreg
 from .nodegroup import nodegroup_reg, nodegroup_unreg
 from .manager import TaskManager, Task, FakeServer
+from .custom_support import crystools_monitor
 try:
     from . import aiprompt
     from . import node_process

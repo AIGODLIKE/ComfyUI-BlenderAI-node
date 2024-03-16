@@ -1,7 +1,7 @@
 bl_info = {
     'name': '无限圣杯-节点',
     'author': '幻之境开发小组-会飞的键盘侠、只剩一瓶辣椒酱',
-    'version': (1, 4, 3),
+    'version': (1, 4, 6),
     'blender': (3, 0, 0),
     'location': '3DView->Panel',
     'category': '辣椒出品',
@@ -10,6 +10,28 @@ bl_info = {
 __dict__ = {}
 import time
 ts = time.time()
+
+
+def clear_pyc(path=None, depth=2):
+    # 递归删除 所有文件夹__pycache__
+    if depth == 0:
+        return
+    import shutil
+    from pathlib import Path
+    if path is None:
+        path = Path(__file__).parent
+    for f in path.iterdir():
+        if f.is_dir() and f.name == "__pycache__":
+            try:
+                shutil.rmtree(f)
+            except Exception:
+                ...
+            continue
+        if f.is_dir():
+            clear_pyc(f, depth - 1)
+
+
+clear_pyc()
 import bpy
 import sys
 from addon_utils import disable
@@ -25,10 +47,11 @@ from .ui import Panel, HISTORY_UL_UIList, HistoryItem
 from .SDNode.history import History
 from .SDNode.rt_tracker import reg_tracker, unreg_tracker
 from .SDNode.nodegroup import nodegroup_reg, nodegroup_unreg
-from .prop import RenderLayerString, Prop
+from .SDNode.custom_support import custom_support_reg, custom_support_unreg
+from .prop import RenderLayerString, MLTWord, Prop
 from .Linker import linker_register, linker_unregister
 from .hook import use_hook
-clss = [Panel, Ops, RenderLayerString, Prop, HISTORY_UL_UIList, HistoryItem, Ops_Mask, Load_History, Popup_Load, Copy_Tree, Load_Batch, Fetch_Node_Status, Clear_Node_Cache, Sync_Stencil_Image, NodeSearch, EnableMLT]
+clss = [Panel, Ops, RenderLayerString, MLTWord, Prop, HISTORY_UL_UIList, HistoryItem, Ops_Mask, Load_History, Popup_Load, Copy_Tree, Load_Batch, Fetch_Node_Status, Clear_Node_Cache, Sync_Stencil_Image, NodeSearch, EnableMLT]
 reg, unreg = bpy.utils.register_classes_factory(clss)
 
 
@@ -62,6 +85,7 @@ def disable_reload():
     bpy.app.timers.register(track_ae, persistent=True)
     # reset disable
     _disable = disable
+
     def hd(mod, *, default_set=False, handle_error=None):
         if default_set and mod == __package__:
             __dict__["NOT_RELOAD_BUILTIN"] = True
@@ -69,6 +93,7 @@ def disable_reload():
         if default_set and mod == __package__:
             __dict__.pop("NOT_RELOAD_BUILTIN")
     sys.modules["addon_utils"].disable = hd
+
 
 def reload_builtin():
     if "NOT_RELOAD_BUILTIN" in __dict__:
@@ -90,6 +115,9 @@ def register():
     Icon.set_hq_preview()
     TaskManager.run_server(fake=True)
     timer_reg()
+    # mlt_words注册到 sdn中会导致访问其他属性卡顿 what?
+    bpy.types.WindowManager.mlt_words = bpy.props.CollectionProperty(type=MLTWord, options={"SKIP_SAVE"})
+    bpy.types.WindowManager.mlt_words_index = bpy.props.IntProperty()
     bpy.types.Scene.sdn = bpy.props.PointerProperty(type=Prop)
     bpy.types.Scene.sdn_history_item = bpy.props.CollectionProperty(type=HistoryItem)
     bpy.types.Scene.sdn_history_item_index = bpy.props.IntProperty(default=0)
@@ -99,6 +127,7 @@ def register():
     FSWatcher.init()
     disable_reload()
     nodegroup_reg()
+    custom_support_reg()
     print(f"{__package__} Launch Time: {time.time() - ts:.4f}s")
 
 
@@ -120,12 +149,13 @@ def unregister():
     linker_unregister()
     use_hook(False)
     nodegroup_unreg()
+    custom_support_unreg()
     FSWatcher.stop()
 
 
 def modules_update():
-    from .kclogger import close_logger
-    close_logger()
+    from .kclogger import logger
+    logger.close()
     modules = []
     for i in sys.modules:
         if i.startswith(__package__) and i != __package__:

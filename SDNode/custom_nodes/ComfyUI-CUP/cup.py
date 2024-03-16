@@ -9,22 +9,36 @@ import shutil
 import hashlib
 import atexit
 import server
+import random
 import gc
 import execution
 import folder_paths
 import nodes
 import time
+import asyncio
 import logging as logger
+from comfy.cli_args import args
 from threading import Thread
 from aiohttp import web
 from pathlib import Path
-from PIL import Image
+from PIL import Image, ImageOps, ImageSequence
 from PIL.PngImagePlugin import PngInfo
 
 FORCE_LOG = False
 CATEGORY_ = "Blender"
-TEMPDIR = Path(__file__).parent.parent / "SDNodeTemp"
+TEMPDIR = Path(__file__).parent.parent.parent / "SDNodeTemp"
 HOST_PATH = Path("XXXHOST-PATHXXX")
+if not HOST_PATH.parent.exists():
+    HOST_PATH = Path(__file__).parent
+
+
+def remove_old_version():
+    cup = Path(__file__).parent.parent.joinpath("cup.py")
+    if cup.exists():
+        cup.unlink()
+
+
+remove_old_version()
 
 
 def removetemp():
@@ -120,7 +134,10 @@ def node_info(node_class):
     """
     obj_class = nodes.NODE_CLASS_MAPPINGS[node_class]
     info = {}
-    info['input'] = obj_class.INPUT_TYPES()
+    try:
+        info['input'] = obj_class.INPUT_TYPES()
+    except Exception:
+        ...
     info['output'] = obj_class.RETURN_TYPES
     info['output_is_list'] = obj_class.OUTPUT_IS_LIST if hasattr(obj_class, 'OUTPUT_IS_LIST') else [False] * len(obj_class.RETURN_TYPES)
     info['output_name'] = obj_class.RETURN_NAMES if hasattr(obj_class, 'RETURN_NAMES') else info['output']
@@ -128,7 +145,7 @@ def node_info(node_class):
     info['display_name'] = nodes.NODE_DISPLAY_NAME_MAPPINGS[node_class] if node_class in nodes.NODE_DISPLAY_NAME_MAPPINGS.keys() else node_class
     info['description'] = ''
     info['category'] = 'sd'
-    if hasattr(obj_class, 'OUTPUT_NODE') and obj_class.OUTPUT_NODE == True:
+    if hasattr(obj_class, 'OUTPUT_NODE') and obj_class.OUTPUT_NODE is True:
         info['output_node'] = True
     else:
         info['output_node'] = False
@@ -137,31 +154,55 @@ def node_info(node_class):
     return info
 
 
-CACHED_NODES = {}
+class NodeCacheManager:
+    def __init__(self):
+        self.cached_nodes = {}
+        self.diff = {}
+        self.filter_node = {"Note", "PrimitiveNode", "Cache Node"}
+
+    def calc_diff(self):
+        if self.diff:
+            return self.diff
+
+        for x in list(nodes.NODE_CLASS_MAPPINGS):
+            if x in self.filter_node:
+                continue
+            ni = node_info(x)
+            if x not in self.cached_nodes or self.cached_nodes[x] != ni:
+                self.diff[x] = ni
+            self.cached_nodes[x] = ni
+        return self.diff
+
+    def update_cached_nodes(self, remote=False):
+        # 本地部署 但差异路径不存在
+        if not remote and not HOST_PATH.parent.exists():
+            return {}
+        from copy import deepcopy
+        self.calc_diff()
+        diff = self.diff
+        if remote:
+            diff = deepcopy(self.diff)
+            self.diff.clear()
+        else:
+            try:
+                # 本地部署时写入差异后清理
+                diff_path = HOST_PATH.joinpath("diff_object_info.json")
+                with diff_path.open("w", encoding="utf-8") as f:
+                    f.write(json.dumps(self.diff))
+                self.diff.clear()
+            except Exception as e:
+                # 写入失败后
+                print(f"Failed to write diff: {e}")
+        return diff
 
 
-def update_cached_nodes():
-    filter_node = {"Note", "PrimitiveNode", "Cache Node"}
-    diff = {}
-    for x in nodes.NODE_CLASS_MAPPINGS:
-        if x in filter_node:
-            continue
-        ni = node_info(x)
-        if x not in CACHED_NODES:
-            diff[x] = ni
-        elif CACHED_NODES[x] != ni:
-            diff[x] = ni
-        CACHED_NODES[x] = ni
-    if not diff or diff == CACHED_NODES:
-        return
-    with HOST_PATH.joinpath("diff_object_info.json").open("w+") as fp:
-        json.dump(diff, fp)
+cache_manager = NodeCacheManager()
 
 
 def diff_listen_loop():
     while True:
         time.sleep(5)
-        update_cached_nodes()
+        cache_manager.update_cached_nodes()
 
 
 Thread(target=diff_listen_loop, daemon=True).start()
@@ -170,6 +211,28 @@ Thread(target=diff_listen_loop, daemon=True).start()
 @server.PromptServer.instance.routes.post("/cup/get_temp_directory")
 async def get_temp_directory(request):
     return web.Response(status=200, body=folder_paths.get_temp_directory())
+
+
+async def queue_msg():
+    queue = {}
+    current_queue = server.PromptServer.instance.prompt_queue.get_current_queue()
+    queue['queue_running'] = current_queue[0]
+    queue['queue_pending'] = current_queue[1]
+    server.PromptServer.instance.send_sync("cup.queue", queue)
+
+
+async def diff_msg():
+    diff = cache_manager.update_cached_nodes(remote=True)
+    server.PromptServer.instance.send_sync("cup.diff", diff)
+
+
+async def msg_loop():
+    while True:
+        await queue_msg()
+        await diff_msg()
+        await asyncio.sleep(1)
+
+Thread(target=asyncio.run, args=(msg_loop(),), daemon=True).start()
 
 
 class ToBlender:
@@ -202,17 +265,18 @@ class ToBlender:
 
 
 class SaveImage:
-    OO = Path.home().joinpath("Desktop")
-
     def __init__(self):
-        self.output_dir = Path.home().joinpath("Desktop")
+        self.output_dir = folder_paths.get_output_directory()
+        self.type = "output"
+        self.prefix_append = ""
+        self.compress_level = 4
 
     @classmethod
     def INPUT_TYPES(s):
         return {"required":
                 {"images": ("IMAGE", ),
                  "filename_prefix": ("STRING", {"default": "ComfyUI"}),
-                 "output_dir": ("STRING", {"default": str(SaveImage.OO.absolute())}),
+                 "output_dir": ("STRING", {"default": ""}),
                  },
                 "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO"},
                 }
@@ -224,68 +288,48 @@ class SaveImage:
 
     CATEGORY = CATEGORY_
 
-    def save_images(self, images, filename_prefix="ComfyUI", output_dir=str(OO.absolute()), prompt=None, extra_pnginfo=None):
-        logger.debug(f'saving {len(images)} images to {output_dir}')
-        self.output_dir = output_dir
-
-        def map_filename(filename):
-            prefix_len = len(filename_prefix)
-            prefix = filename[:prefix_len + 1]
-            try:
-                digits = int(filename[prefix_len + 1:].split('_')[0])
-            except BaseException:
-                digits = 0
-            return (digits, prefix)
-        try:
-            counter = max(filter(lambda a: a[1][:-1] == filename_prefix and a[1][-1] == "_", map(map_filename, os.listdir(self.output_dir))))[0] + 1
-        except ValueError:
-            counter = 1
-        except FileNotFoundError:
-            os.mkdir(self.output_dir)
-            counter = 1
-
-        if not os.path.exists(self.output_dir):
-            os.makedirs(self.output_dir)
-
-        output_dir = Path(self.output_dir)
-        paths = list()
-        for image in images:
+    def save_images(self, images, filename_prefix="ComfyUI", output_dir="", prompt=None, extra_pnginfo=None):
+        filename_prefix += self.prefix_append
+        full_output_folder, filename, counter, subfolder, filename_prefix = folder_paths.get_save_image_path(filename_prefix, self.output_dir, images[0].shape[1], images[0].shape[0])
+        results = list()
+        for (batch_number, image) in enumerate(images):
             i = 255. * image.cpu().numpy()
             img = Image.fromarray(np.clip(i, 0, 255).astype(np.uint8))
-            metadata = PngInfo()
-            if prompt is not None:
-                metadata.add_text("prompt", json.dumps(prompt))
-            if extra_pnginfo is not None:
-                for x in extra_pnginfo:
-                    metadata.add_text(x, json.dumps(extra_pnginfo[x]))
-            file = f"{filename_prefix}_{counter:05}_.png"
-            save_path = output_dir / file
-            img.save(save_path, pnginfo=metadata, optimize=True)
-            paths.append(str(save_path))
+            metadata = None
+            if not args.disable_metadata:
+                metadata = PngInfo()
+                if prompt is not None:
+                    metadata.add_text("prompt", json.dumps(prompt))
+                if extra_pnginfo is not None:
+                    for x in extra_pnginfo:
+                        metadata.add_text(x, json.dumps(extra_pnginfo[x]))
+
+            filename_with_batch_num = filename.replace("%batch_num%", str(batch_number))
+            file = f"{filename_with_batch_num}_{counter:05}_.png"
+            img.save(os.path.join(full_output_folder, file), pnginfo=metadata, compress_level=self.compress_level)
+            results.append({
+                "filename": file,
+                "subfolder": subfolder,
+                "type": self.type
+            })
             counter += 1
-        # print(self.output_dir)
-        # print({"ui": {"images": paths}})
-        return {"ui": {"images": paths}}
+
+        return {"ui": {"images": results}}
 
 
-class PreviewImage:
+class PreviewImage(SaveImage):
     def __init__(self):
-        self.output_dir = TEMPDIR
+        self.output_dir = folder_paths.get_temp_directory()
+        self.type = "temp"
+        self.prefix_append = "_temp_" + ''.join(random.choice("abcdefghijklmnopqrstupvxyz") for _ in range(5))
+        self.compress_level = 1
 
     @classmethod
     def INPUT_TYPES(s):
         return {"required":
-                {"images": ("IMAGE", ), }
+                {"images": ("IMAGE", ), },
+                "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO"},
                 }
-    RETURN_TYPES = ()
-    FUNCTION = "save_images"
-
-    OUTPUT_NODE = True
-
-    CATEGORY = CATEGORY_
-
-    def save_images(self, images):
-        return SaveImage.save_images(self, images, "Temp", self.output_dir)
 
 
 class LoadImage:
@@ -304,6 +348,35 @@ class LoadImage:
     FUNCTION = "load_image"
 
     def load_image(self, image, mode=None):
+        image = Path(image).name
+        image_path = folder_paths.get_annotated_filepath(image, default_dir="input/SDN")
+        # image_path = image
+        img = Image.open(image_path)
+        output_images = []
+        output_masks = []
+        for i in ImageSequence.Iterator(img):
+            i = ImageOps.exif_transpose(i)
+            if i.mode == 'I':
+                i = i.point(lambda i: i * (1 / 255))
+            image = i.convert("RGB")
+            image = np.array(image).astype(np.float32) / 255.0
+            image = torch.from_numpy(image)[None,]
+            if 'A' in i.getbands():
+                mask = np.array(i.getchannel('A')).astype(np.float32) / 255.0
+                mask = 1. - torch.from_numpy(mask)
+            else:
+                mask = torch.zeros((64,64), dtype=torch.float32, device="cpu")
+            output_images.append(image)
+            output_masks.append(mask.unsqueeze(0))
+
+        if len(output_images) > 1:
+            output_image = torch.cat(output_images, dim=0)
+            output_mask = torch.cat(output_masks, dim=0)
+        else:
+            output_image = output_images[0]
+            output_mask = output_masks[0]
+
+        return (output_image, output_mask)
         try:
             image_path = image
             i = Image.open(image_path)
@@ -553,3 +626,4 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "存储": "Save",
     "预览": "Preview",
 }
+WEB_DIRECTORY = "./"

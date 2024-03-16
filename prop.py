@@ -16,6 +16,11 @@ class RenderLayerString(bpy.types.PropertyGroup):
     name: bpy.props.StringProperty(name="Render Layer Name")
 
 
+class MLTWord(bpy.types.PropertyGroup):
+    value: bpy.props.StringProperty(name="Value")
+    freq: bpy.props.IntProperty(name="Frequency")
+
+
 class Prop(bpy.types.PropertyGroup):
     cache = PROP_CACHE
 
@@ -51,6 +56,7 @@ class Prop(bpy.types.PropertyGroup):
                 fpath = p.resolve().as_posix()
                 items.append((fpath, f"{p.name} {dpn}", abspath, len(items)))
         if items:
+            items.sort(key=lambda x: x[1])
             Prop.cache[f"{t}_dir"].clear()
             Prop.cache[f"{t}_dir"].extend(items)
 
@@ -76,6 +82,7 @@ class Prop(bpy.types.PropertyGroup):
                     continue
                 icon_id = Icon.reg_icon(img)
             items.append((str(file), file.stem, "", icon_id, len(items)))
+        items.sort(key=lambda x: x[1])
         Prop.cache["presets"][pd] = items
         return Prop.cache["presets"][pd]
     presets: bpy.props.EnumProperty(items=presets_items, name="Presets")
@@ -109,6 +116,7 @@ class Prop(bpy.types.PropertyGroup):
                     continue
                 icon_id = Icon.reg_icon(img)
             items.append((str(file), file.stem, "", icon_id, len(items)))
+        items.sort(key=lambda x: x[1])
         Prop.cache["groups"][gd] = items
         return Prop.cache["groups"][gd]
     groups: bpy.props.EnumProperty(items=groups_items, name="Presets")
@@ -201,7 +209,7 @@ class Prop(bpy.types.PropertyGroup):
             data = data["workflow"]
         tree.load_json(data)
 
-    import_bookmark: bpy.props.StringProperty(name="Preset Bookmark", default=str(Path.cwd()), subtype="FILE_PATH",update=import_bookmark_update)
+    import_bookmark: bpy.props.StringProperty(name="Preset Bookmark", default=str(Path.cwd()), subtype="FILE_PATH", update=import_bookmark_update)
 
 
 def render_layer_update():

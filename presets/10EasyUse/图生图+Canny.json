@@ -1,0 +1,712 @@
+{
+  "last_node_id": 28,
+  "last_link_id": 13,
+  "nodes": [
+    {
+      "id": 10,
+      "type": "easy a1111Loader",
+      "pos": [
+        725,
+        5
+      ],
+      "size": {
+        "0": 210,
+        "1": 30
+      },
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "optional_lora_stack",
+          "type": "LORA_STACK",
+          "link": null,
+          "label": "optional_lora_stack"
+        },
+        {
+          "name": "positive",
+          "type": "STRING",
+          "link": 5,
+          "label": "positive",
+          "widget": {
+            "name": "positive",
+            "config": [
+              "STRING",
+              {
+                "default": "Positive",
+                "multiline": true
+              }
+            ]
+          }
+        },
+        {
+          "name": "negative",
+          "type": "STRING",
+          "link": 4,
+          "label": "negative",
+          "widget": {
+            "name": "negative",
+            "config": [
+              "STRING",
+              {
+                "default": "Negative",
+                "multiline": true
+              }
+            ]
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "pipe",
+          "type": "pipe",
+          "links": [
+            2
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "model",
+          "type": "model",
+          "links": [],
+          "slot_index": 1
+        },
+        {
+          "name": "vae",
+          "type": "vae",
+          "links": [],
+          "slot_index": 2
+        }
+      ],
+      "title": "简易加载器（A1111）",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "AIGODLIKE华丽_4000.ckpt",
+        "Baked VAE",
+        -1,
+        "None",
+        1.0,
+        1.0,
+        "1024 x 1024",
+        512,
+        512,
+        "Positive",
+        "Negative",
+        1,
+        false
+      ]
+    },
+    {
+      "id": 19,
+      "type": "PreviewImage",
+      "pos": [
+        1296,
+        342
+      ],
+      "size": {
+        "0": 256,
+        "1": 30
+      },
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 8,
+          "label": "images"
+        }
+      ],
+      "outputs": [],
+      "title": "预览",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 20,
+      "type": "easy controlnetLoader",
+      "pos": [
+        955,
+        554
+      ],
+      "size": {
+        "0": 235,
+        "1": 30
+      },
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "pipe",
+          "type": "PIPE_LINE",
+          "link": 2,
+          "label": "pipe"
+        },
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 10,
+          "label": "image"
+        },
+        {
+          "name": "control_net",
+          "type": "CONTROL_NET",
+          "link": null,
+          "label": "control_net"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "pipe",
+          "type": "pipe",
+          "links": [
+            3
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "positive",
+          "type": "positive",
+          "links": [],
+          "slot_index": 1
+        },
+        {
+          "name": "negative",
+          "type": "negative",
+          "links": [],
+          "slot_index": 2
+        }
+      ],
+      "title": "简易Controlnet",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "control_v11p_sd15_canny.pth",
+        1.0,
+        0.824999988079071
+      ]
+    },
+    {
+      "id": 21,
+      "type": "easy positive",
+      "pos": [
+        334,
+        23
+      ],
+      "size": {
+        "0": 357,
+        "1": 30
+      },
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "positive",
+          "type": "positive",
+          "links": [
+            5
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "正面提示词",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "close-up shot of 1 cute girl with beatiful cute small face, (Glittering dress:1.3),(closed mouth), back against the bed, cinimatic ,32k uhd, realistic, Fujicolor, bedroom"
+      ],
+      "bgcolor": "#305030"
+    },
+    {
+      "id": 23,
+      "type": "easy negative",
+      "pos": [
+        332,
+        264
+      ],
+      "size": {
+        "0": 364,
+        "1": 30
+      },
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "negative",
+          "type": "negative",
+          "links": [
+            4
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "负面提示词",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "text, watermark,embedding:badhandv4, red on the face"
+      ],
+      "bgcolor": "#503030"
+    },
+    {
+      "id": 24,
+      "type": "easy imagePixelPerfect",
+      "pos": [
+        977,
+        443
+      ],
+      "size": {
+        "0": 210,
+        "1": 30
+      },
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 6,
+          "label": "image"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "resolution",
+          "type": "resolution",
+          "links": [
+            9
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "图像完美像素",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "Just Resize"
+      ]
+    },
+    {
+      "id": 28,
+      "type": "CannyEdgePreprocessor",
+      "pos": [
+        968,
+        284
+      ],
+      "size": {
+        "0": 210,
+        "1": 30
+      },
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 7,
+          "label": "image"
+        },
+        {
+          "name": "resolution",
+          "type": "INT",
+          "link": 9,
+          "label": "resolution",
+          "widget": {
+            "name": "resolution",
+            "config": [
+              "INT",
+              {
+                "default": 512,
+                "min": 64,
+                "max": 2048,
+                "step": 64
+              }
+            ]
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            8,
+            10
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "Canny细致线预处理器",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        30,
+        180,
+        512
+      ]
+    },
+    {
+      "id": 3,
+      "type": "Seed Everywhere",
+      "pos": [
+        834,
+        -108
+      ],
+      "size": {
+        "0": 200,
+        "1": 100
+      },
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "INT",
+          "type": "INT",
+          "links": [
+            11
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "全局随机种",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "4060646644",
+        "fixed"
+      ]
+    },
+    {
+      "id": 4,
+      "type": "easy preSampling",
+      "pos": [
+        968,
+        5
+      ],
+      "size": {
+        "0": 228,
+        "1": 30
+      },
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "pipe",
+          "type": "PIPE_LINE",
+          "link": 3,
+          "label": "pipe"
+        },
+        {
+          "name": "image_to_latent",
+          "type": "IMAGE",
+          "link": 1,
+          "label": "image_to_latent"
+        },
+        {
+          "name": "latent",
+          "type": "LATENT",
+          "link": null,
+          "label": "latent"
+        },
+        {
+          "name": "seed_num",
+          "type": "INT",
+          "link": 11,
+          "label": "seed_num",
+          "widget": {
+            "name": "seed_num",
+            "config": [
+              "INT",
+              {
+                "default": 0,
+                "min": 0,
+                "max": 2147483647,
+                "step": 1
+              }
+            ]
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "pipe",
+          "type": "pipe",
+          "links": [
+            0
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "预采样参数（基础）",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        25,
+        7.0,
+        "dpmpp_2m",
+        "karras",
+        0.6000000238418579,
+        0
+      ]
+    },
+    {
+      "id": 5,
+      "type": "easy kSampler",
+      "pos": [
+        1210,
+        7
+      ],
+      "size": {
+        "0": 231,
+        "1": 30
+      },
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "pipe",
+          "type": "PIPE_LINE",
+          "link": 0,
+          "label": "pipe"
+        },
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": null,
+          "label": "model"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "pipe",
+          "type": "pipe",
+          "links": [],
+          "slot_index": 0
+        },
+        {
+          "name": "image",
+          "type": "image",
+          "links": [
+            12
+          ],
+          "slot_index": 1
+        }
+      ],
+      "title": "简易K采样器",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "Preview",
+        0,
+        "ComfyUI"
+      ]
+    },
+    {
+      "id": 7,
+      "type": "PreviewImage",
+      "pos": [
+        1495,
+        -61
+      ],
+      "size": {
+        "0": 256,
+        "1": 30
+      },
+      "flags": {},
+      "order": 11,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 12,
+          "label": "images"
+        }
+      ],
+      "outputs": [],
+      "title": "预览.001",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 9,
+      "type": "输入图像",
+      "pos": [
+        332,
+        421
+      ],
+      "size": {
+        "0": 256,
+        "1": 100
+      },
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            1,
+            6,
+            7
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": [],
+          "slot_index": 1
+        }
+      ],
+      "title": "输入图像",
+      "properties": {
+        "sdn_hide": false
+      },
+      "widgets_values": [
+        "",
+        "输入"
+      ]
+    }
+  ],
+  "links": [
+    [
+      0,
+      4,
+      0,
+      5,
+      0,
+      "PIPE_LINE"
+    ],
+    [
+      1,
+      9,
+      0,
+      4,
+      1,
+      "IMAGE"
+    ],
+    [
+      2,
+      10,
+      0,
+      20,
+      0,
+      "PIPE_LINE"
+    ],
+    [
+      3,
+      20,
+      0,
+      4,
+      0,
+      "PIPE_LINE"
+    ],
+    [
+      4,
+      23,
+      0,
+      10,
+      2,
+      "STRING"
+    ],
+    [
+      5,
+      21,
+      0,
+      10,
+      1,
+      "STRING"
+    ],
+    [
+      6,
+      9,
+      0,
+      24,
+      0,
+      "IMAGE"
+    ],
+    [
+      7,
+      9,
+      0,
+      28,
+      0,
+      "IMAGE"
+    ],
+    [
+      8,
+      28,
+      0,
+      19,
+      0,
+      "IMAGE"
+    ],
+    [
+      9,
+      24,
+      0,
+      28,
+      1,
+      "INT"
+    ],
+    [
+      10,
+      28,
+      0,
+      20,
+      1,
+      "IMAGE"
+    ],
+    [
+      11,
+      3,
+      0,
+      4,
+      3,
+      "INT"
+    ],
+    [
+      12,
+      5,
+      1,
+      7,
+      0,
+      "IMAGE"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "groupNodes": {}
+  },
+  "version": 0.4
+}

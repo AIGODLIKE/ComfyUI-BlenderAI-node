@@ -59,7 +59,19 @@ class Panel(bpy.types.Panel):
         elif TaskManager.server == FakeServer._instance:
             self.show_launch_cnn(layout)
             return
+        elif TaskManager.is_launching():
+            box = layout.box()
+            box.alert = True
+            box.scale_y = 2
+            row = box.row()
+            row.alignment = "CENTER"
+            row.label(text="ComfyUI Launching/Connecting...", icon="INFO")
+            row = box.row()
+            row.alignment = "CENTER"
+            row.label(text=TaskManager.server.get_running_info(), icon="TIME")
+            return
         self.show_common(layout)
+        self.show_custom(layout)
 
     def show_common(self, layout: bpy.types.UILayout):
         scale_popup = get_pref().popup_scale
@@ -132,6 +144,10 @@ class Panel(bpy.types.Panel):
             return
         layout.template_list("HISTORY_UL_UIList", "", sce, "sdn_history_item", sce, "sdn_history_item_index")
 
+    def show_custom(self, layout: bpy.types.UILayout):
+        from .SDNode import crystools_monitor
+        crystools_monitor.draw(layout)
+
     def show_launch_cnn(self, layout: bpy.types.UILayout):
         if TaskManager.server != FakeServer._instance:
             return
@@ -162,26 +178,8 @@ class Panel(bpy.types.Panel):
 
     def show_progress(self, layout: bpy.types.UILayout):
         layout = layout.box()
-        qr_num = len(TaskManager.query_server_task().get('queue_running', []))
-        qp_num = TaskManager.get_task_num()
-        row = layout.row(align=True)
-        row.alert = True
-        row.alignment = "CENTER"
-        row.label(text="Pending / Running", text_ctxt=ctxt)
-        row.label(text=f": {qp_num} / {qr_num}", text_ctxt=ctxt)
-        prog = TaskManager.get_progress()
-        if prog and prog.get("value"):
-            import blf
-            per = prog["value"] / prog["max"]
-            content = f"{per*100:3.0f}% "
-            lnum = int(bpy.context.region.width / bpy.context.preferences.view.ui_scale / 7 - 21)
-            lnum = int(lnum * 0.3)
-            lnum = int((bpy.context.region.width - blf.dimensions(0, content)[0]) / blf.dimensions(0, "█")[0]) - 10
-            v = int(per * lnum)
-            content = content + "█" * v + "░" * (lnum - v)
-            row = layout.row()
-            row.alignment = "CENTER"
-            row.label(text=content[:134], text_ctxt=ctxt)
+        from .SDNode.custom_support import cup_monitor
+        cup_monitor.draw(layout)
         self.show_error(layout)
         if TaskManager.get_error_msg():
             row = layout.box().row()

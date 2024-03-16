@@ -16,7 +16,7 @@ from threading import Thread
 from subprocess import Popen, PIPE, STDOUT
 from pathlib import Path
 from queue import Queue
-from ..utils import rmtree as rt, logger, _T, PkgInstaller
+from ..utils import rmtree as rt, logger, _T, PkgInstaller, update_screen
 from ..timer import Timer
 from ..preference import get_pref
 from .history import History
@@ -435,6 +435,7 @@ class TaskErrPaser:
 
 class Server:
     _instance: Server = None
+    server_type = "Base"
     uid = 0
 
     def __new__(cls, *args, **kw):
@@ -446,11 +447,18 @@ class Server:
         self.launch_ip = "127.0.0.1"
         self.launch_port = 8188
         self.launch_url = "http://127.0.0.1:8188"
+        self.elapsed_time = 0
+        self.tstart = 0
 
     def run(self) -> bool:
+        self.tstart = time.time()
         self.uid = time.time_ns()
         TaskManager.clear_error_msg()
         return True
+
+    def get_running_info(self):
+        self.elapsed_time = time.time() - self.tstart
+        return f"{_T('Time Elapsed')}: {self.elapsed_time:.2f}s"
 
     def close(self):
         ...
@@ -486,17 +494,23 @@ class Server:
 
 
 class FakeServer(Server):
-    ...
+    server_type = "Fake"
 
 
 class RemoteServer(Server):
+    server_type = "Remote"
 
     def __init__(self) -> None:
         self.server_connected = False
+        self.cs_support = "UNKNOWN"
+        self.covers = {}
         super().__init__()
 
     def run(self) -> bool:
+        self.tstart = time.time()
         self.server_connected = False
+        self.cs_support = "UNKNOWN"
+        self.covers.clear()
         TaskManager.clear_error_msg()
         self.uid = time.time_ns()
         self.launch_ip = get_ip()
@@ -504,11 +518,72 @@ class RemoteServer(Server):
         self.launch_url = f"http://{self.launch_ip}:{self.launch_port}"
         return self.wait_connect()
 
+    def is_cs_support(self):
+        if self.cs_support in {"NO", "YES"}:
+            return self.cs_support == "YES"
+        self.cs_support = "NO"
+        try:
+            import requests
+            url = f"{get_url()}/cs/fetch_config"
+            if WITH_PROXY:
+                req = requests.post(url=url, json={}, timeout=5)
+            else:
+                req = requests.post(url=url, json={}, proxies={"http": None, "https": None}, timeout=5)
+            if req.status_code == 200:
+                self.cs_support = "YES"
+        except Exception as e:
+            logger.error(e)
+        return self.cs_support == "YES"
+
+    def cache_model_icon(self, mtype, model) -> str | None:
+        if model in self.covers:
+            return self.covers[model]
+        if not mtype:
+            return
+        if not self.is_cs_support():
+            return
+        self.covers[model] = None
+        try:
+            import requests
+            from tempfile import gettempdir
+            from urllib3.util import Timeout
+            timeout = Timeout(connect=0.1, read=2)
+            url = f"{get_url()}/cs/fetch_config"
+            req_json = {"mtype": mtype, "models": [model]}
+            if WITH_PROXY:
+                req = requests.post(url=url, json=req_json, timeout=timeout)
+            else:
+                req = requests.post(url=url,
+                                    json=req_json,
+                                    proxies={"http": None, "https": None},
+                                    timeout=timeout)
+            if req.status_code != 200:
+                return
+            data = req.json().get(model, {})
+            cover = data.get("cover", "")
+            img_quote = cover.split("?t=")[0]
+            cover_url = f"{get_url()}{img_quote}"
+            img_data = requests.get(cover_url, timeout=5).content
+            if not img_data:
+                return
+            img_path = Path(gettempdir()).joinpath(model).with_suffix(Path(img_quote).suffix)
+            with open(img_path, "wb") as f:
+                f.write(img_data)
+            self.covers[model] = img_path
+        except requests.exceptions.ConnectionError:
+            logger.warning("Server Launch Failed")
+        except ModuleNotFoundError:
+            logger.error("Module: requests import error!")
+        except Exception as e:
+            logger.error(e)
+        return self.covers[model]
+
     def wait_connect(self) -> bool:
         import requests
         try:
             if requests.get(f"{self.get_url()}/object_info", proxies={"http": None, "https": None}, timeout=10).status_code == 200:
                 self.server_connected = True
+                update_screen()
                 return True
         except requests.exceptions.ConnectionError as e:
             TaskManager.put_error_msg(str(e))
@@ -526,6 +601,7 @@ class RemoteServer(Server):
 
 
 class LocalServer(Server):
+    server_type = "Local"
     exited_status = {}
 
     def __init__(self) -> None:
@@ -534,6 +610,7 @@ class LocalServer(Server):
         super().__init__()
 
     def run(self) -> bool:
+        self.tstart = time.time()
         TaskManager.clear_error_msg()
         self.uid = time.time_ns()
         pidpath = Path(__file__).parent / "pid"
@@ -567,20 +644,28 @@ class LocalServer(Server):
         # custom_nodes
         for file in Path(__file__).parent.joinpath("custom_nodes").iterdir():
             dst = Path(model_path).joinpath("custom_nodes", file.name)
-            if file.is_dir():
-                if dst.exists():
+            if not file.is_dir():
+                continue
+            if dst.exists():
+                try:
                     rt(dst)
+                except Exception as e:
+                    # 可能会删除失败
+                    ...
+            try:
                 shutil.copytree(file, dst, dirs_exist_ok=True)
-                continue
-            if not file.suffix == ".py":
-                continue
-            if file.name == "cup.py":
-                t = file.read_text(encoding="utf-8")
-                t = t.replace("XXXHOST-PATHXXX", Path(__file__).parent.as_posix())
-                t = t.replace("FORCE_LOG = False", f"FORCE_LOG = {get_pref().force_log}")
-                Path(model_path).joinpath("custom_nodes", file.name).write_text(t, encoding="utf-8")
-                continue
-            shutil.copyfile(file, dst)
+                cup_py = file.joinpath("cup.py")
+                old_cup_py = Path(model_path).joinpath("custom_nodes", cup_py.name)
+                if cup_py.exists():
+                    t = cup_py.read_text(encoding="utf-8")
+                    t = t.replace("XXXHOST-PATHXXX", Path(__file__).parent.as_posix())
+                    t = t.replace("FORCE_LOG = False", f"FORCE_LOG = {get_pref().force_log}")
+                    Path(model_path).joinpath("custom_nodes", file.name, cup_py.name).write_text(t, encoding="utf-8")
+                if old_cup_py.exists():
+                    Path(model_path).joinpath("custom_nodes", cup_py.name).unlink()
+            except Exception as e:
+                # 可能会拷贝失败(权限问题)
+                ...
         args = pref.parse_server_args(self)
         self.launch_ip = get_ip()
         self.launch_port = get_port()
@@ -615,6 +700,7 @@ class LocalServer(Server):
     def wait_connect(self) -> bool:
         pid = self.pid
         while True:
+            update_screen()
             import requests
             try:
                 if requests.get(f"{self.get_url()}/object_info", proxies={"http": None, "https": None}, timeout=1).status_code == 200:
@@ -739,13 +825,32 @@ class TaskManager:
     execute_status_record = []
     error_msg = []
     progress_bar = 0
+    timers = []
     executer = ThreadPoolExecutor(max_workers=1)
     ws: WebSocketApp = None
+    is_server_launching = False
 
     def __new__(cls, *args, **kw):
         if cls._instance is None:
             cls._instance = object.__new__(cls, *args, **kw)
         return cls._instance
+
+    @staticmethod
+    def register_timer(timer):
+        if timer in TaskManager.timers:
+            return
+        TaskManager.timers.append(timer)
+
+    @staticmethod
+    def unregister_timer(timer):
+        try:
+            TaskManager.timers.remove(timer)
+        except ValueError:
+            ...
+
+    @staticmethod
+    def clear_timer():
+        TaskManager.timers.clear()
 
     @staticmethod
     def put_error_msg(error, with_clear=False):
@@ -772,6 +877,10 @@ class TaskManager:
         return TaskManager.task_queue.qsize()
 
     @staticmethod
+    def is_launching() -> bool:
+        return TaskManager.is_server_launching
+
+    @staticmethod
     def is_launched() -> bool:
         if TaskManager.server:
             return TaskManager.server.is_launched()
@@ -779,23 +888,49 @@ class TaskManager:
 
     @staticmethod
     def run_server(fake=False):
-        from .tree import rtnode_reg, rtnode_unreg
-        t1 = time.time()
-        rtnode_unreg()
-        t2 = time.time()
-        logger.info(_T("UnregNode Time:") + f" {t2-t1:.2f}s")
-        run_success = TaskManager.init_server(fake=fake)
-        if not fake and not run_success:
-            TaskManager.init_server(fake=True)
-        t3 = time.time()
-        logger.info(_T("Launch Time:") + f" {t3-t2:.2f}s")
-        t3 = time.time()
-        rtnode_reg()
-        t4 = time.time()
-        logger.info(_T("RegNode Time:") + f" {t4-t3:.2f}s")
+        def refresh_node():
+            Timer.clear()  # timer may cause crash
+            from .tree import rtnode_reg, rtnode_unreg
+            t1 = time.time()
+            rtnode_unreg()
+            t2 = time.time()
+            logger.info(_T("UnregNode Time:") + f" {t2-t1:.2f}s")
+            rtnode_reg()
+            t3 = time.time()
+            logger.info(_T("RegNode Time:") + f" {t3-t2:.2f}s")
+        if TaskManager.is_launching():
+            return
+
+        def callback():
+            Timer.put(refresh_node)
+
+        def job():
+            def update_screen_timer():
+                update_screen()
+                return 0.01
+            import bpy
+            bpy.app.timers.register(update_screen_timer)
+            t1 = time.time()
+            TaskManager.is_server_launching = True
+            run_success = TaskManager.init_server(fake=fake, callback=callback)
+            if not fake and not run_success:
+                TaskManager.init_server(fake=True, callback=callback)
+            TaskManager.is_server_launching = False
+            t2 = time.time()
+            logger.info(_T("Launch Time:") + f" {t2-t1:.2f}s")
+            bpy.app.timers.unregister(update_screen_timer)
+        if fake:
+            job()
+            refresh_node()
+        else:
+            t = Thread(target=job, daemon=True)
+            t.start()
+        # logger.info(_T("UnregNode Time:") + f" {t2-t1:.2f}s")
+        # logger.info(_T("Launch Time:") + f" {t3-t2:.2f}s")
+        # logger.info(_T("RegNode Time:") + f" {t4-t3:.2f}s")
 
     @staticmethod
-    def init_server(fake=False):
+    def init_server(fake=False, callback=lambda: ...):
         if fake:
             TaskManager.server = FakeServer()
             return
@@ -807,7 +942,7 @@ class TaskManager:
         if not TaskManager.server.exited() and running:
             logger.warning(_T("Server Launched"))
             TaskManager.start_polling()
-            Timer.clear()  # timer may cause crash
+            callback()
         else:
             logger.error(_T("Server Launch Failed"))
             TaskManager.server.close()
@@ -818,6 +953,7 @@ class TaskManager:
         Thread(target=TaskManager.poll_res, daemon=True).start()
         Thread(target=TaskManager.poll_task, daemon=True).start()
         Thread(target=TaskManager.proc_res, daemon=True).start()
+        Thread(target=TaskManager.proc_timer, daemon=True).start()
 
     @staticmethod
     def restart_server(fake=False):
@@ -1010,12 +1146,32 @@ class TaskManager:
         logger.debug(_T("Proc Task Thread Exit"))
 
     @staticmethod
+    def proc_timer():
+        uid = TaskManager.server.uid
+        while uid == TaskManager.server.uid:
+            time.sleep(1)
+            for timer in TaskManager.timers:
+                try:
+                    timer()
+                except Exception as e:
+                    logger.info(e)
+        logger.debug(_T("Proc Timer Thread Exit"))
+
+    @staticmethod
     def poll_res():
         tm = TaskManager
         SessionId = TaskManager.SessionId
 
         def on_message(ws, message):
             msg = json.loads(message)
+            try:
+                from .custom_support import crystools_monitor, cup_monitor
+                if crystools_monitor.process_msg(msg):
+                    return
+                if cup_monitor.process_msg(msg):
+                    return
+            except Exception:
+                ...
             mtype = msg["type"]
             data = msg["data"]
             if mtype == "executing":
@@ -1033,11 +1189,7 @@ class TaskManager:
             elif mtype != "progress":
                 logger.debug("%s: %s", _T("Message Type"), mtype)
 
-            def update():
-                import bpy
-                for area in bpy.context.screen.areas:
-                    area.tag_redraw()
-            Timer.put(update)
+            Timer.put(update_screen)
 
             if hasattr(tm, mtype):
                 setattr(tm, mtype, data)
@@ -1134,11 +1286,3 @@ def removetemp():
 
 removetemp()
 atexit.register(removetemp)
-
-
-def run_server():
-    if "--background" in sys.argv or "-b" in sys.argv:
-        return
-
-    atexit.register(removetemp)
-    TaskManager.run_server()

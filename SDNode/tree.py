@@ -380,7 +380,7 @@ class CFNodeTree(NodeTree):
              "outputs": [{"name": "CONDITIONING",
                           "type": "CONDITIONING",
                          "links": [6],
-                          "slot_index":0}],
+                          "slot_index": 0}],
              "properties": {},
              "widgets_values": ["bad hands"]
              }
@@ -457,7 +457,7 @@ class CFNodeTree(NodeTree):
 
     def load_json(self, data):
         self.clear_nodes()
-        Timer.clear() # blueprints中的setwidth 可能崩溃, 因此提前清理
+        Timer.clear()  # blueprints中的setwidth 可能崩溃, 因此提前清理
         Timer.put((self.load_json_ex, data))
 
     def load_json_group(self, data) -> list[bpy.types.Node]:
@@ -759,6 +759,8 @@ class CFNodeTree(NodeTree):
                     # }
                     if to_node is None:
                         continue
+                    if not to_node.is_registered_node_type():
+                        continue
                     if not to_node.sdn_level or to_node.sdn_level <= node.sdn_level:
                         to_node.sdn_level = node.sdn_level + 1
                     # already visited link (ignore it)
@@ -923,6 +925,7 @@ class CFNodeCategory(NodeCategory):
         info += f"\n\tdraw_fns: {self.draw_fns}"
         return info
 
+
 def gen_cat_id(idstr):
     while idstr[0] == "_":
         idstr = idstr[1:]
@@ -1001,9 +1004,26 @@ def load_node(nodetree_desc, root="", proot=""):
     return node_cat
 
 
+def register_classes_factory(classes):
+    def register():
+        for cls in classes:
+            try:
+                bpy.utils.register_class(cls)
+            except Exception as e:
+                logger.error(f"Failed to register {cls} -> {e}")
+
+    def unregister():
+        for cls in reversed(classes):
+            try:
+                bpy.utils.unregister_class(cls)
+            except Exception as e:
+                logger.error(f"Failed to unregister {cls} -> {e}")
+    return register, unregister
+
+
 clss = []
 
-reg, unreg = bpy.utils.register_classes_factory(clss)
+reg, unreg = register_classes_factory(clss)
 
 
 def reg_node_reroute():
@@ -1053,7 +1073,6 @@ def reg_node_reroute():
 
         inode.class_type = inode.__name__
         inode.__metadata__ = {}
-        inode.builtin__stat__ = pickle.dumps({})
         inode.inp_types = []
         inode.out_types = []
         # funcs = inspect.getmembers(NodeBase, predicate=inspect.isfunction)

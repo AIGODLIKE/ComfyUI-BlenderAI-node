@@ -3,7 +3,7 @@ import bpy
 import os
 import json
 import math
-import pickle
+import re
 from hashlib import md5
 from math import ceil
 from typing import Set, Any
@@ -13,7 +13,7 @@ from functools import lru_cache
 from mathutils import Vector, Matrix
 from bpy.types import Context, Event
 from .utils import SELECTED_COLLECTIONS, get_default_tree
-from ..utils import logger, Icon, _T
+from ..utils import logger, Icon, _T, read_json
 from ..datas import ENUM_ITEMS_CACHE, IMG_SUFFIX
 from ..timer import Timer
 from ..translations import ctxt, get_reg_name, get_ori_name
@@ -50,6 +50,18 @@ name2path = {
     "unCLIPCheckpointLoader": {"ckpt_name": "checkpoints"},
     "UpscaleModelLoader": {"model_name": "upscale_models"},
     "GLIGENLoader": {"gligen_name": "gligen"}
+}
+
+name2type = {
+    "ckpt_name": "checkpoints",
+    "vae_name": "vae",
+    "clip_name": "clip",
+    "gligen_name": "gligen",
+    "control_net_name": "controlnet",
+    "lora_name": "loras",
+    "style_model_name": "style_models",
+    "hypernetwork_name": "hypernetworks",
+    "unet_name": "unets",
 }
 
 
@@ -135,9 +147,8 @@ def calc_hash_type(stype):
 
 
 class PropGen:
-
     @staticmethod
-    def _find_icon(nname, inp_name, item):
+    def _find_icon_local(nname, inp_name, item):
         prev_path_list = get_icon_path(nname).get(inp_name)
         if not prev_path_list:
             return 0
@@ -168,6 +179,28 @@ class PropGen:
             return Icon.reg_icon(file.absolute())
         # logger.info(f"🌚 No Icon <- {file.name}")
         return Icon["NONE"]
+
+    @staticmethod
+    def _find_icon_remote(nname, inp_name, item):
+        from .manager import TaskManager, RemoteServer
+        server: RemoteServer = TaskManager.server
+        mtype = name2type.get(inp_name, "")
+        path: Path = server.cache_model_icon(mtype, item)
+        if not path:
+            return
+        return Icon.reg_icon(path.absolute(), reload=True)
+
+    @staticmethod
+    def _find_icon(nname, inp_name, item):
+        from .manager import TaskManager
+        server = TaskManager.server
+        if server and server.server_type == "Remote":
+            icon = PropGen._find_icon_remote(nname, inp_name, item)
+        else:
+            icon = PropGen._find_icon_local(nname, inp_name, item)
+        if not icon:
+            icon = Icon["NONE"]
+        return icon
 
     @staticmethod
     def Gen(proptype, nname, inp_name, inp):
@@ -261,10 +294,42 @@ class PropGen:
         {'default': 'ComfyUI', 'multiline': True}
         subtype = "NONE"
 
+        def update_default_wrap(n):
+            inp_name = n
+
+            def wrap(self: NodeBase, context):
+                stat = self.mlt_stats.get(inp_name)
+                if not stat or not stat.enable:
+                    return
+                stat.freeze = True
+                rm = False
+                try:
+                    stat.texts.clear()
+                    for text in self[inp_name].split(","):
+                        t = text.strip()
+                        if t in stat.texts:
+                            rm = True
+                            continue
+                        i = stat.texts.add()
+                        i.name = t
+                except Exception:
+                    import traceback
+                    traceback.print_exc()
+                stat.freeze = False
+                # if rm:
+                #     ct = ",".join([t.name for t in stat.texts])
+                #     if ct == self[inp_name]:
+                #         return
+                #     self[inp_name] = ct
+            return wrap
+        update_default = update_default_wrap(inp_name)
+
         def update_wrap(n=""):
             i_name = n
+            update_default = update_default_wrap(n)
 
             def wrap(self, context):
+                update_default(self, context)
                 if not self[i_name]:
                     return
                 if not self[i_name].startswith("//"):
@@ -272,7 +337,6 @@ class PropGen:
                 self[i_name] = bpy.path.abspath(self[i_name])
             return wrap
 
-        def update_default(_, __): ...
         update = update_wrap(inp_name)
         if inp_name == "image":
             subtype = "FILE_PATH"
@@ -338,6 +402,123 @@ class SDNConfig(bpy.types.PropertyGroup):
     converted: bpy.props.BoolProperty(default=False)
 
 
+class MLTText(bpy.types.PropertyGroup):
+    def find_stat(self, node: NodeBase):
+        if not node:
+            return
+        for stat in node.mlt_stats:
+            if not stat.enable or stat.freeze:
+                continue
+            if not hasattr(node, stat.name):
+                continue
+            for t in stat.texts:
+                if t != self:
+                    continue
+                return stat
+
+    def set_content(self, v):
+        # v format: '[xxx]key'
+        # 如果v已经存在则弹出报错
+        if "]" in v:
+            v = v.split("]")[1].strip()
+        node: NodeBase = bpy.context.active_node
+        stat = self.find_stat(node)
+        if stat and v in stat.texts:
+            def pop_error(self, context):
+                self.layout.label(text="Text already exists", icon="ERROR")
+            bpy.context.window_manager.popup_menu(pop_error, title="ERROR", icon="ERROR")
+            return
+        self["name"] = v
+
+    def get_content(self):
+        if "name" not in self:
+            self["name"] = ""
+        return self["name"]
+
+    def update_content(self, context):
+        node: NodeBase = context.node
+        # 合并text
+        stat = self.find_stat(node)
+        if not stat:
+            return
+        ct = ",".join([t.name for t in stat.texts])
+        if ct == getattr(node, stat.name):
+            return
+        setattr(node, stat.name, ct)
+
+    name: bpy.props.StringProperty(update=update_content, set=set_content, get=get_content)
+
+
+class MLTRec(bpy.types.PropertyGroup):
+    name: bpy.props.StringProperty()
+    enable: bpy.props.BoolProperty(default=False)
+    texts: bpy.props.CollectionProperty(type=MLTText)
+    tindex: bpy.props.IntProperty(default=0)
+    freeze: bpy.props.BoolProperty(default=False)
+
+    def add_text_update(self, context):
+        if not self.addtext:
+            return
+        t = self.addtext.strip()
+        self.addtext = ""
+        if t not in self.texts:
+            i = self.texts.add()
+            i.name = t
+        else:
+            def pop_error(self, context):
+                self.layout.label(text="Text already exists", icon="ERROR")
+            bpy.context.window_manager.popup_menu(pop_error, title="ERROR", icon="ERROR")
+    addtext: bpy.props.StringProperty(name="Add Tag By Input", update=add_text_update)
+
+
+class MLTWords_UL_UIList(bpy.types.UIList):
+
+    def draw_item(self,
+                  context: bpy.types.Context,
+                  layout: bpy.types.UILayout,
+                  data, item, icon, active_data, active_property, index=0, flt_flag=0):
+        row = layout.row()
+        row.label(text=str(item.freq), icon="SOLO_ON")
+        row.label(text=item.value)
+        op = row.operator(AdvTextEdit.bl_idname, text="", icon="ADD")
+        op.text_name = item.value
+        op.prop = self.list_id
+        op.action = "AddTag"
+
+
+class MLTText_UL_UIList(bpy.types.UIList):
+    def draw_item(self,
+                  context: bpy.types.Context,
+                  layout: bpy.types.UILayout,
+                  data, item, icon, active_data, active_property, index=0, flt_flag=0):
+        row = layout.row(align=True)
+        row.label(text="", icon="KEYTYPE_KEYFRAME_VEC")
+        if getattr(data, active_property) == index:
+            row.prop_search(item, "name", bpy.context.window_manager, "mlt_words", text="", results_are_suggestions=True)
+        else:
+            row.label(text=item.name)
+
+        op = row.operator(AdvTextEdit.bl_idname, text="", icon="ADD")
+        op.text_name = item.name
+        op.prop = data.name
+        op.action = "UpTagWeight"
+
+        op = row.operator(AdvTextEdit.bl_idname, text="", icon="REMOVE")
+        op.text_name = item.name
+        op.prop = data.name
+        op.action = "DownTagWeight"
+
+        op = row.operator(AdvTextEdit.bl_idname, text="", icon="RADIOBUT_OFF")
+        op.text_name = item.name
+        op.prop = data.name
+        op.action = "RemoveTagWeight"
+
+        op = row.operator(AdvTextEdit.bl_idname, text="", icon="X")
+        op.text_name = item.name
+        op.prop = data.name
+        op.action = "RemoveTag"
+
+
 class NodeBase(bpy.types.Node):
     bl_width_min = 200.0
     bl_width_max = 2000.0
@@ -348,7 +529,7 @@ class NodeBase(bpy.types.Node):
     sdn_socket_visible_in: bpy.props.CollectionProperty(type=SDNConfig)
     sdn_socket_visible_out: bpy.props.CollectionProperty(type=SDNConfig)
     id: bpy.props.StringProperty(default="-1")
-    builtin__stat__: bpy.props.StringProperty(subtype="BYTE_STRING")  # ori name: True/False
+    mlt_stats: bpy.props.CollectionProperty(type=MLTRec)
     class_type: str
     # for pylint
     inp_types: list[str]
@@ -457,9 +638,9 @@ class NodeBase(bpy.types.Node):
         return get_ctxt(self.class_type)
 
     def query_stats(self) -> dict:
-        if not self.builtin__stat__:
+        if "BUILTIN_STAT" not in self:
             return {}
-        return pickle.loads(self.builtin__stat__)
+        return self["BUILTIN_STAT"]
 
     def query_stat(self, name):
         stat = self.query_stats()
@@ -467,9 +648,26 @@ class NodeBase(bpy.types.Node):
         return stat.get(name, None)
 
     def set_stat(self, name, value):
+        if "BUILTIN_STAT" not in self:
+            self["BUILTIN_STAT"] = {}
         stat = self.query_stats()
         stat[name] = value
-        self.builtin__stat__ = pickle.dumps(stat)
+
+    def query_mlt_stats(self) -> dict:
+        if "BUILTIN_MLT_STAT" not in self:
+            return {}
+        return self["BUILTIN_MLT_STAT"]
+
+    def query_mlt_stat(self, name):
+        return self.query_mlt_stats().get(name, False)
+
+    def set_mlt_stat(self, name, stat):
+        if "BUILTIN_MLT_STAT" not in self:
+            self["BUILTIN_MLT_STAT"] = {}
+        stat = self.query_mlt_stats()
+        if name not in stat:
+            stat[name] = {}
+        stat[name]["stat"]
 
     def is_base_type(self, name):
         """
@@ -1215,6 +1413,121 @@ class GetSelCol(bpy.types.Operator):
         return {'FINISHED'}
 
 
+class AdvTextEdit(bpy.types.Operator):
+    bl_idname = "sdn.adv_text_edit"
+    bl_label = ""
+    bl_translation_context = ctxt
+    prop: bpy.props.StringProperty(default="")
+    text_name: bpy.props.StringProperty(default="")
+    action: bpy.props.EnumProperty(items=[("SwitchAdvText", "SwitchAdvText", "", 0),
+                                          ("RemoveTag", "RemoveTag", "", 1),
+                                          ("AddTag", "AddTag", "", 2),
+                                          ("UpTagWeight", "UpTagWeight", "", 3),
+                                          ("DownTagWeight", "DownTagWeight", "", 4),
+                                          ("RemoveTagWeight", "RemoveTagWeight", "", 5),
+                                          ],
+                                   default="SwitchAdvText")
+
+    @classmethod
+    def description(cls, context: bpy.types.Context,
+                    properties: bpy.types.OperatorProperties) -> str:
+        desc = "Adv Text Action"
+        if action := getattr(properties, "action", ""):
+            desc = action
+        return _T(desc)
+
+    @classmethod
+    def poll(cls, context):
+        from .tree import TREE_TYPE
+        return context.space_data.tree_type == TREE_TYPE
+
+    def execute(self, context):
+        node: NodeBase = bpy.context.node
+        if not node:
+            return {"FINISHED"}
+        stat: MLTRec = node.mlt_stats.get(self.prop)
+        if self.action == "SwitchAdvText":
+            if not stat:
+                stat = node.mlt_stats.add()
+                stat.name = self.prop
+                stat.enable = True
+            else:
+                stat.enable ^= True
+            self.update_list(node, stat)
+        elif self.action == "RemoveTag":
+            if stat:
+                tindex = stat.texts.find(self.text_name)
+                stat.texts.remove(tindex)
+                self.dump_list(node, stat)
+        elif self.action == "AddTag":
+            if stat:
+                if self.text_name not in stat.texts:
+                    stat.texts.add().name = self.text_name
+                    self.update_list(node, stat)
+                else:
+                    self.report({"ERROR"}, "Text already exists")
+        elif self.action == "UpTagWeight":
+            if stat and self.text_name in stat.texts:
+                t = self.text_name.strip()
+                # 权重格式 tag -> (tag:xxx), 其中xxx为权重值
+                match = re.match(r"\((.*?):(.*?)\)", t)
+                if match:
+                    ot, weight = match.group(1, 2)
+                    weight = float(weight)
+                else:
+                    ot, weight = t, 1
+                weight += 0.1
+                t = f"({ot}:{weight:.1f})"
+                stat.texts[self.text_name].name = t
+        elif self.action == "DownTagWeight":
+            if stat and self.text_name in stat.texts:
+                t = self.text_name.strip()
+                # 权重格式 tag -> (tag:xxx), 其中xxx为权重值
+                match = re.match(r"\((.*?):(.*?)\)", t)
+                if match:
+                    ot, weight = match.group(1, 2)
+                    weight = float(weight)
+                else:
+                    ot, weight = t, 1
+                weight -= 0.1
+                t = f"({ot}:{weight:.1f})"
+                stat.texts[self.text_name].name = t
+        elif self.action == "RemoveTagWeight":
+            if stat and self.text_name in stat.texts:
+                t = self.text_name.strip()
+                # 权重格式 tag -> (tag:xxx), 其中xxx为权重值
+                match = re.match(r"\((.*?):(.*?)\)", t)
+                ot = t if not match else match.group(1)
+                stat.texts[self.text_name].name = ot
+        return {'FINISHED'}
+
+    def dump_list(self, node, stat):
+        if not stat.enable:
+            return
+        if not hasattr(node, stat.name):
+            return
+        ct = ",".join([t.name for t in stat.texts])
+        if ct == getattr(node, stat.name):
+            return
+        setattr(node, stat.name, ct)
+        self.update_list(node, stat)
+
+    def update_list(self, node, stat):
+        if not stat or not node:
+            return
+        stat.texts.clear()
+        rm = False
+        for text in getattr(node, self.prop).split(","):
+            text = text.strip()
+            if not text:
+                rm = True
+                continue
+            i = stat.texts.add()
+            i.name = text.strip()
+        if rm:
+            self.dump_list(node, stat)
+
+
 class NodeParser:
     CACHED_OBJECT_INFO = {}
     SOCKET_TYPE = {}  # NodeType: {PropName: SocketType}
@@ -1267,9 +1580,9 @@ class NodeParser:
     def fetch_object(self):
         self.ori_object_info.clear()
         if self.INTERNAL_PATH.exists():
-            self.ori_object_info.update(json.load(self.INTERNAL_PATH.open("r")))
+            self.ori_object_info.update(read_json(self.INTERNAL_PATH))
         if self.PATH.exists():
-            self.ori_object_info.update(json.load(self.PATH.open("r")))
+            self.ori_object_info.update(read_json(self.PATH))
         from .manager import TaskManager, FakeServer
         if TaskManager.server != FakeServer._instance:
             self._fetch_object_from_server()
@@ -1298,8 +1611,8 @@ class NodeParser:
     def find_diff(self):
         # 获取差异object_info
         if self.DIFF_PATH.exists():
-            self.diff_object_info = json.load(self.DIFF_PATH.open("r"))
-        for name in ["Note", "PrimitiveNode", "Cache Node"]:
+            self.diff_object_info = read_json(self.DIFF_PATH)
+        for name in ["Note", "PrimitiveNode", "Cache Node", "LayerUtility: TextImage"]:
             self.diff_object_info.pop(name, None)
         return self.diff_object_info
 
@@ -1602,7 +1915,7 @@ class Images(bpy.types.PropertyGroup):
     image: bpy.props.PointerProperty(type=bpy.types.Image)
 
 
-clss = [SDNConfig, Ops_Switch_Socket_Disp, Ops_Switch_Socket_Widget, Ops_Add_SaveImage, Set_Render_Res, GetSelCol, Ops_Active_Tex, Ops_Link_Mask, Images]
+clss = [SDNConfig, MLTText, MLTRec, MLTWords_UL_UIList, MLTText_UL_UIList, Ops_Switch_Socket_Disp, Ops_Switch_Socket_Widget, Ops_Add_SaveImage, Set_Render_Res, GetSelCol, AdvTextEdit, Ops_Active_Tex, Ops_Link_Mask, Images]
 
 reg, unreg = bpy.utils.register_classes_factory(clss)
 
