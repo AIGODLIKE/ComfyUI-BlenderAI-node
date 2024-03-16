@@ -1556,6 +1556,10 @@ class 输入图像(BluePrintBase):
             upload_image(self.image)
         r()
 
+    def serialize_specific(s, self: NodeBase, cfg, execute):
+        if "image" in cfg.get("inputs", {}):
+            cfg["inputs"]["image"] = cfg["inputs"]["image"].replace("\\\\", "/").replace("\\", "/")
+
 
 class 材质图(BluePrintBase):
     comfyClass = "材质图"

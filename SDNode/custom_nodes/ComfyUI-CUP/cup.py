@@ -348,6 +348,8 @@ class LoadImage:
     FUNCTION = "load_image"
 
     def load_image(self, image, mode=None):
+        if image:
+            image = image.replace("\\\\", "/").replace("\\", "/")
         image = Path(image).name
         image_path = folder_paths.get_annotated_filepath(image, default_dir="input/SDN")
         # image_path = image
