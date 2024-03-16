@@ -351,7 +351,8 @@ class LoadImage:
         if image:
             image = image.replace("\\\\", "/").replace("\\", "/")
         image = Path(image).name
-        image_path = folder_paths.get_annotated_filepath(image, default_dir="input/SDN")
+        image = f"SDN/{image}"
+        image_path = folder_paths.get_annotated_filepath(image)
         # image_path = image
         img = Image.open(image_path)
         output_images = []
