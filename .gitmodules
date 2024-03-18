@@ -1,0 +1,3 @@
+[submodule "SDNode/custom_nodes/ComfyUI-CUP"]
+	path = SDNode/custom_nodes/ComfyUI-CUP
+	url = https://github.com/AIGODLIKE/ComfyUI-CUP.git
