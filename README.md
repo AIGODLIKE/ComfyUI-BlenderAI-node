@@ -1,8 +1,9 @@
-# ComfyUI-BlenderAI-node
+# Introduction
 This is and addon for using [ComfyUI](https://github.com/comfyanonymous/ComfyUI) in Blender. To convert ComfyUI nodes into Blender nodes, you can use comfyui inside the blender without switching between softwares.
-## Introduction
-- Automatically conver ComfyUI nodes to Blender nodes
-- Can edit launch arguments in n-panel/addon menu, or just link to a running comfyui process
+## Features
+
+- Convert ComfyUI nodes to Blender nodes
+- Edit launch arguments in n-panel/addon menu, or just link to a running comfyui process
 - Special Blender nodes like camera input or compositing data
 - Can draw masks with Grease pencil
 - Node groups like the node group in geometry node
@@ -10,19 +11,28 @@ This is and addon for using [ComfyUI](https://github.com/comfyanonymous/ComfyUI)
 - Node tree presets and node group presets
 - Model preview image on Loaders node
 - Can directly input or replace the 3D models in Blender
+- By using composite can output perfect controlnet image
 
+### Camera Input
 ![image](https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/f087f254-5486-4d9f-9a13-d327abed3e14)
-![image](https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/66a52f47-7057-42af-9775-21c240e9782e)
 
+### Camera Input with roop
 
 https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/cb96dd60-b93a-4f09-9ab6-043b66617313
 
+### Direct Input Mesh to 3D viewport
 
-https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/74418e75-57a4-428d-831a-b8c3277cc7cf
+![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/a86727f0-9c30-4bb1-a591-e3eafc21e8b3)
 
+### Composite Depth Panel
 
+![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/dbef3ac7-d7df-4da5-ac9e-000ce62ef725)
 
-## Installation
+### Edit Character Bone with Model
+
+![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/91f6d8d6-55bb-41ab-9413-73b17d3bdfd8)
+
+# Installation
 
 Only tested on WINDOWS 10\\11
 
@@ -33,6 +43,7 @@ Firstly, you need to install a [Blender](https://www.blender.org/download/)(Reco
 ![image](https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/aacf1cfe-ae44-4930-9a93-c226a8408066)
 
 2. **Install add-on（ComfyUI BlenderAI node）**
+
 - Install with Blender addon
 
 At the Blender preference menu, you can directly install an addon with select the zip file. This will automaticlly install the addon to the Blender that you are currently using.
@@ -54,7 +65,7 @@ git clone https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node.git
 Then you can see the addont after refresh addon menu or reboot Blender.
 And don't forget to enable the addon by click the cube at the tilte's left
 
-## Usage
+# Usage
 
 1. **Set the "ComfyUI Path" to your ComfyUI directory**
 
@@ -92,19 +103,19 @@ Like other Blender nodes, you can use the shortcut keys "Shift+A" to bring up th
 - You can enable the system console in the "Window-Toggle System Console" at the left top
 - Preview images needs to have same name as the model and extension like model.ckpt.jpg
 
-## Links
+# Links
 
-### User Manual
+## User Manual
 
 [用户手册](https://shimo.im/docs/Ee32m0w80rfLp4A2)
 
 [UserManual](https://shimo.im/docs/JSforXF1JC8lSphG)
 
-### Our AI website
+## Our AI website
 
 [AIGODLIKE Community](https://www.aigodlike.com/)
 
-### ComfyUI Package
+## ComfyUI Package
 
 [百度网盘](https://pan.baidu.com/s/1bnVWO9AuurPl2mn9Uc57vg?pwd=2333)
 
