@@ -20,17 +20,17 @@ This is and addon for using [ComfyUI](https://github.com/comfyanonymous/ComfyUI)
 
 https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/cb96dd60-b93a-4f09-9ab6-043b66617313
 
-### Direct Input Mesh to 3D viewport
+### Import or replace AI Generate mesh to 3D Viewport
 
-![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/a86727f0-9c30-4bb1-a591-e3eafc21e8b3)
+![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/92b2913f-f20b-4e6c-85b6-e9f60a7b58f1)
 
 ### Composite Depth Panel
 
-![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/dbef3ac7-d7df-4da5-ac9e-000ce62ef725)
+![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/2386dc4d-6faa-4054-83e7-93f49a27962a)
 
 ### Edit Character Bone with Model
 
-![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/91f6d8d6-55bb-41ab-9413-73b17d3bdfd8)
+![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/484c12bf-55b8-4baf-92df-e422fd900cbf)
 
 # Installation
 
