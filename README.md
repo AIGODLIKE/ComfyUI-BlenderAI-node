@@ -13,6 +13,9 @@ This is and addon for using [ComfyUI](https://github.com/comfyanonymous/ComfyUI)
 - Can directly input or replace the 3D models in Blender
 - By using composite can output perfect controlnet image
 
+Here are some workflow showcase:
+You can find all these workflow presets in `ComfyUI-BlenderAI-node/presets/`
+
 ### Camera input
 ![image](https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/f087f254-5486-4d9f-9a13-d327abed3e14)
 
@@ -97,6 +100,24 @@ Like other Blender nodes, you can use the shortcut keys "Shift+A" to bring up th
 
 ![image](https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/22c68423-07aa-4a07-93a9-9354880276e1)
 
+## Special Nodes for Blender
+![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/b4daedd0-77ce-46c3-9eef-79e93ab1465c)
+
+### Input Image
+- Input image from directory
+- Input image list from directory
+- Input image from render
+- Input image from viewport
+### Mask
+- Create mask by Grease pencil
+- Create mask by object projection on camera
+- Create mask by collection objects preojections
+### Mat Image
+- Input texture from object
+- Input textures from collection objects
+### Save Image
+- Normaly save to folder
+- Save to image in Blender to replace texture
 
 ## Notes
 - Not every node can work perfectly in Blender, like Blender don't support any video type format
