@@ -1,5 +1,16 @@
 # ComfyUI-BlenderAI-node
-Add-on for using [ComfyUI](https://github.com/comfyanonymous/ComfyUI) in Blender.
+This is and addon for using [ComfyUI](https://github.com/comfyanonymous/ComfyUI) in Blender. To convert ComfyUI nodes into Blender nodes, you can use comfyui inside the blender without switching between softwares.
+## Introduction
+- Automatically conver ComfyUI nodes to Blender nodes
+- Can edit launch arguments in n-panel/addon menu, or just link to a running comfyui process
+- Special Blender nodes like camera input or compositing data
+- Can draw masks with Grease pencil
+- Node groups like the node group in geometry node
+- Queue batch processing with mission excel
+- Node tree presets and node group presets
+- Model preview image on Loaders node
+- Can directly input or replace the 3D models in Blender
+
 ![image](https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/f087f254-5486-4d9f-9a13-d327abed3e14)
 ![image](https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/66a52f47-7057-42af-9775-21c240e9782e)
 
@@ -11,66 +22,82 @@ https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/74418e75-57
 
 
 
+## Installation
 
-## NOTE 
-
-If you want to use the latest version, please use the [develop](https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/tree/develop) branch.
-## Function Introduction
-1. Automatically convert Comfyui nodes to Blender nodes, enabling Blender to directly generate images using ComfyUI（As long as your ComfyUI can run）
-2. Multiple Blender dedicated nodes(For example, directly inputting camera rendered images, compositing data, etc. into COMFYUI)
-3. Operation optimization (such as one click drawing mask)
-4. Node group presets
-5. Queue batch processing
-## How to install(Only on WINDOWS 10\11)
+Only tested on WINDOWS 10\\11
 
 1. **Install Blender**
 
-Firstly, you need to install a [Blender](https://www.blender.org/download/)(Suggest Blender 3.5 or 3.6.X, previous versions or 4.0 have not been tested).
+Firstly, you need to install a [Blender](https://www.blender.org/download/)(Recommend Blender 3.5, 3.6.X, or previous 4.0).
 ![image](https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/aacf1cfe-ae44-4930-9a93-c226a8408066)
 
 2. **Install add-on（ComfyUI BlenderAI node）**
+- Install with Blender addon
+At the Blender preference menu, you can directly install an addon with select the zip file. This will automaticlly install the addon to the Blender that you are currently using.
+And don't forget to enable the addon by click the cube at the tilte's left
 
-ComfyUI BlenderAI node is a standard Blender add-on. You can use git to download this addon. Just like that:
-```bash
-cd %USERPROFILE%\AppData\Roaming\Blender Foundation\blender\
+*Note*: Some users reports that install the directyly downloaded zip file will lose preview image
+![[Pasted image 20240319183259.png]]
+
+- Install manually (recommend)
+ComfyUI BlenderAI node is a standard Blender add-on. You can use git the addon to Blender's addon directory.
+```
+cd %USERPROFILE%\AppData\Roaming\Blender Foundation\blender\%version%\scripts\addons
 git clone https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node.git
 ```
-*Note*: Downloading the zip file directly will cause preview image loss!
+Then you can see the addont after refresh addon menu or reboot Blender.
+And don't forget to enable the addon by click the cube at the tilte's left
 
+## Usage
 
-3. **Settings add-on**
+1. **Set the "ComfyUI Path" to your ComfyUI directory**
 
-Set the already configured COMFYUI path，and select the startup mode based on VRAM
 ![image](https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/5d081ee7-0b2a-4871-bdf9-ada05bb12831)
 
 
-## How to use
+2. **Set the "Python Path" if you're not using the standard ComfyUI file directory**
 
-1. Starting the COMFYUI service
+The default (empty) path is:
+```
+├── run_nvidia.bat
+├── ComfyUI
+├── python_embeded
+│   ├── python.exe  <-- Here
+```
 
-Switch to the ComfyUI workspace, use the shortcut key "N" to open the panel, and click to enable the COMFYUI service (note - this service will not automatically start with Blender startup, as it is not necessary to start COMFYUI at all times)
-![image](https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/eef864fb-ee69-4432-970e-8ebf6f4916e6)
+3.  **Open to ComfyUI node workspace**
 
-2. Add nodes/presets
+Switch to the ComfyUI workspace, use the shortcut key "N" to open the panel, and click boot button launch the ComfyUI service.
+Or, Switch the "Server Type" to remote server so that you can link your Blender to a running ComfyUI process
+![[Pasted image 20240319185542.png]]
 
-Like other Blender nodes, you can use the shortcut keys "Shift+A" to bring up the creation menu. You can also click on the "Replace Node Tree" button or "Append Node Tree" button on the right to add/append a node tree. In summary, you should create a node tree like COMFYUI
-**Image preview and input must use Blender specially designed nodes, otherwise the calculation results may not be displayed properly (using Blender specially designed nodes does not affect the data, it will automatically be saved as COMFYUI standard data)**
+4. **Add nodes/presets**
+
+Like other Blender nodes, you can use the shortcut keys "Shift+A" to bring up the creation menu. You can also click on the "Replace Node Tree" button or "Append Node Tree" button on the right to add/append a node tree.
+**Image preview and input must use Blender specially designed nodes, otherwise the calculation results may not be displayed properly 
+(using Blender special nodes won't affect the generation, results will be saved as ComfyUI standard data)**
+
 ![image](https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/22c68423-07aa-4a07-93a9-9354880276e1)
 
 
-## User Manual
+## Notes
+- Not every node can work perfectly in Blender, like Blender don't support any video type format
+- You can enable the system console in the "Window-Toggle System Console" at the left top
+- Preview images needs to have same name as the model and extension like model.ckpt.jpg
 
-[中文手册](https://shimo.im/docs/Ee32m0w80rfLp4A2)
+## Links
 
-[EN](https://shimo.im/docs/JSforXF1JC8lSphG)
+### User Manual
 
-## Our AI community
+[用户手册](https://shimo.im/docs/Ee32m0w80rfLp4A2)
+
+[UserManual](https://shimo.im/docs/JSforXF1JC8lSphG)
+
+### Our AI website
 
 [AIGODLIKE Community](https://www.aigodlike.com/)
 
-## COMFYUI Integration Package
-
-Please upgrade to the latest COMFYUI
+### ComfyUI Package
 
 [百度网盘](https://pan.baidu.com/s/1bnVWO9AuurPl2mn9Uc57vg?pwd=2333)
 
