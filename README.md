@@ -13,22 +13,22 @@ This is and addon for using [ComfyUI](https://github.com/comfyanonymous/ComfyUI)
 - Can directly input or replace the 3D models in Blender
 - By using composite can output perfect controlnet image
 
-### Camera Input
+### Camera input
 ![image](https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/f087f254-5486-4d9f-9a13-d327abed3e14)
 
-### Camera Input with roop
+### Camera input with roop
 
 https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/cb96dd60-b93a-4f09-9ab6-043b66617313
 
-### Import or replace AI Generate mesh to 3D Viewport
+### Import or replace AI generate mesh to 3D Viewport
 
 ![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/92b2913f-f20b-4e6c-85b6-e9f60a7b58f1)
 
-### Composite Depth Panel
+### Composite depth channel
 
 ![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/2386dc4d-6faa-4054-83e7-93f49a27962a)
 
-### Edit Character Bone with Model
+### Edit character bone with model
 
 ![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/484c12bf-55b8-4baf-92df-e422fd900cbf)
 
