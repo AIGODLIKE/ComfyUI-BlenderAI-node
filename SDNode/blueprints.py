@@ -1608,6 +1608,16 @@ class 输入图像(BluePrintBase):
             upload_image(self.image)
         r()
 
+    def serialize_pre(s, self: NodeBase):
+        if self.mode == "视口":
+            if not self.image:
+                self.image = Path(tempfile.gettempdir()).joinpath("viewport.png").as_posix()
+            if Path(self.image).is_dir():
+                self.image = Path(self.image).joinpath("viewport.png").as_posix()
+            if Path(self.image).suffix not in {".png", ".jpg", ".jpeg"}:
+                self.image = Path(self.image).with_suffix(".png").as_posix()
+        super().serialize_pre(self)
+
     def serialize_specific(s, self: NodeBase, cfg, execute):
         if "image" in cfg.get("inputs", {}):
             cfg["inputs"]["image"] = cfg["inputs"]["image"].replace("\\\\", "/").replace("\\", "/")
