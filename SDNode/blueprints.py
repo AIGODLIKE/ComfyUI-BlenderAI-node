@@ -1741,6 +1741,7 @@ class 截图(BluePrintBase):
         @Timer.wait_run
         def f():
             s._capture(self)
+            upload_image(self.image)
         f()
 
 
