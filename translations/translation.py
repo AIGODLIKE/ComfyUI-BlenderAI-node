@@ -205,6 +205,7 @@ other = {
     "UpTagWeight": "增加权重",
     "DownTagWeight": "降低权重",
     "RemoveTagWeight": "删除权重",
+    "socket type not str[IGNORE]: %s.%s -> %s": "Socket类型不是字符串[忽略]: %s.%s -> %s",
     # SDNode/blueprints.py
     "Non-Standard Enum": "非标准枚举",
     "Capture Screen": "截图",

@@ -478,8 +478,8 @@ class MLTWords_UL_UIList(bpy.types.UIList):
                   layout: bpy.types.UILayout,
                   data, item, icon, active_data, active_property, index=0, flt_flag=0):
         row = layout.row()
-        row.label(text=str(item.freq), icon="SOLO_ON")
-        row.label(text=item.value)
+        # row.label(text=str(item.freq), icon="SOLO_ON")
+        row.label(text=item.name)
         op = row.operator(AdvTextEdit.bl_idname, text="", icon="ADD")
         op.text_name = item.value
         op.prop = self.list_id
