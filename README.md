@@ -101,23 +101,45 @@ Like other Blender nodes, you can use the shortcut keys "Shift+A" to bring up th
 ![image](https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/22c68423-07aa-4a07-93a9-9354880276e1)
 
 ## Special Nodes for Blender
-![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/b4daedd0-77ce-46c3-9eef-79e93ab1465c)
 
 ### Input Image
+
+![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/9e89adcb-4574-4b93-b549-998db38cc128)
+
 - Input image from directory
 - Input image list from directory
 - Input image from render
 - Input image from viewport
+
 ### Mask
+
+![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/85c29090-b751-4686-b9b9-7373f7b6ffb1)
+
 - Create mask by Grease pencil
 - Create mask by object projection on camera
 - Create mask by collection objects preojections
+
 ### Mat Image
+
+![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/8fff5b65-9c7f-4053-8bc6-ea16184774ad)
+
 - Input texture from object
 - Input textures from collection objects
+
 ### Save Image
+
+![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/edbc273d-40cd-482b-835f-fb8b69812684)
+
 - Normaly save to folder
 - Save to image in Blender to replace texture
+
+
+### Multiline Textbox
+
+![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/bdc796c0-7dec-4c5d-922e-17860941a23e)
+
+To make write prompt be more visually, we made a function that can show all prompts in a textbox since blender doesn't support multiline format node.
+By click the button on the side of prompts, it will open a window to write prompts
 
 ## Notes
 - Not every node can work perfectly in Blender, like Blender don't support any video type format
