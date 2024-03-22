@@ -215,6 +215,12 @@ other = {
     "No Camera in Scene": "场景像机不存在",
     "Upload Image Success": "图片上传成功",
     "Upload Image Fail": "图片上传失败",
+    "ToSeq": "到序列",
+    "SeqReplace": "替换",
+    "SeqAppend": "追加",
+    "SeqStack": "堆叠",
+    "frame_final_duration": "帧时长",
+    "output_dir": "输出文件夹",
     # SDNode/tree.py
     "Invalid Node Type: {}": "检查到无效的节点: {}",
     "ParseNode Time:": "解析节点耗时:",
