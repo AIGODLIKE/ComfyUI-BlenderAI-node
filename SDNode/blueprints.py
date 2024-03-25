@@ -1629,6 +1629,8 @@ class 材质图(BluePrintBase):
     def new_btn_enable(s, self, layout, context):
         if self.nodetype == s.comfyClass:
             tree = context.space_data.edit_tree
+            if not tree:
+                return True
             mat_iamge_nodes = [n for n in tree.nodes if n.class_type == s.comfyClass]
             return len(mat_iamge_nodes) == 0
         return True
