@@ -1297,10 +1297,11 @@ class 存储(BluePrintBase):
         properties["seq_mode"] = bpy.props.EnumProperty(items=[("SeqReplace", "SeqReplace", "", "", 0),
                                                                ("SeqAppend", "SeqAppend", "", "", 1),
                                                                ("SeqStack", "SeqStack", "", "", 2),
-                                                               ])
+                                                               ],
+                                                        default="SeqAppend")
         properties["channel"] = bpy.props.IntProperty(default=1, min=1, max=127)
         properties["frame_start"] = bpy.props.IntProperty()
-        properties["frame_final_duration"] = bpy.props.IntProperty(default=25, min=1)
+        properties["frame_final_duration"] = bpy.props.IntProperty(default=1, min=1)
 
     def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swsock=True, swdisp=False) -> bool:
         if prop == "mode":
