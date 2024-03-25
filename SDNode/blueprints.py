@@ -1404,7 +1404,7 @@ class 存储(BluePrintBase):
 
                         elif self.seq_mode == "SeqAppend":
                             # 追加模式: 查找当前通道的 最后一个序列的持续位置, 往后新增
-                            max_final_start = -9999
+                            max_final_start = 0
                             for seq in seqe.sequences:
                                 if seq.channel != self.channel:
                                     continue
