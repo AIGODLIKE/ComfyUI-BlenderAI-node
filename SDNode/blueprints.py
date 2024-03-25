@@ -1294,13 +1294,17 @@ class 存储(BluePrintBase):
         prop = bpy.props.PointerProperty(type=bpy.types.Image)
         properties["image"] = prop
 
-        properties["seq_mode"] = bpy.props.EnumProperty(items=[("SeqReplace", "SeqReplace", "", "", 0),
-                                                               ("SeqAppend", "SeqAppend", "", "", 1),
-                                                               ("SeqStack", "SeqStack", "", "", 2),
-                                                               ],
-                                                        default="SeqAppend")
+        properties["seq_mode"] = bpy.props.EnumProperty(
+            items=[
+                ("SeqAppend", "SeqAppend", "", "", 0),
+                ("SeqStack", "SeqStack", "", "", 1),
+                ("SeqReplace", "SeqReplace", "", "", 2),
+            ],
+            default="SeqAppend")
         properties["channel"] = bpy.props.IntProperty(default=1, min=1, max=127)
         properties["frame_start"] = bpy.props.IntProperty()
+        properties["current_frame_as_fs"] = bpy.props.BoolProperty(default=False, description="Use Current Frame as Start Frame")
+        properties["cut_off"] = bpy.props.BoolProperty(default=False, description="Cut off frames behand insert")
         properties["frame_final_duration"] = bpy.props.IntProperty(default=1, min=1)
 
     def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swsock=True, swdisp=False) -> bool:
@@ -1344,9 +1348,14 @@ class 存储(BluePrintBase):
                 layout.prop(self, "seq_mode", expand=True)
                 col = layout.box().column()
                 row = col.row(align=True)
-                row.prop(self, "channel")
-                row.prop(self, "frame_start")
+                row.prop(self, "current_frame_as_fs", toggle=True, text="", icon="GP_MULTIFRAME_EDITING")
+                c = row.column()
+                c.enabled = not self.current_frame_as_fs
+                c.prop(self, "frame_start")
+                col.prop(self, "channel")
                 col.prop(self, "frame_final_duration")
+                if self.seq_mode == "SeqReplace":
+                    col.prop(self, "cut_off", toggle=True, text="", icon="TRACKING_CLEAR_FORWARDS")
                 return True
         return True
 
@@ -1354,6 +1363,59 @@ class 存储(BluePrintBase):
         def __post_fn__(self: NodeBase, t: Task, result: dict, mode, image):
             logger.debug("%s%s->%s", self.class_type, _T('Post Function'), result)
             img_paths = result.get("output", {}).get("images", [])
+            if self.mode == "ToSeq":
+                imgs = []
+                for img in img_paths:
+                    imgs.append(cache_to_local(img).as_posix())
+                def push_images_seq(imgs: list[str], channel, frame_start, frame_final_duration):
+                    seqe = bpy.context.scene.sequence_editor
+                    for img in imgs:
+                        name = Path(img).name
+                        seq = seqe.sequences.new_image(name, img, channel, frame_start)
+                        seq.frame_final_duration = frame_final_duration
+                        frame_start += frame_final_duration
+                        
+                def f(self, imgs):
+                    seqe = bpy.context.scene.sequence_editor
+                    channel = self.channel
+                    frame_start = bpy.context.scene.frame_current if self.current_frame_as_fs else self.frame_start
+                    frame_final_duration = self.frame_final_duration
+                    mode = self.seq_mode
+                    cut_off = self.cut_off
+                    max_final_start = bpy.context.scene.frame_current if self.current_frame_as_fs else 0
+                    
+                    if mode == "SeqReplace":
+                        # 替换模式: 查找当前通道的 frame_start 到 frame_final_duration 之间的所有序列, 删除, 然后将新建序列
+                        rm_seq = []
+                        frame_end = frame_start + frame_final_duration * len(imgs)
+                        print(frame_start, frame_end)
+                        for seq in seqe.sequences:
+                            if seq.channel != channel:
+                                continue
+                            if cut_off and (seq.frame_final_start <= frame_start < seq.frame_final_end or seq.frame_final_start >= frame_start):
+                                # 从 >= frame_start 起所有部分全删除
+                                rm_seq.append(seq)
+                                print("RM1:", seq.frame_final_start, seq.frame_final_end)
+                                continue
+                            if max(frame_start, seq.frame_final_start) < min(frame_end, seq.frame_final_end):
+                                rm_seq.append(seq)
+                                print("RM2:", seq.frame_final_start, seq.frame_final_end)
+                        for seq in rm_seq:
+                            seqe.sequences.remove(seq)
+                    elif mode == "SeqAppend":
+                        # 追加模式: 查找当前通道的 最后一个序列的持续位置, 往后新增
+                        for seq in seqe.sequences:
+                            if seq.channel != channel:
+                                continue
+                            if seq.frame_final_end > max_final_start:
+                                max_final_start = seq.frame_final_end
+                        frame_start = max_final_start
+                    elif mode == "SeqStack":
+                        # 堆叠模式: 直接新建, blender会自己堆叠
+                        ...
+                    push_images_seq(imgs, channel, frame_start, frame_final_duration)
+                Timer.put((f, self, imgs))
+                return
             for img in img_paths:
                 if mode == "Save":
                     filename_prefix = img.get("filename", self.filename_prefix)
@@ -1383,41 +1445,6 @@ class 存储(BluePrintBase):
                         if img_src.packed_file:
                             img_src.unpack(method="REMOVE")
                         img_src.reload()
-                elif mode == "ToSeq":
-                    img = cache_to_local(img).as_posix()
-                    def f(_, img):
-                        name = Path(img).name
-                        seqe = bpy.context.scene.sequence_editor
-                        if self.seq_mode == "SeqReplace":
-                            # 替换模式: 查找当前通道的 frame_start 到 frame_final_duration 之间的所有序列, 删除, 然后将新建序列
-                            rm_seq = []
-                            start = self.frame_start
-                            end = self.frame_start + self.frame_final_duration
-                            for seq in seqe.sequences:
-                                if seq.channel != self.channel:
-                                    continue
-                                if seq.frame_final_start <= start < seq.frame_final_end or seq.frame_final_start < end <= seq.frame_final_end:
-                                    rm_seq.append(seq)
-                            for seq in rm_seq:
-                                seqe.sequences.remove(seq)
-                            seq = seqe.sequences.new_image(name, img, self.channel, self.frame_start)
-                            seq.frame_final_duration = self.frame_final_duration
-
-                        elif self.seq_mode == "SeqAppend":
-                            # 追加模式: 查找当前通道的 最后一个序列的持续位置, 往后新增
-                            max_final_start = 0
-                            for seq in seqe.sequences:
-                                if seq.channel != self.channel:
-                                    continue
-                                if seq.frame_final_end > max_final_start:
-                                    max_final_start = seq.frame_final_end
-                            seq = seqe.sequences.new_image(name, img, self.channel, max_final_start)
-                            seq.frame_final_duration = self.frame_final_duration
-                        elif self.seq_mode == "SeqStack":
-                            # 堆叠模式: 直接新建, blender会自己堆叠
-                            seq = seqe.sequences.new_image(name, img, self.channel, self.frame_start)
-                            seq.frame_final_duration = self.frame_final_duration
-
                 Timer.put((f, image, img))
         post_fn = partial(__post_fn__, self, mode=self.mode, image=self.image)
         return {self.id: (self.serialize(parent=parent), self.pre_fn, post_fn)}

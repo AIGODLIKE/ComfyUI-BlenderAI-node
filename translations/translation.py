@@ -221,6 +221,8 @@ other = {
     "SeqStack": "堆叠",
     "frame_final_duration": "帧时长",
     "output_dir": "输出文件夹",
+    "Use Current Frame as Start Frame": "使用当前帧作为起始帧",
+    "Cut off frames behand insert": "删除当前轨道后续帧",
     # SDNode/tree.py
     "Invalid Node Type: {}": "检查到无效的节点: {}",
     "ParseNode Time:": "解析节点耗时:",
