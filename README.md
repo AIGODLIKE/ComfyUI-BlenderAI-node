@@ -1,6 +1,16 @@
 # ComfyUI-BlenderAI-node
 Add-on for using [ComfyUI](https://github.com/comfyanonymous/ComfyUI) in Blender.
 
+![image](https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/f087f254-5486-4d9f-9a13-d327abed3e14)
+![image](https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/66a52f47-7057-42af-9775-21c240e9782e)
+
+
+https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/cb96dd60-b93a-4f09-9ab6-043b66617313
+
+
+https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/74418e75-57a4-428d-831a-b8c3277cc7cf
+
+
 ## Document(文档)
 [中文文档](README_CN.md)
 
