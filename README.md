@@ -1,5 +1,9 @@
 # ComfyUI-BlenderAI-node
 Add-on for using [ComfyUI](https://github.com/comfyanonymous/ComfyUI) in Blender.
+
+## Document(文档)
+[中文文档](README_CN.md)
+
 ## NOTE 
 
 If you want to use the latest version, please use the [develop](https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/tree/develop) branch.
