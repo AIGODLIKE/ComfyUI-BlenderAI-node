@@ -205,6 +205,7 @@ other = {
     "UpTagWeight": "增加权重",
     "DownTagWeight": "降低权重",
     "RemoveTagWeight": "删除权重",
+    "socket type not str[IGNORE]: %s.%s -> %s": "Socket类型不是字符串[忽略]: %s.%s -> %s",
     # SDNode/blueprints.py
     "Non-Standard Enum": "非标准枚举",
     "Capture Screen": "截图",
@@ -214,6 +215,14 @@ other = {
     "No Camera in Scene": "场景像机不存在",
     "Upload Image Success": "图片上传成功",
     "Upload Image Fail": "图片上传失败",
+    "ToSeq": "到序列",
+    "SeqReplace": "替换",
+    "SeqAppend": "追加",
+    "SeqStack": "堆叠",
+    "frame_final_duration": "帧时长",
+    "output_dir": "输出文件夹",
+    "Use Current Frame as Start Frame": "使用当前帧作为起始帧",
+    "Cut off frames behand insert": "删除当前轨道后续帧",
     # SDNode/tree.py
     "Invalid Node Type: {}": "检查到无效的节点: {}",
     "ParseNode Time:": "解析节点耗时:",

@@ -180,6 +180,7 @@ class AddonPreference(bpy.types.AddonPreferences):
     disable_ipex_optimize: bpy.props.BoolProperty(default=False, name="disable ipex optimize", description="Disables ipex.optimize when loading models with Intel GPUs.")  # --disable-ipex-optimize
 
     attn: bpy.props.EnumProperty(name="attn",
+                                 default="--use-pytorch-cross-attention",
                                  items=[("default", "Auto", "", 0),
                                         ("--use-split-cross-attention", "split-cross-attention", "Use the split cross attention optimization. Ignored when xformers is used.", 1),
                                         ("--use-quad-cross-attention", "quad-cross-attention", "Use the sub-quadratic cross attention optimization . Ignored when xformers is used.", 2),

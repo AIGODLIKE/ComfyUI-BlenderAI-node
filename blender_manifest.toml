@@ -1,0 +1,38 @@
+schema_version = "1.0.0"
+
+# Example of manifest file for a Blender extension
+# Change the values according to your extension
+id = "BlenderAI_Node"
+version = "1.0.0"
+name = "ComfyUI BlenderAI node"
+tagline = "Used for AI model generation, next-generation Blender rendering engine, texture enhancement&generation (based on ComfyUI)"
+maintainer = "AIGODLIKE <karrycharon@qq.com>"
+# Supported types: "add-on", "theme"
+type = "add-on"
+
+# Optional: add-ons can list which resources they will require:
+# * "files" (for access of any filesystem operations)
+# * "network" (for internet access)
+# * "camera" (to capture photos and videos)
+# * "microphone" (to capture audio)
+permissions = ["files", "network"]
+
+# Optional link to documentation, support, source files, etc
+website = "https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node"
+
+# Optional list defined by Blender and server, see:
+# https://docs.blender.org/manual/en/dev/extensions/tags.html
+tags = ["Modeling", "Node", "Render", "Sequencer"]
+
+blender_version_min = "3.5.0"
+# Optional: maximum supported Blender version
+# blender_version_max = "5.1.0"
+
+# License conforming to https://spdx.org/licenses/ (use "SPDX: prefix)
+# https://docs.blender.org/manual/en/dev/extensions/licenses.html
+license = [
+  "SPDX:GPL-2.0-or-later",
+]
+# Optional: required by some licenses.
+copyright = [
+]
