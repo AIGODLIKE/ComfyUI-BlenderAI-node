@@ -9,7 +9,7 @@ import traceback
 import inspect
 import types
 from hashlib import md5
-from string import ascii_letters
+from string import ascii_letters, digits
 from bpy.app.translations import pgettext
 from threading import Thread
 from functools import partial
@@ -976,12 +976,13 @@ def load_node(nodetree_desc, root="", proot=""):
     node_cat = []
     for cat, nodes in nodetree_desc.items():
         ocat = cat
-        rep_chars = [" ", "-", "(", ")", "[", "]", "{", "}", ",", ".", ":", ";", "'", '"', "/", "\\", "|", "?", "*", "<", ">", "=", "+", "&", "^", "%", "$", "#", "@", "!", "`", "~"]
-        for c in rep_chars:
-            cat = cat.replace(c, "_")
+        rep_chars = r"""!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~ """
+        chars = ascii_letters + digits
+        for i, c in enumerate(rep_chars):
+            cat = cat.replace(c, chars[i])
         # 替换所有非ascii字符为X
-        cat = "".join([c if c in ascii_letters else "X" for c in cat])
-        if cat and cat[-1] not in ascii_letters:
+        cat = "".join([c if c in chars else "X" for c in cat])
+        if cat and cat[-1] not in chars:
             cat = cat[:-1] + "z"
         items = []
         menus = []
