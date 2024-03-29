@@ -1927,6 +1927,21 @@ class VHS_VideoCombine(BluePrintBase):
             support_fmt.append("image/webp")
         desc["input"]["required"]["format"] = [support_fmt]
 
+    def load_pre(s, self: NodeBase, data, with_id=True):
+        wv = data.get("widgets_values", {})
+        if isinstance(wv, list):
+            return data
+        frame_rate = wv.get("frame_rate", 8)
+        loop_count = wv.get("loop_count", 0)
+        filename_prefix = wv.get("filename_prefix", "AnimateDiff")
+        format = wv.get("format", "image/gif")
+        if format not in {"image/gif", "image/webp"}:
+            format = "image/gif"
+        pingpong = wv.get("pingpong", False)
+        save_output = wv.get("save_output", True)
+        data["widgets_values"] = [frame_rate, loop_count, filename_prefix, format, pingpong, save_output]
+        return data
+
     def free(s, self: NodeBase):
         if self.prev_name in s.PLAYERS:
             player = s.PLAYERS.pop(self.prev_name)
