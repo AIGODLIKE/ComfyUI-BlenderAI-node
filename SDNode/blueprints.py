@@ -1929,6 +1929,8 @@ class VHS_VideoCombine(BluePrintBase):
 
     def load_pre(s, self: NodeBase, data, with_id=True):
         wv = data.get("widgets_values", {})
+        if isinstance(wv, list):
+            return data
         frame_rate = wv.get("frame_rate", 8)
         loop_count = wv.get("loop_count", 0)
         filename_prefix = wv.get("filename_prefix", "AnimateDiff")
