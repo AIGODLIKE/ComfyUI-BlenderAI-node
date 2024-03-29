@@ -932,6 +932,7 @@ def gen_cat_id(idstr):
     return f"NODE_MT_{idstr}"
 
 
+registered_menus = {}
 def reg_nodetree(identifier, cat_list, sub=False):
     if not cat_list:
         return
@@ -956,8 +957,16 @@ def reg_nodetree(identifier, cat_list, sub=False):
             "poll": cat.poll,
             "draw": draw_node_item,
         }
-        menu_type = type(gen_cat_id(cat.identifier), (bpy.types.Menu,), __data__)
+        class_name = gen_cat_id(cat.identifier)
+        registered_menu = registered_menus.pop(class_name, None)
+        if registered_menu and getattr(registered_menu, "is_registered"):
+            try:
+                bpy.utils.unregister_class(registered_menu)
+            except Exception:
+                pass
+        menu_type = type(class_name, (bpy.types.Menu,), __data__)
         menu_types.append(menu_type)
+        registered_menus[class_name] = menu_type
         bpy.utils.register_class(menu_type)
     if sub:
         return
