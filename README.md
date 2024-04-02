@@ -73,6 +73,7 @@ And don't forget to enable the addon by click the cube at the tilte's left
 0. **Prepare a ComfyUI standard build**
 
 You can download ComfyUI from here: [ComfyUI Release](https://github.com/comfyanonymous/ComfyUI/releases)
+
 Or you can build one by your self as long as follow the standard path structure:
 
 ```
@@ -160,9 +161,12 @@ By click the button on the side of prompts, it will open a window to write promp
 - Preview images needs to have same name as the model and extension like model.ckpt.jpg
 
 ## Tested Nodes
-Here are some interesting nodes we've tested on Blender, 
+Here are some interesting nodes we've tested on Blender
+
 √ = works as in ComfyUI web
+
 ? = not all functions are work
+
 × = only few or none functions are work
 
 |Custom Node Name|Status|
