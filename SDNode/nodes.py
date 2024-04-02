@@ -478,8 +478,8 @@ class MLTWords_UL_UIList(bpy.types.UIList):
                   layout: bpy.types.UILayout,
                   data, item, icon, active_data, active_property, index=0, flt_flag=0):
         row = layout.row()
-        row.label(text=str(item.freq), icon="SOLO_ON")
-        row.label(text=item.value)
+        # row.label(text=str(item.freq), icon="SOLO_ON")
+        row.label(text=item.name)
         op = row.operator(AdvTextEdit.bl_idname, text="", icon="ADD")
         op.text_name = item.value
         op.prop = self.list_id
@@ -1628,6 +1628,8 @@ class NodeParser:
         try:
             socket_clss = self._parse_sockets_clss()
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             logger.error("socket模板解析失败, 请联系开发者")
             raise Exception("socket模板解析失败") from e
         try:
@@ -1715,6 +1717,9 @@ class NodeParser:
                         SOCKET_HASH_MAP[hash_type] = "ENUM"
                         self.SOCKET_TYPE[name][inp] = hash_type
                     else:
+                        if not isinstance(inp_desc[0], str):
+                            logger.warning("socket type not str[IGNORE]: %s.%s -> %s", name, inp, inp_desc[0])
+                            inp_desc[0] = str(inp_desc[0])
                         _desc.add(inp_desc[0])
                         self.SOCKET_TYPE[name][inp] = inp_desc[0]
             for index, out_type in enumerate(desc["output"]):
