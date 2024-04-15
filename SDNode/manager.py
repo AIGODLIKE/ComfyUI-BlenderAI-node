@@ -32,7 +32,7 @@ def get_port():
 
 
 def get_url():
-    return TaskManager.server.get_url()
+    return TaskManager.server.get_url().replace("0.0.0.0", "localhost")
 
 
 WITH_PROXY = False

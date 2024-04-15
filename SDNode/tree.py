@@ -9,7 +9,7 @@ import traceback
 import inspect
 import types
 from hashlib import md5
-from string import ascii_letters
+from string import ascii_letters, digits
 from bpy.app.translations import pgettext
 from threading import Thread
 from functools import partial
@@ -932,6 +932,7 @@ def gen_cat_id(idstr):
     return f"NODE_MT_{idstr}"
 
 
+registered_menus = {}
 def reg_nodetree(identifier, cat_list, sub=False):
     if not cat_list:
         return
@@ -956,8 +957,16 @@ def reg_nodetree(identifier, cat_list, sub=False):
             "poll": cat.poll,
             "draw": draw_node_item,
         }
-        menu_type = type(gen_cat_id(cat.identifier), (bpy.types.Menu,), __data__)
+        class_name = gen_cat_id(cat.identifier)
+        registered_menu = registered_menus.pop(class_name, None)
+        if registered_menu and getattr(registered_menu, "is_registered"):
+            try:
+                bpy.utils.unregister_class(registered_menu)
+            except Exception:
+                pass
+        menu_type = type(class_name, (bpy.types.Menu,), __data__)
         menu_types.append(menu_type)
+        registered_menus[class_name] = menu_type
         bpy.utils.register_class(menu_type)
     if sub:
         return
@@ -976,12 +985,13 @@ def load_node(nodetree_desc, root="", proot=""):
     node_cat = []
     for cat, nodes in nodetree_desc.items():
         ocat = cat
-        rep_chars = [" ", "-", "(", ")", "[", "]", "{", "}", ",", ".", ":", ";", "'", '"', "/", "\\", "|", "?", "*", "<", ">", "=", "+", "&", "^", "%", "$", "#", "@", "!", "`", "~"]
-        for c in rep_chars:
-            cat = cat.replace(c, "_")
+        rep_chars = r"""!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~ """
+        chars = ascii_letters + digits
+        for i, c in enumerate(rep_chars):
+            cat = cat.replace(c, chars[i])
         # 替换所有非ascii字符为X
-        cat = "".join([c if c in ascii_letters else "X" for c in cat])
-        if cat and cat[-1] not in ascii_letters:
+        cat = "".join([c if c in chars else "X" for c in cat])
+        if cat and cat[-1] not in chars:
             cat = cat[:-1] + "z"
         items = []
         menus = []
@@ -1026,7 +1036,7 @@ clss = []
 reg, unreg = register_classes_factory(clss)
 
 
-def reg_node_reroute():
+def reg_class_internal():
     from .nodes import NodeBase, SDNConfig
     bpy.types.NodeSocketColor.slot_index = bpy.props.IntProperty(default=0)
     bpy.types.NodeSocketColor.index = bpy.props.IntProperty(default=-1)
@@ -1046,30 +1056,7 @@ def reg_node_reroute():
         inode.sdn_hide = bpy.props.BoolProperty(default=False)
         inode.sdn_socket_visible_in = bpy.props.CollectionProperty(type=SDNConfig)
         inode.sdn_socket_visible_out = bpy.props.CollectionProperty(type=SDNConfig)
-        # inode.is_dirty = NodeBase.is_dirty
-        # inode.set_dirty = NodeBase.set_dirty
-        # inode.is_group = NodeBase.is_group
-        # inode.get_tree = NodeBase.get_tree
-        # inode.load = NodeBase.load
-        # inode.dump = NodeBase.dump
-        # inode.update = NodeBase.update
-        # inode.serialize_pre = NodeBase.serialize_pre
-        # inode.serialize = NodeBase.serialize
-        # inode.post_fn = NodeBase.post_fn
-        # inode.pre_fn = NodeBase.pre_fn
-        # inode.apply_unique_id = NodeBase.apply_unique_id
-        # inode.unique_id = NodeBase.unique_id
-        # inode.calc_slot_index = NodeBase.calc_slot_index
-        # inode.is_base_type = NodeBase.is_base_type
         inode.get_meta = NodeBase.get_meta
-        # inode.query_stats = NodeBase.query_stats
-        # inode.query_stat = NodeBase.query_stat
-        # inode.set_stat = NodeBase.set_stat
-        # inode.switch_socket_widget = NodeBase.switch_socket_widget
-        # inode.get_from_link = NodeBase.get_from_link
-        # inode.get_ctxt = NodeBase.get_ctxt
-        # inode.get_blueprints = NodeBase.get_blueprints
-        # inode.draw_socket = NodeBase.draw_socket
 
         inode.class_type = inode.__name__
         inode.__metadata__ = {}
@@ -1175,7 +1162,7 @@ def rtnode_reg_diff():
 
 def rtnode_reg():
     nodes_reg()
-    reg_node_reroute()
+    reg_class_internal()
     clss.append(CFNodeTree)
     t1 = time.time()
     # nt_desc = {name: {items:[], menus:[nt_desc...]}}

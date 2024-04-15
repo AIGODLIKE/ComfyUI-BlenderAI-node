@@ -70,6 +70,21 @@ And don't forget to enable the addon by click the cube at the tilte's left
 
 # Usage
 
+0. **Prepare a ComfyUI standard build**
+
+You can download ComfyUI from here: [ComfyUI Release](https://github.com/comfyanonymous/ComfyUI/releases)
+
+Or you can build one by your self as long as follow the standard path structure:
+
+```
+├── ComfyUI
+│   ├── main.py
+│   ...
+├── python_embeded
+│   ├── python.exe
+│   ...
+```
+
 1. **Set the "ComfyUI Path" to your ComfyUI directory**
 
 ![image](https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/5d081ee7-0b2a-4871-bdf9-ada05bb12831)
@@ -79,7 +94,6 @@ And don't forget to enable the addon by click the cube at the tilte's left
 
 The default (empty) path is:
 ```
-├── run_nvidia.bat
 ├── ComfyUI
 ├── python_embeded
 │   ├── python.exe  <-- Here
@@ -167,6 +181,95 @@ Hold `F` and drag cursor to a mask node, it will automatically create a camera t
 - Not every node can work perfectly in Blender, like Blender don't support any video type format
 - You can enable the system console in the "Window-Toggle System Console" at the left top
 - Preview images needs to have same name as the model and extension like model.ckpt.jpg
+
+## Tested Nodes
+Here are some interesting nodes we've tested on Blender
+
+√ = works as in ComfyUI web
+
+? = not all functions are work
+
+× = only few or none functions are work
+
+|Custom Node Name|Status|
+|:----|:----|
+|[3D-Pack](https://github.com/MrForExample/ComfyUI-3D-Pack)|√|
+|[Advanced Encode](https://github.com/BlenderNeko/ComfyUI_ADV_CLIP_emb)|√|
+|[Advanced ControlNet](https://github.com/Kosinkadink/ComfyUI-Advanced-ControlNet)|√|
+|[AGL-ComfyUI-Translation](https://github.com/AIGODLIKE/AIGODLIKE-COMFYUI-TRANSLATION)|√|
+|[AlekPet Nodes](https://github.com/AlekPet/ComfyUI_Custom_Nodes_AlekPet)|√|
+|[AnimateAnyone](https://github.com/MrForExample/ComfyUI-AnimateAnyone-Evolved.git)|√|
+|[AnimateDiff](https://github.com/ArtVentureX/comfyui-animatediff)|?|
+|[AnimateDiff-Evolved](https://github.com/Kosinkadink/ComfyUI-AnimateDiff-Evolved.git)|√|
+|[BiRefNet](https://github.com/viperyl/ComfyUI-BiRefNet.git)|√|
+|[CLIP Seg](https://github.com/biegert/ComfyUI-CLIPSeg)|√|
+|[ComfyRoll](https://github.com/RockOfFire/ComfyUI_Comfyroll_CustomNodes)|√|
+|[ControlNet LLLite](https://github.com/kohya-ss/ControlNet-LLLite-ComfyUI)|√|
+|[ControlNet Preprocessors](https://github.com/Fannovel16/comfy_controlnet_preprocessors)|√|
+|[ControlNet Preprocessors AUX](https://github.com/Fannovel16/comfyui_controlnet_aux)|√|
+|[Crystools](https://github.com/crystian/ComfyUI-Crystools.git)|√|
+|[Cutoff](https://github.com/BlenderNeko/ComfyUI_Cutoff)|√|
+|[Custom-Scripts](https://github.com/pythongosssss/ComfyUI-Custom-Scripts)|×|
+|[cg-use-everywhere](https://github.com/chrisgoringe/cg-use-everywhere.git)|?|
+|[cg-image-picker](https://github.com/chrisgoringe/cg-image-picker.git)|√|
+|[Davemane42 Nodes](https://github.com/Davemane42/ComfyUI_Dave_CustomNode)|×|
+|[Dagthomas Nodes](https://github.com/dagthomas/comfyui_dagthomas)|√|
+|[Dynamic Thresholding](https://github.com/mcmonkeyprojects/sd-dynamic-thresholding)|√|
+|[Easy Tools](https://github.com/jafshare/ComfyUI-Easy-Tools)|√|
+|[Easy Use](https://github.com/yolain/ComfyUI-Easy-Use)|√|
+|[Efficiency Nodes](https://github.com/LucianoCirino/efficiency-nodes-comfyui)|√|
+|[EllangoK Postprocessing](https://github.com/EllangoK/ComfyUI-post-processing-nodes)|√|
+|[Essentials](https://github.com/cubiq/ComfyUI_essentials.git)|√|
+|[ExLlama nodes](https://github.com/Zuellni/ComfyUI-ExLlama-Nodes)|√|
+|[experiments](https://github.com/comfyanonymous/ComfyUI_experiments)|√|
+|[Fast Decode](https://github.com/nagolinc/ComfyUI_FastVAEDecorder_SDXL)|√|
+|[FlowtyTripoSR](https://github.com/flowtyone/ComfyUI-Flowty-TripoSR.git)|√|
+|[FreeU Advanced](https://github.com/WASasquatch/FreeU_Advanced)|√|
+|[IPAdapter](https://github.com/laksjdjf/IPAdapter-ComfyUI)|√|
+|[IPAdapter_plus](https://github.com/cubiq/ComfyUI_IPAdapter_plus)|√|
+|[Image Grid](https://github.com/LEv145/images-grid-comfy-plugin)|√|
+|[Impact Pack](https://github.com/ltdrdata/ComfyUI-Impact-Pack)|?|
+|[Impact Subpack](https://github.com/ltdrdata/ComfyUI-Impact-Subpack)|√|
+|[Inspire Pack](https://github.com/ltdrdata/ComfyUI-Inspire-Pack)|√|
+|[InstantID (cubiq)](https://github.com/cubiq/ComfyUI_InstantID.git)|√|
+|[InstantID (ZHO)](https://github.com/ZHO-ZHO-ZHO/ComfyUI-InstantID.git)|√|
+|[KJ Nodes](https://github.com/kijai/ComfyUI-KJNodes.git)|√|
+|[LaMa Preprocessor](https://github.com/mlinmg/ComfyUI-LaMA-Preprocessor)|√|
+|[Latent2RGB](https://github.com/bvhari/ComfyUI_LatentToRGB)|√|
+|[LayerDiffuse](https://github.com/huchenlei/ComfyUI-layerdiffuse)|√|
+|[LayerStyle](https://github.com/chflame163/ComfyUI_LayerStyle)|√|
+|[LCM](https://github.com/0xbitches/ComfyUI-LCM)|√|
+|[Manager](https://github.com/ltdrdata/ComfyUI-Manager)|×|
+|[Masquerade Nodes](https://github.com/BadCafeCode/masquerade-nodes-comfyui)|×|
+|[Math](https://github.com/evanspearman/ComfyMath.git)|√|
+|[Mixlab Nodes](https://github.com/shadowcz007/comfyui-mixlab-nodes.git)|?|
+|[MoonDream](https://github.com/kijai/ComfyUI-moondream.git)|√|
+|[MotionCtrl](https://github.com/chaojie/ComfyUI-MotionCtrl)|√|
+|[MotionCtrl-SVD](https://github.com/chaojie/ComfyUI-MotionCtrl-SVD)|√|
+|[Noise](https://github.com/BlenderNeko/ComfyUI_Noise)|√|
+|[Portrait Master](https://github.com/florestefano1975/comfyui-portrait-master.git)|√|
+|[Power Noise Suite](https://github.com/WASasquatch/PowerNoiseSuite)|√|
+|[Prompt Reader](https://github.com/receyuki/comfyui-prompt-reader-node)|√|
+|[QR](https://github.com/coreyryanhanson/comfy-qr)|√|
+|[OneButtonPrompt](https://github.com/AIrjen/OneButtonPrompt)|√|
+|[ReActor](https://github.com/Gourieff/comfyui-reactor-node)|√|
+|[Restart-Sampling](https://github.com/ssitu/ComfyUI_restart_sampling)|√|
+|[Roop](https://github.com/Navezjt/ComfyUI_roop.git)|√|
+|[rgthree](https://github.com/rgthree/rgthree-comfy.git)|√|
+|[SD-Latent-Interposer](https://github.com/city96/SD-Latent-Interposer)|√|
+|[SDXL_prompt_styler](https://github.com/twri/sdxl_prompt_styler)|√|
+|[SeargeSDXL](https://github.com/SeargeDP/SeargeSDXL)|√|
+|[Segment Anything](https://github.com/storyicon/comfyui_segment_anything.git)|?|
+|[StabilityNodes](https://github.com/Stability-AI/stability-ComfyUI-nodes)|√|
+|[TiledDiffusion](https://github.com/shiimizu/ComfyUI-TiledDiffusion)|√|
+|[TiledKSampler](https://github.com/BlenderNeko/ComfyUI_TiledKSampler)|√|
+|[TinyTerra](https://github.com/TinyTerra/ComfyUI_tinyterraNodes.git)|√|
+|[UltimateSDUpscale](https://github.com/ssitu/ComfyUI_UltimateSDUpscale)|?|
+|[Vextra Nodes](https://github.com/diontimmer/ComfyUI-Vextra-Nodes)|√|
+|[VLM Nodes](https://github.com/gokayfem/ComfyUI_VLM_nodes.git)|√|
+|[WAS Suite](https://github.com/WASasquatch/was-node-suite-comfyui)|?|
+|[WD14-Tagger](https://github.com/pythongosssss/ComfyUI-WD14-Tagger)|√|
+|[zfkun](https://github.com/zfkun/ComfyUI_zfkun.git)|√|
 
 # Links
 

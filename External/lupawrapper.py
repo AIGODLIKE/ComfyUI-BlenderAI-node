@@ -6,7 +6,7 @@ from os import environ
 from enum import Enum
 from pathlib import Path
 from platform import system
-__VERSION__ = "1.0"
+__VERSION__ = "1.1"
 SDN = f"SDN-{__VERSION__}"
 RT_ROOT = Path(__file__).parent.joinpath(SDN)
 if system() == "Windows":
