@@ -234,6 +234,8 @@ class CFNodeTree(NodeTree):
         self.serialize_pre()
         prompt = {}
         for node in self.get_nodes():
+            if not node.is_registered_node_type():
+                continue
             if node.class_type in {"Reroute", "PrimitiveNode", "Note"}:
                 continue
             prompt.update(node.make_serialize(parent=parent))
@@ -245,7 +247,8 @@ class CFNodeTree(NodeTree):
             nodes = self.nodes
         for n in nodes:
             if not n.is_registered_node_type():
-                raise InvalidNodeType(_T("Invalid Node Type: {}").format(n.name))
+                continue
+                # raise InvalidNodeType(_T("Invalid Node Type: {}").format(n.name))
 
     def get_node_frame_offset(self, node: bpy.types.Node):
         # x  y  w  h  ox oy
