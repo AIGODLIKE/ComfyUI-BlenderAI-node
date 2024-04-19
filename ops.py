@@ -770,12 +770,17 @@ class NodeSearch(bpy.types.Operator):
         return {"CANCELLED"}
 
     def execute(self, context):
+        if not get_default_tree():
+            self.report({'ERROR'}, _T("No NodeTree Found"))
+            return {"FINISHED"}
         try:
             bpy.ops.node.add_node(use_transform=True, settings=[], type=self.item)
         except BaseException:
             self.report({'WARNING'}, f"未定义的节点 > {self.item}")
-
-        bpy.ops.node.translate_attach("INVOKE_DEFAULT")
+        try:
+            bpy.ops.node.translate_attach("INVOKE_DEFAULT")
+        except RuntimeError:
+            ...
         return {"FINISHED"}
 
 
