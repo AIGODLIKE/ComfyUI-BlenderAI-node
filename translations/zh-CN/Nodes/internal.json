@@ -87,6 +87,20 @@
             "denoised_output": "降噪输出"
         }
     },
+    "SamplerCustomAdvanced": {
+        "title": "自定义采样器(高级)",
+        "inputs": {
+            "noise": "噪波生成",
+            "guider": "引导",
+            "sampler": "采样器",
+            "sigmas": "Sigmas",
+            "latent_image": "Latent"
+        },
+        "outputs": {
+            "output": "输出",
+            "denoised_output": "降噪输出"
+        }
+    },
     "KarrasScheduler": {
         "title": "Karras调度器",
         "widgets": {
@@ -129,6 +143,16 @@
             "beta_d": "beta_D",
             "beta_min": "beta_min",
             "eps_s": "eps_s"
+        },
+        "outputs": {
+            "SIGMAS": "Sigmas"
+        }
+    },
+    "AlignYourStepsScheduler": {
+        "title": "AlighYourSteps调度器",
+        "widgets": {
+            "model_type": "模型类型",
+            "steps": "步数"
         },
         "outputs": {
             "SIGMAS": "Sigmas"
@@ -197,6 +221,71 @@
             "SAMPLER": "采样器"
         }
     },
+    "SamplerDPMAdaptative": {
+        "title": "DPMAdaptative采样器",
+        "outputs": {
+            "SAMPLER": "采样器"
+        }
+    },
+
+    "CFGGuider": {
+        "title": "CFG引导",
+        "inputs": {
+            "model": "模型",
+            "positive": "正面条件",
+            "negative": "负面条件"
+        },
+        "widgets": {
+            "cfg": "CFG"
+        },
+        "outputs": {
+            "GUIDER": "引导"
+        }
+    },
+    "DualCFGGuider": {
+        "title": "双CFG引导",
+        "inputs": {
+            "model": "模型",
+            "cond1": "正面条件1",
+            "cond2": "正面条件2",
+            "negative": "负面条件"
+        },
+        "widgets": {
+            "cfg_conds": "CFG正面条件",
+            "cfg_cond2_negative": "CFG_正面条件2_负面条件"
+        },
+        "outputs": {
+            "GUIDER": "引导"
+        }
+    },
+    "BasicGuider": {
+        "title": "基础引导",
+        "inputs": {
+            "model": "模型",
+            "conditioning": "条件"
+        },
+        "outputs": {
+            "GUIDER": "引导"
+        }
+    },
+
+    "RandomNoise": {
+        "title": "随机噪波",
+        "widgets": {
+            "noise_seed": "随机种",
+            "control_before_generate": "运行前操作"
+        },
+        "outputs": {
+            "NOISE": "噪波生成"
+        }
+    },
+    "DisableNoise": {
+        "title": "禁用噪波",
+        "outputs": {
+            "NOISE": "噪波生成"
+        }
+    },
+
     "BasicScheduler": {
         "title": "基础调度器",
         "inputs": {
@@ -248,6 +337,18 @@
 
     "VideoLinearCFGGuidance": {
         "title": "线性CFG引导",
+        "inputs": {
+            "model": "模型"
+        },
+        "widgets": {
+            "min_cfg": "最小CFG"
+        },
+        "outputs": {
+            "MODEL": "模型"
+        }
+    },
+    "VideoTriangleCFGGuidance": {
+        "title": "三角CFG引导",
         "inputs": {
             "model": "模型"
         },
@@ -453,6 +554,20 @@
             "latent": "Latent"
         }
     },
+    "InstructPixToPixConditioning": {
+        "title": "InstructPixToPix条件",
+        "inputs": {
+            "positive": "正面条件",
+            "negative": "负面条件",
+            "vae": "VAE",
+            "pixels": "图像"
+        },
+        "outputs": {
+            "positive": "正面条件",
+            "negative": "负面条件",
+            "latent": "Latent"
+        }
+    },
     "SVD_img2vid_Conditioning": {
         "title": "SVD_图像到视频_条件",
         "inputs": {
@@ -509,6 +624,25 @@
             "azimuth": "方位角",
             "elevation_batch_increment": "俯仰角增量",
             "azimuth_batch_increment": "方位角增量"
+        },
+        "outputs": {
+            "positive": "正面条件",
+            "negative": "负面条件",
+            "latent": "Latent"
+        }
+    },
+    "SV3D_Conditioning": {
+        "title": "SV3D_条件",
+        "inputs": {
+            "clip_vision": "CLIP视觉",
+            "init_image": "图像",
+            "vae": "VAE"
+        },
+        "widgets": {
+            "width": "宽度",
+            "height": "高度",
+            "video_frames": "帧数",
+            "elevation": "俯仰角"
         },
         "outputs": {
             "positive": "正面条件",
@@ -1186,6 +1320,19 @@
             "IMAGE": "图像"
         }
     },
+    "Morphology": {
+        "title": "图像形态学",
+        "inputs": {
+            "image": "图像"
+        },
+        "widgets": {
+            "operation": "操作",
+            "kernel_size": "Kernel_Size"
+        },
+        "outputs": {
+            "IMAGE": "图像"
+        }
+    },
 
 
     "Canny": {
@@ -1601,6 +1748,18 @@
             "CONDITIONING": "条件"
         }
     },
+    "AddNoise": {
+        "title": "添加噪波",
+        "inputs": {
+            "model": "模型",
+            "noise": "噪波生成",
+            "sigmas": "Sigmas",
+            "latent_image": "Latent"
+        },
+        "outputs": {
+            "LATENT": "Latent"
+        }
+    },
 
 
     "StableCascade_SuperResolutionControlnet": {
@@ -1782,10 +1941,22 @@
             "MODEL": "模型"
         }
     },
-    "Differential Diffusion": {
-        "title": "Differential Diffusion",
+    "DifferentialDiffusion": {
+        "title": "差异扩散",
         "inputs": {
             "model": "模型"
+        },
+        "outputs": {
+            "MODEL": "模型"
+        }
+    },
+    "PerturbedAttentionGuidance": {
+        "title": "PAG注意力引导",
+        "inputs": {
+            "model": "模型"
+        },
+        "widgets": {
+            "scale": "缩放"
         },
         "outputs": {
             "MODEL": "模型"
@@ -1906,6 +2077,36 @@
     },
 
 
+    "ModelMergeSD1": {
+        "title": "模型融合(SD1)",
+        "inputs": {
+            "model1": "模型1",
+            "model2": "模型2"
+        },
+        "outputs": {
+            "MODEL": "模型"
+        }
+    },
+    "ModelMergeSD2": {
+        "title": "模型融合(SD2)",
+        "inputs": {
+            "model1": "模型1",
+            "model2": "模型2"
+        },
+        "outputs": {
+            "MODEL": "模型"
+        }
+    },
+    "ModelMergeSDXL": {
+        "title": "模型融合(SDXL)",
+        "inputs": {
+            "model1": "模型1",
+            "model2": "模型2"
+        },
+        "outputs": {
+            "MODEL": "模型"
+        }
+    },
     "ModelMergeSimple": {
         "title": "融合模型",
         "inputs": {
@@ -1996,16 +2197,6 @@
     },
     "ModelMergeBlockNumber": {
         "title": "融合模型(分层数)",
-        "inputs": {
-            "model1": "模型1",
-            "model2": "模型2"
-        },
-        "outputs": {
-            "MODEL": "模型"
-        }
-    },
-    "ModelMergeSDXL": {
-        "title": "融合SDXL模型",
         "inputs": {
             "model1": "模型1",
             "model2": "模型2"
@@ -2105,6 +2296,13 @@
         },
         "outputs": {
             "MODEL": "模型"
+        }
+    },
+
+    "SaveImageWebsocket": {
+        "title": "保存图像到网络接口",
+        "inputs": {
+            "images": "图像"
         }
     }
 }
