@@ -63,7 +63,7 @@ ComfyUI BlenderAI node is a standard Blender add-on. You can use git the addon t
 
 ```
 cd %USERPROFILE%\AppData\Roaming\Blender Foundation\blender\%version%\scripts\addons
-git clone https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node.git
+git clone https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node.git --recursive
 ```
 Then you can see the addont after refresh addon menu or reboot Blender.
 And don't forget to enable the addon by click the cube at the tilte's left
