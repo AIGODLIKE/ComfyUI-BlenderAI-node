@@ -2282,7 +2282,7 @@ class TripoGLBViewer(BluePrintBase):
         new_objs = set(bpy.context.scene.objects) - rec_objs
         for obj in new_objs:
             bpy.context.view_layer.objects.active = obj
-            obj.active_material = s.create_mat()
+            # obj.active_material = s.create_mat()
             s.set_origin(obj)
             bpy.ops.object.shade_smooth()
         return list(new_objs)
