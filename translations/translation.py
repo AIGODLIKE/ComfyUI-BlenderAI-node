@@ -206,6 +206,10 @@ other = {
     "DownTagWeight": "降低权重",
     "RemoveTagWeight": "删除权重",
     "socket type not str[IGNORE]: %s.%s -> %s": "Socket类型不是字符串[忽略]: %s.%s -> %s",
+    "Add SaveImage node": "添加保存图片节点",
+    "Add a SaveImage node and connect it to the image": "添加保存图片节点",
+    "Toggle socket": "切换Socket/属性",
+    "Toggle whether a socket is or isn't used for input": "切换Socket/属性",
     # SDNode/blueprints.py
     "Non-Standard Enum": "非标准枚举",
     "Capture Screen": "截图",
@@ -432,6 +436,7 @@ other = {
     " Prompts": "提示词",
     "MLT": "多行文本",
     "Enable MLT": "开启多行文本",
+    "Enable multiline text for this textbox": "开启多行文本",
     # oooo
     "enable": "开",
     "disable": "关",
