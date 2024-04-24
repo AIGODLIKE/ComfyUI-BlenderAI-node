@@ -562,6 +562,8 @@ def reg_node_ctxt(translations_dict: dict, replace_dict: dict, locale: str):
         td[(None, node_name)] = td[(ctxt, node_name)]
         rd[node_name] = td[(ctxt, node_name)]
         for part in node_translation.values():
+            if not isinstance(part, dict):
+                continue
             for wn, wv in part.items():
                 wn = get_reg_name(wn)
                 td[(ctxt, wn)] = wv
