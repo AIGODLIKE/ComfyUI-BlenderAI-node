@@ -218,11 +218,17 @@ class PropGen:
                 if inp_name in ENUM_ITEMS_CACHE[nname]:
                     return ENUM_ITEMS_CACHE[nname][inp_name]
                 items = []
+                # 专门用于 老版本的 翻译
+                spec_trans = {"输入": "Input",
+                              "渲染": "Render",
+                              "序列图": "Sequence",
+                              "视口": "Viewport"}
                 for item in inp[0]:
                     icon_id = PropGen._find_icon(nname, inp_name, item)
                     if icon_id:
                         ENUM_ITEMS_CACHE[nname][inp_name] = items
-                    items.append((str(item), str(item), "", icon_id, len(items)))
+                    si = str(item)
+                    items.append((si, spec_trans.get(si, si), "", icon_id, len(items)))
                 return items
             return wrap
         prop = bpy.props.EnumProperty(items=get_items(nname, reg_name, inp))
