@@ -328,7 +328,7 @@ def SocketsFromNode(nd: bpy.types.Node, side, callPos) -> list[Socket]:
         pos = skLocCarriage.copy()
         box = (pos.y - 11, pos.y + 11)
         dist = (callPos - skLocCarriage).length
-        lstResult.append(Socket(sk, dist, pos, box, pgettext_iface(sk.name)))
+        lstResult.append(Socket(sk, dist, pos, box, pgettext_iface(sk.name, nd.class_type)))
         skLocCarriage.y = skLocCarriage.y * uiScale
         skLocCarriage.y -= NODE_DY * side
         skLocCarriage.y -= NODE_ITEM_SPACING_Y * side
