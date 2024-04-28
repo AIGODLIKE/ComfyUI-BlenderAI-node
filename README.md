@@ -273,7 +273,9 @@ Here are some interesting nodes we've tested on Blender
 
 # Links
 ## Tutorial
-[English tutorial created by Gioxyer](https://www.youtube.com/watch?v=9rb-8D3NQ58)
+[[EN]English tutorial created by Gioxyer](https://www.youtube.com/watch?v=9rb-8D3NQ58)
+
+[[CN]无限圣杯完全使用指南](https://www.bilibili.com/video/BV1Fo4y187HC/)
 
 (Please feel free to contact me for recommendations)
 
