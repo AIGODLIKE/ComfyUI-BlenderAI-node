@@ -272,20 +272,13 @@ Here are some interesting nodes we've tested on Blender
 |[zfkun](https://github.com/zfkun/ComfyUI_zfkun.git)|√|
 
 # Links
+## Tutorial
+[English tutorial created by Gioxyer](https://www.youtube.com/watch?v=9rb-8D3NQ58)
 
-## User Manual
-
-[用户手册](https://shimo.im/docs/Ee32m0w80rfLp4A2)
-
-[UserManual](https://shimo.im/docs/JSforXF1JC8lSphG)
+(Please feel free to contact me for recommendations)
 
 ## Our AI website
 
 [AIGODLIKE Community](https://www.aigodlike.com/)
 
-## ComfyUI Package
-
-[百度网盘](https://pan.baidu.com/s/1bnVWO9AuurPl2mn9Uc57vg?pwd=2333)
-
-[Google Driver](https://drive.google.com/drive/folders/1Akqh3qPt-Zzi_clqkoCwCl_Xjo78FfbM?usp=sharing)
 
