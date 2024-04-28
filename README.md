@@ -273,9 +273,9 @@ Here are some interesting nodes we've tested on Blender
 
 # Links
 ## Tutorial
-[[EN]BSLIVE ComfyUI Blender AI Node Addon for Generative AI(English tutorial created by Jimmy Gunawan)](https://www.youtube.com/watch?v=OvrKpAVwyco)
+[[EN]BSLIVE ComfyUI Blender AI Node Addon for Generative AI(By Jimmy Gunawan)](https://www.youtube.com/watch?v=OvrKpAVwyco)
 
-[[EN]Generate AI Rendering with Blender ComfyUI AddOn(English tutorial created by Gioxyer)](https://www.youtube.com/watch?v=9rb-8D3NQ58)
+[[EN]Generate AI Rendering with Blender ComfyUI AddOn(By Gioxyer)](https://www.youtube.com/watch?v=9rb-8D3NQ58)
 
 [[CN]无限圣杯完全使用指南](https://www.bilibili.com/video/BV1Fo4y187HC/)
 
