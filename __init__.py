@@ -38,7 +38,6 @@ from addon_utils import disable
 from .SDNode import rtnode_unreg, TaskManager
 from .MultiLineText import EnableMLT
 
-from .translations import translations_dict
 from .utils import Icon, FSWatcher, ScopeTimer
 from .timer import timer_reg, timer_unreg
 from .preference import pref_register, pref_unregister
@@ -110,6 +109,8 @@ def register():
     if bpy.app.background:
         dump_info()
         return
+    
+    from .translations import translations_dict
     bpy.app.translations.register(__name__, translations_dict)
     reg()
     Icon.set_hq_preview()

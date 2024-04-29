@@ -6,6 +6,7 @@ ctxt = "SDN"
 LOCALE_MAP = {
     "zh_HANS": "zh_CN"
 }
+from ..datas import get_bl_version
 # 4.0 zh_HANS -> zh_HANS
 # 3.0 zh_HANS -> zh_CN
 LOCALE_MAP_INV = {}
@@ -230,6 +231,8 @@ other = {
     "SDNGroup": "组",
     "NoCategory": "无分类",
     # SDNode/utils.py
+    "AI Node" + get_bl_version() : "无限圣杯 Node" + get_bl_version(),
+    "AI Node": "无限圣杯 Node",
     "Gen Mask": "遮罩生成",
     "Relink failed: %s": "重连失败: %s",
     "Composite node not found": "未找到合成节点",
@@ -325,6 +328,7 @@ other = {
     "Clear Node Cache": "清除节点缓存",
     "If node parsing error, you can delete node cache by this button, then restart blender to use it normally": "当节点解析错误时可以通过此按钮删除节点缓存, 删除后重启blender即可正常使用",
     # ui.py
+    "ComfyUI": "圣杯节点",
     "ClearTask": "清理任务",
     "Cancel": "取消任务",
     "↓↓ComfyUI Not Launched, Click to Launch↓↓": "↓↓服务未启动, 点击启动↓↓",
