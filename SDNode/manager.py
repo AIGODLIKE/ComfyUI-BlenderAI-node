@@ -6,6 +6,7 @@ import sys
 import json
 import time
 import atexit
+import struct
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 from shutil import rmtree
@@ -53,6 +54,7 @@ class Task:
         self.executing_node: NodeBase = None
         self.is_finished = False
         self.process = {}
+        self.binary_message = b""
         # 记录node的类型 防止节点树变更
         self.node_ref_map = {}
         if not tree:
@@ -97,6 +99,7 @@ class Task:
 
     def set_executing_node_id(self, node_id):
         self.executing_node_id = node_id
+        self.binary_message = b""
 
         def f(self: Task):
             from .nodes import NodeBase
@@ -1165,6 +1168,11 @@ class TaskManager:
         SessionId = TaskManager.SessionId
 
         def on_message(ws, message):
+            if isinstance(message, bytes):
+                if tm.cur_task:
+                    tm.cur_task.binary_message = message
+                TaskManager.handle_binary_message(message)
+                return
             msg = json.loads(message)
             try:
                 from .custom_support import crystools_monitor, cup_monitor
@@ -1270,15 +1278,44 @@ class TaskManager:
                 ...  # pass
             else:
                 logger.error(message)
-
-        ws = WebSocketApp(f"ws://{get_ip()}:{get_port()}/ws?clientId={SessionId['SessionId']}", on_message=on_message)
+        listen_addr = f"ws://{get_ip()}:{get_port()}/ws?clientId={SessionId['SessionId']}"
+        ws = WebSocketApp(listen_addr, on_message=on_message)
         TaskManager.ws = ws
         ws.run_forever()
+        if True:
+            ...
+        else:
+            # 备选方案
+            from ..External.websockets.sync.client import connect
+            from ..External.websockets import ConnectionClosedError
+            ws = connect(listen_addr)
+            TaskManager.ws = ws
+            try:
+                for msg in ws:
+                    on_message(None, msg)
+            except ConnectionClosedError:
+                ...
         logger.debug(_T("Poll Result Thread Exit"))
         TaskManager.ws = None
         if TaskManager.server.is_launched():
             Timer.put((TaskManager.restart_server, True))
 
+    @staticmethod
+    def handle_binary_message(data):
+        # 解析二进制数据的前4个字节获取事件类型
+        event_type = struct.unpack(">I", data[:4])[0]
+        # 根据事件类型处理数据
+        if event_type != 1:
+            logger.debug("Unknown binary event type: %s", event_type)
+            return
+        # 处理图像类型
+        image_type = struct.unpack(">I", data[4:8])[0]
+        image_mime = "image/png" if image_type == 2 else "image/jpeg"
+        # 假设剩余的数据是图像数据，可以保存或进一步处理
+        image_data = data[8:]
+        return
+        with open(f"/Users/karrycharon/Desktop/000.{image_mime.split('/')[1]}", "wb") as f:
+            f.write(image_data)
 
 def removetemp():
     tempdir = Path(__file__).parent / "temp"
