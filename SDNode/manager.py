@@ -587,6 +587,7 @@ class RemoteServer(Server):
             if requests.get(f"{self.get_url()}/object_info", proxies={"http": None, "https": None}, timeout=10).status_code == 200:
                 self.server_connected = True
                 update_screen()
+                self.try_set_preview_method()
                 return True
         except requests.exceptions.ConnectionError as e:
             TaskManager.put_error_msg(str(e))
@@ -594,6 +595,14 @@ class RemoteServer(Server):
             logger.error(e)
         TaskManager.put_error_msg(_T("Remote Server Connect Failed") + f": {self.get_url()}")
         return False
+
+    def try_set_preview_method(self):
+        try:
+            import requests
+            api = f"manager/preview_method?value=${get_pref().preview_method}"
+            requests.get(f"{self.get_url()}/{api}", proxies={"http": None, "https": None}, timeout=1)
+        except Exception:
+            ...
 
     def is_launched(self) -> bool:
         return self.server_connected
@@ -899,10 +908,10 @@ class TaskManager:
             t1 = time.time()
             rtnode_unreg()
             t2 = time.time()
-            logger.info(_T("UnregNode Time:") + f" {t2-t1:.2f}s")
+            logger.info(_T("UnregNode Time:") + f" {t2 - t1:.2f}s")
             rtnode_reg()
             t3 = time.time()
-            logger.info(_T("RegNode Time:") + f" {t3-t2:.2f}s")
+            logger.info(_T("RegNode Time:") + f" {t3 - t2:.2f}s")
         if TaskManager.is_launching():
             return
 
@@ -922,7 +931,7 @@ class TaskManager:
                 TaskManager.init_server(fake=True, callback=callback)
             TaskManager.is_server_launching = False
             t2 = time.time()
-            logger.info(_T("Launch Time:") + f" {t2-t1:.2f}s")
+            logger.info(_T("Launch Time:") + f" {t2 - t1:.2f}s")
             bpy.app.timers.unregister(update_screen_timer)
         if fake:
             job()
@@ -1225,7 +1234,7 @@ class TaskManager:
                 TaskManager.progress_bar = v
                 cf = "\033[92m" + "█" * v + "\033[0m"
                 cp = "\033[32m" + "░" * (m - v) + "\033[0m"
-                content = f"{v*100/m:3.0f}% " + cf + cp + f" {v}/{m}"
+                content = f"{v * 100 / m:3.0f}% " + cf + cp + f" {v}/{m}"
                 logger.info(content + "\r", extra={"same_line": True})
                 # sys.stdout.write(content)
                 # sys.stdout.flush()
@@ -1316,6 +1325,7 @@ class TaskManager:
         return
         with open(f"/Users/karrycharon/Desktop/000.{image_mime.split('/')[1]}", "wb") as f:
             f.write(image_data)
+
 
 def removetemp():
     tempdir = Path(__file__).parent / "temp"
