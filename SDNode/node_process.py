@@ -100,7 +100,7 @@ def draw():
     loc = n.location.copy()
     loc.y += 10
     pos = VecWorldToRegScale(loc)
-    display_texture(task.binary_message, loc, calc_size(view2d, n.dimensions[0]))
+    display_texture(task.binary_message, loc, calc_size(view2d, n.width))
     display_text(head, pos, size, (0, 1, 0.0, 1.0))
     if not task.process:
         return
