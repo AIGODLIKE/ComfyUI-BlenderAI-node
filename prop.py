@@ -222,10 +222,12 @@ class Prop(bpy.types.PropertyGroup):
         ts = time.time()
         candicates_words = Trie.TRIE.bl_search(self.search_tag, max_size=200)
         for word in candicates_words:
+            it = mtw.add()
             if word[1] not in words.word_map:
+                it.value = word[1]
+                it.name = word[1]
                 continue
             word = words.word_map[word[1]]
-            it = mtw.add()
             it.value = word[0]
             it.name = word[0]
             if len(word) == 3 and word[2]:
