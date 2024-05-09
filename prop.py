@@ -2,7 +2,9 @@ from __future__ import annotations
 import bpy
 import os
 import json
+import time
 from pathlib import Path
+from .MultiLineText.trie import Trie
 
 from .preference import get_pref
 from .utils import Icon, FSWatcher, ScopeTimer
@@ -211,6 +213,27 @@ class Prop(bpy.types.PropertyGroup):
 
     import_bookmark: bpy.props.StringProperty(name="Preset Bookmark", default=str(Path.cwd()), subtype="FILE_PATH", update=import_bookmark_update)
 
+    def search_tag_update(self, context):
+        from .MultiLineText.words_collection import words
+        from .kclogger import logger
+        if not Trie.TRIE: return
+        mtw = bpy.context.window_manager.mlt_words
+        mtw.clear()
+        ts = time.time()
+        candicates_words = Trie.TRIE.bl_search(self.search_tag, max_size=200)
+        for word in candicates_words:
+            if word[1] not in words.word_map:
+                continue
+            word = words.word_map[word[1]]
+            it = mtw.add()
+            it.value = word[0]
+            it.name = word[0]
+            if len(word) == 3 and word[2]:
+                it.name = f"{word[0]} <== {word[2]}"
+            it.freq = int(word[1])
+        logger.info(f"Update Search Words: {time.time()-ts:.4f}s")
+
+    search_tag: bpy.props.StringProperty(update=search_tag_update)
 
 def render_layer_update():
     try:
