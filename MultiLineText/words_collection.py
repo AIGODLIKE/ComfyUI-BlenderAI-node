@@ -103,17 +103,19 @@ def f(_):
     mtw = bpy.context.window_manager.mlt_words
     if len(mtw) != 0:
         return
-    # ts = time.time()
-    # count = 0
-    # for word in words.word_list:
-    #     it = mtw.add()
-    #     it.value = word[0]
-    #     it.name = word[0]
-    #     if len(word) == 3 and word[2]:
-    #         it.name = f"{word[0]} <== {word[2]}"
-    #     it.freq = int(word[1])
-    #     count += 1
-    # logger.info(f"Load MLT Words: {time.time()-ts:.4f}s")
+    ts = time.time()
+    count = 0
+    for word in words.word_list:
+        it = mtw.add()
+        it.value = word[0]
+        it.name = word[0]
+        if len(word) == 3 and word[2]:
+            it.name = f"{word[0]} <== {word[2]}"
+        it.freq = int(word[1])
+        count += 1
+        if count > 1000:
+            break
+    logger.info(f"Update Search Words: {time.time()-ts:.4f}s")
 
 
 if f not in bpy.app.handlers.load_post:
