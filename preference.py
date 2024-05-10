@@ -223,7 +223,7 @@ class AddonPreference(bpy.types.AddonPreferences):
     force_log: bpy.props.BoolProperty(default=False, name="Force Log", description="Force Log, Generally Not Needed")
     fixed_preview_image_size: bpy.props.BoolProperty(default=True, name="Fixed Preview Image Size")
     preview_image_size: bpy.props.IntProperty(default=256, min=64, max=8192, name="Preview Image Size")
-    stencil_offset_size_xy: bpy.props.IntVectorProperty(default=(0, 18), size=2, min=-100, max=100, name="Stencil Offset Size")
+    stencil_offset_size_xy: bpy.props.IntVectorProperty(default=(0, 0), size=2, min=-100, max=100, name="Stencil Offset Size")
     drag_link_result_count_col: bpy.props.IntProperty(default=4, min=1, max=10, name="Drag Link Result Count Column")
     drag_link_result_count_row: bpy.props.IntProperty(default=10, min=1, max=100, name="Drag Link Result Count Row")
     count_page_total: bpy.props.IntProperty(default=0, min=0, name="Drag Link Result Page Total")

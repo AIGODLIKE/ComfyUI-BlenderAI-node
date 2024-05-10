@@ -63,7 +63,7 @@ ComfyUI BlenderAI node is a standard Blender add-on. You can git clone the addon
 
 ```
 cd %USERPROFILE%\AppData\Roaming\Blender Foundation\blender\%version%\scripts\addons
-git clone https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node.git
+git clone https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node.git --recursive
 ```
 Then you can see the addon after refreshing the addons menu or restarting Blender.
 Don't forget to enable the addon by clicking on the tickbox to the left of the addon's name!
@@ -157,6 +157,28 @@ Using the Blender-specific nodes won't affect generation, results will still be 
 To improve writing long prompts, we made a function that can show all prompts in a separate textbox since Blender doesn't support multiline textboxes in nodes.
 When you click the button on the side of the textbox, a window will open to write prompts in.
 The first time you do this, you might need to wait.
+
+## Shortcut Keys
+
+### Link
+
+Select a node, then hold `D` and drag cursor to another node's center, you can link all available widgets between them
+
+![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/eae1061a-c4f5-4f0c-becf-501176a7aaa2)
+
+### Search Widgets
+
+By press `R` when the cursor is nearby a widget, there will be a pie menu to display all nodes that has this widget
+
+![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/2dcffa51-a261-4e22-9692-00863e4faa33)
+
+### Mask Link
+
+Hold `F` and drag cursor to a mask node, it will automatically create a camera to genarate mask from scene
+
+![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/d97805e5-4f54-4e1a-9fe0-0b98192baab9)
+
+
 
 ## Notes
 - Not every node can work perfectly in Blender, for example nodes regarding videos
@@ -253,20 +275,17 @@ Here are some interesting nodes we've tested in Blender
 |[zfkun](https://github.com/zfkun/ComfyUI_zfkun.git)|√|
 
 # Links
+## Tutorial
+[[EN]BSLIVE ComfyUI Blender AI Node Addon for Generative AI(By Jimmy Gunawan)](https://www.youtube.com/watch?v=OvrKpAVwyco)
 
-## User Manual
+[[EN]Generate AI Rendering with Blender ComfyUI AddOn(By Gioxyer)](https://www.youtube.com/watch?v=9rb-8D3NQ58)
 
-[用户手册](https://shimo.im/docs/Ee32m0w80rfLp4A2)
+[[CN]无限圣杯完全使用指南](https://www.bilibili.com/video/BV1Fo4y187HC/)
 
-[UserManual](https://shimo.im/docs/JSforXF1JC8lSphG)
+(Please feel free to contact me for recommendations)
 
 ## Our AI website
 
 [AIGODLIKE Community](https://www.aigodlike.com/)
 
-## ComfyUI Package
-
-[百度网盘](https://pan.baidu.com/s/1bnVWO9AuurPl2mn9Uc57vg?pwd=2333)
-
-[Google Drive](https://drive.google.com/drive/folders/1Akqh3qPt-Zzi_clqkoCwCl_Xjo78FfbM?usp=sharing)
 

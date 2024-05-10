@@ -1190,7 +1190,11 @@ def rtnode_unreg():
         bpy.app.handlers.load_post.remove(CFNodeTree.reinit)
     set_draw_intern(reg=False)
     if TREE_NAME in _node_categories:
-        unregister_node_categories(TREE_NAME)
+        try:
+            # TODO: 可能会报错, 但未做后续处理, 可能会有其他后果
+            unregister_node_categories(TREE_NAME)
+        except RuntimeError:
+            ...
     unreg()
     nodes_unreg()
     clss.clear()

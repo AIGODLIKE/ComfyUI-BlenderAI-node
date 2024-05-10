@@ -241,6 +241,7 @@ class Ops(bpy.types.Operator):
             for frame in pframes:
                 pnode.image = pframes[frame]
                 # logger.debug(f"F {frame}: {pnode.image}")
+                pre_img_map = {pnode: pframes[frame]}
                 for fnode, node_frame in node_frames.items():
                     if not (fpath := node_frame.get(frame, "")):
                         error_info = _T("Frame <{}> Not Found in <{}> Node Path!").format(frame, fnode.name)
@@ -249,10 +250,17 @@ class Ops(bpy.types.Operator):
                         break
                     fnode.mode = "输入"
                     fnode.image = fpath
+                    pre_img_map[fnode] = fpath
                     # logger.debug(f"F {frame}: {fnode.image}")
                 else:
                     logger.debug(_T("Frame Task <{}> Added!").format(frame))
-                    TaskManager.push_task(get_task(tree), tree=tree)
+                    def pre(pre_img_map: dict):
+                        for fnode, fpath in pre_img_map.items():
+                            try:
+                                fnode.image = fpath
+                            except Exception:
+                                ...
+                    TaskManager.push_task(get_task(tree), tree=tree, pre=partial(pre, pre_img_map))
             # restore config
             for fnode, cfg in old_cfg.items():
                 setattr(fnode, "mode", cfg["mode"])
@@ -762,12 +770,17 @@ class NodeSearch(bpy.types.Operator):
         return {"CANCELLED"}
 
     def execute(self, context):
+        if not get_default_tree():
+            self.report({'ERROR'}, _T("No NodeTree Found"))
+            return {"FINISHED"}
         try:
             bpy.ops.node.add_node(use_transform=True, settings=[], type=self.item)
         except BaseException:
             self.report({'WARNING'}, f"未定义的节点 > {self.item}")
-
-        bpy.ops.node.translate_attach("INVOKE_DEFAULT")
+        try:
+            bpy.ops.node.translate_attach("INVOKE_DEFAULT")
+        except RuntimeError:
+            ...
         return {"FINISHED"}
 
 
