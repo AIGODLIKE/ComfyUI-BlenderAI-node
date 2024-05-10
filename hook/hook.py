@@ -1,7 +1,7 @@
 import bpy
 from pathlib import Path
 from functools import partial
-from ..External.lupawrapper import get_lua_runtime, LuaRuntime
+#from ..External.lupawrapper import get_lua_runtime, LuaRuntime
 from ..utils import _T
 from ..timer import Timer
 from ..Linker.linker import P

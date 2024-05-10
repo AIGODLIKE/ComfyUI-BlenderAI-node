@@ -11,7 +11,6 @@ __dict__ = {}
 import time
 ts = time.time()
 
-
 def clear_pyc(path=None, depth=2):
     # 递归删除 所有文件夹__pycache__
     if depth == 0:
@@ -29,7 +28,6 @@ def clear_pyc(path=None, depth=2):
             continue
         if f.is_dir():
             clear_pyc(f, depth - 1)
-
 
 clear_pyc()
 import bpy
@@ -123,7 +121,7 @@ def register():
     bpy.types.Scene.sdn_history_item_index = bpy.props.IntProperty(default=0)
     History.register_timer()
     linker_register()
-    use_hook()
+    #use_hook()
     FSWatcher.init()
     disable_reload()
     nodegroup_reg()
@@ -147,7 +145,7 @@ def unregister():
     del bpy.types.Scene.sdn_history_item_index
     modules_update()
     linker_unregister()
-    use_hook(False)
+    #use_hook(False)
     nodegroup_unreg()
     custom_support_unreg()
     FSWatcher.stop()

@@ -2,21 +2,21 @@ import bpy
 from threading import Thread
 from pathlib import Path
 from time import sleep
-from ...External.lupawrapper import get_lua_runtime
+#from ...External.lupawrapper import get_lua_runtime
 from ...utils import update_screen, ScopeTimer, PrevMgr
 from ...timer import Timer
 from ...kclogger import logger
 
 
-rt = get_lua_runtime("AnimatedImage")
-imglib = rt.load_dll("image")
+#rt = get_lua_runtime("AnimatedImage")
+#imglib = rt.load_dll("image")
 
 
 def read_frame_to_preview(imgpath, p: bpy.types.ImagePreview, frame):
-    f, w, h, c, d = imglib.cache_animated_image(imgpath)
+    #f, w, h, c, d = imglib.cache_animated_image(imgpath)
     p.icon_size = (32, 32)
-    p.image_size = (w, h)
-    imglib.read_frame(imgpath, frame, p.as_pointer())
+    p.image_size = (32, 32)#(w, h)
+    #imglib.read_frame(imgpath, frame, p.as_pointer())
 
 
 class AnimatedImagePlayer:
@@ -24,7 +24,7 @@ class AnimatedImagePlayer:
         self.prev = prev
         self.destroy = destroycb
         self.imgpath = imgpath
-        f, w, h, c, d = imglib.cache_animated_image(self.imgpath)
+        f, w, h, c, d = (32, 32, 32, 32, 32) #imglib.cache_animated_image(self.imgpath)
         self.w = w
         self.h = h
         self.delays = list(d.values())
@@ -35,7 +35,7 @@ class AnimatedImagePlayer:
         self.playing = False
         if not Path(self.imgpath).exists():
             return
-        imglib.read_frame(self.imgpath, 0, self.prev.as_pointer())
+        #imglib.read_frame(self.imgpath, 0, self.prev.as_pointer())
 
     def next_frame(self):
         if not Path(self.imgpath).exists():
@@ -47,7 +47,7 @@ class AnimatedImagePlayer:
         self.cframe = (self.cframe + 1) % self.frames
         try:
             ptr = self.prev.as_pointer()
-            imglib.read_frame(self.imgpath, self.cframe, ptr)
+            #imglib.read_frame(self.imgpath, self.cframe, ptr)
             # 更新窗口
             update_screen()
         except Exception as e:
@@ -94,7 +94,7 @@ for g in gif_test:
 def test():
     t = ScopeTimer("Cache 2000x2000")
     gifplayer = AnimatedImagePlayer(TEST, gif)
-    f, w, h, c, d = imglib.cache_animated_image(gif)
+    f, w, h, c, d = (32, 32, 32, 32, 32) #imglib.cache_animated_image(gif)
     logger.info("Image Read Test")
     logger.info([f, w, h, c, list(d.values())])
     gifplayer.auto_play()

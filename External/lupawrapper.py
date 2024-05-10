@@ -17,7 +17,6 @@ sys.path.append(RT_ROOT.joinpath("lupa").as_posix())
 DEFAULT_RT = "lua54"
 DEFAULT_RT = "luajit"
 
-
 def cp_lupa():
     if system() != "Windows":
         return
@@ -37,6 +36,7 @@ class LuaRuntime:
 
     @staticmethod
     def get_lua_runtime(name="", rt=DEFAULT_RT) -> LuaRuntime:
+        return
         if name not in LuaRuntime.__RT_DICT__:
             try:
                 rt = LuaRuntime(name, rt)
@@ -58,8 +58,11 @@ class LuaRuntime:
         try:
             lupa = importlib.import_module(f"lupa.{rt}")
         except BaseException:
-            rt = "lua54"
-            lupa = importlib.import_module("lupa.lua54")
+            try:
+                rt = "lua54"
+                lupa = importlib.import_module("lupa.lua54")
+            except Exception:
+                lupa = importlib.import_module("lupa")
         self.name = name
         self.rt = rt
         self.lupa = lupa

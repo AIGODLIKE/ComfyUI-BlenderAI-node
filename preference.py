@@ -131,7 +131,7 @@ class AddonPreference(bpy.types.AddonPreferences):
                                          default=str(Path(__file__).parent / "ComfyUI"))
     python_path: bpy.props.StringProperty(subtype="FILE_PATH",
                                           name="Python Path",
-                                          description="Select python dir or python.exe")
+                                          description="Select python dir or python.exe.\nOn Linux select your venv /bin/ folder")
     page: bpy.props.EnumProperty(items=[("通用", "General", "", "COLLAPSEMENU", 0),
                                         ("常用路径", "Common Path", "", "URL", 1),
                                         ("友情链接", "Friendly Links", "", "URL", 2),

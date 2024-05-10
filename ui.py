@@ -31,7 +31,7 @@ class Panel(bpy.types.Panel):
             return
         sdn = bpy.context.scene.sdn
         row.prop(sdn, 'open_pref', text="", icon="PREFERENCES", text_ctxt=ctxt)
-        if platform.system() != "Darwin":
+        if platform.system() not in ['Linux', 'Darwin']:
             row.operator("wm.console_toggle", text="", icon="CONSOLE", text_ctxt=ctxt)
         # row.prop(sdn, "restart_webui", text="", icon="RECOVER_LAST")
         if TaskManager.server == FakeServer._instance:

@@ -1758,10 +1758,10 @@ class 截图(BluePrintBase):
             if not self.capture:
                 return
             self.capture = False
-            from ..External.lupawrapper import get_lua_runtime
-            rt = get_lua_runtime()
-            hk = rt.load_dll("luahook")
-            x1, y1, x2, y2 = hk.scrcap()
+            #from ..External.lupawrapper import get_lua_runtime
+            #rt = get_lua_runtime()
+            #hk = rt.load_dll("luahook")
+            x1, y1, x2, y2 = (0, 0, 0, 0)#hk.scrcap()
             if x1 == x2 or y1 == y2:
                 logger.error("%s: %s", _T('Error Capture Screen Region'), (x1, y1, x2, y2))
                 return
