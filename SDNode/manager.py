@@ -587,7 +587,7 @@ class RemoteServer(Server):
             if requests.get(f"{self.get_url()}/object_info", proxies={"http": None, "https": None}, timeout=10).status_code == 200:
                 self.server_connected = True
                 update_screen()
-                self.try_set_preview_method()
+                get_pref().preview_method = get_pref().preview_method
                 return True
         except requests.exceptions.ConnectionError as e:
             TaskManager.put_error_msg(str(e))
@@ -595,14 +595,6 @@ class RemoteServer(Server):
             logger.error(e)
         TaskManager.put_error_msg(_T("Remote Server Connect Failed") + f": {self.get_url()}")
         return False
-
-    def try_set_preview_method(self):
-        try:
-            import requests
-            api = f"manager/preview_method?value=${get_pref().preview_method}"
-            requests.get(f"{self.get_url()}/{api}", proxies={"http": None, "https": None}, timeout=1)
-        except Exception:
-            ...
 
     def is_launched(self) -> bool:
         return self.server_connected
@@ -716,6 +708,7 @@ class LocalServer(Server):
             import requests
             try:
                 if requests.get(f"{self.get_url()}/object_info", proxies={"http": None, "https": None}, timeout=1).status_code == 200:
+                    get_pref().preview_method = get_pref().preview_method
                     return True
             except requests.exceptions.ConnectionError:
                 ...
