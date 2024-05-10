@@ -41,7 +41,7 @@ from .utils import Icon, FSWatcher, ScopeTimer
 from .timer import timer_reg, timer_unreg
 from .preference import pref_register, pref_unregister
 from .ops import Ops, Ops_Mask, Load_History, Popup_Load, Copy_Tree, Load_Batch, Fetch_Node_Status, Clear_Node_Cache, Sync_Stencil_Image, NodeSearch
-from .ui import Panel, HISTORY_UL_UIList, HistoryItem
+from .ui import header_reg, header_unreg, Panel, HISTORY_UL_UIList, HistoryItem
 from .SDNode.history import History
 from .SDNode.rt_tracker import reg_tracker, unreg_tracker
 from .SDNode.nodegroup import nodegroup_reg, nodegroup_unreg
@@ -110,6 +110,8 @@ def register():
         return
     bpy.app.translations.register(__name__, translations_dict)
     reg()
+    header_reg()
+    bpy.types
     Icon.set_hq_preview()
     TaskManager.run_server(fake=True)
     timer_reg()
@@ -138,6 +140,7 @@ def unregister():
         return
     bpy.app.translations.unregister(__name__)
     unreg()
+    header_unreg()
     rtnode_unreg()
     timer_unreg()
     del bpy.types.Scene.sdn

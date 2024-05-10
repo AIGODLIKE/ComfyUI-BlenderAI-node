@@ -193,6 +193,10 @@ class Panel(bpy.types.Panel):
             row.alert = True
             row.label(text=error_msg, icon="ERROR", text_ctxt=ctxt)
 
+def draw_header_button(self, context):
+    if context.space_data.tree_type == 'CFNodeTree':
+        layout = self.layout
+        layout.operator(Ops.bl_idname, text="", icon="PLAY").action = "Submit"
 
 class HistoryItem(bpy.types.PropertyGroup):
     name: bpy.props.StringProperty(default="")
@@ -269,3 +273,9 @@ class PanelViewport(bpy.types.Panel):
                 brush.stencil_pos = (width / 2, (height) / 2 - offset_top)
             brush.stencil_dimension = (length / 2, length / 2)
         Timer.put((f, brush, length, area.width, area.height))
+
+def header_reg():
+    bpy.types.NODE_HT_header.prepend(draw_header_button)
+
+def header_unreg():
+    bpy.types.NODE_HT_header.remove(draw_header_button)
