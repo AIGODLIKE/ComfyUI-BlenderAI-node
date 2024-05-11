@@ -196,7 +196,9 @@ class Panel(bpy.types.Panel):
 def draw_header_button(self, context):
     if context.space_data.tree_type == 'CFNodeTree':
         layout = self.layout
-        layout.operator(Ops.bl_idname, text="", icon="PLAY").action = "Submit"
+        col = layout.column()
+        col.alert = True
+        col.operator(Ops.bl_idname, text="", icon="PLAY").action = "Submit"
 
 class HistoryItem(bpy.types.PropertyGroup):
     name: bpy.props.StringProperty(default="")
