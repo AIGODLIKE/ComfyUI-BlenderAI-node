@@ -221,7 +221,11 @@ class AddonPreference(bpy.types.AddonPreferences):
     auto_launch: bpy.props.BoolProperty(default=False, name="Auto Launch Browser")
     install_deps: bpy.props.BoolProperty(default=False, name="Check Depencies Before Server Launch", description="Check ComfyUI(some) Depencies Before Server Launch")
     force_log: bpy.props.BoolProperty(default=False, name="Force Log", description="Force Log, Generally Not Needed")
-    fixed_preview_image_size: bpy.props.BoolProperty(default=True, name="Fixed Preview Image Size")
+    fixed_preview_image_size: bpy.props.EnumProperty(default="FIXED", name="Preview Image Size",
+                                                     items=[("FIXED", "Fixed", "Previews are shown at your chosen resolution", 0),
+                                                            ("NATIVE", "Native", "Previews are shown at their native resolution", 1),
+                                                            ("DEFAULT", "Default", "Default Blender behavior, previews are not automatically resized", 2),
+                                                            ])
     preview_image_size: bpy.props.IntProperty(default=256, min=64, max=8192, name="Preview Image Size")
     stencil_offset_size_xy: bpy.props.IntVectorProperty(default=(0, 0), size=2, min=-100, max=100, name="Stencil Offset Size")
     drag_link_result_count_col: bpy.props.IntProperty(default=4, min=1, max=10, name="Drag Link Result Count Column")
@@ -521,9 +525,11 @@ class AddonPreference(bpy.types.AddonPreferences):
         row = layout.row(align=True)
         row.prop(self, "ip")
         row.prop(self, "port")
-        row = layout.row(align=True)
-        row.prop(self, "fixed_preview_image_size", toggle=True, text_ctxt=ctxt)
-        row.prop(self, "preview_image_size", text_ctxt=ctxt)
+        row = layout.row(align=True, heading="Preview Image Size")
+        row.prop(self, "fixed_preview_image_size", text="", text_ctxt=ctxt)
+        col = row.column()
+        col.enabled = self.fixed_preview_image_size == "FIXED"
+        col.prop(self, "preview_image_size", text="", text_ctxt=ctxt)
         row = layout.row(align=True)
         row.label(text="Drag Link Result Count", text_ctxt=ctxt)
         row.prop(self, "drag_link_result_count_col", text="", text_ctxt=ctxt)

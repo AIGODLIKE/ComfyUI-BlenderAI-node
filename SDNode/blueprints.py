@@ -101,11 +101,14 @@ def draw_prop_with_link(layout, self, prop, swsock, swdisp=False, row=True, pre=
 
 
 def setwidth(self: NodeBase, w, count=1):
+    if get_pref().fixed_preview_image_size == "DEFAULT":
+        return self.width
+    
     if not w:
         return 0
     oriw = w
     w = max(self.bl_width_min, w)
-    fpis = get_pref().fixed_preview_image_size
+    fpis = get_pref().fixed_preview_image_size == "FIXED"
     if fpis:
         pw = get_pref().preview_image_size
         w = min(oriw, pw)

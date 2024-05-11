@@ -337,6 +337,12 @@ other = {
     "Server Type": "服务类型",
     "LocalServer": "本机启动",
     "RemoteServer": "服务直连(含局域网)",
+    "Fixed": "固定", # TODO: This and the 5 below it are machine-translated chinese
+    "Previews are shown at your chosen resolution": "预览以您选择的分辨率显示",
+    "Native": "原始",
+    "Previews are shown at their native resolution": "预览以原始分辨率显示",
+    "Default": "默认",
+    "Default Blender behavior, previews are not automatically resized": "默认的 Blender 行为，预览不会自动调整大小",
     "Preview Image Size": "预览图尺寸",
     "Enable High Quality Preview Image": "启用高清预览图",
     "ComfyUI Path": "ComfyUI路径",
