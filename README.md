@@ -9,7 +9,7 @@ This is an addon for using [ComfyUI](https://github.com/comfyanonymous/ComfyUI) 
 - Blender-like node groups
 - Queue batch processing with mission excel
 - Node tree/workflow presets and node group presets
-- Image previews for models in the various loader nodes
+- Image previews for models in the Load Checkpoint node
 - Can directly input or replace the 3D models in Blender
 - By using composite can output perfect controlnet image
 
@@ -31,7 +31,7 @@ https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/cb96dd60-b9
 
 ![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/2386dc4d-6faa-4054-83e7-93f49a27962a)
 
-### Edit character bones with model
+### Pose characters using Blender's bones
 
 ![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/484c12bf-55b8-4baf-92df-e422fd900cbf)
 
@@ -46,10 +46,12 @@ First, you need to install [Blender](https://www.blender.org/download/)(Recommen
 ![image](https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/aacf1cfe-ae44-4930-9a93-c226a8408066)
 
 2. **Install this add-on（ComfyUI BlenderAI node）**
+<!--- TODO: "ComfyUI BlenderAI node" is awkward wording. Come up with a better name? -->
 
 - Install from Blender's preferences menu
 
-In Blender's preferences menu, under addons, you can directly install an addon by selecting the zip file.
+In Blender's preferences menu, under addons, you can install an addon by selecting the addon's zip file.
+Blender will automatically show you the addon after it's installed; if you missed it, it's in the Node category, search for "ComfyUI".
 Don't forget to enable the addon by clicking on the tickbox to the left of the addon's name!
 
 *Note*: The zip file might not have a preview image. This is normal.
@@ -59,20 +61,21 @@ Don't forget to enable the addon by clicking on the tickbox to the left of the a
 
 - Install manually (recommended)
 
-ComfyUI BlenderAI node is a standard Blender add-on. You can git clone the addon to Blender's addon directory:
+This is a standard Blender add-on. You can git clone the addon to Blender's addon directory:
 
 ```
 cd %USERPROFILE%\AppData\Roaming\Blender Foundation\blender\%version%\scripts\addons
-git clone https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node.git
+git clone https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node.git --recursive
 ```
 Then you can see the addon after refreshing the addons menu or restarting Blender.
+It is in the Node category, search for "ComfyUI".
 Don't forget to enable the addon by clicking on the tickbox to the left of the addon's name!
 
 # Usage
 
-1. **Prepare a standard ComfyUI build**
+1. **Prepare ComfyUI**
 
-You can download ComfyUI from here: [ComfyUI Release](https://github.com/comfyanonymous/ComfyUI/releases)
+You can download ComfyUI from here: [ComfyUI Releases](https://github.com/comfyanonymous/ComfyUI/releases)
 
 Or you can build one yourself as long as you follow this path structure:
 
@@ -99,12 +102,12 @@ The default (empty) path is:
 │   ├── python.exe  <-- Here
 ```
 
-If you're using a virtual environment named venv, the executable is in `venv/Scripts/python.exe`.
+If you're using a virtual environment named `venv`, the executable is in `venv/Scripts/python.exe`.
 
-4.  **Open to ComfyUI Node Editor**
+4.  **Open the ComfyUI Node Editor**
 
 Switch to the ComfyUI Node Editor, press N to open the sidebar/n-menu, and click the `Launch/Connect to ComfyUI` button to launch ComfyUI or connect to it.
-Or, sSwitch the "Server Type" in the addon's preferences to remote server so that you can link your Blender to a running ComfyUI process.
+Or, switch the "Server Type" in the addon's preferences to remote server so that you can link your Blender to a running ComfyUI process.
 ![Pasted image 20240319185542](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/e46c3a5a-ff32-4503-8228-f101c91c6664)
 
 
@@ -154,14 +157,36 @@ Using the Blender-specific nodes won't affect generation, results will still be 
 
 ![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/bdc796c0-7dec-4c5d-922e-17860941a23e)
 
-To improve writing long prompts, we made a function that can show all prompts in a separate textbox since Blender doesn't support multiline textboxes in nodes.
+To improve writing long prompts, we made a button that can show all prompts in a separate textbox since Blender doesn't support multiline textboxes in nodes.
 When you click the button on the side of the textbox, a window will open to write prompts in.
-The first time you do this, you might need to wait.
+The first time you do this, you might need to wait. Keep your cursor over the window while typing.
+
+## Shortcut Keys
+
+### Link
+
+Select a node, then hold `D` and drag the cursor to another node's center, you can link all available widgets between them
+
+![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/eae1061a-c4f5-4f0c-becf-501176a7aaa2)
+
+### Search Widgets
+
+By pressing `R` when the cursor is near a widget, a pie menu will display all nodes that have this widget
+
+![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/2dcffa51-a261-4e22-9692-00863e4faa33)
+
+### Mask Link
+
+Hold `F` and drag the cursor to a mask node, it will automatically create a camera to genarate mask from the scene
+
+![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/d97805e5-4f54-4e1a-9fe0-0b98192baab9)
+
+
 
 ## Notes
 - Not every node can work perfectly in Blender, for example nodes regarding videos
 - You can enable the console under `Window`>`Toggle System Console` at the top left
-- Model preview images need to have same name as the model, including the extension, for example - `model.ckpt.jpg`
+- Model preview images need to have the same name as the model, including the extension, for example - `model.ckpt.jpg`
 
 ## Tested Nodes
 Here are some interesting nodes we've tested in Blender
@@ -253,20 +278,17 @@ Here are some interesting nodes we've tested in Blender
 |[zfkun](https://github.com/zfkun/ComfyUI_zfkun.git)|√|
 
 # Links
+## Tutorial
+[[EN]BSLIVE ComfyUI Blender AI Node Addon for Generative AI(By Jimmy Gunawan)](https://www.youtube.com/watch?v=OvrKpAVwyco)
 
-## User Manual
+[[EN]Generate AI Rendering with Blender ComfyUI AddOn(By Gioxyer)](https://www.youtube.com/watch?v=9rb-8D3NQ58)
 
-[用户手册](https://shimo.im/docs/Ee32m0w80rfLp4A2)
+[[CN]无限圣杯完全使用指南](https://www.bilibili.com/video/BV1Fo4y187HC/)
 
-[UserManual](https://shimo.im/docs/JSforXF1JC8lSphG)
+(Please feel free to contact me for recommendations)
 
 ## Our AI website
 
 [AIGODLIKE Community](https://www.aigodlike.com/)
 
-## ComfyUI Package
-
-[百度网盘](https://pan.baidu.com/s/1bnVWO9AuurPl2mn9Uc57vg?pwd=2333)
-
-[Google Drive](https://drive.google.com/drive/folders/1Akqh3qPt-Zzi_clqkoCwCl_Xjo78FfbM?usp=sharing)
 

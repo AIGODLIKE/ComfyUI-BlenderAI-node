@@ -805,6 +805,8 @@ class LocalServer(Server):
                 continue
             # logger.info(line)
             # print(re.findall("\|(.*?)[", line.decode("gbk")))
+            if "# 😺dzNodes:".encode() in line:
+                continue
             if b"CUDA out of memory" in line or b"not enough memory" in line:
                 TaskManager.put_error_msg(f"{_T('Error: Out of VRam, try restart blender')}")
             proc = ""
