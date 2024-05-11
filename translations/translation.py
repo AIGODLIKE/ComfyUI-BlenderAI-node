@@ -346,7 +346,7 @@ other = {
     "Previews are shown at your chosen resolution": "预览以您选择的分辨率显示",
     "Native": "原始",
     "Previews are shown at their native resolution": "预览以原始分辨率显示",
-    "Default": "默认",
+    "Blender Default": "Blender 默认",
     "Default Blender behavior, previews are not automatically resized": "默认的 Blender 行为，预览不会自动调整大小",
     "Preview Image Size": "预览图尺寸",
     "Play Finish Sound": "完成时播放声音", # More machine-translated chinese
