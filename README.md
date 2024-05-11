@@ -9,7 +9,7 @@ This is an addon for using [ComfyUI](https://github.com/comfyanonymous/ComfyUI) 
 - Blender-like node groups
 - Queue batch processing with mission excel
 - Node tree/workflow presets and node group presets
-- Image previews for models in the various loader nodes
+- Image previews for models in the Load Checkpoint node
 - Can directly input or replace the 3D models in Blender
 - By using composite can output perfect controlnet image
 
@@ -31,7 +31,7 @@ https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/cb96dd60-b9
 
 ![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/2386dc4d-6faa-4054-83e7-93f49a27962a)
 
-### Edit character bones with model
+### Pose characters using Blender's bones
 
 ![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/484c12bf-55b8-4baf-92df-e422fd900cbf)
 
@@ -73,9 +73,9 @@ Don't forget to enable the addon by clicking on the tickbox to the left of the a
 
 # Usage
 
-1. **Prepare a standard ComfyUI build**
+1. **Prepare ComfyUI**
 
-You can download ComfyUI from here: [ComfyUI Release](https://github.com/comfyanonymous/ComfyUI/releases)
+You can download ComfyUI from here: [ComfyUI Releases](https://github.com/comfyanonymous/ComfyUI/releases)
 
 Or you can build one yourself as long as you follow this path structure:
 
@@ -102,9 +102,9 @@ The default (empty) path is:
 │   ├── python.exe  <-- Here
 ```
 
-If you're using a virtual environment named venv, the executable is in `venv/Scripts/python.exe`.
+If you're using a virtual environment named `venv`, the executable is in `venv/Scripts/python.exe`.
 
-4.  **Open to ComfyUI Node Editor**
+4.  **Open the ComfyUI Node Editor**
 
 Switch to the ComfyUI Node Editor, press N to open the sidebar/n-menu, and click the `Launch/Connect to ComfyUI` button to launch ComfyUI or connect to it.
 Or, switch the "Server Type" in the addon's preferences to remote server so that you can link your Blender to a running ComfyUI process.
@@ -157,9 +157,9 @@ Using the Blender-specific nodes won't affect generation, results will still be 
 
 ![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/bdc796c0-7dec-4c5d-922e-17860941a23e)
 
-To improve writing long prompts, we made a function that can show all prompts in a separate textbox since Blender doesn't support multiline textboxes in nodes.
+To improve writing long prompts, we made a button that can show all prompts in a separate textbox since Blender doesn't support multiline textboxes in nodes.
 When you click the button on the side of the textbox, a window will open to write prompts in.
-The first time you do this, you might need to wait.
+The first time you do this, you might need to wait. Keep your cursor over the window while typing.
 
 ## Shortcut Keys
 
