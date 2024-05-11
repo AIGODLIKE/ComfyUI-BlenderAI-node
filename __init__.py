@@ -4,7 +4,7 @@ bl_info = {
     'version': (1, 5, 1),
     'blender': (3, 0, 0),
     'location': '3DView->Panel',
-    'category': 'Node', # This is automatically translated by Blender
+    'category': 'AI',
     'doc_url': "https://shimo.im/docs/Ee32m0w80rfLp4A2"
 }
 __dict__ = {}
