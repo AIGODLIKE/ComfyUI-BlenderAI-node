@@ -344,6 +344,10 @@ other = {
     "Default": "默认",
     "Default Blender behavior, previews are not automatically resized": "默认的 Blender 行为，预览不会自动调整大小",
     "Preview Image Size": "预览图尺寸",
+    "Play Finish Sound": "完成时播放声音", # More machine-translated chinese
+    "Play a sound when the ComfyUI queue is empty": "当 ComfyUI 队列为空时播放声音",
+    "Finish Sound Path" : "最终声音路径",
+    "Path to the file to play when the ComfyUI queue is empty": "当 ComfyUI 队列为空时要播放的文件的路径", # --- MTL chinese ends here
     "Enable High Quality Preview Image": "启用高清预览图",
     "ComfyUI Path": "ComfyUI路径",
     "Python Path": "Python解释器路径",

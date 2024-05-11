@@ -6,6 +6,7 @@ import sys
 import json
 import time
 import atexit
+import aud
 from platform import system
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
@@ -1199,6 +1200,15 @@ class TaskManager:
                 ...
             elif mtype != "progress":
                 logger.debug("%s: %s", _T("Message Type"), mtype)
+
+            if mtype == "status" and data['status']['exec_info']['queue_remaining'] == 0 and get_pref().play_finish_sound:
+                try: #The user may not type the filepath in correctly
+                    device = aud.Device()
+                    sound = aud.Sound(get_pref().finish_sound_path)
+                    sound_buffered = aud.Sound.cache(sound)
+                    device.play(sound_buffered)
+                except Exception as e:
+                    logger.error("Error when playing sound:", e)
 
             Timer.put(update_screen)
 
