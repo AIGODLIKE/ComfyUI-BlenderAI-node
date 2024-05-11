@@ -1,10 +1,10 @@
 bl_info = {
-    'name': '无限圣杯-节点',
+    'name': '无限圣杯-节点 (ComfyUI Node Editor)',
     'author': '幻之境开发小组-会飞的键盘侠、只剩一瓶辣椒酱',
     'version': (1, 5, 1),
     'blender': (3, 0, 0),
     'location': '3DView->Panel',
-    'category': '辣椒出品',
+    'category': 'Node', # This is automatically translated by Blender
     'doc_url': "https://shimo.im/docs/Ee32m0w80rfLp4A2"
 }
 __dict__ = {}
