@@ -29,7 +29,10 @@ class AnimatedImagePlayer:
         self.prev = prev
         self.destroy = destroycb
         self.imgpath = imgpath
-        f, w, h, c, d = (32, 32, 32, 32, 32) #imglib.cache_animated_image(self.imgpath)
+        if system() != "Linux": #TODO: Linux lupa
+            f, w, h, c, d = imglib.cache_animated_image(self.imgpath)
+        else:
+            f, w, h, c, d = (32, 32, 32, 32, 32)
         self.w = w
         self.h = h
         self.delays = list(d.values())
@@ -40,7 +43,8 @@ class AnimatedImagePlayer:
         self.playing = False
         if not Path(self.imgpath).exists():
             return
-        #imglib.read_frame(self.imgpath, 0, self.prev.as_pointer())
+        if system() != "Linux": #TODO: Linux lupa
+            imglib.read_frame(self.imgpath, 0, self.prev.as_pointer())
 
     def next_frame(self):
         if not Path(self.imgpath).exists():
@@ -52,7 +56,8 @@ class AnimatedImagePlayer:
         self.cframe = (self.cframe + 1) % self.frames
         try:
             ptr = self.prev.as_pointer()
-            #imglib.read_frame(self.imgpath, self.cframe, ptr)
+            if system() != "Linux": #TODO: Linux lupa
+                imglib.read_frame(self.imgpath, self.cframe, ptr)
             # 更新窗口
             update_screen()
         except Exception as e:
@@ -99,7 +104,7 @@ for g in gif_test:
 def test():
     t = ScopeTimer("Cache 2000x2000")
     gifplayer = AnimatedImagePlayer(TEST, gif)
-    f, w, h, c, d = (32, 32, 32, 32, 32) #imglib.cache_animated_image(gif)
+    f, w, h, c, d = imglib.cache_animated_image(gif)
     logger.info("Image Read Test")
     logger.info([f, w, h, c, list(d.values())])
     gifplayer.auto_play()

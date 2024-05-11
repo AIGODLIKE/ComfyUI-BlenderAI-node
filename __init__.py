@@ -126,7 +126,7 @@ def register():
     bpy.types.Scene.sdn_history_item_index = bpy.props.IntProperty(default=0)
     History.register_timer()
     linker_register()
-    if system() != "Linux":
+    if system() != "Linux": #TODO: Linux lupa
         use_hook()
     FSWatcher.init()
     disable_reload()
@@ -152,7 +152,7 @@ def unregister():
     del bpy.types.Scene.sdn_history_item_index
     modules_update()
     linker_unregister()
-    if system() != "Linux":
+    if system() != "Linux": #TODO: Linux lupa
         use_hook(False)
     nodegroup_unreg()
     custom_support_unreg()

@@ -17,6 +17,7 @@ sys.path.append(RT_ROOT.joinpath("lupa").as_posix())
 DEFAULT_RT = "lua54"
 DEFAULT_RT = "luajit"
 
+
 def cp_lupa():
     if system() != "Windows":
         return
