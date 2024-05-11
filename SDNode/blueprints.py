@@ -196,6 +196,7 @@ class BluePrintBase:
                 mgr = bpy.context.window_manager
                 col.prop(stat, "addtext", icon="ADD", text="")
                 col.template_list("MLTWords_UL_UIList", prop, mgr, "mlt_words", mgr, "mlt_words_index")
+                col.prop(bpy.context.scene.sdn, "search_tag", icon="VIEWZOOM", text="")
                 col.template_list("MLTText_UL_UIList", "", stat, "texts", stat, "tindex")
             return True
 

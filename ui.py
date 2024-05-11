@@ -18,7 +18,7 @@ class Panel(bpy.types.Panel):
     bl_description = ""
     bl_space_type = "NODE_EDITOR"
     bl_region_type = "UI"
-    bl_category = "圣杯节点"
+    bl_category = "ComfyUI"
 
     @classmethod
     def poll(cls, context):

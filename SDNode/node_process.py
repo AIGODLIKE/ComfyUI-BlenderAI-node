@@ -1,5 +1,10 @@
 import bpy
 import blf
+import gpu
+import struct
+import tempfile
+from pathlib import Path
+from functools import lru_cache
 from mathutils import Vector
 from .manager import TaskManager
 from ..utils import _T
@@ -13,6 +18,41 @@ FONT_ID = 0
 #         if sp.type == "NODE_EDITOR":
 #             return sp
 #     return None
+@lru_cache
+def load_texture(data: bytes) -> gpu.types.GPUTexture:
+    if not data:
+        return
+    # 解析二进制数据的前4个字节获取事件类型
+    event_type = struct.unpack(">I", data[:4])[0]
+    # 根据事件类型处理数据
+    if event_type != 1:
+        return
+    # 处理图像类型
+    image_type = struct.unpack(">I", data[4:8])[0]
+    image_mime = ".png" if image_type == 2 else ".jpeg"
+    img_path = Path(tempfile.gettempdir()).joinpath("rviewport").with_suffix(image_mime)
+    img_path.write_bytes(data[8:])
+    bl_img = bpy.data.images.load(img_path.as_posix())
+    gpu_img = gpu.texture.from_image(bl_img)
+    bpy.data.images.remove(bl_img)
+    img_path.unlink()
+    return gpu_img
+
+
+def display_texture(texture: bytes, loc, size):
+    """
+    显示图片纹理
+    """
+    tex = load_texture(texture)
+    if not tex:
+        return
+    loc = loc.copy()
+    loc.y += 20
+    pos = VecWorldToRegScale(loc)
+    from gpu_extras.presets import draw_texture_2d
+    w = size
+    h = tex.height / tex.width * size
+    draw_texture_2d(tex, pos, w, h)
 
 
 def display_text(text, pos, size=50, color=(0, 0.7, 0.0, 1.0)):
@@ -60,6 +100,7 @@ def draw():
     loc = n.location.copy()
     loc.y += 10
     pos = VecWorldToRegScale(loc)
+    display_texture(task.binary_message, loc, calc_size(view2d, n.width))
     display_text(head, pos, size, (0, 1, 0.0, 1.0))
     if not task.process:
         return
@@ -68,7 +109,7 @@ def draw():
     blf.size(FONT_ID, size)
     loc.x += blf.dimensions(FONT_ID, head)[0] / size * vsize
     pos = VecWorldToRegScale(loc)
-    display_text(f" {v/m*100:3.0f}% ", pos, size * 1.5, (1, 1, 0.0, 1.0))
+    display_text(f" {v / m * 100:3.0f}% ", pos, size * 1.5, (1, 1, 0.0, 1.0))
     draw_node_process(n, v / m)
 
 

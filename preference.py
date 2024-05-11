@@ -170,13 +170,29 @@ class AddonPreference(bpy.types.AddonPreferences):
                                         ("--fp16-text-enc", "fp16-text-enc", "Store text encoder weights in fp16.", 3),
                                         ("--fp32-text-enc", "fp32-text-enc", "Store text encoder weights in fp32.", 4)
                                         ])  # --fpte
+
+    @staticmethod
+    def try_set_preview_method(preview_method):
+        try:
+            import requests
+            from .SDNode.manager import get_url
+            api = f"manager/preview_method?value={preview_method}"
+            requests.get(f"{get_url()}/{api}", proxies={"http": None, "https": None}, timeout=1)
+        except Exception:
+            ...
+
+    def preview_method_update(self, context):
+        from threading import Thread
+        Thread(target=self.try_set_preview_method, args=(self.preview_method,)).start()
+
     preview_method: bpy.props.EnumProperty(name="preview-method",
                                            items=[("none", "None", "", 0),
                                                   ("auto", "Auto", "", 1),
                                                   ("latent2rgb", "Latent2RGB", "", 2),
                                                   ("taesd", "TAESD", "", 3)
                                                   ],
-                                           description="Default preview method for sampler nodes.")  # --preview-method
+                                           description="Default preview method for sampler nodes.",
+                                           update=preview_method_update)  # --preview-method
     disable_ipex_optimize: bpy.props.BoolProperty(default=False, name="disable ipex optimize", description="Disables ipex.optimize when loading models with Intel GPUs.")  # --disable-ipex-optimize
 
     attn: bpy.props.EnumProperty(name="attn",
@@ -423,6 +439,7 @@ class AddonPreference(bpy.types.AddonPreferences):
     count_page_prev: bpy.props.BoolProperty(default=False,
                                             name="Drag Link Result Page Prev",
                                             update=update_count_page_prev)
+
     @staticmethod
     def get_cuda_list():
         """
