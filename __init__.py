@@ -1,7 +1,7 @@
 bl_info = {
     'name': '无限圣杯-节点 (ComfyUI Node Editor)',
     'author': '幻之境开发小组-会飞的键盘侠、只剩一瓶辣椒酱',
-    'version': (1, 5, 0),
+    'version': (1, 5, 1),
     'blender': (3, 0, 0),
     'location': '3DView->Panel',
     'category': 'Node', # This is automatically translated by Blender
@@ -38,7 +38,6 @@ from addon_utils import disable
 from .SDNode import rtnode_unreg, TaskManager
 from .MultiLineText import EnableMLT
 
-from .translations import translations_dict
 from .utils import Icon, FSWatcher, ScopeTimer
 from .timer import timer_reg, timer_unreg
 from .preference import pref_register, pref_unregister
@@ -110,6 +109,8 @@ def register():
     if bpy.app.background:
         dump_info()
         return
+    
+    from .translations import translations_dict
     bpy.app.translations.register(__name__, translations_dict)
     reg()
     Icon.set_hq_preview()

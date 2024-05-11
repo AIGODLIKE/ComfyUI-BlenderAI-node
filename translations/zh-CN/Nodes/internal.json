@@ -227,6 +227,17 @@
             "SAMPLER": "采样器"
         }
     },
+    "SamplerLCMUpscale": {
+        "title": "LCM缩放采样器",
+        "widgets": {
+            "scale_ratio": "缩放系数",
+            "scale_steps": "缩放步数",
+            "upscale_method": "缩放方法"
+        },
+        "outputs": {
+            "SAMPLER": "采样器"
+        }
+    },
 
     "CFGGuider": {
         "title": "CFG引导",
@@ -322,6 +333,19 @@
         },
         "outputs": {
             "SIGMAS": "Sigmas"
+        }
+    },
+    "SplitSigmasDenoise": {
+        "title": "分离Sigmas降噪",
+        "inputs": {
+            "sigmas": "Sigmas"
+        },
+        "widgets": {
+            "denoise": "降噪"
+        },
+        "outputs": {
+            "high_sigmas": "高Sigmas",
+            "low_sigmas": "低Sigmas"
         }
     },
     "FlipSigmas": {
@@ -1735,6 +1759,68 @@
     },
 
 
+    "UNetSelfAttentionMultiply": {
+        "title": "UNet自注意力乘数",
+        "inputs": {
+            "model": "模型"
+        },
+        "widgets": {
+            "q": "q",
+            "k": "k",
+            "v": "v",
+            "out": "out"
+        },
+        "outputs": {
+            "MODEL": "模型"
+        }
+    },
+    "UNetCrossAttentionMultiply": {
+        "title": "UNet交叉注意力乘数",
+        "inputs": {
+            "model": "模型"
+        },
+        "widgets": {
+            "q": "q",
+            "k": "k",
+            "v": "v",
+            "out": "out"
+        },
+        "outputs": {
+            "MODEL": "模型"
+        }
+    },
+    "UNetTemporalAttentionMultiply": {
+        "title": "UNetTemporal注意力乘数",
+        "inputs": {
+            "model": "模型"
+        },
+        "widgets": {
+            "q": "q",
+            "k": "k",
+            "v": "v",
+            "out": "out"
+        },
+        "outputs": {
+            "MODEL": "模型"
+        }
+    },
+    "CLIPAttentionMultiply": {
+        "title": "CLIP注意力乘数",
+        "inputs": {
+            "clip": "CLIP"
+        },
+        "widgets": {
+            "q": "q",
+            "k": "k",
+            "v": "v",
+            "out": "out"
+        },
+        "outputs": {
+            "CLIP": "CLIP"
+        }
+    },
+
+
     "CLIPTextEncodeControlnet": {
         "title": "CLIP文本编码ControlNet",
         "inputs": {
@@ -1916,7 +2002,7 @@
         }
     },
     "SelfAttentionGuidance": {
-        "title": "自注意力引导",
+        "title": "SAG自注意力引导",
         "inputs": {
             "model": "模型"
         },
@@ -1929,7 +2015,7 @@
         }
     },
     "PerpNeg": {
-        "title": "重塑负提示",
+        "title": "PerpNeg重塑负提示",
         "inputs": {
             "model": "模型",
             "empty_conditioning": "空条件"
@@ -1939,6 +2025,22 @@
         },
         "outputs": {
             "MODEL": "模型"
+        }
+    },
+    "PerpNegGuider": {
+        "title": "PerpNeg重塑负提示引导",
+        "inputs": {
+            "model": "模型",
+            "positive": "正面条件",
+            "negative": "负面条件",
+            "empty_conditioning": "空条件"
+        },
+        "widgets": {
+            "cfg": "CFG",
+            "neg_scale": "负面缩放"
+        },
+        "outputs": {
+            "GUIDER": "引导"
         }
     },
     "DifferentialDiffusion": {
