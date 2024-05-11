@@ -1069,7 +1069,8 @@ def get_ctx_node():
 
 class Ops_Switch_Socket_Widget(bpy.types.Operator):
     bl_idname = "sdn.switch_socket_widget"
-    bl_label = "切换Socket/属性"
+    bl_label = "Toggle socket"
+    bl_description = "Toggle whether a socket is or isn't used for input"
     socket_name: bpy.props.StringProperty()
     node_name: bpy.props.StringProperty()
     action: bpy.props.StringProperty(default="")
@@ -1138,7 +1139,8 @@ class Ops_Switch_Socket_Widget(bpy.types.Operator):
 
 class Ops_Add_SaveImage(bpy.types.Operator):
     bl_idname = "sdn.add_saveimage"
-    bl_label = "添加保存图片节点"
+    bl_label = "Add SaveImage node"
+    bl_description = "Add a SaveImage node and connect it to the image"
     node_name: bpy.props.StringProperty()
 
     def execute(self, context):

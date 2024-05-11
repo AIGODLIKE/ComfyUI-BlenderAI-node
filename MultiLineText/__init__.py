@@ -32,8 +32,8 @@ def disable_multiline_text():
 
 class EnableMLT(bpy.types.Operator):
     bl_idname = "sdn.enable_mlt"
-    bl_description = "Enable MLT"
     bl_label = "Enable MLT"
+    bl_description = "Enable multiline text for this textbox"
     bl_translation_context = ctxt
 
     def execute(self, context):
