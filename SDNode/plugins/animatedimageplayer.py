@@ -1,23 +1,28 @@
 import bpy
+from platform import system
 from threading import Thread
 from pathlib import Path
 from time import sleep
-#from ...External.lupawrapper import get_lua_runtime
 from ...utils import update_screen, ScopeTimer, PrevMgr
 from ...timer import Timer
 from ...kclogger import logger
 
 
-#rt = get_lua_runtime("AnimatedImage")
-#imglib = rt.load_dll("image")
+if system() != "Linux": #TODO: Linux lupa
+    from ...External.lupawrapper import get_lua_runtime
+    rt = get_lua_runtime("AnimatedImage")
+    imglib = rt.load_dll("image")
 
 
 def read_frame_to_preview(imgpath, p: bpy.types.ImagePreview, frame):
-    #f, w, h, c, d = imglib.cache_animated_image(imgpath)
-    p.icon_size = (32, 32)
-    p.image_size = (32, 32)#(w, h)
-    #imglib.read_frame(imgpath, frame, p.as_pointer())
-
+    if system() != "Linux": #TODO: Linux lupa
+        p.icon_size = (32, 32)
+        p.image_size = (32, 32)
+    else:
+        f, w, h, c, d = imglib.cache_animated_image(imgpath)
+        p.icon_size = (32, 32)
+        p.image_size = (w, h)
+        imglib.read_frame(imgpath, frame, p.as_pointer())
 
 class AnimatedImagePlayer:
     def __init__(self, prev: bpy.types.ImagePreview, imgpath: str, destroycb=None) -> None:

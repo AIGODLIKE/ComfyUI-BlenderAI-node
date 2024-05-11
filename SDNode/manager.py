@@ -6,7 +6,7 @@ import sys
 import json
 import time
 import atexit
-import platform
+from platform import system
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 from shutil import rmtree
@@ -674,7 +674,7 @@ class LocalServer(Server):
         # cmd = " ".join([str(python), arg])
         # 加了 stderr后 无法获取 进度?
         # logger.debug(" ".join(args))
-        if(platform.system() == 'Linux'):
+        if(system() == 'Linux'):
             args = " ".join(args)
             args = f"source {pref.python_path}/activate; {args}"
             if(os.path.exists("/opt/intel/oneapi/setvars.sh")):

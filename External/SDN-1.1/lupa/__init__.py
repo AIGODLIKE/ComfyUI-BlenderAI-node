@@ -1,5 +1,5 @@
 from __future__ import absolute_import
-
+from platform import system
 
 # We need to enable global symbol visibility for lupa in order to
 # support binary module loading in Lua.  If we can enable it here, we
@@ -52,7 +52,8 @@ def _import_newest_lib():
         raise RuntimeError("Failed to import Lupa binary module.")
     # prefer Lua over LuaJIT and high versions over low versions.
     module_name = max(modules, key=lambda m: (m[1] == 'lua', tuple(map(int, m[2] or '0'))))
-    #_newest_lib = __import__(module_name[0], level=1, fromlist="*", globals=globals())
+    if system() != "Linux:": #TODO: Linux lupa
+        _newest_lib = __import__(module_name[0], level=1, fromlist="*", globals=globals())
 
     return _newest_lib
 
@@ -62,8 +63,11 @@ def __getattr__(name):
     Get a name from the latest available Lua (or LuaJIT) module.
     Imports the module as needed.
     """
-    #lua = _newest_lib if _newest_lib is not None else _import_newest_lib()
-    return "lua54"#getattr(lua, name)
+    if system() != "Linux": #TODO: Linux lupa
+        lua = _newest_lib if _newest_lib is not None else _import_newest_lib()
+        return getattr(lua, name)
+    else:
+        return "lua54"
 
 
 import sys

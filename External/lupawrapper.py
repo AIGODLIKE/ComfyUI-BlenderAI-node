@@ -36,7 +36,8 @@ class LuaRuntime:
 
     @staticmethod
     def get_lua_runtime(name="", rt=DEFAULT_RT) -> LuaRuntime:
-        return
+        if system() == "Linux": #TODO: Linux lupa
+            return
         if name not in LuaRuntime.__RT_DICT__:
             try:
                 rt = LuaRuntime(name, rt)
@@ -58,11 +59,9 @@ class LuaRuntime:
         try:
             lupa = importlib.import_module(f"lupa.{rt}")
         except BaseException:
-            try:
+            if system() != "Linux": #TODO: Linux lupa
                 rt = "lua54"
                 lupa = importlib.import_module("lupa.lua54")
-            except Exception:
-                lupa = importlib.import_module("lupa")
         self.name = name
         self.rt = rt
         self.lupa = lupa

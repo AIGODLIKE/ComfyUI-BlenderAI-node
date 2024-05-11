@@ -6,7 +6,7 @@ try:
     # ori = sys.getdlopenflags()
     # sys.setdlopenflags(8)
     ts = time()
-    #from .lupawrapper import test
+    from .lupawrapper import test
     # print(f"Load lua runtime: {time() - ts:.2f}s")
     # test()
     # sys.setdlopenflags(ori)

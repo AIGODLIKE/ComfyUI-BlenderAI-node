@@ -9,6 +9,7 @@ import urllib.parse
 import tempfile
 from functools import partial, lru_cache
 from pathlib import Path
+from platform import system
 from copy import deepcopy
 from bpy.types import Context, UILayout
 
@@ -1759,10 +1760,13 @@ class 截图(BluePrintBase):
             if not self.capture:
                 return
             self.capture = False
-            #from ..External.lupawrapper import get_lua_runtime
-            #rt = get_lua_runtime()
-            #hk = rt.load_dll("luahook")
-            x1, y1, x2, y2 = (0, 0, 0, 0)#hk.scrcap()
+            if system() != "Linux": #TODO: Linux lupa
+                from ..External.lupawrapper import get_lua_runtime
+                rt = get_lua_runtime()
+                hk = rt.load_dll("luahook")
+                x1, y1, x2, y2 = hk.scrcap()
+            else:
+                x1, y1, x2, y2 = (0, 0, 0, 0)
             if x1 == x2 or y1 == y2:
                 logger.error("%s: %s", _T('Error Capture Screen Region'), (x1, y1, x2, y2))
                 return
