@@ -1213,7 +1213,8 @@ class TaskManager:
 
             if mtype == "status" and data['status']['exec_info']['queue_remaining'] == 0 and get_pref().play_finish_sound:
                 try: #The user may not type the filepath in correctly
-                    device = aud.Device()
+                    device = aud.Device() # 
+                    device.volume = get_pref().finish_sound_volume
                     sound = aud.Sound(get_pref().finish_sound_path)
                     sound_buffered = aud.Sound.cache(sound)
                     device.play(sound_buffered)

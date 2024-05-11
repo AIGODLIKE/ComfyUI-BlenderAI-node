@@ -247,6 +247,8 @@ class AddonPreference(bpy.types.AddonPreferences):
     finish_sound_path: bpy.props.StringProperty(subtype="FILE_PATH", name="Finish Sound Path", 
                                                 description="Path to the file to play when the ComfyUI queue is empty",
                                                 default=str(Path(__file__).parent / "SDNode" / "finish.wav"))
+    finish_sound_volume: bpy.props.FloatProperty(default=1.0, min=0, soft_max=4, precision=2, step=1, name="Volume", 
+                                                 description="Volume of the sound played wwhen the ComfyUI queue is empty")
     stencil_offset_size_xy: bpy.props.IntVectorProperty(default=(0, 0), size=2, min=-100, max=100, name="Stencil Offset Size")
     drag_link_result_count_col: bpy.props.IntProperty(default=4, min=1, max=10, name="Drag Link Result Count Column")
     drag_link_result_count_row: bpy.props.IntProperty(default=10, min=1, max=100, name="Drag Link Result Count Row")
@@ -553,10 +555,13 @@ class AddonPreference(bpy.types.AddonPreferences):
         col.prop(self, "preview_image_size", text="", text_ctxt=ctxt)
         row = layout.row(align=True)
         row.prop(self, "play_finish_sound", text_ctxt=ctxt)
-        col = row.column()
+        col = row.column(align=True)
         col.scale_x = 1.75 # This will also stretch the folder button. Too bad! Still better than the alternative.
         col.enabled = self.play_finish_sound
         col.prop(self, "finish_sound_path", text="", text_ctxt=ctxt)
+        col = row.column(align=True)
+        col.prop(self, "finish_sound_volume", text="", text_ctxt=ctxt)
+        col.scale_x = 0.4
         row = layout.row(align=True)
         row.label(text="Drag Link Result Count", text_ctxt=ctxt)
         row.prop(self, "drag_link_result_count_col", text="", text_ctxt=ctxt)
