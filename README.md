@@ -49,7 +49,8 @@ First, you need to install [Blender](https://www.blender.org/download/)(Recommen
 
 - Install from Blender's preferences menu
 
-In Blender's preferences menu, under addons, you can directly install an addon by selecting the zip file.
+In Blender's preferences menu, under addons, you can install an addon by selecting the addon's zip file.
+Blender will automatically show you the addon after it's installed; if you missed it, it's in the Node category, search for "ComfyUI".
 Don't forget to enable the addon by clicking on the tickbox to the left of the addon's name!
 
 *Note*: The zip file might not have a preview image. This is normal.
@@ -66,6 +67,7 @@ cd %USERPROFILE%\AppData\Roaming\Blender Foundation\blender\%version%\scripts\ad
 git clone https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node.git --recursive
 ```
 Then you can see the addon after refreshing the addons menu or restarting Blender.
+It is in the Node category, search for "ComfyUI".
 Don't forget to enable the addon by clicking on the tickbox to the left of the addon's name!
 
 # Usage
