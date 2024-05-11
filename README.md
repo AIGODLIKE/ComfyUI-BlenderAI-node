@@ -46,6 +46,7 @@ First, you need to install [Blender](https://www.blender.org/download/)(Recommen
 ![image](https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/aacf1cfe-ae44-4930-9a93-c226a8408066)
 
 2. **Install this add-on（ComfyUI BlenderAI node）**
+<!--- TODO: "ComfyUI BlenderAI node" is awkward wording. Come up with a better name? -->
 
 - Install from Blender's preferences menu
 
@@ -60,7 +61,7 @@ Don't forget to enable the addon by clicking on the tickbox to the left of the a
 
 - Install manually (recommended)
 
-ComfyUI BlenderAI node is a standard Blender add-on. You can git clone the addon to Blender's addon directory:
+This is a standard Blender add-on. You can git clone the addon to Blender's addon directory:
 
 ```
 cd %USERPROFILE%\AppData\Roaming\Blender Foundation\blender\%version%\scripts\addons
@@ -106,7 +107,7 @@ If you're using a virtual environment named venv, the executable is in `venv/Scr
 4.  **Open to ComfyUI Node Editor**
 
 Switch to the ComfyUI Node Editor, press N to open the sidebar/n-menu, and click the `Launch/Connect to ComfyUI` button to launch ComfyUI or connect to it.
-Or, sSwitch the "Server Type" in the addon's preferences to remote server so that you can link your Blender to a running ComfyUI process.
+Or, switch the "Server Type" in the addon's preferences to remote server so that you can link your Blender to a running ComfyUI process.
 ![Pasted image 20240319185542](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/e46c3a5a-ff32-4503-8228-f101c91c6664)
 
 
@@ -164,19 +165,19 @@ The first time you do this, you might need to wait.
 
 ### Link
 
-Select a node, then hold `D` and drag cursor to another node's center, you can link all available widgets between them
+Select a node, then hold `D` and drag the cursor to another node's center, you can link all available widgets between them
 
 ![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/eae1061a-c4f5-4f0c-becf-501176a7aaa2)
 
 ### Search Widgets
 
-By press `R` when the cursor is nearby a widget, there will be a pie menu to display all nodes that has this widget
+By pressing `R` when the cursor is near a widget, a pie menu will display all nodes that have this widget
 
 ![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/2dcffa51-a261-4e22-9692-00863e4faa33)
 
 ### Mask Link
 
-Hold `F` and drag cursor to a mask node, it will automatically create a camera to genarate mask from scene
+Hold `F` and drag the cursor to a mask node, it will automatically create a camera to genarate mask from the scene
 
 ![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/d97805e5-4f54-4e1a-9fe0-0b98192baab9)
 
@@ -185,7 +186,7 @@ Hold `F` and drag cursor to a mask node, it will automatically create a camera t
 ## Notes
 - Not every node can work perfectly in Blender, for example nodes regarding videos
 - You can enable the console under `Window`>`Toggle System Console` at the top left
-- Model preview images need to have same name as the model, including the extension, for example - `model.ckpt.jpg`
+- Model preview images need to have the same name as the model, including the extension, for example - `model.ckpt.jpg`
 
 ## Tested Nodes
 Here are some interesting nodes we've tested in Blender
