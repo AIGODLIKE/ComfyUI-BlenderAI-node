@@ -1731,6 +1731,9 @@ class NodeParser:
                         if not isinstance(inp_desc[0], str):
                             logger.warning("socket type not str[IGNORE]: %s.%s -> %s", name, inp, inp_desc[0])
                             inp_desc[0] = str(inp_desc[0])
+                        # 如果到这里仍然是空 则使用默认字符串
+                        if inp_desc[0] == "":
+                            inp_desc[0] = f"{name}_{inp}"
                         _desc.add(inp_desc[0])
                         self.SOCKET_TYPE[name][inp] = inp_desc[0]
             for index, out_type in enumerate(desc["output"]):
@@ -1772,7 +1775,9 @@ class NodeParser:
         for stype in sockets:
             if stype in {"ENUM", }:
                 continue
-
+            # 过滤不安全socket
+            if stype == "":
+                continue
             def draw(self, context, layout, node: NodeBase, text):
                 if not node.is_registered_node_type():
                     return
