@@ -210,6 +210,7 @@ other = {
     "Add SaveImage node": "添加保存图片节点",
     "Add a SaveImage node and connect it to the image": "添加保存图片节点",
     "Toggle socket": "切换Socket/属性",
+    "Toggle socket visibility": "切换Socket显示隐藏",
     "Toggle whether a socket is or isn't used for input": "切换Socket/属性",
     # SDNode/blueprints.py
     "Non-Standard Enum": "非标准枚举",
