@@ -275,7 +275,7 @@ class PanelViewport(bpy.types.Panel):
         Timer.put((f, brush, length, area.width, area.height))
 
 def header_reg():
-    bpy.types.NODE_HT_header.prepend(draw_header_button)
+    bpy.types.NODE_HT_header.append(draw_header_button)
 
 def header_unreg():
     bpy.types.NODE_HT_header.remove(draw_header_button)
