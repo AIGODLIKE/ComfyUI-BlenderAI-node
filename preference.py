@@ -238,6 +238,7 @@ class AddonPreference(bpy.types.AddonPreferences):
     install_deps: bpy.props.BoolProperty(default=False, name="Check Depencies Before Server Launch", description="Check ComfyUI(some) Depencies Before Server Launch")
     force_log: bpy.props.BoolProperty(default=False, name="Force Log", description="Force Log, Generally Not Needed")
     preview_image_size_type: bpy.props.EnumProperty(default="FIXED", name="Preview Image Size",
+                                                    translation_context=ctxt,
                                                      items=[("FIXED", "Fixed", "Previews are shown at your chosen resolution", 0),
                                                             ("NATIVE", "Native", "Previews are shown at their native resolution", 1),
                                                             ("DEFAULT", "Blender Default", "Default Blender behavior, previews are not automatically resized", 2),
@@ -247,7 +248,7 @@ class AddonPreference(bpy.types.AddonPreferences):
     finish_sound_path: bpy.props.StringProperty(subtype="FILE_PATH", name="Finish Sound Path", 
                                                 description="Path to the file to play when the ComfyUI queue is empty",
                                                 default=str(Path(__file__).parent / "SDNode" / "finish.wav"))
-    finish_sound_volume: bpy.props.FloatProperty(default=1.0, min=0, soft_max=4, precision=2, step=1, name="Volume", 
+    finish_sound_volume: bpy.props.FloatProperty(default=1.0, min=0, soft_max=4, precision=2, step=1, name="Sound Volume", 
                                                  description="Volume of the sound played wwhen the ComfyUI queue is empty")
     stencil_offset_size_xy: bpy.props.IntVectorProperty(default=(0, 0), size=2, min=-100, max=100, name="Stencil Offset Size")
     drag_link_result_count_col: bpy.props.IntProperty(default=4, min=1, max=10, name="Drag Link Result Count Column")
