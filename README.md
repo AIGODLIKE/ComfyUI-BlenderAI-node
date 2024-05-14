@@ -204,30 +204,6 @@ Hold `F` and drag the cursor to a mask node, it will automatically create a came
 
 ![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/d97805e5-4f54-4e1a-9fe0-0b98192baab9)
 
-
-
-## Shortcut Keys
-
-### Link
-
-Select a node, then hold `D` and drag cursor to another node's center, you can link all available widgets between them
-
-![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/eae1061a-c4f5-4f0c-becf-501176a7aaa2)
-
-### Search Widgets
-
-By press `R` when the cursor is nearby a widget, there will be a pie menu to display all nodes that has this widget
-
-![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/2dcffa51-a261-4e22-9692-00863e4faa33)
-
-### Mask Link
-
-Hold `F` and drag cursor to a mask node, it will automatically create a camera to genarate mask from scene
-
-![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/d97805e5-4f54-4e1a-9fe0-0b98192baab9)
-
-
-
 ## Notes
 - Not every node can work perfectly in Blender, for example nodes regarding videos
 - You can enable the console under `Window`>`Toggle System Console` at the top left
