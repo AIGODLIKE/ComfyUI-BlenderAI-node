@@ -1,4 +1,8 @@
+from platform import system
+
 def use_hook(action=True):
+    if system() == "Linux": # TODO: Linux lupa
+        return
     try:
         from . import hook
         if action:
