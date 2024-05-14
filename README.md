@@ -37,7 +37,7 @@ https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/cb96dd60-b9
 
 # Installation
 
-Only tested on WINDOWS 10\\11
+## WINDOWS 10\\11
 
 1. **Install Blender**
 
@@ -70,6 +70,18 @@ git clone https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node.git --recursive
 Then you can see the addon after refreshing the addons menu or restarting Blender.
 It is in the Node category, search for "ComfyUI".
 Don't forget to enable the addon by clicking on the tickbox to the left of the addon's name!
+
+## Linux
+If you're using Linux, assuming you have some experience:
+
+1. Install [Blender](https://www.blender.org/download/)
+2. Create and activate a Python venv
+3. Install [ComfyUI](https://github.com/comfyanonymous/ComfyUI)
+4. `cd /home/**YOU**/.config/blender/**BLENDER.VERSION**/scripts/addons`
+4. `git clone https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node.git --recursive`
+5. Set your ComfyUI path and your venv /bin/ path in the addon's preferences
+
+Some things will not work on Linux, or might break!
 
 # Usage
 

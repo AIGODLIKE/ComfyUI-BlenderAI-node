@@ -31,7 +31,7 @@ class Panel(bpy.types.Panel):
             return
         sdn = bpy.context.scene.sdn
         row.prop(sdn, 'open_pref', text="", icon="PREFERENCES", text_ctxt=ctxt)
-        if platform.system() != "Darwin":
+        if platform.system() not in ['Linux', 'Darwin']:
             row.operator("wm.console_toggle", text="", icon="CONSOLE", text_ctxt=ctxt)
         # row.prop(sdn, "restart_webui", text="", icon="RECOVER_LAST")
         if TaskManager.server == FakeServer._instance:
@@ -193,6 +193,12 @@ class Panel(bpy.types.Panel):
             row.alert = True
             row.label(text=error_msg, icon="ERROR", text_ctxt=ctxt)
 
+def draw_header_button(self, context):
+    if context.space_data.tree_type == 'CFNodeTree':
+        layout = self.layout
+        col = layout.column()
+        col.alert = True
+        col.operator(Ops.bl_idname, text="", icon="PLAY").action = "Submit"
 
 class HistoryItem(bpy.types.PropertyGroup):
     name: bpy.props.StringProperty(default="")
@@ -269,3 +275,9 @@ class PanelViewport(bpy.types.Panel):
                 brush.stencil_pos = (width / 2, (height) / 2 - offset_top)
             brush.stencil_dimension = (length / 2, length / 2)
         Timer.put((f, brush, length, area.width, area.height))
+
+def header_reg():
+    bpy.types.NODE_HT_header.append(draw_header_button)
+
+def header_unreg():
+    bpy.types.NODE_HT_header.remove(draw_header_button)

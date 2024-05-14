@@ -6,6 +6,8 @@ import sys
 import json
 import time
 import atexit
+import aud
+from platform import system
 import struct
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
@@ -677,6 +679,14 @@ class LocalServer(Server):
         # cmd = " ".join([str(python), arg])
         # 加了 stderr后 无法获取 进度?
         # logger.debug(" ".join(args))
+        if(system() == 'Linux'):
+            args = " ".join(args)
+            args = f"source {pref.python_path}/activate; {args}"
+            if(os.path.exists("/opt/intel/oneapi/setvars.sh")):
+                args = "source /opt/intel/oneapi/setvars.sh; " + args
+                logger.warning("Using Intel OneAPI")
+            args = ["/bin/bash", "-c", args] #shell=True will use /bin/sh which can't source
+        
         p = Popen(args, stdout=PIPE, stderr=STDOUT, cwd=Path(model_path).resolve().as_posix())
         self.child = p
         self.pid = p.pid
@@ -1200,6 +1210,16 @@ class TaskManager:
                 ...
             elif mtype != "progress":
                 logger.debug("%s: %s", _T("Message Type"), mtype)
+
+            if mtype == "status" and data['status']['exec_info']['queue_remaining'] == 0 and get_pref().play_finish_sound:
+                try: #The user may not type the filepath in correctly
+                    device = aud.Device() # 
+                    device.volume = get_pref().finish_sound_volume
+                    sound = aud.Sound(get_pref().finish_sound_path)
+                    sound_buffered = aud.Sound.cache(sound)
+                    device.play(sound_buffered)
+                except Exception as e:
+                    logger.error("Error when playing sound:", e)
 
             Timer.put(update_screen)
 
