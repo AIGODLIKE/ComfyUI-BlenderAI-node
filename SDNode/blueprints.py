@@ -9,6 +9,7 @@ import urllib.parse
 import tempfile
 from functools import partial, lru_cache
 from pathlib import Path
+from platform import system
 from copy import deepcopy
 from bpy.types import Context, UILayout
 
@@ -100,11 +101,17 @@ def draw_prop_with_link(layout, self, prop, swsock, swdisp=False, row=True, pre=
 
 
 def setwidth(self: NodeBase, w, count=1):
+    if get_pref().preview_image_size_type == "DEFAULT":
+        def delegate(self: NodeBase):
+            self.bl_width_max = 8192
+        Timer.put((delegate, self))
+        return self.width
+    
     if not w:
         return 0
     oriw = w
     w = max(self.bl_width_min, w)
-    fpis = get_pref().fixed_preview_image_size
+    fpis = get_pref().preview_image_size_type == "FIXED"
     if fpis:
         pw = get_pref().preview_image_size
         w = min(oriw, pw)
@@ -192,6 +199,7 @@ class BluePrintBase:
                 mgr = bpy.context.window_manager
                 col.prop(stat, "addtext", icon="ADD", text="")
                 col.template_list("MLTWords_UL_UIList", prop, mgr, "mlt_words", mgr, "mlt_words_index")
+                col.prop(bpy.context.scene.sdn, "search_tag", icon="VIEWZOOM", text="")
                 col.template_list("MLTText_UL_UIList", "", stat, "texts", stat, "tindex")
             return True
 
@@ -1367,6 +1375,7 @@ class 存储(BluePrintBase):
                 imgs = []
                 for img in img_paths:
                     imgs.append(cache_to_local(img).as_posix())
+
                 def push_images_seq(imgs: list[str], channel, frame_start, frame_final_duration):
                     seqe = bpy.context.scene.sequence_editor
                     for img in imgs:
@@ -1758,10 +1767,13 @@ class 截图(BluePrintBase):
             if not self.capture:
                 return
             self.capture = False
-            from ..External.lupawrapper import get_lua_runtime
-            rt = get_lua_runtime()
-            hk = rt.load_dll("luahook")
-            x1, y1, x2, y2 = hk.scrcap()
+            if system() != "Linux": #TODO: Linux lupa
+                from ..External.lupawrapper import get_lua_runtime
+                rt = get_lua_runtime()
+                hk = rt.load_dll("luahook")
+                x1, y1, x2, y2 = hk.scrcap()
+            else:
+                x1, y1, x2, y2 = (0, 0, 0, 0)
             if x1 == x2 or y1 == y2:
                 logger.error("%s: %s", _T('Error Capture Screen Region'), (x1, y1, x2, y2))
                 return
@@ -2122,7 +2134,7 @@ class TripoSRViewer(BluePrintBase):
         name = "TripoSR Material"
         if name in bpy.data.materials:
             return bpy.data.materials[name]
-        mat = bpy.data.materials.new(name="TripoSR Material")
+        mat = bpy.data.materials.new(name=name)
         mat.use_nodes = True
         nodetree = mat.node_tree
         # 创建3个节点 ShaderNodeVertexColor ShaderNodeBsdfPrincipled 和 ShaderNodeOutputMaterial
@@ -2200,6 +2212,121 @@ class TripoSRViewer(BluePrintBase):
                     save_path = Path(self.output_dir).joinpath(self.filename).with_suffix(".obj")
                     save_path = get_next_filename(save_path)
                     obj = cache_to_local(data, suffix=".obj", save_path=save_path).as_posix()
+        Timer.put((f, self, meshes))
+
+
+class TripoGLBViewer(BluePrintBase):
+    comfyClass = "TripoGLBViewer"
+
+    def spec_extra_properties(s, properties, nname, ndesc):
+        desktop = Path.home().joinpath("Desktop").as_posix()
+        prop = bpy.props.StringProperty(name="Output Path", default=desktop, subtype="DIR_PATH")
+        properties["output_dir"] = prop
+        items = [("Import", "Import", "", "", 0),
+                 ("Replace", "Replace", "", "", 1),
+                 ("Export", "Export", "", "", 2),
+                 ]
+        prop = bpy.props.EnumProperty(items=items)
+        properties["mode"] = prop
+        prop = bpy.props.StringProperty(default="model.glb")
+        properties["filename"] = prop
+
+    def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swsock=True, swdisp=False) -> bool:
+        if prop == "mode":
+            layout.prop(self, prop, expand=True, text_ctxt=self.get_ctxt())
+            if self.mode == "Import":
+                layout.prop(self, "output_dir", expand=True, text_ctxt=self.get_ctxt())
+            elif self.mode == "Replace":
+                o = bpy.context.object
+                if o:
+                    layout.label(text=_T('Current Object: %s') % o.name)
+            elif self.mode == "Export":
+                layout.prop(self, "filename", expand=True, text_ctxt=self.get_ctxt())
+                layout.prop(self, "output_dir", expand=True, text_ctxt=self.get_ctxt())
+        return True
+
+    def create_mat(s) -> bpy.types.Material:
+        name = "TripoGLB Material"
+        if name in bpy.data.materials:
+            return bpy.data.materials[name]
+        mat = bpy.data.materials.new(name=name)
+        mat.use_nodes = True
+        nodetree = mat.node_tree
+        # 创建3个节点 ShaderNodeVertexColor ShaderNodeBsdfPrincipled 和 ShaderNodeOutputMaterial
+        nodetree.nodes.clear()
+        n1 = nodetree.nodes.new(type='ShaderNodeVertexColor')
+        n1.location = -200, 300
+        n2 = nodetree.nodes.new(type='ShaderNodeBsdfPrincipled')
+        n2.location = 10, 300
+        n3 = nodetree.nodes.new(type='ShaderNodeOutputMaterial')
+        n3.location = 300, 300
+        # 依次连接n1-n2-n3 均连接第一个接口
+        nodetree.links.new(n1.outputs[0], n2.inputs[0])
+        nodetree.links.new(n2.outputs[0], n3.inputs[0])
+        return mat
+
+    def set_origin(s, obj: bpy.types.Object):
+        import numpy as np
+        from mathutils import Vector
+        # obj = bpy.context.active_object
+        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+        mesh: bpy.types.Mesh = obj.data
+        # 使用numpy加速获取所有顶点的Z坐标
+        verts = np.zeros(len(mesh.vertices) * 3)
+        mesh.vertices.foreach_get("co", verts)
+        verts = verts.reshape((-1, 3))
+        # 计算中心点
+        center = verts.sum(axis=0) / len(mesh.vertices)
+        center[2] = verts[:, 2].min()
+        lowest_point = Vector(center)
+        # 将原点设置到底部中心点
+        # 首先，将3D光标移动到底部中心点位置
+        cursor_loc = bpy.context.scene.cursor.location
+        bpy.context.scene.cursor.location = lowest_point
+        # 然后，将原点设置到3D光标的位置
+        bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
+        bpy.context.scene.cursor.location = cursor_loc
+
+    def import_glb(s, filepath) -> list[bpy.types.Object]:
+        rec_objs = set(bpy.context.scene.objects)
+        bpy.ops.import_scene.gltf(filepath=filepath)
+        new_objs = set(bpy.context.scene.objects) - rec_objs
+        for obj in new_objs:
+            bpy.context.view_layer.objects.active = obj
+            # obj.active_material = s.create_mat()
+            s.set_origin(obj)
+            bpy.ops.object.shade_smooth()
+        return list(new_objs)
+
+    def post_fn(s, self: NodeBase, t: Task, result):
+        logger.debug("%s%s->%s", self.class_type, _T('Post Function'), result)
+        # result = {'node': '4', 'output': {'mesh': [{'filename': 'meshsave_00002_.obj', 'type': 'output', 'subfolder': ''}]}}
+        output = result.get("output", {})
+        meshes = output.get("mesh", [])
+        if not meshes:
+            return
+
+        def f(self, meshes):
+            for data in meshes:
+                filename = data.get("filename", "")
+                if not filename.lower().endswith(".glb"):
+                    logger.warning(f"Not process {filename}")
+                    continue
+
+                if self.mode in {"Import", "Replace"}:
+                    active_object = bpy.context.object
+                    save_path = Path(self.output_dir).joinpath(filename)
+                    obj = cache_to_local(data, suffix=".glb", save_path=save_path).as_posix()
+                    imp_objs = s.import_glb(obj)
+                    if self.mode == "Replace" and active_object and imp_objs:
+                        active_object.data, imp_objs[0].data = imp_objs[0].data, active_object.data
+                        bpy.data.objects.remove(imp_objs[0])
+                        bpy.context.view_layer.objects.active = active_object
+                        active_object.select_set(True)
+                elif self.mode == "Export":
+                    save_path = Path(self.output_dir).joinpath(self.filename).with_suffix(".glb")
+                    save_path = get_next_filename(save_path)
+                    obj = cache_to_local(data, suffix=".glb", save_path=save_path).as_posix()
         Timer.put((f, self, meshes))
 
 

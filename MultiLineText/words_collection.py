@@ -27,6 +27,7 @@ class Words:
 
     def __init__(self):
         self.word_list: list[tuple] = []
+        self.word_map: dict[str, tuple] = {}
 
     def read_tags(self):
         if self.CACHE_PATH.exists():
@@ -89,10 +90,13 @@ class Words:
             # words.append((word, 5000, ""))
         return words
 
+    def load_map(self):
+        for word in self.word_list:
+            self.word_map[word[0]] = word
 
 words = Words()
 words.read_tags()
-
+words.load_map()
 
 @bpy.app.handlers.persistent
 def f(_):
@@ -109,7 +113,9 @@ def f(_):
             it.name = f"{word[0]} <== {word[2]}"
         it.freq = int(word[1])
         count += 1
-    logger.info(f"Load MLT Words: {time.time()-ts:.4f}s")
+        if count > 1000:
+            break
+    logger.info(f"Update Search Words: {time.time()-ts:.4f}s")
 
 
 if f not in bpy.app.handlers.load_post:

@@ -240,6 +240,7 @@ def insert_internal(trie: Trie):
                         if c == "," and left_bracket == 0:
                             split_words.append(split_word.strip())
                             split_word = ""
+                            continue
                         split_word += c
                         if c == "(":
                             left_bracket += 1
@@ -249,6 +250,8 @@ def insert_internal(trie: Trie):
                     split_words = content.split(",")
                 # 处理 to -> replace
                 for split_word in split_words:
+                    if not split_word:
+                        continue
                     rrow = (row[0], split_word, row[2], row[1], row[4])
                     words.append(rrow)
     for w in words:

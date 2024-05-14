@@ -218,11 +218,17 @@ class PropGen:
                 if inp_name in ENUM_ITEMS_CACHE[nname]:
                     return ENUM_ITEMS_CACHE[nname][inp_name]
                 items = []
+                # 专门用于 老版本的 翻译
+                spec_trans = {"输入": "Input",
+                              "渲染": "Render",
+                              "序列图": "Sequence",
+                              "视口": "Viewport"}
                 for item in inp[0]:
                     icon_id = PropGen._find_icon(nname, inp_name, item)
                     if icon_id:
                         ENUM_ITEMS_CACHE[nname][inp_name] = items
-                    items.append((str(item), str(item), "", icon_id, len(items)))
+                    si = str(item)
+                    items.append((si, spec_trans.get(si, si), "", icon_id, len(items)))
                 return items
             return wrap
         prop = bpy.props.EnumProperty(items=get_items(nname, reg_name, inp))
@@ -436,7 +442,7 @@ class MLTText(bpy.types.PropertyGroup):
         return self["name"]
 
     def update_content(self, context):
-        node: NodeBase = context.node
+        node: NodeBase = get_ctx_node()
         # 合并text
         stat = self.find_stat(node)
         if not stat:
@@ -1015,7 +1021,8 @@ class SocketBase(bpy.types.NodeSocket):
 
 class Ops_Switch_Socket_Disp(bpy.types.Operator):
     bl_idname = "sdn.switch_socket_disp"
-    bl_label = "切换Socket显示隐藏"
+    bl_label = "Toggle socket visibility"
+    bl_translation_context = ctxt
     socket_name: bpy.props.StringProperty()
     node_name: bpy.props.StringProperty()
     action: bpy.props.StringProperty(default="")
@@ -1030,7 +1037,7 @@ class Ops_Switch_Socket_Disp(bpy.types.Operator):
     def execute(self, context: Context) -> Set[int] | Set[str]:
         from .tree import CFNodeTree
         from .nodegroup import SDNGroup
-        node: SDNGroup = context.node
+        node: SDNGroup = get_ctx_node()
         if not node:
             return {"FINISHED"}
         if not node.is_group():
@@ -1055,18 +1062,25 @@ class Ops_Switch_Socket_Disp(bpy.types.Operator):
         otree.restore_toggle_links()
         return {"FINISHED"}
 
+def get_ctx_node():
+    node = getattr(bpy.context, "node", None)
+    if node: return node
+    node = getattr(bpy.context, "active_node", None)
+    if node: return node
 
 class Ops_Switch_Socket_Widget(bpy.types.Operator):
     bl_idname = "sdn.switch_socket_widget"
-    bl_label = "切换Socket/属性"
+    bl_label = "Toggle socket"
+    bl_description = "Toggle whether a socket is or isn't used for input"
     socket_name: bpy.props.StringProperty()
     node_name: bpy.props.StringProperty()
     action: bpy.props.StringProperty(default="")
+    bl_translation_context = ctxt
 
     def set_active_node(self, tree):
         if not tree:
             return
-        node = bpy.context.node
+        node = get_ctx_node()
         if not node:
             return
         if tree.nodes.active:
@@ -1079,10 +1093,10 @@ class Ops_Switch_Socket_Widget(bpy.types.Operator):
         tree: CFNodeTree = get_default_tree()
         otree = tree
         node: NodeBase = None
-        if context.node and context.node.is_group():
+        if get_ctx_node() and get_ctx_node().is_group():
             self.set_active_node(otree)
             otree.store_toggle_links()
-            tree = context.node.node_tree
+            tree = get_ctx_node().node_tree
         socket_name = get_ori_name(self.socket_name)
         if not (node := tree.nodes.get(self.node_name)):
             return {"FINISHED"}
@@ -1091,7 +1105,7 @@ class Ops_Switch_Socket_Widget(bpy.types.Operator):
                 node.switch_socket_widget(socket_name, True)
             case "ToProp":
                 node.switch_socket_widget(socket_name, False)
-        if context.node and context.node.is_group():
+        if get_ctx_node() and get_ctx_node().is_group():
             tree.interface_update(context)
             tree.update()
             # 通知更新所有节点
@@ -1127,8 +1141,10 @@ class Ops_Switch_Socket_Widget(bpy.types.Operator):
 
 class Ops_Add_SaveImage(bpy.types.Operator):
     bl_idname = "sdn.add_saveimage"
-    bl_label = "添加保存图片节点"
+    bl_label = "Add SaveImage node"
+    bl_description = "Add a SaveImage node and connect it to the image"
     node_name: bpy.props.StringProperty()
+    bl_translation_context = ctxt
 
     def execute(self, context):
         tree = get_default_tree()
@@ -1150,6 +1166,7 @@ class Ops_Active_Tex(bpy.types.Operator):
     bl_label = "选择纹理"
     img_name: bpy.props.StringProperty()
     node_name: bpy.props.StringProperty()
+    bl_translation_context = ctxt
 
     def execute(self, context):
         if not (img := bpy.data.images.get(self.img_name)):
@@ -1165,6 +1182,7 @@ class Ops_Link_Mask(bpy.types.Operator):
     bl_idname = "sdn.link_mask"
     bl_label = "链接遮照"
     bl_options = {"REGISTER", "UNDO"}
+    bl_translation_context = ctxt
     action: bpy.props.StringProperty(default="")
     cam_name: bpy.props.StringProperty(default="")
     node_name: bpy.props.StringProperty(default="")
@@ -1442,7 +1460,7 @@ class AdvTextEdit(bpy.types.Operator):
         return context.space_data.tree_type == TREE_TYPE
 
     def execute(self, context):
-        node: NodeBase = bpy.context.node
+        node: NodeBase = get_ctx_node()
         if not node:
             return {"FINISHED"}
         stat: MLTRec = node.mlt_stats.get(self.prop)
@@ -1720,6 +1738,9 @@ class NodeParser:
                         if not isinstance(inp_desc[0], str):
                             logger.warning("socket type not str[IGNORE]: %s.%s -> %s", name, inp, inp_desc[0])
                             inp_desc[0] = str(inp_desc[0])
+                        # 如果到这里仍然是空 则使用默认字符串
+                        if inp_desc[0] == "":
+                            inp_desc[0] = f"{name}_{inp}"
                         _desc.add(inp_desc[0])
                         self.SOCKET_TYPE[name][inp] = inp_desc[0]
             for index, out_type in enumerate(desc["output"]):
@@ -1761,7 +1782,9 @@ class NodeParser:
         for stype in sockets:
             if stype in {"ENUM", }:
                 continue
-
+            # 过滤不安全socket
+            if stype == "":
+                continue
             def draw(self, context, layout, node: NodeBase, text):
                 if not node.is_registered_node_type():
                     return

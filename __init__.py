@@ -1,10 +1,10 @@
 bl_info = {
-    'name': '无限圣杯-节点',
+    'name': '无限圣杯-节点 (ComfyUI Node Editor)',
     'author': '幻之境开发小组-会飞的键盘侠、只剩一瓶辣椒酱',
-    'version': (1, 4, 9),
+    'version': (1, 5, 1),
     'blender': (3, 0, 0),
     'location': '3DView->Panel',
-    'category': '辣椒出品',
+    'category': 'AI',
     'doc_url': "https://shimo.im/docs/Ee32m0w80rfLp4A2"
 }
 __dict__ = {}
@@ -38,12 +38,11 @@ from addon_utils import disable
 from .SDNode import rtnode_unreg, TaskManager
 from .MultiLineText import EnableMLT
 
-from .translations import translations_dict
 from .utils import Icon, FSWatcher, ScopeTimer
 from .timer import timer_reg, timer_unreg
 from .preference import pref_register, pref_unregister
 from .ops import Ops, Ops_Mask, Load_History, Popup_Load, Copy_Tree, Load_Batch, Fetch_Node_Status, Clear_Node_Cache, Sync_Stencil_Image, NodeSearch
-from .ui import Panel, HISTORY_UL_UIList, HistoryItem
+from .ui import header_reg, header_unreg, Panel, HISTORY_UL_UIList, HistoryItem
 from .SDNode.history import History
 from .SDNode.rt_tracker import reg_tracker, unreg_tracker
 from .SDNode.nodegroup import nodegroup_reg, nodegroup_unreg
@@ -53,7 +52,7 @@ from .Linker import linker_register, linker_unregister
 from .hook import use_hook
 clss = [Panel, Ops, RenderLayerString, MLTWord, Prop, HISTORY_UL_UIList, HistoryItem, Ops_Mask, Load_History, Popup_Load, Copy_Tree, Load_Batch, Fetch_Node_Status, Clear_Node_Cache, Sync_Stencil_Image, NodeSearch, EnableMLT]
 reg, unreg = bpy.utils.register_classes_factory(clss)
-
+from platform import system
 
 def dump_info():
     import json
@@ -110,8 +109,11 @@ def register():
     if bpy.app.background:
         dump_info()
         return
+    
+    from .translations import translations_dict
     bpy.app.translations.register(__name__, translations_dict)
     reg()
+    header_reg()
     Icon.set_hq_preview()
     TaskManager.run_server(fake=True)
     timer_reg()
@@ -140,6 +142,7 @@ def unregister():
         return
     bpy.app.translations.unregister(__name__)
     unreg()
+    header_unreg()
     rtnode_unreg()
     timer_unreg()
     del bpy.types.Scene.sdn

@@ -6,6 +6,9 @@ import sys
 import json
 import time
 import atexit
+import aud
+from platform import system
+import struct
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 from shutil import rmtree
@@ -53,6 +56,7 @@ class Task:
         self.executing_node: NodeBase = None
         self.is_finished = False
         self.process = {}
+        self.binary_message = b""
         # 记录node的类型 防止节点树变更
         self.node_ref_map = {}
         if not tree:
@@ -97,6 +101,7 @@ class Task:
 
     def set_executing_node_id(self, node_id):
         self.executing_node_id = node_id
+        self.binary_message = b""
 
         def f(self: Task):
             from .nodes import NodeBase
@@ -584,6 +589,7 @@ class RemoteServer(Server):
             if requests.get(f"{self.get_url()}/object_info", proxies={"http": None, "https": None}, timeout=10).status_code == 200:
                 self.server_connected = True
                 update_screen()
+                get_pref().preview_method = get_pref().preview_method
                 return True
         except requests.exceptions.ConnectionError as e:
             TaskManager.put_error_msg(str(e))
@@ -673,6 +679,14 @@ class LocalServer(Server):
         # cmd = " ".join([str(python), arg])
         # 加了 stderr后 无法获取 进度?
         # logger.debug(" ".join(args))
+        if system() == 'Linux':
+            args = " ".join(args)
+            args = f"source {pref.python_path}/activate; {args}"
+            if Path("/opt/intel/oneapi/setvars.sh").exists():
+                args = "source /opt/intel/oneapi/setvars.sh; " + args
+                logger.warning("Using Intel OneAPI")
+            args = ["/bin/bash", "-c", args]  # shell=True will use /bin/sh which can't source
+
         p = Popen(args, stdout=PIPE, stderr=STDOUT, cwd=Path(model_path).resolve().as_posix())
         self.child = p
         self.pid = p.pid
@@ -704,6 +718,7 @@ class LocalServer(Server):
             import requests
             try:
                 if requests.get(f"{self.get_url()}/object_info", proxies={"http": None, "https": None}, timeout=1).status_code == 200:
+                    get_pref().preview_method = get_pref().preview_method
                     return True
             except requests.exceptions.ConnectionError:
                 ...
@@ -796,6 +811,8 @@ class LocalServer(Server):
                 continue
             # logger.info(line)
             # print(re.findall("\|(.*?)[", line.decode("gbk")))
+            if "# 😺dzNodes:".encode() in line:
+                continue
             if b"CUDA out of memory" in line or b"not enough memory" in line:
                 TaskManager.put_error_msg(f"{_T('Error: Out of VRam, try restart blender')}")
             proc = ""
@@ -894,10 +911,10 @@ class TaskManager:
             t1 = time.time()
             rtnode_unreg()
             t2 = time.time()
-            logger.info(_T("UnregNode Time:") + f" {t2-t1:.2f}s")
+            logger.info(_T("UnregNode Time:") + f" {t2 - t1:.2f}s")
             rtnode_reg()
             t3 = time.time()
-            logger.info(_T("RegNode Time:") + f" {t3-t2:.2f}s")
+            logger.info(_T("RegNode Time:") + f" {t3 - t2:.2f}s")
         if TaskManager.is_launching():
             return
 
@@ -917,7 +934,7 @@ class TaskManager:
                 TaskManager.init_server(fake=True, callback=callback)
             TaskManager.is_server_launching = False
             t2 = time.time()
-            logger.info(_T("Launch Time:") + f" {t2-t1:.2f}s")
+            logger.info(_T("Launch Time:") + f" {t2 - t1:.2f}s")
             bpy.app.timers.unregister(update_screen_timer)
         if fake:
             job()
@@ -1158,11 +1175,33 @@ class TaskManager:
         logger.debug(_T("Proc Timer Thread Exit"))
 
     @staticmethod
+    def try_play_finished_sound(msg_data):
+        if not get_pref().play_finish_sound:
+            return
+        is_queue_finished = msg_data.get('status', {}).get('exec_info', {}).get('queue_remaining', 1) == 0
+        if not is_queue_finished:
+            return
+        # 尝试播放任务完成时音效
+        try:  # The user may not type the filepath in correctly
+            device = aud.Device()
+            device.volume = get_pref().finish_sound_volume
+            sound = aud.Sound(get_pref().finish_sound_path)
+            sound_buffered = aud.Sound.cache(sound)
+            device.play(sound_buffered)
+        except Exception as e:
+            logger.error("Error when playing sound:", e)
+
+    @staticmethod
     def poll_res():
         tm = TaskManager
         SessionId = TaskManager.SessionId
 
         def on_message(ws, message):
+            if isinstance(message, bytes):
+                if tm.cur_task:
+                    tm.cur_task.binary_message = message
+                TaskManager.handle_binary_message(message)
+                return
             msg = json.loads(message)
             try:
                 from .custom_support import crystools_monitor, cup_monitor
@@ -1197,6 +1236,7 @@ class TaskManager:
             if mtype == "status":
                 {'status': {'exec_info': {'queue_remaining': 1}}, 'sid': 'ComfyUICUP'}
                 SessionId["SessionId"] = data.get("sid", SessionId["SessionId"])
+                TaskManager.try_play_finished_sound(data)
             elif mtype == "executing":
                 {"type": "executing", "data": {"node": "7"}}
                 if not data["node"]:
@@ -1215,7 +1255,7 @@ class TaskManager:
                 TaskManager.progress_bar = v
                 cf = "\033[92m" + "█" * v + "\033[0m"
                 cp = "\033[32m" + "░" * (m - v) + "\033[0m"
-                content = f"{v*100/m:3.0f}% " + cf + cp + f" {v}/{m}"
+                content = f"{v * 100 / m:3.0f}% " + cf + cp + f" {v}/{m}"
                 logger.info(content + "\r", extra={"same_line": True})
                 # sys.stdout.write(content)
                 # sys.stdout.flush()
@@ -1268,14 +1308,44 @@ class TaskManager:
                 ...  # pass
             else:
                 logger.error(message)
-
-        ws = WebSocketApp(f"ws://{get_ip()}:{get_port()}/ws?clientId={SessionId['SessionId']}", on_message=on_message)
+        listen_addr = f"ws://{get_ip()}:{get_port()}/ws?clientId={SessionId['SessionId']}"
+        ws = WebSocketApp(listen_addr, on_message=on_message)
         TaskManager.ws = ws
         ws.run_forever()
+        if True:
+            ...
+        else:
+            # 备选方案
+            from ..External.websockets.sync.client import connect
+            from ..External.websockets import ConnectionClosedError
+            ws = connect(listen_addr)
+            TaskManager.ws = ws
+            try:
+                for msg in ws:
+                    on_message(None, msg)
+            except ConnectionClosedError:
+                ...
         logger.debug(_T("Poll Result Thread Exit"))
         TaskManager.ws = None
         if TaskManager.server.is_launched():
             Timer.put((TaskManager.restart_server, True))
+
+    @staticmethod
+    def handle_binary_message(data):
+        # 解析二进制数据的前4个字节获取事件类型
+        event_type = struct.unpack(">I", data[:4])[0]
+        # 根据事件类型处理数据
+        if event_type != 1:
+            logger.debug("Unknown binary event type: %s", event_type)
+            return
+        # 处理图像类型
+        image_type = struct.unpack(">I", data[4:8])[0]
+        image_mime = "image/png" if image_type == 2 else "image/jpeg"
+        # 假设剩余的数据是图像数据，可以保存或进一步处理
+        image_data = data[8:]
+        return
+        with open(f"/Users/karrycharon/Desktop/000.{image_mime.split('/')[1]}", "wb") as f:
+            f.write(image_data)
 
 
 def removetemp():

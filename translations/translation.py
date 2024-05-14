@@ -6,6 +6,7 @@ ctxt = "SDN"
 LOCALE_MAP = {
     "zh_HANS": "zh_CN"
 }
+from ..datas import get_bl_version
 # 4.0 zh_HANS -> zh_HANS
 # 3.0 zh_HANS -> zh_CN
 LOCALE_MAP_INV = {}
@@ -152,6 +153,7 @@ other = {
     "Poll Task Thread Exit": "任务轮询线程关闭",
     "STDOUT Listen Thread Exit": "输出监听线程关闭",
     "Time Elapsed": "已耗时",
+    "Error when playing sound:": "播放声音出错:",
     # SDNode/node_process.py
     "Executing": "执行中",
     # SDNode/nodes.py
@@ -206,6 +208,11 @@ other = {
     "DownTagWeight": "降低权重",
     "RemoveTagWeight": "删除权重",
     "socket type not str[IGNORE]: %s.%s -> %s": "Socket类型不是字符串[忽略]: %s.%s -> %s",
+    "Add SaveImage node": "添加保存图片节点",
+    "Add a SaveImage node and connect it to the image": "添加保存图片节点",
+    "Toggle socket": "切换Socket/属性",
+    "Toggle socket visibility": "切换Socket显示隐藏",
+    "Toggle whether a socket is or isn't used for input": "切换Socket/属性",
     # SDNode/blueprints.py
     "Non-Standard Enum": "非标准枚举",
     "Capture Screen": "截图",
@@ -230,6 +237,8 @@ other = {
     "SDNGroup": "组",
     "NoCategory": "无分类",
     # SDNode/utils.py
+    "AI Node" + get_bl_version() : "无限圣杯 Node" + get_bl_version(),
+    "AI Node": "无限圣杯 Node",
     "Gen Mask": "遮罩生成",
     "Relink failed: %s": "重连失败: %s",
     "Composite node not found": "未找到合成节点",
@@ -325,6 +334,7 @@ other = {
     "Clear Node Cache": "清除节点缓存",
     "If node parsing error, you can delete node cache by this button, then restart blender to use it normally": "当节点解析错误时可以通过此按钮删除节点缓存, 删除后重启blender即可正常使用",
     # ui.py
+    "ComfyUI": "圣杯节点",
     "ClearTask": "清理任务",
     "Cancel": "取消任务",
     "↓↓ComfyUI Not Launched, Click to Launch↓↓": "↓↓服务未启动, 点击启动↓↓",
@@ -333,11 +343,23 @@ other = {
     "Server Type": "服务类型",
     "LocalServer": "本机启动",
     "RemoteServer": "服务直连(含局域网)",
+    "Fixed": "固定尺寸",
+    "Previews are shown at your chosen resolution": "使用设定分辨率预览",
+    "Native": "原始尺寸",
+    "Previews are shown at their native resolution": "使用原始尺寸预览",
+    "Blender Default": "默认",
+    "Default Blender behavior, previews are not automatically resized": "不控制预览图大小",
     "Preview Image Size": "预览图尺寸",
+    "Play Finish Sound": "任务完成时播放声音",
+    "Play a sound when the ComfyUI queue is empty": "当 ComfyUI 任务队列全部完成时播放声音",
+    "Finish Sound Path" : "完成时播放的声音文件路径",
+    "Path to the file to play when the ComfyUI queue is empty": "当 ComfyUI 任务队列全部完成时播的声音文件的路径",
+    "Sound Volume": "声音音量",
+    "Volume of the sound played wwhen the ComfyUI queue is empty": "当 ComfyUI 任务队列全部完成时播放的声音音量",
     "Enable High Quality Preview Image": "启用高清预览图",
     "ComfyUI Path": "ComfyUI路径",
     "Python Path": "Python解释器路径",
-    "Select python dir or python.exe": "选择python所在文件夹或python.exe",
+    "Select python dir or python.exe.\nOn Linux select your venv /bin/ folder": "选择python所在文件夹或python.exe.\n在Linux上选择您的venv /bin/ 文件夹",
     "With WEBUI Model": "兼容WEBUI模型",
     "With ComfyUI Model": "兼容ComfyUI模型",
     "General": "通用",
@@ -432,6 +454,7 @@ other = {
     " Prompts": "提示词",
     "MLT": "多行文本",
     "Enable MLT": "开启多行文本",
+    "Enable multiline text for this textbox": "开启多行文本",
     # oooo
     "enable": "开",
     "disable": "关",
@@ -562,6 +585,8 @@ def reg_node_ctxt(translations_dict: dict, replace_dict: dict, locale: str):
         td[(None, node_name)] = td[(ctxt, node_name)]
         rd[node_name] = td[(ctxt, node_name)]
         for part in node_translation.values():
+            if not isinstance(part, dict):
+                continue
             for wn, wv in part.items():
                 wn = get_reg_name(wn)
                 td[(ctxt, wn)] = wv

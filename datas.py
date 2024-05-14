@@ -3,6 +3,14 @@ PRESETS_DIR = Path(__file__).parent / "presets"
 GROUPS_DIR = Path(__file__).parent / "groups"
 IMG_SUFFIX = {".png", ".jpg", ".jpeg"}
 
+VERSION = ""
+
+def get_bl_version():
+    if VERSION: return VERSION
+    from . import bl_info
+    return ".".join([str(i) for i in bl_info['version']])
+
+VERSION = get_bl_version()
 
 class MetaIn(type):
     CACHE: dict[str, dict] = {}

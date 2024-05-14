@@ -9,7 +9,7 @@ from urllib.parse import urlparse
 from .kclogger import logger
 from .translations import LANG_TEXT
 from .timer import Timer
-from .datas import IMG_SUFFIX
+from .datas import IMG_SUFFIX, get_bl_version
 translation = {}
 
 
@@ -37,14 +37,8 @@ def rmtree(path: Path):
         except BaseException:
             ...
 
-
-def get_version():
-    from . import bl_info
-    return ".".join([str(i) for i in bl_info['version']])
-
-
 def get_addon_name():
-    return _T("无限圣杯 Node") + get_version()
+    return "AI Node" + get_bl_version()
 
 
 def _T(word):
