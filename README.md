@@ -289,6 +289,9 @@ Here are some interesting nodes we've tested in Blender
 |[WD14-Tagger](https://github.com/pythongosssss/ComfyUI-WD14-Tagger)|√|
 |[zfkun](https://github.com/zfkun/ComfyUI_zfkun.git)|√|
 
+# Change Log
+See [Change Log](./CHANGE_LOG.md).
+
 # Links
 ## Tutorial
 [[EN]BSLIVE ComfyUI Blender AI Node Addon for Generative AI(By Jimmy Gunawan)](https://www.youtube.com/watch?v=OvrKpAVwyco)
