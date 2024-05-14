@@ -131,7 +131,7 @@ class AddonPreference(bpy.types.AddonPreferences):
                                          default=str(Path(__file__).parent / "ComfyUI"))
     python_path: bpy.props.StringProperty(subtype="FILE_PATH",
                                           name="Python Path",
-                                          description="Select python dir or python.exe")
+                                          description="Select python dir or python.exe.\nOn Linux select your venv /bin/ folder")
     page: bpy.props.EnumProperty(items=[("通用", "General", "", "COLLAPSEMENU", 0),
                                         ("常用路径", "Common Path", "", "URL", 1),
                                         ("友情链接", "Friendly Links", "", "URL", 2),
@@ -237,8 +237,18 @@ class AddonPreference(bpy.types.AddonPreferences):
     auto_launch: bpy.props.BoolProperty(default=False, name="Auto Launch Browser")
     install_deps: bpy.props.BoolProperty(default=False, name="Check Depencies Before Server Launch", description="Check ComfyUI(some) Depencies Before Server Launch")
     force_log: bpy.props.BoolProperty(default=False, name="Force Log", description="Force Log, Generally Not Needed")
-    fixed_preview_image_size: bpy.props.BoolProperty(default=True, name="Fixed Preview Image Size")
+    preview_image_size_type: bpy.props.EnumProperty(default="FIXED", name="Preview Image Size",
+                                                     items=[("FIXED", "Fixed", "Previews are shown at your chosen resolution", 0),
+                                                            ("NATIVE", "Native", "Previews are shown at their native resolution", 1),
+                                                            ("DEFAULT", "Blender Default", "Default Blender behavior, previews are not automatically resized", 2),
+                                                            ])
     preview_image_size: bpy.props.IntProperty(default=256, min=64, max=8192, name="Preview Image Size")
+    play_finish_sound: bpy.props.BoolProperty(default=True, name="Play Finish Sound", description="Play a sound when the ComfyUI queue is empty")
+    finish_sound_path: bpy.props.StringProperty(subtype="FILE_PATH", name="Finish Sound Path", 
+                                                description="Path to the file to play when the ComfyUI queue is empty",
+                                                default=str(Path(__file__).parent / "SDNode" / "finish.wav"))
+    finish_sound_volume: bpy.props.FloatProperty(default=1.0, min=0, soft_max=4, precision=2, step=1, name="Volume", 
+                                                 description="Volume of the sound played wwhen the ComfyUI queue is empty")
     stencil_offset_size_xy: bpy.props.IntVectorProperty(default=(0, 0), size=2, min=-100, max=100, name="Stencil Offset Size")
     drag_link_result_count_col: bpy.props.IntProperty(default=4, min=1, max=10, name="Drag Link Result Count Column")
     drag_link_result_count_row: bpy.props.IntProperty(default=10, min=1, max=100, name="Drag Link Result Count Row")
@@ -538,9 +548,20 @@ class AddonPreference(bpy.types.AddonPreferences):
         row = layout.row(align=True)
         row.prop(self, "ip")
         row.prop(self, "port")
+        row = layout.row(align=True, heading="Preview Image Size")
+        row.prop(self, "preview_image_size_type", text="", text_ctxt=ctxt)
+        col = row.column()
+        col.enabled = self.preview_image_size_type == "FIXED"
+        col.prop(self, "preview_image_size", text="", text_ctxt=ctxt)
         row = layout.row(align=True)
-        row.prop(self, "fixed_preview_image_size", toggle=True, text_ctxt=ctxt)
-        row.prop(self, "preview_image_size", text_ctxt=ctxt)
+        row.prop(self, "play_finish_sound", text_ctxt=ctxt)
+        col = row.column(align=True)
+        col.scale_x = 1.75 # This will also stretch the folder button. Too bad! Still better than the alternative.
+        col.enabled = self.play_finish_sound
+        col.prop(self, "finish_sound_path", text="", text_ctxt=ctxt)
+        col = row.column(align=True)
+        col.prop(self, "finish_sound_volume", text="", text_ctxt=ctxt)
+        col.scale_x = 0.4
         row = layout.row(align=True)
         row.label(text="Drag Link Result Count", text_ctxt=ctxt)
         row.prop(self, "drag_link_result_count_col", text="", text_ctxt=ctxt)
