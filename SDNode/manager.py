@@ -571,7 +571,8 @@ class RemoteServer(Server):
             img_data = requests.get(cover_url, timeout=5).content
             if not img_data:
                 return
-            img_path = Path(gettempdir()).joinpath(model).with_suffix(Path(img_quote).suffix)
+            img_name = model.replace("/", "_").replace("\\", "_")
+            img_path = Path(gettempdir()).joinpath(img_name).with_suffix(Path(img_quote).suffix)
             with open(img_path, "wb") as f:
                 f.write(img_data)
             self.covers[model] = img_path
