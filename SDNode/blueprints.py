@@ -1116,7 +1116,7 @@ def upload_image(img_path):
             # {'name': 'icon.png', 'subfolder': 'SDN', 'type': 'input'}
             return response.json()
         else:
-            logger.error(f"{_T('Upload Image Fail')}: {response.text}")
+            logger.error(f"{_T('Upload Image Fail')}: [{response.status_code}] {response.text}")
     except Exception as e:
         logger.error(f"{_T('Upload Image Fail')}: {e}")
 
