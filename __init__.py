@@ -4,7 +4,7 @@ bl_info = {
     'version': (1, 5, 1),
     'blender': (3, 0, 0),
     'location': '3DView->Panel',
-    'category': 'Node', # This is automatically translated by Blender
+    'category': 'AI',
     'doc_url': "https://shimo.im/docs/Ee32m0w80rfLp4A2"
 }
 __dict__ = {}
@@ -114,7 +114,6 @@ def register():
     bpy.app.translations.register(__name__, translations_dict)
     reg()
     header_reg()
-    bpy.types
     Icon.set_hq_preview()
     TaskManager.run_server(fake=True)
     timer_reg()
@@ -126,8 +125,7 @@ def register():
     bpy.types.Scene.sdn_history_item_index = bpy.props.IntProperty(default=0)
     History.register_timer()
     linker_register()
-    if system() != "Linux": #TODO: Linux lupa
-        use_hook()
+    use_hook()
     FSWatcher.init()
     disable_reload()
     nodegroup_reg()
@@ -152,8 +150,7 @@ def unregister():
     del bpy.types.Scene.sdn_history_item_index
     modules_update()
     linker_unregister()
-    if system() != "Linux": #TODO: Linux lupa
-        use_hook(False)
+    use_hook(False)
     nodegroup_unreg()
     custom_support_unreg()
     FSWatcher.stop()

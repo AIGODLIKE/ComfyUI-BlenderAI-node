@@ -102,6 +102,9 @@ def draw_prop_with_link(layout, self, prop, swsock, swdisp=False, row=True, pre=
 
 def setwidth(self: NodeBase, w, count=1):
     if get_pref().preview_image_size_type == "DEFAULT":
+        def delegate(self: NodeBase):
+            self.bl_width_max = 8192
+        Timer.put((delegate, self))
         return self.width
     
     if not w:

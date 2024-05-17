@@ -679,14 +679,14 @@ class LocalServer(Server):
         # cmd = " ".join([str(python), arg])
         # 加了 stderr后 无法获取 进度?
         # logger.debug(" ".join(args))
-        if(system() == 'Linux'):
+        if system() == 'Linux':
             args = " ".join(args)
             args = f"source {pref.python_path}/activate; {args}"
-            if(os.path.exists("/opt/intel/oneapi/setvars.sh")):
+            if Path("/opt/intel/oneapi/setvars.sh").exists():
                 args = "source /opt/intel/oneapi/setvars.sh; " + args
                 logger.warning("Using Intel OneAPI")
-            args = ["/bin/bash", "-c", args] #shell=True will use /bin/sh which can't source
-        
+            args = ["/bin/bash", "-c", args]  # shell=True will use /bin/sh which can't source
+
         p = Popen(args, stdout=PIPE, stderr=STDOUT, cwd=Path(model_path).resolve().as_posix())
         self.child = p
         self.pid = p.pid
@@ -1175,6 +1175,23 @@ class TaskManager:
         logger.debug(_T("Proc Timer Thread Exit"))
 
     @staticmethod
+    def try_play_finished_sound(msg_data):
+        if not get_pref().play_finish_sound:
+            return
+        is_queue_finished = msg_data.get('status', {}).get('exec_info', {}).get('queue_remaining', 1) == 0
+        if not is_queue_finished:
+            return
+        # 尝试播放任务完成时音效
+        try:  # The user may not type the filepath in correctly
+            device = aud.Device()
+            device.volume = get_pref().finish_sound_volume
+            sound = aud.Sound(get_pref().finish_sound_path)
+            sound_buffered = aud.Sound.cache(sound)
+            device.play(sound_buffered)
+        except Exception as e:
+            logger.error("Error when playing sound:", e)
+
+    @staticmethod
     def poll_res():
         tm = TaskManager
         SessionId = TaskManager.SessionId
@@ -1211,16 +1228,6 @@ class TaskManager:
             elif mtype != "progress":
                 logger.debug("%s: %s", _T("Message Type"), mtype)
 
-            if mtype == "status" and data['status']['exec_info']['queue_remaining'] == 0 and get_pref().play_finish_sound:
-                try: #The user may not type the filepath in correctly
-                    device = aud.Device() # 
-                    device.volume = get_pref().finish_sound_volume
-                    sound = aud.Sound(get_pref().finish_sound_path)
-                    sound_buffered = aud.Sound.cache(sound)
-                    device.play(sound_buffered)
-                except Exception as e:
-                    logger.error("Error when playing sound:", e)
-
             Timer.put(update_screen)
 
             if hasattr(tm, mtype):
@@ -1229,6 +1236,7 @@ class TaskManager:
             if mtype == "status":
                 {'status': {'exec_info': {'queue_remaining': 1}}, 'sid': 'ComfyUICUP'}
                 SessionId["SessionId"] = data.get("sid", SessionId["SessionId"])
+                TaskManager.try_play_finished_sound(data)
             elif mtype == "executing":
                 {"type": "executing", "data": {"node": "7"}}
                 if not data["node"]:
