@@ -8,6 +8,7 @@ from pathlib import Path
 from bpy.types import Context, Event
 from mathutils import Vector
 from functools import partial
+import re
 from .translations import ctxt
 from .prop import Prop
 from .utils import _T, logger, FSWatcher, read_json
@@ -884,6 +885,69 @@ def menu_sync_stencil_image(self: bpy.types.Menu, context: bpy.types.Context):
         col.operator(Sync_Stencil_Image.bl_idname, text="Stop Sync Stencil Image", icon="PAUSE").action = "Clear"
     else:
         self.layout.operator(Sync_Stencil_Image.bl_idname, icon="PLAY")
+
+
+def sdn_to_image_editors(context: bpy.types.Context, node: bpy.types.Node, do_save_temp: bool = False, do_saveimage_node: bool = True):
+    image = None
+    if node.bl_idname == 'PreviewImage' and len(node.prev) > 0:
+        image = node.prev[0].image
+        if image.is_dirty and do_save_temp:
+            image.save()
+
+    if node.bl_idname == '输入图像': # "Input Image" Blender-side node
+        image = node.prev
+
+    if node.bl_idname == 'SaveImage' and do_saveimage_node:
+        path = Path(node.output_dir)
+        prefix = node.filename_prefix
+        file_re = re.compile(f'{prefix}_([0-9]+)') # Should the _ at the end be included? 
+        biggest = (None, -1)
+        if (len(node.inputs) == 1 or node.inputs[1].connections == ()) and path.is_dir():
+            # Find newest image, by filename
+            for f in path.iterdir():
+                if f.is_file():
+                    match = file_re.match(f.stem)
+                    if match and int(match.groups()[0]) > biggest[1]:
+                        biggest = (f, int(match.groups()[0]))
+
+            # If found, see if loaded / create if not
+            if biggest[0] != None:
+                for im in bpy.data.images:
+                    if im.filepath == f.as_posix():
+                        image = im
+                        break
+                
+                if image == None:
+                    image = bpy.data.images.new(f.stem + f.suffix, 32, 32)
+                    image.source = 'FILE'
+                    image.filepath = f.as_posix()
+    
+    if image == None:
+        return
+        
+    for window in context.window_manager.windows:
+        for area in window.screen.areas:
+            if area.type == 'IMAGE_EDITOR' and not area.spaces[0].use_image_pin:
+                area.spaces[0].image = image
+    
+def image_editor_to_sdn(context: bpy.types.Context, overwrite: bool=False):
+    image = context.space_data.image
+    for window in context.window_manager.windows:
+        for area in window.screen.areas:
+            if area.type == 'NODE_EDITOR' and area.spaces[0].tree_type == 'CFNodeTree':
+                active = area.spaces[0].node_tree.nodes.active
+                if active.bl_idname == '输入图像': # "Input Image" Blender-side node
+                    if image.is_dirty:
+                        image.file_format = 'PNG'
+                        image.alpha_mode = 'CHANNEL_PACKED' # For properly saving a mask
+                        if overwrite:
+                            newpath = image.filepath_raw
+                        else:
+                            extensionless = image.filepath_raw[:image.filepath_raw.rfind(".")]
+                            newpath = extensionless + "_move.png"
+                        image.save_render(newpath, context.scene)
+                    active.image = image.filepath_raw
+                    return
 
 
 bpy.types.VIEW3D_PT_tools_brush_settings.append(menu_sync_stencil_image)
