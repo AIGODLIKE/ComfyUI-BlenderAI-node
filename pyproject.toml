@@ -1,0 +1,13 @@
+[project]
+name = "comfyui-blenderai-node"
+description = "Bridge between ComfyUI and blender's ComfyUI-BlenderAI-node addon."
+version = "1.0.0"
+license = "LICENSE"
+
+[project.urls]
+Repository = "https://github.com/AIGODLIKE/ComfyUI-CUP"
+
+[tool.comfy]
+PublisherId = ""
+DisplayName = "ComfyUI-BlenderAI-node"
+Icon = ""
