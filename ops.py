@@ -887,17 +887,19 @@ def menu_sync_stencil_image(self: bpy.types.Menu, context: bpy.types.Context):
         self.layout.operator(Sync_Stencil_Image.bl_idname, icon="PLAY")
 
 
-def sdn_to_image_editors(context: bpy.types.Context, node: bpy.types.Node, do_save_temp: bool = False, do_saveimage_node: bool = True):
-    image = None
+bpy.types.VIEW3D_PT_tools_brush_settings.append(menu_sync_stencil_image)
+# bpy.types.VIEW3D_PT_tools_brush_display.append(menu_sync_stencil_image)
+
+def sdn_get_image(node: bpy.types.Node):
     if node.bl_idname == 'PreviewImage' and len(node.prev) > 0:
-        image = node.prev[0].image
-        if image.is_dirty and do_save_temp:
-            image.save()
+        return node.prev[0].image
 
     if node.bl_idname == '输入图像': # "Input Image" Blender-side node
-        image = node.prev
+        return node.prev
 
-    if node.bl_idname == 'SaveImage' and do_saveimage_node:
+    image = None
+
+    if node.bl_idname == 'SaveImage':
         path = Path(node.output_dir)
         prefix = node.filename_prefix
         file_re = re.compile(f'{prefix}_([0-9]+)') # Should the _ at the end be included? 
@@ -910,7 +912,7 @@ def sdn_to_image_editors(context: bpy.types.Context, node: bpy.types.Node, do_sa
                     if match and int(match.groups()[0]) > biggest[1]:
                         biggest = (f, int(match.groups()[0]))
 
-            # If found, see if loaded / create if not
+            # If found, see if loaded, create if not
             if biggest[0] != None:
                 for im in bpy.data.images:
                     if im.filepath == f.as_posix():
@@ -921,38 +923,137 @@ def sdn_to_image_editors(context: bpy.types.Context, node: bpy.types.Node, do_sa
                     image = bpy.data.images.new(f.stem + f.suffix, 32, 32)
                     image.source = 'FILE'
                     image.filepath = f.as_posix()
+                
+                return image
     
-    if image == None:
-        return
-        
-    for window in context.window_manager.windows:
-        for area in window.screen.areas:
-            if area.type == 'IMAGE_EDITOR' and not area.spaces[0].use_image_pin:
-                area.spaces[0].image = image
+    return image
+
+class SDNode_To_Image(bpy.types.Operator):
+    bl_idname = "sdn.sdn_to_image"
+    bl_label = "ComfyUI node to Image Editor"
+    bl_description = "Open the selected Save/Preview/Input Image node's image in an Image Editor"
+    bl_translation_context = ctxt
+
+    @classmethod
+    def poll(cls, context: Context):
+        return (context.space_data.type == 'IMAGE_EDITOR' and context.space_data.image) or \
+               (context.space_data.type == 'NODE_EDITOR' and context.space_data.tree_type == 'CFNodeTree')
+
+    def execute(self, context):
+
+        node = None
+        ime_area = None
+
+        if context.area.type == 'NODE_EDITOR':
+            node = context.active_node
+                
+            for window in context.window_manager.windows:
+                for area in window.screen.areas:
+                    if area.type == 'IMAGE_EDITOR' and not area.spaces[0].use_image_pin:
+                        ime_area = area
+                        break
+                if ime_area:
+                    break
+                    
+        if context.area.type == 'IMAGE_EDITOR':
+            ime_area = context.area
+
+            sdn_area = None
+            for window in context.window_manager.windows:
+                for area in window.screen.areas:
+                    if area.type == 'NODE_EDITOR' and area.spaces[0].tree_type == 'CFNodeTree':
+                        sdn_area = area
+                        break
+                if sdn_area:
+                    break
+            
+            node = sdn_area.spaces[0].node_tree.nodes.active
+
+        if not node:
+            self.report({'ERROR'}, "No active ComfyUI node!")
+            return {'CANCELLED'}
+        if not ime_area:
+            self.report({'ERROR'}, "No Image Editor with an unpinned image found!")
+
+        image = sdn_get_image(node)
+        if not image:
+            self.report({'ERROR'}, "Could not retrieve node image!")
+
+        ime_area.spaces[0].image = image
+        ime_area.spaces[0].image.alpha_mode = 'CHANNEL_PACKED'
+
+        return {'FINISHED'}
     
-def image_editor_to_sdn(context: bpy.types.Context, overwrite: bool=False):
-    image = context.space_data.image
-    for window in context.window_manager.windows:
-        for area in window.screen.areas:
-            if area.type == 'NODE_EDITOR' and area.spaces[0].tree_type == 'CFNodeTree':
-                active = area.spaces[0].node_tree.nodes.active
-                if active.bl_idname == '输入图像': # "Input Image" Blender-side node
-                    if image.is_dirty:
-                        image.file_format = 'PNG'
-                        image.alpha_mode = 'CHANNEL_PACKED' # For properly saving a mask
-                        if overwrite:
-                            newpath = image.filepath_raw
-                        else:
-                            extensionless = image.filepath_raw[:image.filepath_raw.rfind(".")]
-                            newpath = extensionless + "_move.png"
-                        image.save_render(newpath, context.scene)
-                    active.image = image.filepath_raw
-                    return
+class Image_To_SDNode(bpy.types.Operator):
+    bl_idname = "sdn.image_to_sdn"
+    bl_label = "Image Editor to ComfyUI Node"
+    bl_description = "Move the current image to a ComfyUI Node Editor"
+    bl_translation_context = ctxt
 
+    @classmethod
+    def poll(cls, context: Context):
+        return (context.space_data.type == 'IMAGE_EDITOR' and context.space_data.image) or \
+               (context.space_data.type == 'NODE_EDITOR' and context.space_data.tree_type == 'CFNodeTree')
+    
+    def execute(self, context):
+        sdn_area = None
+        image = None
+        new_node_loc = None
 
-bpy.types.VIEW3D_PT_tools_brush_settings.append(menu_sync_stencil_image)
-# bpy.types.VIEW3D_PT_tools_brush_display.append(menu_sync_stencil_image)
+        if context.area.type == 'IMAGE_EDITOR':
+            image = context.space_data.image
 
+            for window in context.window_manager.windows:
+                for area in window.screen.areas:
+                    if area.type == 'NODE_EDITOR' and area.spaces[0].tree_type == 'CFNodeTree':
+                        sdn_area = area
+                if sdn_area:
+                    break
+            
+            if not sdn_area:
+                self.report({'ERROR'}, "No ComfyUI Node Editor found!")
+                return {'CANCELLED'}
+            
+            new_node_loc = sdn_area.regions[3].view2d.region_to_view(sdn_area.x + sdn_area.width / 2.0, sdn_area.y + sdn_area.height / 2.0)
+            
+        if context.area.type == 'NODE_EDITOR':
+            sdn_area = context.area
+
+            for window in context.window_manager.windows:
+                for area in window.screen.areas:
+                    if area.type == 'IMAGE_EDITOR' and area.spaces[0].image is not None:
+                        image = area.spaces[0].image
+                        break
+                if image:
+                    break
+
+            if not image:
+                self.report({'ERROR'}, "No Image Editor with an open image found!")
+                return {'CANCELLED'}
+            
+            new_node_loc = sdn_area.spaces[0].cursor_location
+            
+        print(image)
+        print(image.is_dirty)
+        if image.is_dirty:
+            image.file_format = 'PNG'
+            if(image.alpha_mode != 'CHANNEL_PACKED'):
+                self.report({'WARNING'}, "The image is not using channel packed alpha. If you have painted a mask, the color underneath is black!")
+
+            extensionless = image.filepath_raw[:image.filepath_raw.rfind(".")]
+            newpath = extensionless + "_m.png"
+            print("New path:", newpath)
+            image.save_render(newpath, scene=context.scene)
+
+        active = sdn_area.spaces[0].node_tree.nodes.active
+        if active and active.bl_idname == '输入图像': # "Input Image" Blender-side node
+            active.image = image.filepath_raw
+        else:
+            new_node = sdn_area.spaces[0].node_tree.nodes.new('输入图像')
+            new_node.location = new_node_loc
+            new_node.image = image.filepath_raw
+
+        return {'FINISHED'}
 
 @bpy.app.handlers.persistent
 def clear(_):
