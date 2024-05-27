@@ -1212,7 +1212,7 @@ class Ops_Link_Mask(bpy.types.Operator):
     @classmethod
     def poll(cls, context):
         from .tree import TREE_TYPE
-        return context.space_data.tree_type == TREE_TYPE
+        return context.space_data.type == 'NODE_EDITOR' and context.space_data.tree_type == TREE_TYPE
 
     def invoke(self, context: Context, event: Event):
         if self.action == "OnlyFocus":
@@ -1457,7 +1457,7 @@ class AdvTextEdit(bpy.types.Operator):
     @classmethod
     def poll(cls, context):
         from .tree import TREE_TYPE
-        return context.space_data.tree_type == TREE_TYPE
+        return context.space_data.type == 'NODE_EDITOR' and context.space_data.tree_type == TREE_TYPE
 
     def execute(self, context):
         node: NodeBase = get_ctx_node()

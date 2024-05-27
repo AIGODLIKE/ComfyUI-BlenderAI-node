@@ -908,7 +908,7 @@ class CFNodeTree(NodeTree):
 class CFNodeCategory(NodeCategory):
 
     def poll(self, context):
-        return context.space_data.tree_type == TREE_TYPE
+        return context.space_data.type == 'NODE_EDITOR' and context.space_data.tree_type == TREE_TYPE
 
     def __init__(self, *args, **kwargs) -> None:
         self.menus = kwargs.pop("menus", [])

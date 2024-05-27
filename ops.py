@@ -638,7 +638,7 @@ class Copy_Tree(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context: Context):
-        return bpy.context.space_data.edit_tree
+        return getattr(bpy.context.space_data, "edit_tree", False)
 
     def execute(self, context):
         tree: CFNodeTree = get_default_tree(context)
@@ -667,7 +667,7 @@ class Load_Batch(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context: Context):
-        return bpy.context.space_data.edit_tree
+        return getattr(bpy.context.space_data, "edit_tree", False)
 
     def invoke(self, context: Context, event: Event):
         # 弹出文件选择框
@@ -733,7 +733,7 @@ class Fetch_Node_Status(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context: Context):
-        return bpy.context.space_data.edit_tree
+        return getattr(bpy.context.space_data, "edit_tree", False)
 
     def execute(self, context):
         # from .SDNode.tree import rtnode_reg_diff

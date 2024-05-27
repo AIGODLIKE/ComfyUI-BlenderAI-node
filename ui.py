@@ -22,7 +22,7 @@ class Panel(bpy.types.Panel):
 
     @classmethod
     def poll(cls, context):
-        return context.space_data.tree_type == TREE_TYPE
+        return context.space_data.type == 'NODE_EDITOR' and context.space_data.tree_type == TREE_TYPE
 
     def draw_header(self, context):
         row = self.layout.row(align=True)
