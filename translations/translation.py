@@ -343,12 +343,18 @@ other = {
     "No ComfyUI Node Editor found!": "未找到 ComfyUI 节点编辑器！",
     "No Image Editor with an open image found!": "未找到可打开图像的图像编辑器！",
     "The image is not using channel packed alpha. If you have painted a mask, the color underneath is black!": "图像没有使用通道打包 Alpha。如果您绘制了遮罩，下面的颜色就是黑色的！",
+    "Force Centered": "以力为中心",
+    "If creating a new node, put it in the centre of the editor": "如果创建一个新节点，请将其放在编辑器的中心位置",
     # ui.py
     "ComfyUI": "圣杯节点",
     "ClearTask": "清理任务",
     "Cancel": "取消任务",
     "↓↓ComfyUI Not Launched, Click to Launch↓↓": "↓↓服务未启动, 点击启动↓↓",
     "ComfyUI Launching/Connecting...": "ComfyUI服务启动/连接中...",
+    "To Image Editor": "至图像编辑器",
+    "From Image Editor": "来自图像编辑器",
+    "To ComfyUI Node Editor": "前往 ComfyUI 节点编辑器",
+    "From ComfyUI Node Editor": "来自 ComfyUI 节点编辑器",
     # preference.py
     "Server Type": "服务类型",
     "LocalServer": "本机启动",

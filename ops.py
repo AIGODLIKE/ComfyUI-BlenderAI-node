@@ -1001,6 +1001,9 @@ class Image_To_SDNode(bpy.types.Operator):
     bl_description = "Move the current image to a ComfyUI Node Editor node"
     bl_translation_context = ctxt
 
+    force_centered: bpy.props.BoolProperty(name="Force Centered", description="If creating a new node, put it in the centre of the editor",
+                                           translation_context=ctxt, default=False)
+
     @classmethod
     def poll(cls, context: Context):
 
@@ -1033,7 +1036,10 @@ class Image_To_SDNode(bpy.types.Operator):
                 self.report({'ERROR'}, "No Image Editor with an open image found!")
                 return {'CANCELLED'}
             
-            new_node_loc = sdn_area.spaces[0].cursor_location
+            if not self.force_centered:
+                new_node_loc = sdn_area.spaces[0].cursor_location
+            else:
+                new_node_loc = sdn_area.regions[3].view2d.region_to_view(sdn_area.x + sdn_area.width / 2.0, sdn_area.y + sdn_area.height / 2.0)
 
         if image.is_dirty:
             image.file_format = 'PNG'
@@ -1061,7 +1067,7 @@ class Image_To_SDNode(bpy.types.Operator):
                 
 
         active = sdn_area.spaces[0].node_tree.nodes.active
-        if active and active.bl_idname == '输入图像': # "Input Image" Blender-side node
+        if active and active.bl_idname == '输入图像' and active.select: # "Input Image" Blender-side node
             active.image = image.filepath_raw
         else:
             new_node = sdn_area.spaces[0].node_tree.nodes.new('输入图像')

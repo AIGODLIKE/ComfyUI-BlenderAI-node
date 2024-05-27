@@ -204,14 +204,15 @@ def draw_sdn_tofrom(self, context):
     layout = self.layout
     if context.space_data.tree_type == TREE_TYPE:
         layout.separator()
-        layout.operator(Image_To_SDNode.bl_idname, text="From Image Editor", icon="IMPORT")
-        layout.operator(SDNode_To_Image.bl_idname, text="To Image Editor", icon="EXPORT")
+        layout.operator(SDNode_To_Image.bl_idname, text="To Image Editor", text_ctxt=ctxt, icon="EXPORT")
+        props = layout.operator(Image_To_SDNode.bl_idname, text="From Image Editor", text_ctxt=ctxt, icon="IMPORT")
+        props.force_centered = True
 
 def draw_imeditor_tofrom(self, context):
     layout = self.layout
     layout.separator()
-    layout.operator(SDNode_To_Image.bl_idname, text="From ComfyUI Node Editor", icon="IMPORT")
-    layout.operator(Image_To_SDNode.bl_idname, text="To ComfyUI Node Editor", icon="EXPORT")
+    layout.operator(Image_To_SDNode.bl_idname, text="To ComfyUI Node Editor", text_ctxt=ctxt, icon="EXPORT")
+    layout.operator(SDNode_To_Image.bl_idname, text="From ComfyUI Node Editor", text_ctxt=ctxt, icon="IMPORT")
 
 
 class HistoryItem(bpy.types.PropertyGroup):
