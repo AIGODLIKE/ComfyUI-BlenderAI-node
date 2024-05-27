@@ -937,7 +937,7 @@ class SDNode_To_Image(bpy.types.Operator):
     @classmethod
     def poll(cls, context: Context):
         return (context.space_data.type == 'IMAGE_EDITOR' and context.space_data.image) or \
-               (context.space_data.type == 'NODE_EDITOR' and context.space_data.tree_type == 'CFNodeTree')
+               (context.space_data.type == 'NODE_EDITOR' and context.space_data.tree_type == TREE_TYPE)
 
     def execute(self, context):
 
@@ -961,7 +961,7 @@ class SDNode_To_Image(bpy.types.Operator):
             sdn_area = None
             for window in context.window_manager.windows:
                 for area in window.screen.areas:
-                    if area.type == 'NODE_EDITOR' and area.spaces[0].tree_type == 'CFNodeTree':
+                    if area.type == 'NODE_EDITOR' and area.spaces[0].tree_type == TREE_TYPE:
                         sdn_area = area
                         break
                 if sdn_area:
@@ -993,7 +993,7 @@ class Image_To_SDNode(bpy.types.Operator):
     @classmethod
     def poll(cls, context: Context):
         return (context.space_data.type == 'IMAGE_EDITOR' and context.space_data.image) or \
-               (context.space_data.type == 'NODE_EDITOR' and context.space_data.tree_type == 'CFNodeTree')
+               (context.space_data.type == 'NODE_EDITOR' and context.space_data.tree_type == TREE_TYPE)
     
     def execute(self, context):
         sdn_area = None
@@ -1005,7 +1005,7 @@ class Image_To_SDNode(bpy.types.Operator):
 
             for window in context.window_manager.windows:
                 for area in window.screen.areas:
-                    if area.type == 'NODE_EDITOR' and area.spaces[0].tree_type == 'CFNodeTree':
+                    if area.type == 'NODE_EDITOR' and area.spaces[0].tree_type == TREE_TYPE:
                         sdn_area = area
                 if sdn_area:
                     break

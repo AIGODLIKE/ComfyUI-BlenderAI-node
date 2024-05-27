@@ -194,7 +194,7 @@ class Panel(bpy.types.Panel):
             row.label(text=error_msg, icon="ERROR", text_ctxt=ctxt)
 
 def draw_header_button(self, context):
-    if context.space_data.tree_type == 'CFNodeTree':
+    if context.space_data.tree_type == TREE_TYPE:
         layout = self.layout
         col = layout.column()
         col.alert = True
