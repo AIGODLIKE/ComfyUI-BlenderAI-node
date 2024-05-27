@@ -929,6 +929,26 @@ def sdn_get_image(node: bpy.types.Node):
     
     return image
 
+def get_imeditor(context: bpy.types.Context, check_for_image: bool = False):
+    for window in context.window_manager.windows:
+        for area in window.screen.areas:
+            if check_for_image:
+                if area.type == 'IMAGE_EDITOR' and area.spaces[0].image and len(area.spaces[0].image.pixels) > 0:
+                    return area
+            else:
+                if area.type == 'IMAGE_EDITOR' and not area.spaces[0].use_image_pin:
+                    return area
+    
+    return None
+
+def get_sdneditor(context: bpy.types.Context):
+    for window in context.window_manager.windows:
+        for area in window.screen.areas:
+            if area.type == 'NODE_EDITOR' and area.spaces[0].tree_type == TREE_TYPE and area.spaces[0].edit_tree:
+                return area
+    
+    return None
+
 class SDNode_To_Image(bpy.types.Operator):
     bl_idname = "sdn.sdn_to_image"
     bl_label = "ComfyUI node to Image Editor"
@@ -937,8 +957,8 @@ class SDNode_To_Image(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context: Context):
-        return (context.space_data.type == 'IMAGE_EDITOR' and context.space_data.image) or \
-               (context.space_data.type == 'NODE_EDITOR' and context.space_data.tree_type == TREE_TYPE)
+        return (context.space_data.type == 'IMAGE_EDITOR' and context.space_data.image and get_sdneditor(context)) or \
+               (context.space_data.type == 'NODE_EDITOR' and context.space_data.tree_type == TREE_TYPE and get_imeditor(context))
 
     def execute(self, context):
 
@@ -947,27 +967,13 @@ class SDNode_To_Image(bpy.types.Operator):
 
         if context.area.type == 'NODE_EDITOR':
             node = context.active_node
-                
-            for window in context.window_manager.windows:
-                for area in window.screen.areas:
-                    if area.type == 'IMAGE_EDITOR' and not area.spaces[0].use_image_pin:
-                        ime_area = area
-                        break
-                if ime_area:
-                    break
+            ime_area = get_imeditor(context, False)
                     
         if context.area.type == 'IMAGE_EDITOR':
             ime_area = context.area
-
-            sdn_area = None
-            for window in context.window_manager.windows:
-                for area in window.screen.areas:
-                    if area.type == 'NODE_EDITOR' and area.spaces[0].tree_type == TREE_TYPE:
-                        sdn_area = area
-                        break
-                if sdn_area:
-                    break
-            
+            sdn_area = get_sdneditor(context)
+            if not sdn_area:
+                self.report({'ERROR'}, "No ComfyUI Node Editor found!")
             node = sdn_area.spaces[0].node_tree.nodes.active
 
         if not node:
@@ -997,8 +1003,9 @@ class Image_To_SDNode(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context: Context):
-        return (context.space_data.type == 'IMAGE_EDITOR' and context.space_data.image) or \
-               (context.space_data.type == 'NODE_EDITOR' and context.space_data.tree_type == TREE_TYPE)
+
+        return (context.space_data.type == 'IMAGE_EDITOR' and context.space_data.image and get_sdneditor(context)) or \
+               (context.space_data.type == 'NODE_EDITOR' and context.space_data.tree_type == TREE_TYPE and get_imeditor(context, True))
     
     def execute(self, context):
         sdn_area = None
@@ -1009,13 +1016,7 @@ class Image_To_SDNode(bpy.types.Operator):
         if context.area.type == 'IMAGE_EDITOR':
             ime_area = context.area
             image = context.space_data.image
-
-            for window in context.window_manager.windows:
-                for area in window.screen.areas:
-                    if area.type == 'NODE_EDITOR' and area.spaces[0].tree_type == TREE_TYPE:
-                        sdn_area = area
-                if sdn_area:
-                    break
+            sdn_area = get_sdneditor(context)
             
             if not sdn_area:
                 self.report({'ERROR'}, "No ComfyUI Node Editor found!")
@@ -1025,15 +1026,8 @@ class Image_To_SDNode(bpy.types.Operator):
             
         if context.area.type == 'NODE_EDITOR':
             sdn_area = context.area
-
-            for window in context.window_manager.windows:
-                for area in window.screen.areas:
-                    if area.type == 'IMAGE_EDITOR' and area.spaces[0].image is not None and len(image.pixels) > 0:
-                        ime_area = area
-                        image = area.spaces[0].image
-                        break
-                if ime_area:
-                    break
+            ime_area = get_imeditor(context, True)
+            image = ime_area.spaces[0].image
 
             if not ime_area:
                 self.report({'ERROR'}, "No Image Editor with an open image found!")
