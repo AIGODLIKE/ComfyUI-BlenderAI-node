@@ -3,12 +3,13 @@ import re
 import json
 import tempfile
 import time
+import re
+import uuid
 from typing import Any
 from pathlib import Path
 from bpy.types import Context, Event
 from mathutils import Vector
 from functools import partial
-import re
 from .translations import ctxt
 from .prop import Prop
 from .utils import _T, logger, FSWatcher, read_json
@@ -984,10 +985,12 @@ class SDNode_To_Image(bpy.types.Operator):
 
         return {'FINISHED'}
     
+MODIFIED_IMAGE_SUFFIX = '_m'
+
 class Image_To_SDNode(bpy.types.Operator):
     bl_idname = "sdn.image_to_sdn"
-    bl_label = "Image Editor to ComfyUI Node"
-    bl_description = "Move the current image to a ComfyUI Node Editor"
+    bl_label = "Image Editor to ComfyUI node"
+    bl_description = "Move the current image to a ComfyUI Node Editor node"
     bl_translation_context = ctxt
 
     @classmethod
@@ -997,10 +1000,12 @@ class Image_To_SDNode(bpy.types.Operator):
     
     def execute(self, context):
         sdn_area = None
+        ime_area = None
         image = None
         new_node_loc = None
 
         if context.area.type == 'IMAGE_EDITOR':
+            ime_area = context.area
             image = context.space_data.image
 
             for window in context.window_manager.windows:
@@ -1021,29 +1026,43 @@ class Image_To_SDNode(bpy.types.Operator):
 
             for window in context.window_manager.windows:
                 for area in window.screen.areas:
-                    if area.type == 'IMAGE_EDITOR' and area.spaces[0].image is not None:
+                    if area.type == 'IMAGE_EDITOR' and area.spaces[0].image is not None and len(image.pixels) > 0:
+                        ime_area = area
                         image = area.spaces[0].image
                         break
-                if image:
+                if ime_area:
                     break
 
-            if not image:
+            if not ime_area:
                 self.report({'ERROR'}, "No Image Editor with an open image found!")
                 return {'CANCELLED'}
             
             new_node_loc = sdn_area.spaces[0].cursor_location
-            
-        print(image)
-        print(image.is_dirty)
+
         if image.is_dirty:
             image.file_format = 'PNG'
-            if(image.alpha_mode != 'CHANNEL_PACKED'):
+            if image.alpha_mode != 'CHANNEL_PACKED':
                 self.report({'WARNING'}, "The image is not using channel packed alpha. If you have painted a mask, the color underneath is black!")
-
-            extensionless = image.filepath_raw[:image.filepath_raw.rfind(".")]
-            newpath = extensionless + "_m.png"
-            print("New path:", newpath)
-            image.save_render(newpath, scene=context.scene)
+            
+            if image.source in ['VIEWER', 'GENERATED']: # viewer = render result
+                filename = f"render_{uuid.uuid4()}"
+                newpath = f"/tmp/{filename}.png"
+                image.alpha = 'CHANNEL_PACKED'
+                image.save_render(filepath=newpath, scene=context.scene)
+                newim = bpy.data.images.new(image.name + MODIFIED_IMAGE_SUFFIX, 32, 32, alpha=True)
+                newim.source = 'FILE'
+                newim.filepath = newpath
+                ime_area.spaces[0].image = newim
+            else:
+                extensionless = image.filepath_raw[:image.filepath_raw.rfind(".")]
+                if not extensionless.endswith(MODIFIED_IMAGE_SUFFIX):
+                    newpath = extensionless + MODIFIED_IMAGE_SUFFIX + ".png"
+                    image.save_render(filepath=newpath, scene=context.scene) # save_render is needed to properly save channel packed images
+                    image.filepath = newpath
+                    image.name = image.name 
+                else:
+                    image.save()
+                
 
         active = sdn_area.spaces[0].node_tree.nodes.active
         if active and active.bl_idname == '输入图像': # "Input Image" Blender-side node
@@ -1052,6 +1071,10 @@ class Image_To_SDNode(bpy.types.Operator):
             new_node = sdn_area.spaces[0].node_tree.nodes.new('输入图像')
             new_node.location = new_node_loc
             new_node.image = image.filepath_raw
+            for n in sdn_area.spaces[0].node_tree.nodes:
+                n.select = False
+            new_node.select = True
+            sdn_area.spaces[0].node_tree.nodes.active = new_node
 
         return {'FINISHED'}
 
