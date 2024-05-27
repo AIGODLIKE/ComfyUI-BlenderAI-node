@@ -2,7 +2,7 @@ import bpy
 import platform
 from bl_ui.properties_paint_common import UnifiedPaintPanel
 from bpy.types import Context
-from .ops import Ops, Load_History, Copy_Tree, Load_Batch, Fetch_Node_Status, Clear_Node_Cache
+from .ops import Ops, Load_History, Copy_Tree, Load_Batch, Fetch_Node_Status, Clear_Node_Cache, SDNode_To_Image, Image_To_SDNode
 from .translations import ctxt
 from .SDNode import TaskManager, FakeServer
 from .SDNode.tree import TREE_TYPE
@@ -200,6 +200,20 @@ def draw_header_button(self, context):
         col.alert = True
         col.operator(Ops.bl_idname, text="", icon="PLAY").action = "Submit"
 
+def draw_sdn_tofrom(self, context):
+    layout = self.layout
+    if context.space_data.tree_type == TREE_TYPE:
+        layout.separator()
+        layout.operator(Image_To_SDNode.bl_idname, text="From Image Editor", icon="IMPORT")
+        layout.operator(SDNode_To_Image.bl_idname, text="To Image Editor", icon="EXPORT")
+
+def draw_imeditor_tofrom(self, context):
+    layout = self.layout
+    layout.separator()
+    layout.operator(SDNode_To_Image.bl_idname, text="From ComfyUI Node Editor", icon="IMPORT")
+    layout.operator(Image_To_SDNode.bl_idname, text="To ComfyUI Node Editor", icon="EXPORT")
+
+
 class HistoryItem(bpy.types.PropertyGroup):
     name: bpy.props.StringProperty(default="")
 
@@ -276,8 +290,12 @@ class PanelViewport(bpy.types.Panel):
             brush.stencil_dimension = (length / 2, length / 2)
         Timer.put((f, brush, length, area.width, area.height))
 
-def header_reg():
+def ui_reg():
     bpy.types.NODE_HT_header.append(draw_header_button)
+    bpy.types.IMAGE_MT_image.append(draw_imeditor_tofrom)
+    bpy.types.NODE_MT_node.append(draw_sdn_tofrom)
 
-def header_unreg():
+def ui_unreg():
     bpy.types.NODE_HT_header.remove(draw_header_button)
+    bpy.types.IMAGE_MT_image.remove(draw_imeditor_tofrom)
+    bpy.types.NODE_MT_node.remove(draw_sdn_tofrom)
