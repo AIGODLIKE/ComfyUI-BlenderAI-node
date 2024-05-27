@@ -974,7 +974,7 @@ class SDNode_To_Image(bpy.types.Operator):
             self.report({'ERROR'}, "No active ComfyUI node!")
             return {'CANCELLED'}
         if not ime_area:
-            self.report({'ERROR'}, "No Image Editor with an unpinned image found!")
+            self.report({'ERROR'}, "No Image Editor with an open unpinned image found!")
 
         image = sdn_get_image(node)
         if not image:
