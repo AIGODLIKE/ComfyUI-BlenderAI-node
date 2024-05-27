@@ -975,10 +975,12 @@ class SDNode_To_Image(bpy.types.Operator):
             return {'CANCELLED'}
         if not ime_area:
             self.report({'ERROR'}, "No Image Editor with an open unpinned image found!")
+            return {'CANCELLED'}
 
         image = sdn_get_image(node)
         if not image:
             self.report({'ERROR'}, "Could not retrieve node image!")
+            return {'CANCELLED'}
 
         ime_area.spaces[0].image = image
         ime_area.spaces[0].image.alpha_mode = 'CHANNEL_PACKED'
