@@ -78,21 +78,21 @@ class Ops(bpy.types.Operator):
         if action == "PresetFromClipBoard":
             desc = _T("Load from ClipBoard")
         elif action == "Launch":
-            desc = _T("Launch/Connect ComfyUI")
+            desc = _T("Launch/Connect to ComfyUI")
         elif action == "Restart":
             desc = _T("Restart ComfyUI")
         elif action == "Connect":
             desc = _T("Connect to existing & running ComfyUI server")
         elif action == "Submit":
-            desc = _T("Submit Task and with Clear Cache if Alt Pressed")
+            desc = _T("Submit Task, with Clear Cache if Alt pressed")
         elif action == "Close":
-            desc = _T("Close/Disconnect ComfyUI")
+            desc = _T("Close/Disconnect from ComfyUI")
         return desc
 
     def draw(self, context):
         layout = self.layout
         if self.action == "Submit" and not TaskManager.is_launched():
-            layout.label(text=_T("ComfyUI not Run,To Run?"), icon="INFO", text_ctxt=ctxt)
+            layout.label(text=_T("ComfyUI not running, run?"), icon="INFO", text_ctxt=ctxt)
         if self.action == "Save":
             if (Path(bpy.context.scene.sdn.presets_dir) / f"{self.save_name}.json").exists():
                 layout.alert = True
@@ -789,7 +789,7 @@ class NodeSearch(bpy.types.Operator):
 class Clear_Node_Cache(bpy.types.Operator):
     bl_idname = "sdn.clear_node_cache"
     bl_label = "Clear Node Cache"
-    bl_description = "If node parsing error, you can delete node cache by this button, then restart blender to use it normally"
+    bl_description = "If there is a node parsing error, you can delete the node cache with this button, then restart Blender"
     bl_translation_context = ctxt
 
     def execute(self, context):
@@ -883,7 +883,7 @@ def menu_sync_stencil_image(self: bpy.types.Menu, context: bpy.types.Context):
     if context.area in Sync_Stencil_Image.areas:
         col = self.layout.column()
         col.alert = True
-        col.operator(Sync_Stencil_Image.bl_idname, text="Stop Sync Stencil Image", icon="PAUSE").action = "Clear"
+        col.operator(Sync_Stencil_Image.bl_idname, text="Stop Syncing Stencil Image", icon="PAUSE").action = "Clear"
     else:
         self.layout.operator(Sync_Stencil_Image.bl_idname, icon="PLAY")
 

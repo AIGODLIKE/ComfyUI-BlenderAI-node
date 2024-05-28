@@ -9,9 +9,10 @@ This is an addon for using [ComfyUI](https://github.com/comfyanonymous/ComfyUI) 
 - Blender-like node groups
 - Queue batch processing with mission excel
 - Node tree/workflow presets and node group presets
-- Image previews for models in the Load Checkpoint node
+- Image previews for models in the Load Checkpoint / LoRA node
 - Can directly input or replace the 3D models in Blender
 - By using composite can output perfect controlnet image
+- Conveniently move images to and from the Image Editor
 
 Here are some workflow showcases:
 You can find all these workflow presets in `ComfyUI-BlenderAI-node/presets/`
@@ -41,7 +42,7 @@ https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/cb96dd60-b9
 
 1. **Install Blender**
 
-First, you need to install [Blender](https://www.blender.org/download/)(Recommend Blender 3.5, 3.6.X, or previous 4.0).
+First, you need to install [Blender](https://www.blender.org/download/)(We recommend Blender 3.5, 3.6.X, or 4.0).
 
 ![image](https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/aacf1cfe-ae44-4930-9a93-c226a8408066)
 
@@ -207,7 +208,7 @@ Here are some interesting nodes we've tested in Blender
 
 ? = not all functions work
 
-× = only few or no functions work
+× = only a few or no functions work
 
 |Custom Node Name|Status|
 |:----|:----|
