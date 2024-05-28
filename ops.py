@@ -898,9 +898,12 @@ def sdn_get_image(node: bpy.types.Node):
     if node.bl_idname == '输入图像': # "Input Image" Blender-side node
         return node.prev
 
+    if node.bl_idname == '存储' and node.mode == 'ToImage': # "Save" Blender-side node
+        return node.image
+
     image = None
 
-    if node.bl_idname == 'SaveImage':
+    if node.bl_idname == 'SaveImage' or (node.bl_idname == '存储' and node.mode == 'Save'):
         path = Path(node.output_dir)
         prefix = node.filename_prefix
         file_re = re.compile(f'{prefix}_([0-9]+)') # Should the _ at the end be included? 
