@@ -892,7 +892,7 @@ bpy.types.VIEW3D_PT_tools_brush_settings.append(menu_sync_stencil_image)
 # bpy.types.VIEW3D_PT_tools_brush_display.append(menu_sync_stencil_image)
 
 def sdn_get_image(node: bpy.types.Node):
-    if node.bl_idname == 'PreviewImage' and len(node.prev) > 0:
+    if node.bl_idname in ('PreviewImage', '预览') and len(node.prev) > 0: # '预览' "Preview" Blender-side node
         return node.prev[0].image
 
     if node.bl_idname == '输入图像': # "Input Image" Blender-side node
