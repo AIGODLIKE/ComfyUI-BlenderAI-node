@@ -687,7 +687,9 @@ class LocalServer(Server):
                 args = "source /opt/intel/oneapi/setvars.sh; " + args
                 logger.warning("Using Intel OneAPI")
             args = ["/bin/bash", "-c", args]  # shell=True will use /bin/sh which can't source
-
+        # mac
+        if system() == "Darwin":
+            os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
         p = Popen(args, stdout=PIPE, stderr=STDOUT, cwd=Path(model_path).resolve().as_posix())
         self.child = p
         self.pid = p.pid
