@@ -106,7 +106,7 @@ def setwidth(self: NodeBase, w, count=1):
             self.bl_width_max = 8192
         Timer.put((delegate, self))
         return self.width
-    
+
     if not w:
         return 0
     oriw = w
@@ -1383,7 +1383,7 @@ class 存储(BluePrintBase):
                         seq = seqe.sequences.new_image(name, img, channel, frame_start)
                         seq.frame_final_duration = frame_final_duration
                         frame_start += frame_final_duration
-                        
+
                 def f(self, imgs):
                     seqe = bpy.context.scene.sequence_editor
                     channel = self.channel
@@ -1392,7 +1392,7 @@ class 存储(BluePrintBase):
                     mode = self.seq_mode
                     cut_off = self.cut_off
                     max_final_start = bpy.context.scene.frame_current if self.current_frame_as_fs else 0
-                    
+
                     if mode == "SeqReplace":
                         # 替换模式: 查找当前通道的 frame_start 到 frame_final_duration 之间的所有序列, 删除, 然后将新建序列
                         rm_seq = []
@@ -1541,6 +1541,11 @@ class 输入图像(BluePrintBase):
         prop = bpy.props.BoolProperty(default=False)
         properties["disable_render"] = prop
 
+        prop = bpy.props.BoolProperty(default=True, name="Use Current Frame")
+        properties["use_current_frame"] = prop
+        prop = bpy.props.IntProperty(default=1, name="Input Frame")
+        properties["input_frame"] = prop
+
     def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swsock=True, swdisp=False) -> bool:
         if prop == "mode":
             if self.mode == "序列图":
@@ -1560,6 +1565,9 @@ class 输入图像(BluePrintBase):
                     icon = "HIDE_ON" if bpy.context.scene.sdn.disable_render_all else "HIDE_OFF"
                     row.prop(bpy.context.scene.sdn, "disable_render_all", text="", icon=icon)
                     layout.prop(self, "out_layers")
+                layout.prop(self, "use_current_frame", toggle=True)
+                if not self.use_current_frame:
+                    layout.prop(self, "input_frame")
             return True
         elif prop == "image":
             if os.path.exists(self.image):
@@ -1592,7 +1600,7 @@ class 输入图像(BluePrintBase):
                 w = setwidth(self, w)
                 layout.template_icon(icon_id, scale=w // 20)
             return True
-        elif prop in {"render_layer", "out_layers", "frames_dir", "disable_render"}:
+        elif prop in {"render_layer", "out_layers", "frames_dir", "disable_render", "use_current_frame", "input_frame"}:
             return True
 
     def pre_fn(s, self: NodeBase):
@@ -1607,6 +1615,7 @@ class 输入图像(BluePrintBase):
             logger.warning("%s->%s", _T('Render'), self.image)
             old = bpy.context.scene.render.filepath
             bpy.context.scene.render.filepath = self.image
+
             if self.mode == "视口":
                 # 场景相机可能为空
                 if not bpy.context.scene.camera:
@@ -1621,6 +1630,9 @@ class 输入图像(BluePrintBase):
                         gpo.hide_render = True
                 except BaseException:
                     ...
+            current_frame = bpy.context.scene.frame_current
+            if self.mode == "渲染" and not self.use_current_frame:
+                bpy.context.scene.frame_set(self.input_frame)
             if bpy.context.scene.use_nodes:
                 from .utils import set_composite
                 nt = bpy.context.scene.node_tree
@@ -1636,6 +1648,8 @@ class 输入图像(BluePrintBase):
                     nt.nodes.remove(render_layer)
             else:
                 bpy.ops.render.render(write_still=True)
+            if self.mode == "渲染":
+                bpy.context.scene.frame_set(current_frame)
             bpy.context.scene.render.filepath = old
 
         @Timer.wait_run
@@ -1767,7 +1781,7 @@ class 截图(BluePrintBase):
             if not self.capture:
                 return
             self.capture = False
-            if system() != "Linux": #TODO: Linux lupa
+            if system() != "Linux":  # TODO: Linux lupa
                 from ..External.lupawrapper import get_lua_runtime
                 rt = get_lua_runtime()
                 hk = rt.load_dll("luahook")

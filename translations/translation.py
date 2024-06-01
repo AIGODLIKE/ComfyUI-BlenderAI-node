@@ -230,6 +230,8 @@ other = {
     "output_dir": "输出文件夹",
     "Use Current Frame as Start Frame": "使用当前帧作为起始帧",
     "Cut off frames behand insert": "删除当前轨道后续帧",
+    "Use Current Frame": "使用当前帧",
+    "Input Frame": "输入帧",
     # SDNode/tree.py
     "Invalid Node Type: {}": "检查到无效的节点: {}",
     "ParseNode Time:": "解析节点耗时:",
