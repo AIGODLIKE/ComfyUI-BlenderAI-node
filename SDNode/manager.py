@@ -571,7 +571,8 @@ class RemoteServer(Server):
             img_data = requests.get(cover_url, timeout=5).content
             if not img_data:
                 return
-            img_path = Path(gettempdir()).joinpath(model).with_suffix(Path(img_quote).suffix)
+            img_name = model.replace("/", "_").replace("\\", "_")
+            img_path = Path(gettempdir()).joinpath(img_name).with_suffix(Path(img_quote).suffix)
             with open(img_path, "wb") as f:
                 f.write(img_data)
             self.covers[model] = img_path
@@ -686,7 +687,9 @@ class LocalServer(Server):
                 args = "source /opt/intel/oneapi/setvars.sh; " + args
                 logger.warning("Using Intel OneAPI")
             args = ["/bin/bash", "-c", args]  # shell=True will use /bin/sh which can't source
-
+        # mac
+        if system() == "Darwin":
+            os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
         p = Popen(args, stdout=PIPE, stderr=STDOUT, cwd=Path(model_path).resolve().as_posix())
         self.child = p
         self.pid = p.pid

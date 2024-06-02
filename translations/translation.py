@@ -1,6 +1,6 @@
+from pathlib import Path
 import json
 import bpy
-from pathlib import Path
 
 ctxt = "SDN"
 LOCALE_MAP = {
@@ -30,8 +30,8 @@ if not is_zh_HANS_version():
     }
 
 
-def get_locale_inv(locale):
-    return LOCALE_MAP_INV.get(locale, locale)
+def get_locale_inv(in_locale):
+    return LOCALE_MAP_INV.get(in_locale, in_locale)
 
 
 REG_CTXT = {ctxt, }
@@ -230,6 +230,8 @@ other = {
     "output_dir": "输出文件夹",
     "Use Current Frame as Start Frame": "使用当前帧作为起始帧",
     "Cut off frames behand insert": "删除当前轨道后续帧",
+    "Use Current Frame": "使用当前帧",
+    "Input Frame": "输入帧",
     # SDNode/tree.py
     "Invalid Node Type: {}": "检查到无效的节点: {}",
     "ParseNode Time:": "解析节点耗时:",
@@ -237,7 +239,7 @@ other = {
     "SDNGroup": "组",
     "NoCategory": "无分类",
     # SDNode/utils.py
-    "AI Node" + get_bl_version() : "无限圣杯 Node" + get_bl_version(),
+    "AI Node" + get_bl_version(): "无限圣杯 Node" + get_bl_version(),
     "AI Node": "无限圣杯 Node",
     "Gen Mask": "遮罩生成",
     "Relink failed: %s": "重连失败: %s",
@@ -352,7 +354,7 @@ other = {
     "Preview Image Size": "预览图尺寸",
     "Play Finish Sound": "任务完成时播放声音",
     "Play a sound when the ComfyUI queue is empty": "当 ComfyUI 任务队列全部完成时播放声音",
-    "Finish Sound Path" : "完成时播放的声音文件路径",
+    "Finish Sound Path": "完成时播放的声音文件路径",
     "Path to the file to play when the ComfyUI queue is empty": "当 ComfyUI 任务队列全部完成时播的声音文件的路径",
     "Sound Volume": "声音音量",
     "Volume of the sound played wwhen the ComfyUI queue is empty": "当 ComfyUI 任务队列全部完成时播放的声音音量",
@@ -529,8 +531,8 @@ def get_json_data_recursive(p: Path) -> dict[str, dict[str, dict]]:
     return json_data
 
 
-def read_locale(locale):
-    mapped_locale = LOCALE_MAP.get(locale, locale)
+def read_locale(in_locale):
+    mapped_locale = LOCALE_MAP.get(in_locale, in_locale)
     p = Path(__file__).parent.joinpath(mapped_locale)
     if not p.exists():
         p = Path(__file__).parent.joinpath(mapped_locale.replace("_", "-"))
@@ -552,15 +554,15 @@ def read_locale(locale):
     return data
 
 
-def reg_other_translations(translations_dict: dict, replace_dict: dict, locale: str):
-    for word, translation in LANG_TEXT[locale].items():
-        translations_dict[locale][(ctxt, word)] = translation
-        translations_dict[locale][(None, word)] = translation
-        replace_dict[locale][word] = translation
+def reg_other_translations(tdict: dict, replace_dict: dict, in_locale: str):
+    for word, translation in LANG_TEXT[in_locale].items():
+        tdict[in_locale][(ctxt, word)] = translation
+        tdict[in_locale][(None, word)] = translation
+        replace_dict[in_locale][word] = translation
 
 
-def reg_node_ctxt(translations_dict: dict, replace_dict: dict, locale: str):
-    mapped_locale = LOCALE_MAP.get(locale, locale)
+def reg_node_ctxt(tdict: dict, replace_dict: dict, in_locale: str):
+    mapped_locale = LOCALE_MAP.get(in_locale, in_locale)
     # 处理节点注册, 每个节点提供一个ctxt
     # 1. 查找locale
     p = Path(__file__).parent.joinpath(mapped_locale, "Nodes")
@@ -571,25 +573,25 @@ def reg_node_ctxt(translations_dict: dict, replace_dict: dict, locale: str):
 
     json_data = get_json_data_recursive(p)
 
-    if locale not in translations_dict:
-        translations_dict[locale] = {}
-    if locale not in replace_dict:
-        replace_dict[locale] = {}
-    td = translations_dict[locale]
-    rd = replace_dict[locale]
+    if in_locale not in tdict:
+        tdict[in_locale] = {}
+    if in_locale not in replace_dict:
+        replace_dict[in_locale] = {}
+    td = tdict[in_locale]
+    rd = replace_dict[in_locale]
     # 2. 注册所有Node
     for node_name, node_translation in json_data.items():
-        ctxt = node_name
-        REG_CTXT.add(ctxt)
-        td[(ctxt, node_name)] = node_translation.pop("title", node_name)
-        td[(None, node_name)] = td[(ctxt, node_name)]
-        rd[node_name] = td[(ctxt, node_name)]
+        t_ctxt = node_name
+        REG_CTXT.add(t_ctxt)
+        td[(t_ctxt, node_name)] = node_translation.pop("title", node_name)
+        td[(None, node_name)] = td[(t_ctxt, node_name)]
+        rd[node_name] = td[(t_ctxt, node_name)]
         for part in node_translation.values():
             if not isinstance(part, dict):
                 continue
             for wn, wv in part.items():
                 wn = get_reg_name(wn)
-                td[(ctxt, wn)] = wv
+                td[(t_ctxt, wn)] = wv
                 td[(None, wn)] = wv
                 rd[wn] = wv
                 # if node_name == "EmptyLatentImage": print(f"{node_name} reg: {wn} -> {wv}")
