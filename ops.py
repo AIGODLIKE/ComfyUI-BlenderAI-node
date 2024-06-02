@@ -183,21 +183,9 @@ class Ops(bpy.types.Operator):
             logger.error(_T("No Node Tree Found!"))
             self.report({"ERROR"}, _T("No Node Tree Found!"))
             return
-        def reset_error_mark(tree: CFNodeTree):
-            if not tree:
-                return
-            from mathutils import Color
-            for n in tree.nodes:
-                if not n.label.endswith(("-ERROR", "-EXEC")) or n.color != Color((1, 0, 0)):
-                    continue
-                n.use_custom_color = False
-                n.label = ""
-        reset_error_mark(tree)
 
-        def get_task(tree: CFNodeTree):
-            prompt = tree.serialize()
-            workflow = tree.save_json()
-            return {"prompt": prompt, "workflow": workflow, "api": "prompt"}
+        tree.reset_error_mark()
+
         if bpy.context.scene.sdn.advanced_exe and not Ops.is_advanced_enable:
             Ops.is_advanced_enable = True
             if bpy.context.scene.sdn.loop_exec:
@@ -260,7 +248,7 @@ class Ops(bpy.types.Operator):
                                 fnode.image = fpath
                             except Exception:
                                 ...
-                    TaskManager.push_task(get_task(tree), tree=tree, pre=partial(pre, pre_img_map))
+                    TaskManager.push_task(tree.get_task(), tree=tree, pre=partial(pre, pre_img_map))
             # restore config
             for fnode, cfg in old_cfg.items():
                 setattr(fnode, "mode", cfg["mode"])
@@ -335,7 +323,7 @@ class Ops(bpy.types.Operator):
                     img.filepath = filepath.resolve().as_posix()
                     img.filepath_raw = img.filepath
                 mat_image_node.image = FSWatcher.to_str(filepath)
-                TaskManager.push_task(get_task(tree), tree=tree)
+                TaskManager.push_task(tree.get_task(), tree=tree)
             return {"FINISHED"}
         else:
             if self.alt:
@@ -348,7 +336,7 @@ class Ops(bpy.types.Operator):
                     def pre(cf):
                         bpy.context.scene.frame_set(cf)
                     pre = partial(pre, cf)
-                    TaskManager.push_task(get_task(tree), pre, tree=tree)
+                    TaskManager.push_task(tree.get_task(), pre, tree=tree)
             elif bpy.context.scene.sdn.frame_mode == "Batch":
                 batch_dir = bpy.context.scene.sdn.batch_dir
                 select_node = tree.nodes.active
@@ -367,10 +355,10 @@ class Ops(bpy.types.Operator):
                     if file.suffix not in IMG_SUFFIX:
                         continue
                     select_node.image = file.as_posix()
-                    TaskManager.push_task(get_task(tree), tree=tree)
+                    TaskManager.push_task(tree.get_task(), tree=tree)
                 select_node.mode, select_node.image = old_mode, old_image
             else:
-                TaskManager.push_task(get_task(tree), tree=tree)
+                TaskManager.push_task(tree.get_task(), tree=tree)
         return {"FINISHED"}
 
     def update_nodes_pos(self, event):

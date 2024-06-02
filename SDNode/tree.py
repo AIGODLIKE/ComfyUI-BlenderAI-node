@@ -9,6 +9,7 @@ import traceback
 import inspect
 import types
 from hashlib import md5
+from mathutils import Color
 from string import ascii_letters, digits
 from bpy.app.translations import pgettext
 from threading import Thread
@@ -159,6 +160,23 @@ class CFNodeTree(NodeTree):
 
     def get_id_pool(self) -> Pool:
         return self.Pool(self)
+
+    def reset_error_mark(self):
+        for n in self.nodes:
+            if not n.label.endswith(("-ERROR", "-EXEC")) or n.color != Color((1, 0, 0)):
+                continue
+            n.use_custom_color = False
+            n.label = ""
+
+    def get_task(self):
+        prompt = self.serialize()
+        workflow = self.save_json()
+        return {"prompt": prompt, "workflow": workflow, "api": "prompt"}
+
+    def execute(self):
+        self.reset_error_mark()
+        from .manager import TaskManager
+        TaskManager.push_task(self.get_task(), tree=self)
 
     @staticmethod
     def refresh_current_tree():
