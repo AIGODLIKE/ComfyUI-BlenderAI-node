@@ -146,7 +146,7 @@ Loop execution is in advanced executing option at the side of `Excute Node Tree`
 
 ### Input Image
 
-![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/9e89adcb-4574-4b93-b549-998db38cc128)
+![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/d065fa92-9d00-4be3-a867-dbfb4779bdd6)
 
 - Input image from directory
 - Input image list from directory
