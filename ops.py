@@ -1052,7 +1052,7 @@ class Image_To_SDNode(bpy.types.Operator):
             if image.source in ['VIEWER', 'GENERATED']: # viewer = render result
                 filename = f"render_{uuid.uuid4()}"
                 newpath = f"/tmp/{filename}.png"
-                image.alpha = 'CHANNEL_PACKED'
+                image.alpha_mode = 'CHANNEL_PACKED'
                 image.save_render(filepath=newpath, scene=context.scene)
                 newim = bpy.data.images.new(image.name + MODIFIED_IMAGE_SUFFIX, 32, 32, alpha=True)
                 newim.source = 'FILE'
