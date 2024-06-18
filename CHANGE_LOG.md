@@ -11,3 +11,12 @@
 - change: Addon cat name [#e544efe](https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/commit/e544ef5e6694ff5fd0959c97bd35cc9fe0dd387c)
 - fix: ID data write error(context not allowed) [#481f611](https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/commit/481f611943b51bc578f5f93d3fc6cb9c3aba52e8)
 - fix: Cache remote model preview name with sep cause error [#804cf5e](https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/commit/804cf5ef668a04dff015d5f1662539956b203119)
+
+## 1.5.3
+- change: Update translation [#c3840f7](https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/commit/c3840f7c1031f8abfdc6e41de2068c39e44ca882)
+- add: Add input image render frame [#99c4637](https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/commit/99c46373fdcd9aed6ed2757df04a404855308011)
+- change: Update README [PR#99](https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/pull/99)
+
+## 1.5.4
+- change: Code refactor [#7a3ab44](https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/commit/7a3ab448e64a08e79e2b485edc143242ea905078)
+- change: Update README [PR#106](https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/pull/106) [#3b7ee42](https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/commit/3b7ee42cee52111d4f0d9b7734a2b729d338ede1)
