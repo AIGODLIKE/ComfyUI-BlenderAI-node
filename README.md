@@ -16,7 +16,6 @@ This is an addon for using [ComfyUI](https://github.com/comfyanonymous/ComfyUI) 
 
 Here are some workflow showcases:
 You can find all these workflow presets in `ComfyUI-BlenderAI-node/presets/`
-
 ### Camera input
 ![image](https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/f087f254-5486-4d9f-9a13-d327abed3e14)
 
@@ -35,6 +34,10 @@ https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/cb96dd60-b9
 ### Pose characters using Blender's bones
 
 ![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/484c12bf-55b8-4baf-92df-e422fd900cbf)
+
+### Automatic AI gap animation(ToonCrafter)
+
+https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/2c21173b-84e7-433c-bf2f-e61bcca7162c
 
 # Installation
 
@@ -150,8 +153,8 @@ Loop execution is in advanced executing option at the side of `Excute Node Tree`
 
 - Input image from directory
 - Input image list from directory
-- Input image from render
-- Input image from viewport
+- Input image from render(Supports current and selected frames)
+- Input image from viewport(Supports real-time refresh)
 
 ### Mask
 
