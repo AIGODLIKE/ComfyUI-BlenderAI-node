@@ -232,6 +232,7 @@ other = {
     "Cut off frames behand insert": "删除当前轨道后续帧",
     "Use Current Frame": "使用当前帧",
     "Input Frame": "输入帧",
+    "Total Time": "总时长",
     # SDNode/tree.py
     "Invalid Node Type: {}": "检查到无效的节点: {}",
     "ParseNode Time:": "解析节点耗时:",

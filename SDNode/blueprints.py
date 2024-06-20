@@ -7,6 +7,7 @@ import textwrap
 import urllib.request
 import urllib.parse
 import tempfile
+import aud
 from functools import partial, lru_cache
 from pathlib import Path
 from platform import system
@@ -2342,6 +2343,91 @@ class TripoGLBViewer(BluePrintBase):
                     save_path = get_next_filename(save_path)
                     obj = cache_to_local(data, suffix=".glb", save_path=save_path).as_posix()
         Timer.put((f, self, meshes))
+
+
+class PreviewAudio(BluePrintBase):
+    comfyClass = "PreviewAudio"
+    device: aud.Device = aud.Device()
+    handle: aud.Handle = None
+
+    @staticmethod
+    def play(sound: aud.Sound, t=0):
+        PreviewAudio.stop()
+        PreviewAudio.handle = None
+        PreviewAudio.handle = PreviewAudio.device.play(sound)
+        PreviewAudio.handle.position = t
+
+    @staticmethod
+    def stop():
+        if not PreviewAudio.handle:
+            return
+        PreviewAudio.handle.stop()
+
+    def spec_extra_properties(s, properties, nname, ndesc):
+        prop = bpy.props.StringProperty(subtype="FILE_PATH")
+        properties["audio_source"] = prop
+        prop = bpy.props.FloatProperty(min=0, subtype="TIME_ABSOLUTE")
+        properties["time_max"] = prop
+
+        def time_set(self, value):
+            self["time"] = min(value, self.time_max)
+
+        def time_get(self):
+            if "time" not in self:
+                self["time"] = 0
+            return self["time"]
+        prop = bpy.props.FloatProperty(min=0, max=9999999, set=time_set, get=time_get)
+        properties["time"] = prop
+
+        def play(self, context):
+            if not self.play:
+                return
+            self.play = False
+            if not self.audio_source:
+                return
+            sound = aud.Sound(self.audio_source)
+            PreviewAudio.play(sound, self.time)
+        prop = bpy.props.BoolProperty(update=play)
+        properties["play"] = prop
+
+    def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swsock=True, swdisp=False) -> bool:
+        if prop in {"audio_source"}:
+            return True
+        if prop == "time_max":
+            layout.label(text=f"{_T('Total Time')}: {self.time_max:.2f}s")
+            return True
+        if prop == "play":
+            layout.prop(self, "play", text="", icon="PLAY")
+            return True
+
+    def serialize_pre_specific(s, self: NodeBase):
+        self.audio_source = ""
+        PreviewAudio.stop()
+
+    def post_fn(s, self: NodeBase, t: Task, result):
+        logger.debug("%s%s->%s", self.class_type, _T('Post Function'), result)
+        audio_paths = result.get("output", {}).get("audio", [])
+        if not audio_paths:
+            logger.error('response is %s, cannot find audio in it', result)
+            return
+        logger.warning("%s: %s", _T('Load Preview Audio'), audio_paths)
+
+        def f(self, audio_paths: list[dict]):
+            if not audio_paths:
+                return
+            data = audio_paths[0]
+            audio_path = cache_to_local(data, suffix="flac")
+            if not audio_path or not Path(audio_path).exists():
+                return
+            audio_path = Path(audio_path).as_posix()
+            self.time_max = 0
+            self.audio_source = audio_path
+            try:
+                sound = aud.Sound(audio_path)
+                self.time_max = sound.length / sound.specs[0]
+            except BaseException:
+                ...
+        Timer.put((f, self, audio_paths))
 
 
 class SDNGroupBP(BluePrintBase):
