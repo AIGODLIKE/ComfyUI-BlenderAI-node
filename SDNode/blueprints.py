@@ -1131,7 +1131,8 @@ def cache_to_local(data, suffix="png", save_path="") -> Path:
     with urllib.request.urlopen(url) as response:
         img_data = response.read()
         if not save_path:
-            save_path = Path(tempfile.gettempdir()) / data.get('filename', f'preview.{suffix}')
+            suffix = suffix if suffix.startswith(".") else f".{suffix}"
+            save_path = Path(tempfile.gettempdir()) / data.get('filename', f'preview{suffix}')
         with open(save_path, "wb") as f:
             f.write(img_data)
         return save_path
@@ -2343,6 +2344,140 @@ class TripoGLBViewer(BluePrintBase):
                     save_path = get_next_filename(save_path)
                     obj = cache_to_local(data, suffix=".glb", save_path=save_path).as_posix()
         Timer.put((f, self, meshes))
+
+
+class SaveAudioBL(BluePrintBase):
+    comfyClass = "SaveAudioBL"
+
+    def spec_extra_properties(s, properties, nname, ndesc):
+        prop = bpy.props.StringProperty()
+        properties["filename_prefix"] = prop
+
+        def update(self, context):
+            absp = bpy.path.abspath(self.output_dir)
+            if bpy.path.abspath(self.output_dir) == self.output_dir:
+                return
+            self.output_dir = absp
+        prop = bpy.props.StringProperty(subtype="DIR_PATH", update=update)
+        properties["output_dir"] = prop
+        items = [("Save", "Save", "", "", 0),
+                 ("ToSeq", "ToSeq", "", "", 1),
+                 ]
+        prop = bpy.props.EnumProperty(items=items)
+        properties["mode"] = prop
+
+        properties["seq_mode"] = bpy.props.EnumProperty(
+            items=[
+                ("SeqAppend", "SeqAppend", "", "", 0),
+                ("SeqStack", "SeqStack", "", "", 1),
+                ("SeqReplace", "SeqReplace", "", "", 2),
+            ],
+            default="SeqAppend")
+        properties["channel"] = bpy.props.IntProperty(default=1, min=1, max=127)
+        properties["frame_start"] = bpy.props.IntProperty()
+        properties["current_frame_as_fs"] = bpy.props.BoolProperty(default=False, description="Use Current Frame as Start Frame")
+        properties["cut_off"] = bpy.props.BoolProperty(default=False, description="Cut off frames behand insert")
+        properties["frame_final_duration"] = bpy.props.IntProperty(default=1, min=1)
+
+    def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swsock=True, swdisp=False) -> bool:
+        if prop == "mode":
+            layout.prop(self, prop, expand=True, text_ctxt=self.get_ctxt())
+            if self.mode == "Save":
+                layout.prop(self, "filename_prefix", text_ctxt=self.get_ctxt())
+                layout.prop(self, "output_dir", text_ctxt=self.get_ctxt())
+                return True
+            elif self.mode == "ToSeq":
+                layout.prop(self, "seq_mode", expand=True)
+                col = layout.box().column()
+                row = col.row(align=True)
+                row.prop(self, "current_frame_as_fs", toggle=True, text="", icon="GP_MULTIFRAME_EDITING")
+                c = row.column()
+                c.enabled = not self.current_frame_as_fs
+                c.prop(self, "frame_start")
+                col.prop(self, "channel")
+                col.prop(self, "frame_final_duration")
+                if self.seq_mode == "SeqReplace":
+                    col.prop(self, "cut_off", toggle=True, text="", icon="TRACKING_CLEAR_FORWARDS")
+                return True
+        return True
+
+    def make_serialize(s, self: NodeBase, parent: NodeBase = None) -> dict:
+        def __post_fn__(self: NodeBase, t: Task, result: dict, mode):
+            logger.debug("%s%s->%s", self.class_type, _T('Post Function'), result)
+            audio_paths = result.get("output", {}).get("audio", [])
+            if self.mode == "ToSeq":
+                audios = []
+                for audio_path in audio_paths:
+                    audios.append(cache_to_local(audio_path, suffix="flac").as_posix())
+
+                def push_audios_seq(audios: list[str], channel, frame_start, frame_final_duration):
+                    seqe = bpy.context.scene.sequence_editor
+                    for audio in audios:
+                        name = Path(audio).name
+                        seq = seqe.sequences.new_sound(name, audio, channel, frame_start)
+                        seq.frame_final_duration = frame_final_duration
+                        frame_start += frame_final_duration
+
+                def f(self, audios):
+                    seqe = bpy.context.scene.sequence_editor
+                    channel = self.channel
+                    frame_start = bpy.context.scene.frame_current if self.current_frame_as_fs else self.frame_start
+                    frame_final_duration = self.frame_final_duration
+                    mode = self.seq_mode
+                    cut_off = self.cut_off
+                    max_final_start = bpy.context.scene.frame_current if self.current_frame_as_fs else 0
+
+                    if mode == "SeqReplace":
+                        # 替换模式: 查找当前通道的 frame_start 到 frame_final_duration 之间的所有序列, 删除, 然后将新建序列
+                        rm_seq = []
+                        frame_end = frame_start + frame_final_duration * len(audios)
+                        print(frame_start, frame_end)
+                        for seq in seqe.sequences:
+                            if seq.channel != channel:
+                                continue
+                            if cut_off and (seq.frame_final_start <= frame_start < seq.frame_final_end or seq.frame_final_start >= frame_start):
+                                # 从 >= frame_start 起所有部分全删除
+                                rm_seq.append(seq)
+                                print("RM1:", seq.frame_final_start, seq.frame_final_end)
+                                continue
+                            if max(frame_start, seq.frame_final_start) < min(frame_end, seq.frame_final_end):
+                                rm_seq.append(seq)
+                                print("RM2:", seq.frame_final_start, seq.frame_final_end)
+                        for seq in rm_seq:
+                            seqe.sequences.remove(seq)
+                    elif mode == "SeqAppend":
+                        # 追加模式: 查找当前通道的 最后一个序列的持续位置, 往后新增
+                        for seq in seqe.sequences:
+                            if seq.channel != channel:
+                                continue
+                            if seq.frame_final_end > max_final_start:
+                                max_final_start = seq.frame_final_end
+                        frame_start = max_final_start
+                    elif mode == "SeqStack":
+                        # 堆叠模式: 直接新建, blender会自己堆叠
+                        ...
+                    push_audios_seq(audios, channel, frame_start, frame_final_duration)
+                Timer.put((f, self, audios))
+                return
+            if mode != "Save":
+                return
+            # 处理 Save 逻辑
+            for audio_path in audio_paths:
+                filename_prefix = audio_path.get("filename", self.filename_prefix)
+                output_dir = self.output_dir
+                if not output_dir or not Path(output_dir).is_dir():
+                    output_dir = tempfile.gettempdir()
+                save_path = Path(output_dir).joinpath(filename_prefix).with_suffix(".flac")
+                audio_path = cache_to_local(audio_path, save_path=save_path).as_posix()
+                if not save_path.exists():
+                    continue
+                output_dir = save_path.parent.as_posix()
+
+                def save_out_dir(self, output_dir):
+                    self.output_dir = output_dir
+                Timer.put((save_out_dir, self, output_dir))
+        post_fn = partial(__post_fn__, self, mode=self.mode)
+        return {self.id: (self.serialize(parent=parent), self.pre_fn, post_fn)}
 
 
 class PreviewAudio(BluePrintBase):
