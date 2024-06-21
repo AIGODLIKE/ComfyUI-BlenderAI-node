@@ -2525,14 +2525,27 @@ class PreviewAudio(BluePrintBase):
         prop = bpy.props.BoolProperty(update=play)
         properties["play"] = prop
 
+        def stop(self, context):
+            if not self.stop:
+                return
+            self.stop = False
+            if not self.audio_source:
+                return
+            PreviewAudio.stop()
+        prop = bpy.props.BoolProperty(update=stop)
+        properties["stop"] = prop
+
     def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swsock=True, swdisp=False) -> bool:
-        if prop in {"audio_source"}:
+        if prop in {"audio_source", "stop"}:
             return True
         if prop == "time_max":
             layout.label(text=f"{_T('Total Time')}: {self.time_max:.2f}s")
             return True
         if prop == "play":
-            layout.prop(self, "play", text="", icon="PLAY")
+            if PreviewAudio.handle and PreviewAudio.handle.position > 0:
+                layout.prop(self, "stop", text="", icon="PAUSE")
+            else:
+                layout.prop(self, "play", text="", icon="PLAY")
             return True
 
     def serialize_pre_specific(s, self: NodeBase):
