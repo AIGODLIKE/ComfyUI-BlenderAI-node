@@ -37,6 +37,7 @@ def rmtree(path: Path):
         except BaseException:
             ...
 
+
 def get_addon_name():
     return "AI Node" + get_bl_version()
 
@@ -364,7 +365,7 @@ class PngParse:
                 compression_method, filter_method, interlace_method = \
                 struct.unpack('>8s4sIIBBBBB', png_header)
             # 输出 PNG 文件头
-            data = {
+            _ = {
                 "PNG file signature": file_sig,
                 "IHDR_signature": ihdr_sig,
                 "Image_size": [width, height],
@@ -388,9 +389,9 @@ class PngParse:
             while True:
                 length_bytes = file.read(4)
                 length = struct.unpack('>I', length_bytes)[0]  # Read chunk length (4 bytes)
-                chunk_type = file.read(4)      # Read chunk type (4 bytes)
+                chunk_type = file.read(4)       # Read chunk type (4 bytes)
                 chunk_data = file.read(length)  # Read chunk data (length bytes)
-                crc = file.read(4)             # Read CRC (4 bytes)
+                _ = file.read(4)                # Read CRC (4 bytes)
                 if chunk_type in {b'IHDR', b'PLTE'}:  # header and Palette
                     continue
                 elif chunk_type == b'tEXt':
