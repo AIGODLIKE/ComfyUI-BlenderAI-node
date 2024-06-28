@@ -165,12 +165,16 @@ class WebUIToComfyUI
             this.params["Positive prompt"] = pp.slice(-1) == "," ? pp.slice(0, -1).trim() : pp;
             this.text = this.text.replace(pp, "").trim();
         }
-        var np = this.text.match(/Negative prompt: (.*?)(?:,\n)/s);
-        np = np ? np : this.text.match(/Negative prompt: (.*?)(?:,\r\n)/s);
+        var np = this.text.match(/(Negative prompt: .*?)(?:Steps: )/s);
+        np = np ? np : this.text.match(/(Negative prompt: .*?)(?:,\r\n)/s);
+        np = np ? np : this.text.match(/(Negative prompt: .*?)(?:,\n)/s);
+        np = np ? np : this.text.match(/(Negative prompt: .*?)(?:\n)/s);
         if(np !== null)
         {
-            this.params["Negative prompt"] = np[1].trim();
-            this.text = this.text.replace(np[0], "").trim();
+            var prompt = np[1].slice("Negative prompt: ".length).trim();
+            prompt = prompt.slice(-1) == "," ? prompt.slice(0, -1).trim() : prompt;
+            this.params["Negative prompt"] = prompt;
+            this.text = this.text.replace(np[1], "").trim();
         }
     }
     _control_net(){
@@ -443,6 +447,60 @@ parameters(official art:1.2),(colorful:1.1),(masterpiece:1.2),best quality,maste
             "Version": "v1.9.4",
         };
         console.assert(deepEqual(this._parse(in_t2), out_t2), "Test 2 failed");
+        var in_t3 = `
+masterpiece, best quality, girl,woman,female, short hair, light smile, closed_eyes, cat_ears, overskirt,white dress,frills, pale blue Clothes,tiara
+Negative prompt: easynegative, ng_deepnegative_v1_75t, By bad artist -neg, verybadimagenegative_v1.3
+Steps: 20, Sampler: Euler a, CFG scale: 7, Seed: 3850677924, Size: 768x1024, Model hash: 19dbfda152, Model: 二次元_mixProV45Colorbox_v45, Clip skip: 2, ENSD: 31337
+        `;
+        var out_t3 = {
+          "Positive prompt": `
+masterpiece, best quality, girl,woman,female, short hair, light smile, closed_eyes, cat_ears, overskirt,white dress,frills, pale blue Clothes,tiara`.trim(),
+          "Negative prompt": "easynegative, ng_deepnegative_v1_75t, By bad artist -neg, verybadimagenegative_v1.3",
+          "Steps": "20",
+          "Sampler": "Euler a",
+          "CFG scale": "7",
+          "Seed": "3850677924",
+          "Size": "768x1024",
+          "Model hash": "19dbfda152",
+          "Model": "二次元_mixProV45Colorbox_v45",
+          "Clip skip": "2",
+        };
+        console.assert(deepEqual(this._parse(in_t3), out_t3), "Test 3 failed");
+        var in_t4 = `
+masterpiece, best quality, 1girl, solo, voxel art,
+gazebo, white girl,
+rust hair, ochre eyes,
+long hair, folded ponytail,
+evening gown, trim dress,
+ribbon, Gift Hat Hair Band , Opera-length necklaces, Arm harnesses,
+classic, medieval, noble
+Negative prompt: lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality, normal quality, jpeg artifacts, signature, watermark, username, blurry, badhandv4, easynegative, ng_deepnegative_v1_75t, verybadimagenegative_v1.3
+Steps: 20, Sampler: Euler a, CFG scale: 7, Seed: 1825312441, Size: 640x960, Model hash: 149fe7d36c, Model: 二次元_meinaalter_v1, ENSD: 31337, Wildcard prompt: "masterpiece, best quality, 1girl, solo, voxel art,
+__scene-location__, white girl,
+__color__ hair, __color__ eyes,
+__character-hair-Size__, __character-hair-Style__,
+__character-clothing-Dress__, trim dress,
+ribbon, __character-accessories-Hair__, __character-accessories-Neck__, __character-accessories-Arm__,
+classic, medieval, noble"`;
+        var out_t4 = {
+          "Positive prompt": `
+masterpiece, best quality, 1girl, solo, voxel art,
+gazebo, white girl,
+rust hair, ochre eyes,
+long hair, folded ponytail,
+evening gown, trim dress,
+ribbon, Gift Hat Hair Band , Opera-length necklaces, Arm harnesses,
+classic, medieval, noble`.trim(),
+          "Negative prompt": "lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality, normal quality, jpeg artifacts, signature, watermark, username, blurry, badhandv4, easynegative, ng_deepnegative_v1_75t, verybadimagenegative_v1.3",
+          "Steps": "20",
+          "Sampler": "Euler a",
+          "CFG scale": "7",
+          "Seed": "1825312441",
+          "Size": "640x960",
+          "Model hash": "149fe7d36c",
+          "Model": "二次元_meinaalter_v1",
+        };
+        console.assert(deepEqual(this._parse(in_t4), out_t4), "Test 4 failed");
     }
     base_workflow(){
         var wk = {

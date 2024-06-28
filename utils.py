@@ -751,11 +751,15 @@ class WebUIToComfyUI:
             pp = pp[1].strip()
             self.params["Positive prompt"] = pp[:-1].strip() if pp[-1] == "," else pp
             self.text = self.text.replace(pp, "").strip()
-        np = re.search("Negative prompt: (.*?)(?:,\n)", self.text, re.S)
+        np = re.search("(Negative prompt: .*?)(?:Steps: )", self.text, re.S)
         np = np if np else re.search("Negative prompt: (.*?)(?:,\r\n)", self.text, re.S)
+        np = np if np else re.search("Negative prompt: (.*?)(?:,\n)", self.text, re.S)
+        np = np if np else re.search("Negative prompt: (.*?)(?:\n)", self.text, re.S)
         if np:
-            self.params["Negative prompt"] = np[1].strip()
-            self.text = self.text.replace(np[0], "").strip()
+            prompt = np[1][len("Negative prompt: "):].strip()
+            prompt = prompt[:-1].strip() if prompt[-1] == "," else prompt
+            self.params["Negative prompt"] = prompt
+            self.text = self.text.replace(np[1], "").strip()
 
     def _control_net(self):
         if not re.search(r"(Control[nN]et \d+): ", self.text, re.S):
@@ -940,6 +944,63 @@ parameters(official art:1.2),(colorful:1.1),(masterpiece:1.2),best quality,maste
             "Version": "v1.9.4",
         }
         assert self._parse(in_t2) == out_t2, "Test 2 failed"
+        in_t3 = """
+masterpiece, best quality, girl,woman,female, short hair, light smile, closed_eyes, cat_ears, overskirt,white dress,frills, pale blue Clothes,tiara
+Negative prompt: easynegative, ng_deepnegative_v1_75t, By bad artist -neg, verybadimagenegative_v1.3
+Steps: 20, Sampler: Euler a, CFG scale: 7, Seed: 3850677924, Size: 768x1024, Model hash: 19dbfda152, Model: 二次元_mixProV45Colorbox_v45, Clip skip: 2, ENSD: 31337
+        """
+        out_t3 = {
+            "Positive prompt": """
+masterpiece, best quality, girl,woman,female, short hair, light smile, closed_eyes, cat_ears, overskirt,white dress,frills, pale blue Clothes,tiara
+          """.strip(),
+            "Negative prompt": "easynegative, ng_deepnegative_v1_75t, By bad artist -neg, verybadimagenegative_v1.3",
+            "Steps": "20",
+            "Sampler": "Euler a",
+            "CFG scale": "7",
+            "Seed": "3850677924",
+            "Size": "768x1024",
+            "Model hash": "19dbfda152",
+            "Model": "二次元_mixProV45Colorbox_v45",
+            "Clip skip": "2",
+        }
+        assert self._parse(in_t3) == out_t3, "Test 3 failed"
+        in_t4 = """
+masterpiece, best quality, 1girl, solo, voxel art,
+gazebo, white girl,
+rust hair, ochre eyes,
+long hair, folded ponytail,
+evening gown, trim dress,
+ribbon, Gift Hat Hair Band , Opera-length necklaces, Arm harnesses,
+classic, medieval, noble
+Negative prompt: lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality, normal quality, jpeg artifacts, signature, watermark, username, blurry, badhandv4, easynegative, ng_deepnegative_v1_75t, verybadimagenegative_v1.3
+Steps: 20, Sampler: Euler a, CFG scale: 7, Seed: 1825312441, Size: 640x960, Model hash: 149fe7d36c, Model: 二次元_meinaalter_v1, ENSD: 31337, Wildcard prompt: "masterpiece, best quality, 1girl, solo, voxel art,
+__scene-location__, white girl,
+__color__ hair, __color__ eyes,
+__character-hair-Size__, __character-hair-Style__,
+__character-clothing-Dress__, trim dress,
+ribbon, __character-accessories-Hair__, __character-accessories-Neck__, __character-accessories-Arm__,
+classic, medieval, noble"
+        """
+        out_t4 = {
+            "Positive prompt": """
+masterpiece, best quality, 1girl, solo, voxel art,
+gazebo, white girl,
+rust hair, ochre eyes,
+long hair, folded ponytail,
+evening gown, trim dress,
+ribbon, Gift Hat Hair Band , Opera-length necklaces, Arm harnesses,
+classic, medieval, noble
+          """.strip(),
+            "Negative prompt": "lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality, normal quality, jpeg artifacts, signature, watermark, username, blurry, badhandv4, easynegative, ng_deepnegative_v1_75t, verybadimagenegative_v1.3",
+            "Steps": "20",
+            "Sampler": "Euler a",
+            "CFG scale": "7",
+            "Seed": "1825312441",
+            "Size": "640x960",
+            "Model hash": "149fe7d36c",
+            "Model": "二次元_meinaalter_v1",
+        }
+        assert self._parse(in_t4) == out_t4, "Test 4 failed"
 
     def base_workflow(self):
         wk = {
