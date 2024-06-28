@@ -20,3 +20,4 @@
 ## 1.5.4
 - change: Code refactor [#7a3ab44](https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/commit/7a3ab448e64a08e79e2b485edc143242ea905078)
 - change: Update README [PR#106](https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/pull/106) [#3b7ee42](https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/commit/3b7ee42cee52111d4f0d9b7734a2b729d338ede1)
+- add: Preview Audio Node

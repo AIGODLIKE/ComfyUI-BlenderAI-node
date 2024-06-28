@@ -2,6 +2,8 @@ import struct
 import queue
 import platform
 import time
+import re
+import json
 from pathlib import Path
 from threading import Thread
 from functools import lru_cache
@@ -625,3 +627,764 @@ class CtxTimer:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.echo(f"{self.name} cost {time.time() - self.time_start:.4f}s")
+
+
+class WebUIToComfyUI:
+    SAMPLERNAME_W2C = {
+        "Euler": "euler",
+        "Euler a": "euler_ancestral",
+        "Heun": "heun",
+        "DPM fast": "dpm_fast",
+        "DPM adaptive": "dpm_adaptive",
+        "DPM2": "dpm_2",
+        "DPM2 a": "dpm_2_ancestral",
+        "DPM++ 2M": "dpmpp_2m",
+        "DPM++ SDE": "dpmpp_sde_gpu",
+        "DPM++ 2M SDE": "dpmpp_2m_sde_gpu",
+        "DPM++ 3M SDE": "dpmpp_3m_sde",
+        "DDIM": "ddim",
+        "LMS": "lms",
+        "LCM": "LCM",
+        "UniPC": "uni_pc",
+    }
+    SCHEDULERNAME_W2C = {
+        "Automatic": "normal",
+        "Karras": "karras",
+        "Exponential": "exponential",
+        "SGM Uniform": "sgm_uniform",
+    }
+
+    def __init__(self, text: str = "", ):
+        self.text: str = text
+        self.params: dict = {}
+
+    def is_webui_format(self):
+        return "Negative prompt: " in self.text and "Steps: " in self.text
+
+    def to_comfyui_format(self):
+        params = self.params.copy()
+        wk = self.base_workflow()
+        np = wk["nodes"][0]
+        pp = wk["nodes"][1]
+        empty_image = wk["nodes"][2]
+        ksampler = wk["nodes"][3]
+        checkpoint_loader = wk["nodes"][6]
+        clip_last_layer = wk["nodes"][7]
+        if "Negative prompt" in params:
+            np["widgets_values"][0] = params["Negative prompt"]
+        if "Positive prompt" in params:
+            pp["widgets_values"][0] = params["Positive prompt"]
+        if "Size" in params:
+            width = 512
+            height = 512
+            if "x" in params["Size"]:
+                size_list = params["Size"].split("x")
+                width = size_list[0]
+                height = size_list[1]
+            empty_image["widgets_values"][0] = width
+            empty_image["widgets_values"][1] = height
+
+        if "Seed" in params:
+            ksampler["widgets_values"][0] = params["Seed"]
+        if "Steps" in params:
+            ksampler["widgets_values"][2] = params["Steps"]
+        if "CFG scale" in params:
+            ksampler["widgets_values"][3] = params["CFG scale"]
+        if "Sampler" in params:
+            sampler_name: str = params["Sampler"]
+            scheduler_name: str = "normal"
+            if "Schedule type" in params:
+                sampler_name = params["Sampler"]
+                scheduler_name = params["Schedule type"]
+            else:
+                # samper存储 sampler_name + " " + scheduler_name
+                rlast = sampler_name.rfind(" ")
+                if rlast != -1:
+                    scheduler_name = sampler_name[rlast + 1:]
+                    sampler_name = sampler_name[:rlast]
+
+            if sampler_name in self.SAMPLERNAME_W2C:
+                ksampler["widgets_values"][4] = self.SAMPLERNAME_W2C[sampler_name]
+            if scheduler_name in self.SCHEDULERNAME_W2C:
+                ksampler["widgets_values"][5] = self.SCHEDULERNAME_W2C[scheduler_name]
+
+        if "Denoising strength" in params:
+            ksampler["widgets_values"][6] = params["Denoising strength"]
+        if "Model" in params:
+            model = params["Model"]  # TODO: 模型得加后缀名字, 和webui不同
+            from .SDNode.nodes import NodeBase
+            registered_node_types = {n.class_type: n.__metadata__ for n in NodeBase.__subclasses__()}
+            node_type = registered_node_types[checkpoint_loader["type"]]
+            model_list = node_type.get("input", {}).get("required", {}).get("ckpt_name", [[]])[0]
+            for _m in model_list:
+                sep_i = _m.rfind("/")
+                if _m[sep_i + 1:].split(".")[0] != model:
+                    continue
+                checkpoint_loader["widgets_values"][0] = _m
+
+        if "Clip skip" in params:
+            clip_last_layer["widgets_values"][0] = params["Clip skip"]
+        return json.dumps(wk)
+
+    def parse(self, text=None):
+        self.text = text or self.text
+        self.test()
+        self._parse(text)
+        return self.params
+
+    def _parse(self, text=None):
+        if text:
+            self.text = text.strip()
+            self.params = {}
+        self._prompt()
+        self._base()
+        self._control_net()
+        self._ti_hashes()
+        self._tiled_diffusion()
+        self._adetailer()
+        self._version()
+        return self.params
+
+    def _prompt(self):
+        pp = re.search("^(.*?)Negative prompt:", self.text, re.S)
+        if pp:
+            pp = pp[1].strip()
+            self.params["Positive prompt"] = pp[:-1].strip() if pp[-1] == "," else pp
+            self.text = self.text.replace(pp, "").strip()
+        np = re.search("Negative prompt: (.*?)(?:,\n)", self.text, re.S)
+        np = np if np else re.search("Negative prompt: (.*?)(?:,\r\n)", self.text, re.S)
+        if np:
+            self.params["Negative prompt"] = np[1].strip()
+            self.text = self.text.replace(np[0], "").strip()
+
+    def _control_net(self):
+        if not re.search(r"(Control[nN]et \d+): ", self.text, re.S):
+            return
+        for cn in re.finditer(r'(Control[nN]et \d+): (".*?"),', self.text, re.S):
+            self.params[cn[1]] = cn[2]
+            self.text = self.text.replace(cn[0], "")
+
+    def _ti_hashes(self):
+        th = re.search('TI hashes: (".*?"),', self.text, re.S)
+        if not th:
+            return
+        self.params["TI hashes"] = th[1].strip()
+        self.text = self.text.replace(th[0], "").strip()
+
+    def _tiled_diffusion(self):
+        td = re.search("Tiled Diffusion: ({.*?}),", self.text, re.S)
+        if not td:
+            return
+        self.params["Tiled Diffusion"] = td[1].strip()
+        self.text = self.text.replace(td[0], "").strip()
+
+    def _adetailer(self):
+        ad_p = re.search('ADetailer prompt: (".*?"),', self.text, re.S)
+        if ad_p:
+            self.params["ADetailer prompt"] = ad_p[1].strip()
+            self.text = self.text.replace(ad_p[0], "").strip()
+        ads = re.finditer("(ADetailer .*?): (.*?),", self.text, re.S)
+        for ad in ads:
+            self.params[ad[1]] = ad[2]
+            self.text = self.text.replace(ad[0], "")
+
+    def _version(self):
+        v = re.search(r"Version: (.*?)(?:.\s|$)", self.text, re.S)
+        if not v:
+            return
+        self.params["Version"] = v[1].strip()
+        self.text = self.text.replace(v[0], "").strip()
+
+    def _base(self):
+        step = re.search("Steps: (.*?),", self.text, re.S)
+        if step:
+            self.params["Steps"] = step[1].strip()
+            self.text = self.text.replace(step[0], "").strip()
+        sampler = re.search("Sampler: (.*?),", self.text, re.S)
+        if sampler:
+            self.params["Sampler"] = sampler[1].strip()
+            self.text = self.text.replace(sampler[0], "").strip()
+        scheduler = re.search("Schedule type: (.*?),", self.text, re.S)
+        if scheduler:
+            self.params["Schedule type"] = scheduler[1].strip()
+            self.text = self.text.replace(scheduler[0], "").strip()
+        cfg = re.search("CFG scale: (.*?),", self.text, re.S)
+        if cfg:
+            self.params["CFG scale"] = cfg[1].strip()
+            self.text = self.text.replace(cfg[0], "").strip()
+        seed = re.search("Seed: (.*?),", self.text, re.S)
+        if seed:
+            self.params["Seed"] = seed[1].strip()
+            self.text = self.text.replace(seed[0], "").strip()
+        size = re.search("Size: (.*?),", self.text, re.S)
+        if size:
+            self.params["Size"] = size[1].strip()
+            self.text = self.text.replace(size[0], "").strip()
+        model_hash = re.search("Model hash: (.*?),", self.text, re.S)
+        if model_hash:
+            self.params["Model hash"] = model_hash[1].strip()
+            self.text = self.text.replace(model_hash[0], "").strip()
+        model = re.search("Model: (.*?),", self.text, re.S)
+        if model:
+            self.params["Model"] = model[1].strip()
+            self.text = self.text.replace(model[0], "").strip()
+        denoising = re.search("Denoising strength: (.*?),", self.text, re.S)
+        if denoising:
+            self.params["Denoising strength"] = denoising[1].strip()
+            self.text = self.text.replace(denoising[0], "").strip()
+        clip_skip = re.search("Clip skip: (.*?),", self.text, re.S)
+        if clip_skip:
+            self.params["Clip skip"] = clip_skip[1].strip()
+            self.text = self.text.replace(clip_skip[0], "").strip()
+        vae = re.search("VAE: (.*?),", self.text, re.S)
+        if vae:
+            self.params["VAE"] = vae[1].strip()
+            self.text = self.text.replace(vae[0], "").strip()
+        vae_hash = re.search("VAE hash: (.*?),", self.text, re.S)
+        if vae_hash:
+            self.params["VAE hash"] = vae_hash[1].strip()
+            self.text = self.text.replace(vae_hash[0], "").strip()
+
+    def test(self):
+        in_t0 = """
+masterpiece,best quality,1girl,
+BREAK thighhighs,
+BREAK (colorful spot black:1.5),color gradient,
+BREAK multicolored background,
+Negative prompt: nsfw,nipples,navel,cameltoe,lowres,bad anatomy,bad hands,text,error,missing fingers,extra digit,fewer digits,cropped,worst quality,low quality,normal quality,jpeg artifacts,signature,watermark,username,blurry,
+Steps: 8, Sampler: DPM++ 2M Karras, CFG scale: 2, Seed: 3627297328, Size: 768x1024, Model hash: bbd321d4a3, Model: raemuXL_v35Lightning, Denoising strength: 0.5, Clip skip: 2, ADetailer model: face_yolov8n.pt, ADetailer prompt: "black eyes, black hair, ", ADetailer confidence: 0.3, ADetailer dilate erode: 4, ADetailer mask blur: 4, ADetailer denoising strength: 0.4, ADetailer inpaint only masked: True, ADetailer inpaint padding: 32, ADetailer version: 24.5.1, Hires upscale: 2, Hires steps: 4, Hires upscaler: ESRGAN_4x, Downcast alphas_cumprod: True, Version: 1.8.0-RC
+        """
+        out_t0 = {
+            "Positive prompt": """
+masterpiece,best quality,1girl,
+BREAK thighhighs,
+BREAK (colorful spot black:1.5),color gradient,
+BREAK multicolored background
+            """.strip(),
+            "Negative prompt": "nsfw,nipples,navel,cameltoe,lowres,bad anatomy,bad hands,text,error,missing fingers,extra digit,fewer digits,cropped,worst quality,low quality,normal quality,jpeg artifacts,signature,watermark,username,blurry",
+            "Steps": "8",
+            "Sampler": "DPM++ 2M Karras",
+            "CFG scale": "2",
+            "Seed": "3627297328",
+            "Size": "768x1024",
+            "Model hash": "bbd321d4a3",
+            "Model": "raemuXL_v35Lightning",
+            "Denoising strength": "0.5",
+            "Clip skip": "2",
+            "ADetailer model": "face_yolov8n.pt",
+            "ADetailer prompt": "\"black eyes, black hair, \"",
+            "ADetailer confidence": "0.3",
+            "ADetailer dilate erode": "4",
+            "ADetailer mask blur": "4",
+            "ADetailer denoising strength": "0.4",
+            "ADetailer inpaint only masked": "True",
+            "ADetailer inpaint padding": "32",
+            "ADetailer version": "24.5.1",
+            # "Hires upscale": "2",
+            # "Hires steps": "4",
+            # "Hires upscaler": "ESRGAN_4x",
+            # "Downcast alphas_cumprod": "True",
+            "Version": "1.8.0-RC"
+        }
+        assert self._parse(in_t0) == out_t0, "Test 0 failed"
+        in_t1 = """
+masterpiece,ultra high quality,highest quality,super fine,1girl,solo,(black background:1.3),(silhouette:1.1),sparkle,looking at viewer,upper body,simple background,glowing,(dim lighting:1.2),crystal clear,colorful clothes,
+Negative prompt: Easy Negative,bad handv4,ng_deepnegative_v1_75t,(worst quality:2),(low quality:2),(normal quality:2),lowres,((monochrome)),((grayscale)),bad anatomy,DeepNegative,skin spots,acnes,skin blemishes,(fat:1.2),facing away,looking away,tilted head,lowres,bad anatomy,bad hands,missing fingers,extra digit,fewer digits,bad feet,poorly drawn hands,poorly drawn face,mutation,deformed,extra fingers,extra limbs,extra arms,extra legs,malformed limbs,fused fingers,too many fingers,long neck,cross-eyed,mutated hands,polar lowres,bad body,bad proportions,gross proportions,missing arms,missing legs,extra digit,extra arms,extra leg,extra foot,teethcroppe,signature,watermark,username,blurry,cropped,jpeg artifacts,text,Lower body exposure,
+Steps: 30, Sampler: UniPC, Schedule type: Karras, CFG scale: 7, Seed: 3620085674, Size: 1024x1536, Model hash: 3d1b3c42ec, Model: AWPainting_v1.2, ControlNet 0: "Module: tile_resample, Model: control_v11f1e_sd15_tile_fp16 [3b860298], Weight: 0.6, Resize Mode: Crop and Resize, Processor Res: 512, Threshold A: 1.0, Threshold B: 0.5, Guidance Start: 0.0, Guidance End: 1.0, Pixel Perfect: True, Control Mode: Balanced", TI hashes: "ng_deepnegative_v1_75t: 54e7e4826d53", Pad conds: True, Version: v1.9.4
+        """
+        out_t1 = {
+            "Positive prompt": "masterpiece,ultra high quality,highest quality,super fine,1girl,solo,(black background:1.3),(silhouette:1.1),sparkle,looking at viewer,upper body,simple background,glowing,(dim lighting:1.2),crystal clear,colorful clothes",
+            "Negative prompt": "Easy Negative,bad handv4,ng_deepnegative_v1_75t,(worst quality:2),(low quality:2),(normal quality:2),lowres,((monochrome)),((grayscale)),bad anatomy,DeepNegative,skin spots,acnes,skin blemishes,(fat:1.2),facing away,looking away,tilted head,lowres,bad anatomy,bad hands,missing fingers,extra digit,fewer digits,bad feet,poorly drawn hands,poorly drawn face,mutation,deformed,extra fingers,extra limbs,extra arms,extra legs,malformed limbs,fused fingers,too many fingers,long neck,cross-eyed,mutated hands,polar lowres,bad body,bad proportions,gross proportions,missing arms,missing legs,extra digit,extra arms,extra leg,extra foot,teethcroppe,signature,watermark,username,blurry,cropped,jpeg artifacts,text,Lower body exposure",
+            "Steps": "30",
+            "Sampler": "UniPC",
+            "Schedule type": "Karras",
+            "CFG scale": "7",
+            "Seed": "3620085674",
+            "Size": "1024x1536",
+            "Model hash": "3d1b3c42ec",
+            "Model": "AWPainting_v1.2",
+            "ControlNet 0": "\"Module: tile_resample, Model: control_v11f1e_sd15_tile_fp16 [3b860298], Weight: 0.6, Resize Mode: Crop and Resize, Processor Res: 512, Threshold A: 1.0, Threshold B: 0.5, Guidance Start: 0.0, Guidance End: 1.0, Pixel Perfect: True, Control Mode: Balanced\"",
+            "TI hashes": "\"ng_deepnegative_v1_75t: 54e7e4826d53\"",
+            # "Pad conds": "True",
+            "Version": "v1.9.4"
+        }
+        assert self._parse(in_t1) == out_t1, "Test 1 failed"
+
+        in_t2 = """
+parameters(official art:1.2),(colorful:1.1),(masterpiece:1.2),best quality,masterpiece,highres,original,extremely detailed wallpaper,1girl,solo,very long hair,(loli:1.3),vibrant color palette,dazzling hues,kaleidoscopic patterns,enchanting young maiden,radiant beauty,chromatic harmony,iridescent hair,sparkling eyes,lush landscapes,vivid blossoms,mesmerizing sunsets,brilliant rainbows,prismatic reflections,whimsical attire,captivating accessories,stunning chromatic display,artful composition,picturesque backdrop,breathtaking scenery,visual symphony,spellbinding chromatic enchantment,
+(shiny:1.2),(Oil highlights:1.2),[wet with oil:0.7],(shiny:1.2),[wet with oil:0.5],
+Negative prompt: (worst quality, low quality, blurry:1.5),(bad hands:1.4),watermark,(greyscale:0.88),multiple limbs,(deformed fingers, bad fingers:1.2),(ugly:1.3),monochrome,horror,geometry,bad anatomy,bad limbs,(Blurry pupil),(bad shading),error,bad composition,Extra fingers,NSFW,badhandv4,charturnerv2,corneo_dva,EasyNegative,EasyNegativeV2,ng_deepnegative_v1_75t,
+Steps: 25, Sampler: Euler, Schedule type: Automatic, CFG scale: 7, Seed: 848680687, Size: 1024x1536, Model hash: 099e07547a, Model: Dark Sushi Mix 大颗寿司Mix_BrighterPruned, VAE hash: f921fb3f29, VAE: kl-f8-anime2.ckpt, Denoising strength: 0.75, Clip skip: 2, Tiled Diffusion: {"Method": "MultiDiffusion", "Tile tile width": 96, "Tile tile height": 96, "Tile Overlap": 48, "Tile batch size": 4, "Keep input size": true, "NoiseInv": true, "NoiseInv Steps": 10, "NoiseInv Retouch": 1, "NoiseInv Renoise strength": 0.5, "NoiseInv Kernel size": 64}, ControlNet 0: "Module: tile_resample, Model: control_v11f1e_sd15_tile_fp16 [3b860298], Weight: 0.5, Resize Mode: Crop and Resize, Processor Res: 512, Threshold A: 1.0, Threshold B: 0.5, Guidance Start: 0.0, Guidance End: 1.0, Pixel Perfect: True, Control Mode: Balanced", Pad conds: True, Version: v1.9.4
+        """
+        out_t2 = {
+            "Positive prompt": """
+parameters(official art:1.2),(colorful:1.1),(masterpiece:1.2),best quality,masterpiece,highres,original,extremely detailed wallpaper,1girl,solo,very long hair,(loli:1.3),vibrant color palette,dazzling hues,kaleidoscopic patterns,enchanting young maiden,radiant beauty,chromatic harmony,iridescent hair,sparkling eyes,lush landscapes,vivid blossoms,mesmerizing sunsets,brilliant rainbows,prismatic reflections,whimsical attire,captivating accessories,stunning chromatic display,artful composition,picturesque backdrop,breathtaking scenery,visual symphony,spellbinding chromatic enchantment,
+(shiny:1.2),(Oil highlights:1.2),[wet with oil:0.7],(shiny:1.2),[wet with oil:0.5]
+            """.strip(),
+            "Negative prompt": "(worst quality, low quality, blurry:1.5),(bad hands:1.4),watermark,(greyscale:0.88),multiple limbs,(deformed fingers, bad fingers:1.2),(ugly:1.3),monochrome,horror,geometry,bad anatomy,bad limbs,(Blurry pupil),(bad shading),error,bad composition,Extra fingers,NSFW,badhandv4,charturnerv2,corneo_dva,EasyNegative,EasyNegativeV2,ng_deepnegative_v1_75t",
+            "Steps": "25",
+            "Sampler": "Euler",
+            "Schedule type": "Automatic",
+            "CFG scale": "7",
+            "Seed": "848680687",
+            "Size": "1024x1536",
+            "Model hash": "099e07547a",
+            "Model": "Dark Sushi Mix 大颗寿司Mix_BrighterPruned",
+            "VAE hash": "f921fb3f29",
+            "VAE": "kl-f8-anime2.ckpt",
+            "Denoising strength": "0.75",
+            "Clip skip": "2",
+            "Tiled Diffusion": '{"Method": "MultiDiffusion", "Tile tile width": 96, "Tile tile height": 96, "Tile Overlap": 48, "Tile batch size": 4, "Keep input size": true, "NoiseInv": true, "NoiseInv Steps": 10, "NoiseInv Retouch": 1, "NoiseInv Renoise strength": 0.5, "NoiseInv Kernel size": 64}',
+            "ControlNet 0": '"Module: tile_resample, Model: control_v11f1e_sd15_tile_fp16 [3b860298], Weight: 0.5, Resize Mode: Crop and Resize, Processor Res: 512, Threshold A: 1.0, Threshold B: 0.5, Guidance Start: 0.0, Guidance End: 1.0, Pixel Perfect: True, Control Mode: Balanced"',
+            # "Pad conds": "True",
+            "Version": "v1.9.4",
+        }
+        assert self._parse(in_t2) == out_t2, "Test 2 failed"
+
+    def base_workflow(self):
+        wk = {
+            "last_node_id": 10,
+            "last_link_id": 12,
+            "nodes": [
+                {
+                    "id": 7,
+                    "type": "CLIPTextEncode",
+                    "pos": [
+                        413,
+                        389
+                    ],
+                    "size": {
+                        "0": 425.27801513671875,
+                        "1": 180.6060791015625
+                    },
+                    "flags": {},
+                    "order": 4,
+                    "mode": 0,
+                    "inputs": [
+                        {
+                            "name": "clip",
+                            "type": "CLIP",
+                            "link": 12,
+                            "label": "CLIP"
+                        }
+                    ],
+                    "outputs": [
+                        {
+                            "name": "CONDITIONING",
+                            "type": "CONDITIONING",
+                            "links": [
+                                6
+                            ],
+                            "slot_index": 0,
+                            "label": "条件"
+                        }
+                    ],
+                    "properties": {
+                        "Node name for S&R": "CLIPTextEncode"
+                    },
+                    "widgets_values": [
+                        "text, watermark"
+                    ]
+                },
+                {
+                    "id": 6,
+                    "type": "CLIPTextEncode",
+                    "pos": [
+                        415,
+                        186
+                    ],
+                    "size": {
+                        "0": 422.84503173828125,
+                        "1": 164.31304931640625
+                    },
+                    "flags": {},
+                    "order": 3,
+                    "mode": 0,
+                    "inputs": [
+                        {
+                            "name": "clip",
+                            "type": "CLIP",
+                            "link": 11,
+                            "label": "CLIP"
+                        }
+                    ],
+                    "outputs": [
+                        {
+                            "name": "CONDITIONING",
+                            "type": "CONDITIONING",
+                            "links": [
+                                4
+                            ],
+                            "slot_index": 0,
+                            "label": "条件"
+                        }
+                    ],
+                    "properties": {
+                        "Node name for S&R": "CLIPTextEncode"
+                    },
+                    "widgets_values": [
+                        "beautiful scenery nature glass bottle landscape, , purple galaxy bottle,"
+                    ]
+                },
+                {
+                    "id": 5,
+                    "type": "EmptyLatentImage",
+                    "pos": [
+                        473,
+                        609
+                    ],
+                    "size": {
+                        "0": 315,
+                        "1": 106
+                    },
+                    "flags": {},
+                    "order": 0,
+                    "mode": 0,
+                    "outputs": [
+                        {
+                            "name": "LATENT",
+                            "type": "LATENT",
+                            "links": [
+                                2
+                            ],
+                            "slot_index": 0,
+                            "label": "Latent"
+                        }
+                    ],
+                    "properties": {
+                        "Node name for S&R": "EmptyLatentImage"
+                    },
+                    "widgets_values": [
+                        512,
+                        512,
+                        1
+                    ]
+                },
+                {
+                    "id": 3,
+                    "type": "KSampler",
+                    "pos": [
+                        863,
+                        186
+                    ],
+                    "size": {
+                        "0": 315,
+                        "1": 262
+                    },
+                    "flags": {},
+                    "order": 5,
+                    "mode": 0,
+                    "inputs": [
+                        {
+                            "name": "model",
+                            "type": "MODEL",
+                            "link": 1,
+                            "label": "模型"
+                        },
+                        {
+                            "name": "positive",
+                            "type": "CONDITIONING",
+                            "link": 4,
+                            "label": "正面条件"
+                        },
+                        {
+                            "name": "negative",
+                            "type": "CONDITIONING",
+                            "link": 6,
+                            "label": "负面条件"
+                        },
+                        {
+                            "name": "latent_image",
+                            "type": "LATENT",
+                            "link": 2,
+                            "label": "Latent"
+                        }
+                    ],
+                    "outputs": [
+                        {
+                            "name": "LATENT",
+                            "type": "LATENT",
+                            "links": [
+                                7
+                            ],
+                            "slot_index": 0,
+                            "label": "Latent"
+                        }
+                    ],
+                    "properties": {
+                        "Node name for S&R": "KSampler"
+                    },
+                    "widgets_values": [
+                        156680208700286,
+                        "randomize",
+                        20,
+                        8,
+                        "euler",
+                        "normal",
+                        1
+                    ]
+                },
+                {
+                    "id": 8,
+                    "type": "VAEDecode",
+                    "pos": [
+                        1209,
+                        188
+                    ],
+                    "size": {
+                        "0": 210,
+                        "1": 46
+                    },
+                    "flags": {},
+                    "order": 6,
+                    "mode": 0,
+                    "inputs": [
+                        {
+                            "name": "samples",
+                            "type": "LATENT",
+                            "link": 7,
+                            "label": "Latent"
+                        },
+                        {
+                            "name": "vae",
+                            "type": "VAE",
+                            "link": 8,
+                            "label": "VAE"
+                        }
+                    ],
+                    "outputs": [
+                        {
+                            "name": "IMAGE",
+                            "type": "IMAGE",
+                            "links": [
+                                9
+                            ],
+                            "slot_index": 0,
+                            "label": "图像"
+                        }
+                    ],
+                    "properties": {
+                        "Node name for S&R": "VAEDecode"
+                    }
+                },
+                {
+                    "id": 9,
+                    "type": "SaveImage",
+                    "pos": [
+                        1451,
+                        189
+                    ],
+                    "size": {
+                        "0": 210,
+                        "1": 58
+                    },
+                    "flags": {},
+                    "order": 7,
+                    "mode": 0,
+                    "inputs": [
+                        {
+                            "name": "images",
+                            "type": "IMAGE",
+                            "link": 9,
+                            "label": "图像"
+                        }
+                    ],
+                    "properties": {},
+                    "widgets_values": [
+                        "ComfyUI"
+                    ]
+                },
+                {
+                    "id": 4,
+                    "type": "CheckpointLoaderSimple",
+                    "pos": [
+                        -348,
+                        179
+                    ],
+                    "size": {
+                        "0": 315,
+                        "1": 98
+                    },
+                    "flags": {},
+                    "order": 1,
+                    "mode": 0,
+                    "outputs": [
+                        {
+                            "name": "MODEL",
+                            "type": "MODEL",
+                            "links": [
+                                1
+                            ],
+                            "slot_index": 0,
+                            "label": "模型"
+                        },
+                        {
+                            "name": "CLIP",
+                            "type": "CLIP",
+                            "links": [
+                                10
+                            ],
+                            "slot_index": 1,
+                            "label": "CLIP"
+                        },
+                        {
+                            "name": "VAE",
+                            "type": "VAE",
+                            "links": [
+                                8
+                            ],
+                            "slot_index": 2,
+                            "label": "VAE"
+                        }
+                    ],
+                    "properties": {
+                        "Node name for S&R": "CheckpointLoaderSimple"
+                    },
+                    "widgets_values": [
+                        "mixProV4_v4.safetensors"
+                    ]
+                },
+                {
+                    "id": 10,
+                    "type": "CLIPSetLastLayer",
+                    "pos": [
+                        17,
+                        181
+                    ],
+                    "size": {
+                        "0": 315,
+                        "1": 58
+                    },
+                    "flags": {},
+                    "order": 2,
+                    "mode": 0,
+                    "inputs": [
+                        {
+                            "name": "clip",
+                            "type": "CLIP",
+                            "link": 10,
+                            "label": "CLIP"
+                        }
+                    ],
+                    "outputs": [
+                        {
+                            "name": "CLIP",
+                            "type": "CLIP",
+                            "links": [
+                                11,
+                                12
+                            ],
+                            "shape": 3,
+                            "label": "CLIP",
+                            "slot_index": 0
+                        }
+                    ],
+                    "properties": {
+                        "Node name for S&R": "CLIPSetLastLayer"
+                    },
+                    "widgets_values": [
+                        -1
+                    ]
+                }
+            ],
+            "links": [
+                [
+                    1,
+                    4,
+                    0,
+                    3,
+                    0,
+                    "MODEL"
+                ],
+                [
+                    2,
+                    5,
+                    0,
+                    3,
+                    3,
+                    "LATENT"
+                ],
+                [
+                    4,
+                    6,
+                    0,
+                    3,
+                    1,
+                    "CONDITIONING"
+                ],
+                [
+                    6,
+                    7,
+                    0,
+                    3,
+                    2,
+                    "CONDITIONING"
+                ],
+                [
+                    7,
+                    3,
+                    0,
+                    8,
+                    0,
+                    "LATENT"
+                ],
+                [
+                    8,
+                    4,
+                    2,
+                    8,
+                    1,
+                    "VAE"
+                ],
+                [
+                    9,
+                    8,
+                    0,
+                    9,
+                    0,
+                    "IMAGE"
+                ],
+                [
+                    10,
+                    4,
+                    1,
+                    10,
+                    0,
+                    "CLIP"
+                ],
+                [
+                    11,
+                    10,
+                    0,
+                    6,
+                    0,
+                    "CLIP"
+                ],
+                [
+                    12,
+                    10,
+                    0,
+                    7,
+                    0,
+                    "CLIP"
+                ]
+            ],
+            "groups": [],
+            "config": {},
+            "extra": {
+                "ds": {
+                    "scale": 1.2100000000000004,
+                    "offset": [
+                        253.97393794242356,
+                        53.4865032972739
+                    ]
+                }
+            },
+            "version": 0.4
+        }
+        return wk
+
+
+if __name__ == "__main__":
+    webui_parser = WebUIToComfyUI("")
+    webui_parser.test()

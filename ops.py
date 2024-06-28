@@ -497,6 +497,11 @@ class Ops(bpy.types.Operator):
     def PresetFromClipBoard(self):
         try:
             data = bpy.context.window_manager.clipboard
+            from .utils import WebUIToComfyUI
+            web_parser = WebUIToComfyUI(data)
+            if web_parser.is_webui_format():
+                web_parser.parse()
+                data = web_parser.to_comfyui_format()
             data = json.loads(data)
             if not isinstance(data, dict):
                 self.report({"ERROR"}, _T("ClipBoard Content Format Error"))
