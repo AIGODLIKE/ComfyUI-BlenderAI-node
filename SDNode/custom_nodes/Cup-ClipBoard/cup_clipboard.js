@@ -1209,7 +1209,7 @@ classic, medieval, noble`.trim(),
                 "CLIP_POSITIVE",
                 "CLIP_NEGATIVE",
                 "none",
-                "comfy",
+                "A1111",
                 512,
                 512,
                 1
