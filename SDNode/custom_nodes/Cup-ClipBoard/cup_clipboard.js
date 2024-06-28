@@ -850,6 +850,32 @@ classic, medieval, noble`.trim(),
                 "widgets_values": [
                   -1
                 ]
+              },
+              {
+                  "id": 11,
+                  "type": "PreviewImage",
+                  "pos": [
+                      1450,
+                      380
+                  ],
+                  "size": {
+                      "0": 210,
+                      "1": 30
+                  },
+                  "flags": {},
+                  "order": 8,
+                  "mode": 0,
+                  "inputs": [
+                      {
+                          "name": "images",
+                          "type": "IMAGE",
+                          "link": 13,
+                          "label": "图像"
+                      }
+                  ],
+                  "properties": {
+                      "Node name for S&R": "PreviewImage"
+                  }
               }
             ],
             "links": [
@@ -932,6 +958,14 @@ classic, medieval, noble`.trim(),
                 7,
                 0,
                 "CLIP"
+              ],
+              [
+                  13,
+                  8,
+                  0,
+                  11,
+                  0,
+                  "IMAGE"
               ]
             ],
             "groups": [],
