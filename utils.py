@@ -698,10 +698,11 @@ class WebUIToComfyUI:
                 scheduler_name = params["Schedule type"]
             else:
                 # samper存储 sampler_name + " " + scheduler_name
-                rlast = sampler_name.rfind(" ")
-                if rlast != -1:
-                    scheduler_name = sampler_name[rlast + 1:]
-                    sampler_name = sampler_name[:rlast]
+                for one_sch_name in self.SCHEDULERNAME_W2C:
+                    if one_sch_name in sampler_name:
+                        scheduler_name = one_sch_name
+                        sampler_name = sampler_name.replace(one_sch_name, "").strip()
+                        break
 
             if sampler_name in self.SAMPLERNAME_W2C:
                 ksampler["widgets_values"][4] = self.SAMPLERNAME_W2C[sampler_name]

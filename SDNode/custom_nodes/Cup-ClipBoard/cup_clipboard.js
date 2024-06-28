@@ -103,11 +103,15 @@ class WebUIToComfyUI
             else
             {
                 // samper存储 sampler_name + " " + scheduler_name
-                var rlast = sampler_name.lastIndexOf(" ");
-                if (rlast != -1)
+                var all_scheduler_names = Object.keys(WebUIToComfyUI.SCHEDULERNAME_W2C);
+                for(const one_sch_name of all_scheduler_names)
                 {
-                    scheduler_name = sampler_name.slice(rlast + 1);
-                    sampler_name = sampler_name.slice(0, rlast);
+                  if (sampler_name.includes(one_sch_name))
+                  {
+                      scheduler_name = one_sch_name;
+                      sampler_name = sampler_name.replace(one_sch_name, "").trim();
+                      break;
+                  }
                 }
             }
             if (sampler_name in WebUIToComfyUI.SAMPLERNAME_W2C)
