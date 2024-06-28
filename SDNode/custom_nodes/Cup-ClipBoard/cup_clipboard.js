@@ -59,7 +59,17 @@ class WebUIToComfyUI
             return true;
         return false;
     }
+    with_efficient(){
+      return "Efficient Loader" in LiteGraph.registered_node_types && "KSampler (Efficient)" in LiteGraph.registered_node_types;
+    }
     to_comfyui_format(){
+      if (this.with_efficient())
+      {
+        return this.to_comfyui_format_efficient();
+      }
+      return this.to_comfyui_format_base();
+    }
+    to_comfyui_format_base(){
         var params = this.params;
         var wk = this.base_workflow();
         var np = wk["nodes"][0];
@@ -139,6 +149,81 @@ class WebUIToComfyUI
         if ("Clip skip" in params)
             clip_last_layer["widgets_values"][0] = -1 * params["Clip skip"];
         return JSON.stringify(wk);
+    }
+    to_comfyui_format_efficient(){
+      var params = this.params;
+      var wk = this.efficient_workflow();
+      var loader = wk["nodes"][1];
+      var ksampler = wk["nodes"][2];
+      if ("Negative prompt" in params)
+          loader["widgets_values"][7] = params["Negative prompt"];
+      if ("Positive prompt" in params)
+          loader["widgets_values"][6] = params["Positive prompt"];
+      if ("Size" in params)
+      {
+          var width = 512;
+          var height = 512;
+          if (params["Size"].includes("x"))
+          {
+              var size_list = params["Size"].split("x");
+              width = size_list[0];
+              height = size_list[1];
+          }
+          loader["widgets_values"][10] = width;
+          loader["widgets_values"][11] = height;
+      }
+      if ("Seed" in params)
+          ksampler["widgets_values"][0] = params["Seed"];
+      if ("Steps" in params)
+          ksampler["widgets_values"][2] = params["Steps"];
+      if ("CFG scale" in params)
+          ksampler["widgets_values"][3] = params["CFG scale"];
+      if ("Sampler" in params)
+      {
+          var sampler_name = params["Sampler"];
+          var scheduler_name = "normal";
+          if ("Schedule type" in params)
+          {
+              sampler_name = params["Sampler"];
+              scheduler_name = params["Schedule type"];
+          }
+          else
+          {
+              // samper存储 sampler_name + " " + scheduler_name
+              var all_scheduler_names = Object.keys(WebUIToComfyUI.SCHEDULERNAME_W2C);
+              for(const one_sch_name of all_scheduler_names)
+              {
+                if (sampler_name.includes(one_sch_name))
+                {
+                    scheduler_name = one_sch_name;
+                    sampler_name = sampler_name.replace(one_sch_name, "").trim();
+                    break;
+                }
+              }
+          }
+          if (sampler_name in WebUIToComfyUI.SAMPLERNAME_W2C)
+              ksampler["widgets_values"][4] = WebUIToComfyUI.SAMPLERNAME_W2C[sampler_name];
+          if (scheduler_name in WebUIToComfyUI.SCHEDULERNAME_W2C)
+              ksampler["widgets_values"][5] = WebUIToComfyUI.SCHEDULERNAME_W2C[scheduler_name];
+      }
+      if ("Denoising strength" in params)
+          ksampler["widgets_values"][6] = params["Denoising strength"];
+      if ("Model" in params)
+      {
+          var model = params["Model"]; // 模型得加后缀名字, 和webui不同
+          var node_type = LiteGraph.registered_node_types[loader.type];
+          var model_list = node_type?.nodeData?.input?.required?.ckpt_name?.[0];
+          model_list = model_list ? model_list : [];
+          for(var _m of model_list)
+          {
+              var sep_i = _m.lastIndexOf("/");
+              if(_m.slice(sep_i + 1).split(".")[0] == model)
+                  loader["widgets_values"][0] = _m;
+          }
+      }
+      if ("Clip skip" in params)
+          loader["widgets_values"][2] = -1 * params["Clip skip"];
+      return JSON.stringify(wk);
     }
     parse(text){
         this.text = text ? text : this.text;
@@ -876,7 +961,7 @@ classic, medieval, noble`.trim(),
                   "properties": {
                       "Node name for S&R": "PreviewImage"
                   }
-              }
+              },
             ],
             "links": [
               [
@@ -966,7 +1051,7 @@ classic, medieval, noble`.trim(),
                   11,
                   0,
                   "IMAGE"
-              ]
+              ],
             ],
             "groups": [],
             "config": {},
@@ -982,6 +1067,373 @@ classic, medieval, noble`.trim(),
             "version": 0.4
           };
           return wk;
+    }
+    efficient_workflow(){
+        var wk = {
+          "last_node_id": 5,
+          "last_link_id": 9,
+          "nodes": [
+            {
+              "id": 4,
+              "type": "SaveImage",
+              "pos": [
+                1040,
+                250
+              ],
+              "size": {
+                "0": 320,
+                "1": 60
+              },
+              "flags": {},
+              "order": 2,
+              "mode": 0,
+              "inputs": [
+                {
+                  "name": "images",
+                  "type": "IMAGE",
+                  "link": 8,
+                  "label": "图像"
+                }
+              ],
+              "properties": {
+                "Node name for S&R": "SaveImage"
+              },
+              "widgets_values": [
+                "ComfyUI"
+              ]
+            },
+            {
+              "id": 2,
+              "type": "Efficient Loader",
+              "pos": [
+                210,
+                250
+              ],
+              "size": {
+                "0": 400,
+                "1": 462
+              },
+              "flags": {},
+              "order": 0,
+              "mode": 0,
+              "inputs": [
+                {
+                  "name": "lora_stack",
+                  "type": "LORA_STACK",
+                  "link": null,
+                  "label": "LoRA堆"
+                },
+                {
+                  "name": "cnet_stack",
+                  "type": "CONTROL_NET_STACK",
+                  "link": null,
+                  "label": "ControlNet堆"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "MODEL",
+                  "type": "MODEL",
+                  "links": [
+                    7
+                  ],
+                  "shape": 3,
+                  "label": "模型",
+                  "slot_index": 0
+                },
+                {
+                  "name": "CONDITIONING+",
+                  "type": "CONDITIONING",
+                  "links": [
+                    3
+                  ],
+                  "shape": 3,
+                  "label": "正面条件",
+                  "slot_index": 1
+                },
+                {
+                  "name": "CONDITIONING-",
+                  "type": "CONDITIONING",
+                  "links": [
+                    4
+                  ],
+                  "shape": 3,
+                  "label": "负面条件",
+                  "slot_index": 2
+                },
+                {
+                  "name": "LATENT",
+                  "type": "LATENT",
+                  "links": [
+                    5
+                  ],
+                  "shape": 3,
+                  "label": "Latent",
+                  "slot_index": 3
+                },
+                {
+                  "name": "VAE",
+                  "type": "VAE",
+                  "links": [
+                    6
+                  ],
+                  "shape": 3,
+                  "label": "VAE",
+                  "slot_index": 4
+                },
+                {
+                  "name": "CLIP",
+                  "type": "CLIP",
+                  "links": null,
+                  "shape": 3,
+                  "label": "CLIP"
+                },
+                {
+                  "name": "DEPENDENCIES",
+                  "type": "DEPENDENCIES",
+                  "links": null,
+                  "shape": 3,
+                  "label": "依赖"
+                }
+              ],
+              "properties": {
+                "Node name for S&R": "Efficient Loader"
+              },
+              "widgets_values": [
+                "animagineXLV3_v30.safetensors",
+                "Baked VAE",
+                -1,
+                "None",
+                1,
+                1,
+                "CLIP_POSITIVE",
+                "CLIP_NEGATIVE",
+                "none",
+                "comfy",
+                512,
+                512,
+                1
+              ],
+              "bgcolor": "#335555",
+              "shape": 1
+            },
+            {
+              "id": 1,
+              "type": "KSampler (Efficient)",
+              "pos": [
+                660,
+                250
+              ],
+              "size": {
+                "0": 330,
+                "1": 370
+              },
+              "flags": {},
+              "order": 1,
+              "mode": 0,
+              "inputs": [
+                {
+                  "name": "model",
+                  "type": "MODEL",
+                  "link": 7,
+                  "label": "模型",
+                  "slot_index": 0
+                },
+                {
+                  "name": "positive",
+                  "type": "CONDITIONING",
+                  "link": 3,
+                  "label": "正面条件"
+                },
+                {
+                  "name": "negative",
+                  "type": "CONDITIONING",
+                  "link": 4,
+                  "label": "负面条件"
+                },
+                {
+                  "name": "latent_image",
+                  "type": "LATENT",
+                  "link": 5,
+                  "label": "Latent"
+                },
+                {
+                  "name": "optional_vae",
+                  "type": "VAE",
+                  "link": 6,
+                  "label": "VAE(可选)"
+                },
+                {
+                  "name": "script",
+                  "type": "SCRIPT",
+                  "link": null,
+                  "label": "脚本"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "MODEL",
+                  "type": "MODEL",
+                  "links": null,
+                  "shape": 3,
+                  "label": "模型"
+                },
+                {
+                  "name": "CONDITIONING+",
+                  "type": "CONDITIONING",
+                  "links": null,
+                  "shape": 3,
+                  "label": "正面条件"
+                },
+                {
+                  "name": "CONDITIONING-",
+                  "type": "CONDITIONING",
+                  "links": null,
+                  "shape": 3,
+                  "label": "负面条件"
+                },
+                {
+                  "name": "LATENT",
+                  "type": "LATENT",
+                  "links": null,
+                  "shape": 3,
+                  "label": "Latent"
+                },
+                {
+                  "name": "VAE",
+                  "type": "VAE",
+                  "links": null,
+                  "shape": 3,
+                  "label": "VAE"
+                },
+                {
+                  "name": "IMAGE",
+                  "type": "IMAGE",
+                  "links": [
+                    8,
+                    9
+                  ],
+                  "shape": 3,
+                  "label": "图像",
+                  "slot_index": 5
+                }
+              ],
+              "properties": {
+                "Node name for S&R": "KSampler (Efficient)"
+              },
+              "widgets_values": [
+                800315283332510,
+                "randomize",
+                20,
+                7,
+                "euler",
+                "normal",
+                1,
+                "auto",
+                "true"
+              ],
+              "bgcolor": "#333355",
+              "shape": 1
+            },
+            {
+              "id": 5,
+              "type": "PreviewImage",
+              "pos": [
+                1050,
+                520
+              ],
+              "size": {
+                "0": 210,
+                "1": 30
+              },
+              "flags": {},
+              "order": 3,
+              "mode": 0,
+              "inputs": [
+                {
+                  "name": "images",
+                  "type": "IMAGE",
+                  "link": 9,
+                  "label": "图像"
+                }
+              ],
+              "properties": {
+                "Node name for S&R": "PreviewImage"
+              }
+            }
+          ],
+          "links": [
+            [
+              3,
+              2,
+              1,
+              1,
+              1,
+              "CONDITIONING"
+            ],
+            [
+              4,
+              2,
+              2,
+              1,
+              2,
+              "CONDITIONING"
+            ],
+            [
+              5,
+              2,
+              3,
+              1,
+              3,
+              "LATENT"
+            ],
+            [
+              6,
+              2,
+              4,
+              1,
+              4,
+              "VAE"
+            ],
+            [
+              7,
+              2,
+              0,
+              1,
+              0,
+              "MODEL"
+            ],
+            [
+              8,
+              1,
+              5,
+              4,
+              0,
+              "IMAGE"
+            ],
+            [
+              9,
+              1,
+              5,
+              5,
+              0,
+              "IMAGE"
+            ]
+          ],
+          "groups": [],
+          "config": {},
+          "extra": {
+            "ds": {
+              "scale": 1.2100000000000006,
+              "offset": [
+                -639.1956340693308,
+                -38.20042379820701
+              ]
+            }
+          },
+          "version": 0.4
+        };
+        return wk;
     }
 }
 

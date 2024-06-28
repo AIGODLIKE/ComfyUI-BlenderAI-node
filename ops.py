@@ -500,7 +500,7 @@ class Ops(bpy.types.Operator):
             from .utils import WebUIToComfyUI
             web_parser = WebUIToComfyUI(data)
             if web_parser.is_webui_format():
-                web_parser.parse()
+                web_parser.parse(data)
                 data = web_parser.to_comfyui_format()
             data = json.loads(data)
             if not isinstance(data, dict):
