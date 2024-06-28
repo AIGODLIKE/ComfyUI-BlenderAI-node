@@ -724,7 +724,7 @@ class WebUIToComfyUI:
                 checkpoint_loader["widgets_values"][0] = _m
 
         if "Clip skip" in params:
-            clip_last_layer["widgets_values"][0] = params["Clip skip"]
+            clip_last_layer["widgets_values"][0] = -int(params["Clip skip"])
         return json.dumps(wk)
 
     def parse(self, text=None):

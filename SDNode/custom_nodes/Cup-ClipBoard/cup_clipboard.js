@@ -137,7 +137,7 @@ class WebUIToComfyUI
             //     checkpoint_loader["widgets_values"][0] = params["Model"]; // TODO: 模型得加后缀名字, 和webui不同
         }
         if ("Clip skip" in params)
-            clip_last_layer["widgets_values"][0] = params["Clip skip"];
+            clip_last_layer["widgets_values"][0] = -1 * params["Clip skip"];
         return JSON.stringify(wk);
     }
     parse(text){
