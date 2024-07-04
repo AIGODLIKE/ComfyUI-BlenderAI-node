@@ -670,6 +670,66 @@ class WebUIToComfyUI:
         registered_node_types = self.get_registered_node_types()
         return "Efficient Loader" in registered_node_types and "KSampler (Efficient)" in registered_node_types
 
+    def make_link(self, workflow, out_node, out_index, in_node, in_index):
+        last_link_id = workflow["last_link_id"] + 1
+        workflow["last_link_id"] = last_link_id
+        ltype = out_node["outputs"][out_index]["type"] or None
+        link = [last_link_id, out_node["id"], out_index, in_node["id"], in_index, ltype]
+        out_node["outputs"][out_index]["links"].append(last_link_id)
+        old_in_link = in_node["inputs"][in_index]["link"]
+        if old_in_link and old_in_link != last_link_id:
+            self.remove_link(workflow, old_in_link)
+        in_node["inputs"][in_index]["link"] = last_link_id
+        workflow["links"].append(link)
+
+    def remove_link(self, workflow, link_id):
+        if link_id is None:
+            return
+        if link_id == workflow["last_link_id"]:
+            workflow["last_link_id"] = workflow["last_link_id"] - 1
+        for i in range(len(workflow["links"])):
+            link = workflow["links"][i]
+            if link[0] != link_id:
+                continue
+            workflow["links"].pop(i)
+            return
+
+    def remove_node_by_id(self, workflow, node_id):
+        if not node_id:
+            return
+        find_node = None
+        find_node_index = -1
+        for i in range(len(workflow["nodes"])):
+            if (workflow["nodes"][i]["id"] == node_id):
+                find_node = workflow["nodes"][i]
+                find_node_index = i
+                break
+        if not find_node:
+            return
+        # 移除关联的link
+        for inp in find_node.get("inputs", []):
+            link_id = inp["link"]
+            if not link_id:
+                continue
+            for node in workflow["nodes"]:
+                for output in node["outputs"]:
+                    try:
+                        output["links"].remove(link_id)
+                        break
+                    except ValueError:
+                        ...
+            self.remove_link(workflow, link_id)
+        for out in find_node.get("outputs", []):
+            for link_id in out.get("links", []):
+                if link_id is None:
+                    continue
+                for node in workflow["nodes"]:
+                    for inp in node.get("inputs", []):
+                        inp["link"] = None if inp["link"] == link_id else inp["link"]
+            self.remove_link(workflow, link_id)
+        # 移除节点
+        workflow["nodes"].pop(find_node_index)
+
     def to_comfyui_format(self):
         if self.with_efficient():
             return self.to_comfyui_format_efficient()
@@ -725,6 +785,74 @@ class WebUIToComfyUI:
 
         if "Denoising strength" in params:
             ksampler["widgets_values"][6] = params["Denoising strength"]
+            if float(params["Denoising strength"]) < 1:
+                # 图生图, 需要添加图片输入
+                last_node_id = wk["last_node_id"]
+                load_image = {
+                    "id": last_node_id + 1,
+                    "type": "LoadImage",
+                    "pos": [250, -110],
+                    "size": [320, 310],
+                    "mode": 0,
+                    "outputs": [
+                        {
+                            "name": "IMAGE",
+                            "type": "IMAGE",
+                            "links": [],
+                            "shape": 3,
+                            "label": "图像",
+                            "slot_index": 0,
+                        },
+                        {
+                            "name": "MASK",
+                            "type": "MASK",
+                            "links": None,
+                            "shape": 3,
+                            "label": "遮罩",
+                        },
+                    ],
+                    "properties": {"Node name for S&R": "LoadImage"},
+                    "widgets_values": ["xxx.png", "image"],
+                }
+                vae_encode = {
+                    "id": last_node_id + 2,
+                    "type": "VAEEncode",
+                    "pos": [640, 10],
+                    "size": {0: 210, 1: 50},
+                    "mode": 0,
+                    "inputs": [
+                        {
+                            "name": "pixels",
+                            "type": "IMAGE",
+                            "link": 0,
+                            "label": "图像",
+                        },
+                        {
+                            "name": "vae",
+                            "type": "VAE",
+                            "link": None,
+                            "label": "VAE",
+                        },
+                    ],
+                    "outputs": [
+                        {
+                            "name": "LATENT",
+                            "type": "LATENT",
+                            "links": [],
+                            "shape": 3,
+                            "label": "Latent",
+                            "slot_index": 0,
+                        },
+                    ],
+                    "properties": {"Node name for S&R": "VAEEncode"},
+                }
+                wk["nodes"].append(load_image)
+                wk["nodes"].append(vae_encode)
+                wk["last_node_id"] = last_node_id + 2
+                self.remove_node_by_id(wk, empty_image["id"])
+                self.make_link(wk, load_image, 0, vae_encode, 0)
+                self.make_link(wk, checkpoint_loader, 2, vae_encode, 1)
+                self.make_link(wk, vae_encode, 0, ksampler, 3)
         if "Model" in params:
             model = params["Model"]  # TODO: 模型得加后缀名字, 和webui不同
             registered_node_types = self.get_registered_node_types()
@@ -786,6 +914,73 @@ class WebUIToComfyUI:
 
         if "Denoising strength" in params:
             ksampler["widgets_values"][6] = params["Denoising strength"]
+            if float(params["Denoising strength"]) < 1:
+                # 图生图, 需要添加图片输入
+                last_node_id = wk["last_node_id"]
+                load_image = {
+                    "id": last_node_id + 1,
+                    "type": "LoadImage",
+                    "pos": [250, -110],
+                    "size": [320, 310],
+                    "mode": 0,
+                    "outputs": [
+                        {
+                            "name": "IMAGE",
+                            "type": "IMAGE",
+                            "links": [],
+                            "shape": 3,
+                            "label": "图像",
+                            "slot_index": 0,
+                        },
+                        {
+                            "name": "MASK",
+                            "type": "MASK",
+                            "links": None,
+                            "shape": 3,
+                            "label": "遮罩",
+                        },
+                    ],
+                    "properties": {"Node name for S&R": "LoadImage"},
+                    "widgets_values": ["xxx.png", "image"],
+                }
+                vae_encode = {
+                    "id": last_node_id + 2,
+                    "type": "VAEEncode",
+                    "pos": [640, 10],
+                    "size": {0: 210, 1: 50},
+                    "mode": 0,
+                    "inputs": [
+                        {
+                            "name": "pixels",
+                            "type": "IMAGE",
+                            "link": 0,
+                            "label": "图像",
+                        },
+                        {
+                            "name": "vae",
+                            "type": "VAE",
+                            "link": None,
+                            "label": "VAE",
+                        },
+                    ],
+                    "outputs": [
+                        {
+                            "name": "LATENT",
+                            "type": "LATENT",
+                            "links": [],
+                            "shape": 3,
+                            "label": "Latent",
+                            "slot_index": 0,
+                        },
+                    ],
+                    "properties": {"Node name for S&R": "VAEEncode"},
+                }
+                wk["nodes"].append(load_image)
+                wk["nodes"].append(vae_encode)
+                wk["last_node_id"] = last_node_id + 2
+                self.make_link(wk, load_image, 0, vae_encode, 0)
+                self.make_link(wk, loader, 4, vae_encode, 1)
+                self.make_link(wk, vae_encode, 0, ksampler, 3)
         if "Model" in params:
             model = params["Model"]  # 模型得加后缀名字, 和webui不同
             registered_node_types = self.get_registered_node_types()
@@ -1079,8 +1274,8 @@ classic, medieval, noble
 
     def base_workflow(self):
         wk = {
-            "last_node_id": 10,
-            "last_link_id": 12,
+            "last_node_id": 11,
+            "last_link_id": 13,
             "nodes": [
                 {
                     "id": 7,
@@ -1093,8 +1288,6 @@ classic, medieval, noble
                         "0": 425.27801513671875,
                         "1": 180.6060791015625
                     },
-                    "flags": {},
-                    "order": 4,
                     "mode": 0,
                     "inputs": [
                         {
@@ -1133,8 +1326,6 @@ classic, medieval, noble
                         "0": 422.84503173828125,
                         "1": 164.31304931640625
                     },
-                    "flags": {},
-                    "order": 3,
                     "mode": 0,
                     "inputs": [
                         {
@@ -1173,8 +1364,6 @@ classic, medieval, noble
                         "0": 315,
                         "1": 106
                     },
-                    "flags": {},
-                    "order": 0,
                     "mode": 0,
                     "outputs": [
                         {
@@ -1207,8 +1396,6 @@ classic, medieval, noble
                         "0": 315,
                         "1": 262
                     },
-                    "flags": {},
-                    "order": 5,
                     "mode": 0,
                     "inputs": [
                         {
@@ -1271,8 +1458,6 @@ classic, medieval, noble
                         "0": 210,
                         "1": 46
                     },
-                    "flags": {},
-                    "order": 6,
                     "mode": 0,
                     "inputs": [
                         {
@@ -1314,8 +1499,6 @@ classic, medieval, noble
                         "0": 210,
                         "1": 58
                     },
-                    "flags": {},
-                    "order": 7,
                     "mode": 0,
                     "inputs": [
                         {
@@ -1341,8 +1524,6 @@ classic, medieval, noble
                         "0": 315,
                         "1": 98
                     },
-                    "flags": {},
-                    "order": 1,
                     "mode": 0,
                     "outputs": [
                         {
@@ -1391,8 +1572,6 @@ classic, medieval, noble
                         "0": 315,
                         "1": 58
                     },
-                    "flags": {},
-                    "order": 2,
                     "mode": 0,
                     "inputs": [
                         {
@@ -1433,8 +1612,6 @@ classic, medieval, noble
                         "0": 210,
                         "1": 30
                     },
-                    "flags": {},
-                    "order": 8,
                     "mode": 0,
                     "inputs": [
                         {
@@ -1570,8 +1747,6 @@ classic, medieval, noble
                         "0": 320,
                         "1": 60
                     },
-                    "flags": {},
-                    "order": 2,
                     "mode": 0,
                     "inputs": [
                         {
@@ -1599,8 +1774,6 @@ classic, medieval, noble
                         "0": 400,
                         "1": 462
                     },
-                    "flags": {},
-                    "order": 0,
                     "mode": 0,
                     "inputs": [
                         {
@@ -1714,8 +1887,6 @@ classic, medieval, noble
                         "0": 330,
                         "1": 370
                     },
-                    "flags": {},
-                    "order": 1,
                     "mode": 0,
                     "inputs": [
                         {
@@ -1832,8 +2003,6 @@ classic, medieval, noble
                         "0": 210,
                         "1": 30
                     },
-                    "flags": {},
-                    "order": 3,
                     "mode": 0,
                     "inputs": [
                         {
