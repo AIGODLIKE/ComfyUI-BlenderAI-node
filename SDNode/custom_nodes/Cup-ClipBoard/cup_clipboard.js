@@ -62,6 +62,67 @@ class WebUIToComfyUI
     with_efficient(){
       return "Efficient Loader" in LiteGraph.registered_node_types && "KSampler (Efficient)" in LiteGraph.registered_node_types;
     }
+    make_link(workflow, out_node, out_index, in_node, in_index)
+    {
+        var last_link_id = ++workflow["last_link_id"];
+        var ltype = out_node["outputs"][out_index].type | null;
+        var link = [last_link_id, out_node["id"], out_index, in_node["id"], in_index, ltype];
+        out_node["outputs"][out_index].links.push(last_link_id);
+        in_node["inputs"][in_index].link = last_link_id;
+        workflow["links"].push(link);
+    }
+    remove_link(workflow, link_id)
+    {
+      if (link_id === null || link_id === undefined) return;
+      if (link_id == workflow["last_link_id"]) workflow["last_link_id"]--;
+      for (var i = 0; workflow["links"].length; i++) {
+        var link = workflow["links"][i];
+        if (link[0] == link_id) {
+          workflow["links"].splice(i, 1);
+          return;
+        }
+      }
+    }
+    remove_node_by_id(workflow, id)
+    {
+      if (id === null || id === undefined) return;
+      var find_node = null;
+      var find_node_index = -1;
+      for (var i = 0; i < workflow["nodes"].length; i++) {
+        if (workflow["nodes"][i].id == id) {
+          find_node = workflow["nodes"][i];
+          find_node_index = i;
+          break;
+        }
+      }
+      if (find_node == null) return;
+      // 移除关联的link
+      for (var i = 0; i < (find_node.inputs || []).length; i++) {
+        var link_id = find_node.inputs[i].link;
+        if (link_id == null) continue;
+        for (var node of workflow["nodes"]) {
+          for(var output of node.outputs)
+          {
+            var f_index = output.links.indexOf(link_id);
+            if (f_index == -1) continue;
+            output.links.splice(f_index, 1);
+          }
+        }
+        this.remove_link(workflow, link_id);
+      }
+      for (var i = 0; i < (find_node.outputs || []).length; i++) {
+        for (var link_id of find_node.outputs[i].links) {
+          if (link_id == null) continue;
+          for (var node of workflow["nodes"]) {
+            for(var input of node.inputs || [])
+              input.link = input.link == link_id ? null : input.link;
+          }
+          this.remove_link(workflow, link_id);
+        }
+      }
+      // 移除节点
+      workflow["nodes"].splice(find_node_index, 1);
+    }
     to_comfyui_format(){
       if (this.with_efficient())
       {
@@ -130,7 +191,79 @@ class WebUIToComfyUI
                 ksampler["widgets_values"][5] = WebUIToComfyUI.SCHEDULERNAME_W2C[scheduler_name];
         }
         if ("Denoising strength" in params)
+        {
             ksampler["widgets_values"][6] = params["Denoising strength"];
+            if (params["Denoising strength"] < 1)
+            {
+              // 图生图, 需要添加图片输入
+              var last_node_id = wk["last_node_id"];
+              var load_image = {
+                id: ++last_node_id,
+                type: "LoadImage",
+                pos: [250, -110],
+                size: [320, 310],
+                mode: 0,
+                outputs: [
+                  {
+                    name: "IMAGE",
+                    type: "IMAGE",
+                    links: [],
+                    shape: 3,
+                    label: "图像",
+                    slot_index: 0,
+                  },
+                  {
+                    name: "MASK",
+                    type: "MASK",
+                    links: null,
+                    shape: 3,
+                    label: "遮罩",
+                  },
+                ],
+                properties: { "Node name for S&R": "LoadImage" },
+                widgets_values: ["xxx.png", "image"],
+              };
+              var vae_encode = {
+                id: ++last_node_id,
+                type: "VAEEncode",
+                pos: [640, 10],
+                size: { 0: 210, 1: 50 },
+                mode: 0,
+                inputs: [
+                  {
+                    name: "pixels",
+                    type: "IMAGE",
+                    link: 0,
+                    label: "图像",
+                  },
+                  {
+                    name: "vae",
+                    type: "VAE",
+                    link: null,
+                    label: "VAE",
+                  },
+                ],
+                outputs: [
+                  {
+                    name: "LATENT",
+                    type: "LATENT",
+                    links: [],
+                    shape: 3,
+                    label: "Latent",
+                    slot_index: 0,
+                  },
+                ],
+                properties: { "Node name for S&R": "VAEEncode" },
+              };
+              wk["nodes"].push(load_image);
+              wk["nodes"].push(vae_encode);
+              wk["last_node_id"] = last_node_id;
+              this.remove_node_by_id(wk, empty_image.id);
+              this.make_link(wk, load_image, 0, vae_encode, 0);
+              this.make_link(wk, checkpoint_loader, 2, vae_encode, 1);
+              this.make_link(wk, vae_encode, 0, ksampler, 3);
+            }
+        }
         if ("Model" in params)
         {
             var model = params["Model"]; // TODO: 模型得加后缀名字, 和webui不同
@@ -207,7 +340,78 @@ class WebUIToComfyUI
               ksampler["widgets_values"][5] = WebUIToComfyUI.SCHEDULERNAME_W2C[scheduler_name];
       }
       if ("Denoising strength" in params)
-          ksampler["widgets_values"][6] = params["Denoising strength"];
+      {
+        ksampler["widgets_values"][6] = params["Denoising strength"];
+        if (params["Denoising strength"] < 1)
+        {
+          // 图生图, 需要添加图片输入
+          var last_node_id = wk["last_node_id"];
+          var load_image = {
+            id: ++last_node_id,
+            type: "LoadImage",
+            pos: [250, -110],
+            size: [320, 310],
+            mode: 0,
+            outputs: [
+              {
+                name: "IMAGE",
+                type: "IMAGE",
+                links: [],
+                shape: 3,
+                label: "图像",
+                slot_index: 0,
+              },
+              {
+                name: "MASK",
+                type: "MASK",
+                links: null,
+                shape: 3,
+                label: "遮罩",
+              },
+            ],
+            properties: { "Node name for S&R": "LoadImage" },
+            widgets_values: ["xxx.png", "image"],
+          };
+          var vae_encode = {
+            id: ++last_node_id,
+            type: "VAEEncode",
+            pos: [640, 10],
+            size: { 0: 210, 1: 50 },
+            mode: 0,
+            inputs: [
+              {
+                name: "pixels",
+                type: "IMAGE",
+                link: 0,
+                label: "图像",
+              },
+              {
+                name: "vae",
+                type: "VAE",
+                link: null,
+                label: "VAE",
+              },
+            ],
+            outputs: [
+              {
+                name: "LATENT",
+                type: "LATENT",
+                links: [],
+                shape: 3,
+                label: "Latent",
+                slot_index: 0,
+              },
+            ],
+            properties: { "Node name for S&R": "VAEEncode" },
+          };
+          wk["nodes"].push(load_image);
+          wk["nodes"].push(vae_encode);
+          wk["last_node_id"] = last_node_id;
+          this.make_link(wk, load_image, 0, vae_encode, 0);
+          this.make_link(wk, loader, 4, vae_encode, 1);
+          this.make_link(wk, vae_encode, 0, ksampler, 4);
+        }
+      }
       if ("Model" in params)
       {
           var model = params["Model"]; // 模型得加后缀名字, 和webui不同
@@ -593,8 +797,8 @@ classic, medieval, noble`.trim(),
     }
     base_workflow(){
         var wk = {
-            "last_node_id": 10,
-            "last_link_id": 12,
+            "last_node_id": 11,
+            "last_link_id": 13,
             "nodes": [
               {
                 "id": 7,
@@ -607,8 +811,6 @@ classic, medieval, noble`.trim(),
                   "0": 425.27801513671875,
                   "1": 180.6060791015625
                 },
-                "flags": {},
-                "order": 4,
                 "mode": 0,
                 "inputs": [
                   {
@@ -647,8 +849,6 @@ classic, medieval, noble`.trim(),
                   "0": 422.84503173828125,
                   "1": 164.31304931640625
                 },
-                "flags": {},
-                "order": 3,
                 "mode": 0,
                 "inputs": [
                   {
@@ -687,8 +887,6 @@ classic, medieval, noble`.trim(),
                   "0": 315,
                   "1": 106
                 },
-                "flags": {},
-                "order": 0,
                 "mode": 0,
                 "outputs": [
                   {
@@ -721,8 +919,6 @@ classic, medieval, noble`.trim(),
                   "0": 315,
                   "1": 262
                 },
-                "flags": {},
-                "order": 5,
                 "mode": 0,
                 "inputs": [
                   {
@@ -785,8 +981,6 @@ classic, medieval, noble`.trim(),
                   "0": 210,
                   "1": 46
                 },
-                "flags": {},
-                "order": 6,
                 "mode": 0,
                 "inputs": [
                   {
@@ -828,8 +1022,6 @@ classic, medieval, noble`.trim(),
                   "0": 210,
                   "1": 58
                 },
-                "flags": {},
-                "order": 7,
                 "mode": 0,
                 "inputs": [
                   {
@@ -855,8 +1047,6 @@ classic, medieval, noble`.trim(),
                   "0": 315,
                   "1": 98
                 },
-                "flags": {},
-                "order": 1,
                 "mode": 0,
                 "outputs": [
                   {
@@ -905,8 +1095,6 @@ classic, medieval, noble`.trim(),
                   "0": 315,
                   "1": 58
                 },
-                "flags": {},
-                "order": 2,
                 "mode": 0,
                 "inputs": [
                   {
@@ -947,8 +1135,6 @@ classic, medieval, noble`.trim(),
                       "0": 210,
                       "1": 30
                   },
-                  "flags": {},
-                  "order": 8,
                   "mode": 0,
                   "inputs": [
                       {
@@ -1084,8 +1270,6 @@ classic, medieval, noble`.trim(),
                 "0": 320,
                 "1": 60
               },
-              "flags": {},
-              "order": 2,
               "mode": 0,
               "inputs": [
                 {
@@ -1113,8 +1297,6 @@ classic, medieval, noble`.trim(),
                 "0": 400,
                 "1": 462
               },
-              "flags": {},
-              "order": 0,
               "mode": 0,
               "inputs": [
                 {
@@ -1228,8 +1410,6 @@ classic, medieval, noble`.trim(),
                 "0": 330,
                 "1": 370
               },
-              "flags": {},
-              "order": 1,
               "mode": 0,
               "inputs": [
                 {
@@ -1346,8 +1526,6 @@ classic, medieval, noble`.trim(),
                 "0": 210,
                 "1": 30
               },
-              "flags": {},
-              "order": 3,
               "mode": 0,
               "inputs": [
                 {
