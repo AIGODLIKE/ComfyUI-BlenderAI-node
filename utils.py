@@ -1439,7 +1439,7 @@ classic, medieval, noble
                     },
                     "widgets_values": [
                         156680208700286,
-                        "randomize",
+                        "fixed",
                         20,
                         8,
                         "euler",
@@ -1980,7 +1980,7 @@ classic, medieval, noble
                     },
                     "widgets_values": [
                         800315283332510,
-                        "randomize",
+                        "fixed",
                         20,
                         7,
                         "euler",
