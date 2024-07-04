@@ -144,6 +144,10 @@ class CFNodeTree(NodeTree):
         def _get_id_pool(self) -> set:
             if "ID_POOL" not in self.tree:
                 self.tree["ID_POOL"] = pickle.dumps(set())
+            try:
+                return pickle.loads(self.tree["ID_POOL"])
+            except pickle.UnpicklingError:
+                self.tree["ID_POOL"] = pickle.dumps(set())
             return pickle.loads(self.tree["ID_POOL"])
 
         def _set_id_pool(self, value):
