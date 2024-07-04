@@ -465,7 +465,10 @@ class WebUIToComfyUI
         if(pp !== null)
         {
             pp = pp[1].trim();
-            this.params["Positive prompt"] = pp.slice(-1) == "," ? pp.slice(0, -1).trim() : pp;
+            var pp_str = pp.slice(-1) == "," ? pp.slice(0, -1).trim() : pp;
+            if (pp_str.startsWith("parameters"))
+              pp_str = pp_str.slice("parameters".length).trim();
+            this.params["Positive prompt"] = pp_str;
             this.text = this.text.replace(pp, "").trim();
         }
         var np = this.text.match(/(Negative prompt: .*?)(?:Steps: )/s);
@@ -729,7 +732,7 @@ Steps: 25, Sampler: Euler, Schedule type: Automatic, CFG scale: 7, Seed: 8486806
         `;
         var out_t2 = {
             "Positive prompt": `
-parameters(official art:1.2),(colorful:1.1),(masterpiece:1.2),best quality,masterpiece,highres,original,extremely detailed wallpaper,1girl,solo,very long hair,(loli:1.3),vibrant color palette,dazzling hues,kaleidoscopic patterns,enchanting young maiden,radiant beauty,chromatic harmony,iridescent hair,sparkling eyes,lush landscapes,vivid blossoms,mesmerizing sunsets,brilliant rainbows,prismatic reflections,whimsical attire,captivating accessories,stunning chromatic display,artful composition,picturesque backdrop,breathtaking scenery,visual symphony,spellbinding chromatic enchantment,
+(official art:1.2),(colorful:1.1),(masterpiece:1.2),best quality,masterpiece,highres,original,extremely detailed wallpaper,1girl,solo,very long hair,(loli:1.3),vibrant color palette,dazzling hues,kaleidoscopic patterns,enchanting young maiden,radiant beauty,chromatic harmony,iridescent hair,sparkling eyes,lush landscapes,vivid blossoms,mesmerizing sunsets,brilliant rainbows,prismatic reflections,whimsical attire,captivating accessories,stunning chromatic display,artful composition,picturesque backdrop,breathtaking scenery,visual symphony,spellbinding chromatic enchantment,
 (shiny:1.2),(Oil highlights:1.2),[wet with oil:0.7],(shiny:1.2),[wet with oil:0.5]`.trim(),
             "Negative prompt": "(worst quality, low quality, blurry:1.5),(bad hands:1.4),watermark,(greyscale:0.88),multiple limbs,(deformed fingers, bad fingers:1.2),(ugly:1.3),monochrome,horror,geometry,bad anatomy,bad limbs,(Blurry pupil),(bad shading),error,bad composition,Extra fingers,NSFW,badhandv4,charturnerv2,corneo_dva,EasyNegative,EasyNegativeV2,ng_deepnegative_v1_75t",
             "Steps": "25",
