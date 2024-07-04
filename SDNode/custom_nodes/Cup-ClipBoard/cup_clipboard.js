@@ -66,8 +66,18 @@ class WebUIToComfyUI
     {
         var last_link_id = ++workflow["last_link_id"];
         var ltype = out_node["outputs"][out_index].type | null;
-        var link = [last_link_id, out_node["id"], out_index, in_node["id"], in_index, ltype];
+        var link = [
+          last_link_id,
+          out_node["id"],
+          out_index,
+          in_node["id"],
+          in_index,
+          ltype,
+        ];
         out_node["outputs"][out_index].links.push(last_link_id);
+        var old_in_link = in_node["inputs"][in_index].link;
+        if (old_in_link !== null && old_in_link != last_link_id)
+          this.remove_link(workflow, old_in_link);
         in_node["inputs"][in_index].link = last_link_id;
         workflow["links"].push(link);
     }
@@ -75,7 +85,7 @@ class WebUIToComfyUI
     {
       if (link_id === null || link_id === undefined) return;
       if (link_id == workflow["last_link_id"]) workflow["last_link_id"]--;
-      for (var i = 0; workflow["links"].length; i++) {
+      for (var i = 0; i < workflow["links"].length; i++) {
         var link = workflow["links"][i];
         if (link[0] == link_id) {
           workflow["links"].splice(i, 1);
@@ -409,7 +419,7 @@ class WebUIToComfyUI
           wk["last_node_id"] = last_node_id;
           this.make_link(wk, load_image, 0, vae_encode, 0);
           this.make_link(wk, loader, 4, vae_encode, 1);
-          this.make_link(wk, vae_encode, 0, ksampler, 4);
+          this.make_link(wk, vae_encode, 0, ksampler, 3);
         }
       }
       if ("Model" in params)
