@@ -919,29 +919,28 @@ class WebUIToComfyUI:
                 last_node_id = wk["last_node_id"]
                 load_image = {
                     "id": last_node_id + 1,
-                    "type": "LoadImage",
-                    "pos": [250, -110],
-                    "size": [320, 310],
+                    "type": "输入图像",
+                    "pos": [210, -110],
+                    "size": {0: 200, 1: 100},
                     "mode": 0,
+                    "inputs": [],
                     "outputs": [
                         {
                             "name": "IMAGE",
                             "type": "IMAGE",
                             "links": [],
-                            "shape": 3,
-                            "label": "图像",
-                            "slot_index": 0,
+                            "slot_index": 0
                         },
                         {
                             "name": "MASK",
                             "type": "MASK",
-                            "links": None,
-                            "shape": 3,
-                            "label": "遮罩",
-                        },
+                            "links": [],
+                            "slot_index": 1
+                        }
                     ],
-                    "properties": {"Node name for S&R": "LoadImage"},
-                    "widgets_values": ["xxx.png", "image"],
+                    "title": "输入图像",
+                    "properties": {},
+                    "widgets_values": ["", "输入"]
                 }
                 vae_encode = {
                     "id": last_node_id + 2,
