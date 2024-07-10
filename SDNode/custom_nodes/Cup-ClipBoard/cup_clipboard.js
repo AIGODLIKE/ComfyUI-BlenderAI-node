@@ -155,10 +155,10 @@ class WebUIToComfyUI
       workflow["nodes"].splice(find_node_index, 1);
     }
     to_comfyui_format(){
-      // if (this.with_efficient())
-      // {
-      //   return this.to_comfyui_format_efficient();
-      // }
+      if (this.with_efficient())
+      {
+        return this.to_comfyui_format_efficient();
+      }
       return this.to_comfyui_format_base();
     }
     to_comfyui_format_base(){
