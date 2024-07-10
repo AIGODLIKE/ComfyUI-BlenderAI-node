@@ -1036,7 +1036,7 @@ class WebUIToComfyUI:
     def _control_net(self):
         if not re.search(r"(Control[nN]et \d+): ", self.text, re.S):
             return
-        for cn in re.finditer(r'(Control[nN]et \d+): (".*?"),', self.text, re.S):
+        for cn in re.finditer(r'(Control[nN]et \d+): "(.*?)",', self.text, re.S):
             self.params[cn[1]] = cn[2]
             self.text = self.text.replace(cn[0], "")
 
@@ -1179,7 +1179,7 @@ Steps: 30, Sampler: UniPC, Schedule type: Karras, CFG scale: 7, Seed: 3620085674
             "Size": "1024x1536",
             "Model hash": "3d1b3c42ec",
             "Model": "AWPainting_v1.2",
-            "ControlNet 0": "\"Module: tile_resample, Model: control_v11f1e_sd15_tile_fp16 [3b860298], Weight: 0.6, Resize Mode: Crop and Resize, Processor Res: 512, Threshold A: 1.0, Threshold B: 0.5, Guidance Start: 0.0, Guidance End: 1.0, Pixel Perfect: True, Control Mode: Balanced\"",
+            "ControlNet 0": "Module: tile_resample, Model: control_v11f1e_sd15_tile_fp16 [3b860298], Weight: 0.6, Resize Mode: Crop and Resize, Processor Res: 512, Threshold A: 1.0, Threshold B: 0.5, Guidance Start: 0.0, Guidance End: 1.0, Pixel Perfect: True, Control Mode: Balanced",
             "TI hashes": "\"ng_deepnegative_v1_75t: 54e7e4826d53\"",
             # "Pad conds": "True",
             "Version": "v1.9.4"
@@ -1211,7 +1211,7 @@ parameters(official art:1.2),(colorful:1.1),(masterpiece:1.2),best quality,maste
             "Denoising strength": "0.75",
             "Clip skip": "2",
             "Tiled Diffusion": '{"Method": "MultiDiffusion", "Tile tile width": 96, "Tile tile height": 96, "Tile Overlap": 48, "Tile batch size": 4, "Keep input size": true, "NoiseInv": true, "NoiseInv Steps": 10, "NoiseInv Retouch": 1, "NoiseInv Renoise strength": 0.5, "NoiseInv Kernel size": 64}',
-            "ControlNet 0": '"Module: tile_resample, Model: control_v11f1e_sd15_tile_fp16 [3b860298], Weight: 0.5, Resize Mode: Crop and Resize, Processor Res: 512, Threshold A: 1.0, Threshold B: 0.5, Guidance Start: 0.0, Guidance End: 1.0, Pixel Perfect: True, Control Mode: Balanced"',
+            "ControlNet 0": 'Module: tile_resample, Model: control_v11f1e_sd15_tile_fp16 [3b860298], Weight: 0.5, Resize Mode: Crop and Resize, Processor Res: 512, Threshold A: 1.0, Threshold B: 0.5, Guidance Start: 0.0, Guidance End: 1.0, Pixel Perfect: True, Control Mode: Balanced',
             # "Pad conds": "True",
             "Version": "v1.9.4",
         }

@@ -52,6 +52,7 @@ class WebUIToComfyUI
     };
     constructor(text){
         this.text = text;
+        this.parse_cn = false;
         this.params = {};
     }
     is_webui_format(){
@@ -61,6 +62,26 @@ class WebUIToComfyUI
     }
     with_efficient(){
       return "Efficient Loader" in LiteGraph.registered_node_types && "KSampler (Efficient)" in LiteGraph.registered_node_types;
+    }
+    apply_nodes_offset(nodes, offset=[0, 0]){
+        for (var node of nodes) {
+          node["pos"][0] += offset[0];
+          node["pos"][1] += offset[1];
+        }
+    }
+    find_following_nodes(wk, node, _nodes = []){
+      for (var out of node["outputs"] || []) {
+        if (!out["links"]) continue;
+        for (var link_id of out["links"] || []) {
+          var _l = wk["links"].find((l) => l[0] == link_id);
+          if (!_l) continue;
+          var _in = wk["nodes"].find((n) => n["id"] == _l[3]);
+          if (!_in) continue;
+          if (!_nodes.includes(_in)) _nodes.push(_in);
+          this.find_following_nodes(wk, _in, _nodes);
+        }
+      }
+      return _nodes;
     }
     make_link(workflow, out_node, out_index, in_node, in_index)
     {
@@ -134,15 +155,16 @@ class WebUIToComfyUI
       workflow["nodes"].splice(find_node_index, 1);
     }
     to_comfyui_format(){
-      if (this.with_efficient())
-      {
-        return this.to_comfyui_format_efficient();
-      }
+      // if (this.with_efficient())
+      // {
+      //   return this.to_comfyui_format_efficient();
+      // }
       return this.to_comfyui_format_base();
     }
     to_comfyui_format_base(){
         var params = this.params;
         var wk = this.base_workflow();
+        this.apply_nodes_offset(wk["nodes"], [-200, 63]);
         var np = wk["nodes"][0];
         var pp = wk["nodes"][1];
         var empty_image = wk["nodes"][2];
@@ -199,6 +221,7 @@ class WebUIToComfyUI
                 ksampler["widgets_values"][4] = WebUIToComfyUI.SAMPLERNAME_W2C[sampler_name];
             if (scheduler_name in WebUIToComfyUI.SCHEDULERNAME_W2C)
                 ksampler["widgets_values"][5] = WebUIToComfyUI.SCHEDULERNAME_W2C[scheduler_name];
+            this._gen_control_net(wk, ksampler, pp, np);
         }
         if ("Denoising strength" in params)
         {
@@ -237,7 +260,7 @@ class WebUIToComfyUI
                 id: ++last_node_id,
                 type: "VAEEncode",
                 pos: [640, 10],
-                size: { 0: 210, 1: 50 },
+                size: [210, 50],
                 mode: 0,
                 inputs: [
                   {
@@ -268,7 +291,7 @@ class WebUIToComfyUI
               wk["nodes"].push(load_image);
               wk["nodes"].push(vae_encode);
               wk["last_node_id"] = last_node_id;
-              this.remove_node_by_id(wk, empty_image.id);
+              this.remove_node_by_id(wk, empty_image["id"]);
               this.make_link(wk, load_image, 0, vae_encode, 0);
               this.make_link(wk, checkpoint_loader, 2, vae_encode, 1);
               this.make_link(wk, vae_encode, 0, ksampler, 3);
@@ -348,6 +371,7 @@ class WebUIToComfyUI
               ksampler["widgets_values"][4] = WebUIToComfyUI.SAMPLERNAME_W2C[sampler_name];
           if (scheduler_name in WebUIToComfyUI.SCHEDULERNAME_W2C)
               ksampler["widgets_values"][5] = WebUIToComfyUI.SCHEDULERNAME_W2C[scheduler_name];
+          this._gen_control_net(wk, ksampler, loader, loader);
       }
       if ("Denoising strength" in params)
       {
@@ -442,6 +466,7 @@ class WebUIToComfyUI
     parse(text){
         this.text = text ? text : this.text;
         this.test();
+        this.parse_cn = true;
         this._parse(text);
         return this.params;
     }
@@ -489,13 +514,325 @@ Controlnet 0: "preprocessor: dw_openpose_full, model: control_v11p_sd15_openpose
 Controlnet 1: "preprocessor: depth_leres (LeRes 深度图估算）, model: control_v11f1p_sd15_depth, weight: 0.7, starting/ending: (0.23, 0.76), resize mode: Crop and Resize, pixel_perfect: True, control mode: Balanced, preprocessor params: (1024, 0, 0)", 
 ControlNet 2: "Module: tile_resample, Model: control_v11f1e_sd15_tile_fp16 [3b860298], Weight: 0.6, Resize Mode: Crop and Resize, Processor Res: 512, Threshold A: 1.0, Threshold B: 0.5, Guidance Start: 0.0, Guidance End: 1.0, Pixel Perfect: True, Control Mode: Balanced",
         */
-        if(this.text.match(/(Control[nN]et \d+): /s) == null)
-            return;
-        for(const cn of this.text.matchAll(/(Control[nN]et \d+): (".*?"),/gs))
-        {
-            this.params[cn[1]] = cn[2];
-            this.text = this.text.replace(cn[0], "");
+        if (this.text.match(/(Control[nN]et \d+): /s) == null) return;
+        function parse_cn_params(text) {
+          var params = {};
+          var new_ver = text.includes("preprocessor params: ");
+          if (new_ver) {
+            // Controlnet 0: "preprocessor: dw_openpose_full, model: control_v11p_sd15_openpose, weight: 1.0, starting/ending: (0.0, 1.0), resize mode: Crop and Resize, pixel_perfect: False, control mode: Balanced, preprocessor params: (1024, None, None)",
+            var preprocessor = text.match(/preprocessor: (.*?), /s)[1];
+            var model = text.match(/model: (.*?), /s)[1];
+            var weight = text.match(/weight: (.*?), /s)[1];
+            var starting_end = text.match(/starting\/ending: \((.*?)\),/s)[1];
+            starting_end = starting_end ? JSON.parse(`[${starting_end}]`) : [];
+            var resize_mode = text.match(/resize mode: (.*?), /s)[1];
+            var pixel_perfect = text.match(/pixel_perfect: (.*?), /s)[1];
+            pixel_perfect = pixel_perfect == "True";
+            var control_mode = text.match(/control mode: (.*?),/s)[1];
+            var pp_params = text.match(/preprocessor params: \((.*?)\)/s)[1];
+            pp_params = pp_params.replaceAll("None", "null");
+            // 去掉括号并按逗号分割
+            pp_params = pp_params ? JSON.parse(`[${pp_params}]`) : [];
+
+            params = {
+              preprocessor: preprocessor,
+              model: model,
+              weight: weight,
+              starting_end: starting_end,
+              resize_mode: resize_mode,
+              preprocessor_params: pp_params,
+              pixel_perfect: pixel_perfect,
+              control_mode: control_mode,
+            };
+          } else {
+            // "ControlNet 0": "Module: tile_resample, Model: control_v11f1e_sd15_tile_fp16 [3b860298], Weight: 0.6, Resize Mode: Crop and Resize, Processor Res: 512, Threshold A: 1.0, Threshold B: 0.5, Guidance Start: 0.0, Guidance End: 1.0, Pixel Perfect: True, Control Mode: Balanced",
+            var preprocessor = text.match(/Module: (.*?), /s)[1];
+            var model = text.match(/Model: (.*?), /s)[1];
+            var weight = text.match(/Weight: (.*?), /s)[1];
+            var resize_mode = text.match(/Resize Mode: (.*?), /s)[1];
+
+            var pp_param_res = text.match(/Processor Res: (.*?), /s)[1];
+            var pp_param_a = text.match(/Threshold A: (.*?), /s)[1];
+            var pp_param_b = text.match(/Threshold B: (.*?), /s)[1];
+
+            var starting = text.match(/Guidance Start: (.*?), /s)[1];
+            var end = text.match(/Guidance End: (.*?), /s)[1];
+            var pixel_perfect = text.match(/Pixel Perfect: (.*?), /s)[1];
+            pixel_perfect = pixel_perfect == "True";
+            var control_mode = text.match(/Control Mode: (.*?)$/s)[1];
+            params = {
+              preprocessor: preprocessor,
+              model: model,
+              weight: weight,
+              starting_end: [starting, end],
+              resize_mode: resize_mode,
+              preprocessor_params: [pp_param_res, pp_param_a, pp_param_b],
+              pixel_perfect: pixel_perfect,
+              control_mode: control_mode,
+            };
+          }
+          return params;
         }
+        var cns = this.text.matchAll(/(Control[nN]et \d+): "(.*?)",/gs);
+        for (const cn of cns) {
+          this.params[cn[1]] = this.parse_cn ? parse_cn_params(cn[2]) : cn[2];
+          this.text = this.text.replace(cn[0], "");
+        }
+    }
+    _gen_control_net(wk, ksampler, out_p, out_n)
+    {
+      const offset = 500;
+      // CN部分
+      var load_image_cn = {
+        id: wk["last_node_id"] + 1,
+        type: "LoadImage",
+        pos: [320, 800],
+        mode: 0,
+        outputs: [
+          {
+            name: "IMAGE",
+            type: "IMAGE",
+            links: [],
+            shape: 3,
+            label: "图像",
+            slot_index: 0,
+          },
+          {
+            name: "MASK",
+            type: "MASK",
+            links: null,
+            shape: 3,
+            label: "遮罩",
+          },
+        ],
+        widgets_values: ["xxx.png", "image"],
+      };
+      wk["nodes"].push(load_image_cn);
+      wk["last_node_id"] += 1;
+      var count = -1;
+      for (var key in this.params) {
+        if (!key.toLowerCase().startsWith("controlnet")) continue;
+        ++count;
+        var last_node_id = wk["last_node_id"];
+        var value = this.params[key];
+        // 新增 aux 集成 preproccessor
+        var aux_preprocessor = {
+          id: last_node_id + 1,
+          type: "AIO_Preprocessor",
+          pos: [700 + offset * count, 640],
+          mode: 0,
+          inputs: [
+            {
+              name: "image",
+              type: "IMAGE",
+              link: null,
+              label: "图像",
+            },
+          ],
+          outputs: [
+            {
+              name: "IMAGE",
+              type: "IMAGE",
+              links: [],
+              shape: 3,
+              label: "图像",
+              slot_index: 0,
+            },
+          ],
+          widgets_values: ["CannyEdgePreprocessor", 512],
+        };
+        // 新增 apply controlnet
+        var apply_controlnet = {
+          id: last_node_id + 2,
+          type: "ControlNetApplyAdvanced",
+          pos: [710 + offset * count, 270],
+          mode: 0,
+          inputs: [
+            {
+              name: "positive",
+              type: "CONDITIONING",
+              link: null,
+              label: "正面条件",
+            },
+            {
+              name: "negative",
+              type: "CONDITIONING",
+              link: null,
+              label: "负面条件",
+            },
+            {
+              name: "control_net",
+              type: "CONTROL_NET",
+              link: null,
+              label: "ControlNet",
+            },
+            {
+              name: "image",
+              type: "IMAGE",
+              link: null,
+              label: "图像",
+            },
+          ],
+          outputs: [
+            {
+              name: "positive",
+              type: "CONDITIONING",
+              links: [],
+              shape: 3,
+              label: "正面条件",
+              slot_index: 0,
+            },
+            {
+              name: "negative",
+              type: "CONDITIONING",
+              links: [20],
+              shape: 3,
+              label: "负面条件",
+              slot_index: 1,
+            },
+          ],
+          widgets_values: [1, 0, 1],
+        };
+        var controlnet_loader = {
+          id: last_node_id + 3,
+          type: "ControlNetLoader",
+          pos: [720 + offset * count, 500],
+          mode: 0,
+          outputs: [
+            {
+              name: "CONTROL_NET",
+              type: "CONTROL_NET",
+              links: [],
+              shape: 3,
+              label: "ControlNet",
+            },
+          ],
+          widgets_values: ["xxx.pth", null],
+        };
+        wk["last_node_id"] += 3;
+        wk["nodes"].push(aux_preprocessor, apply_controlnet, controlnet_loader);
+        // 参数处理
+        aux_preprocessor["widgets_values"][0] = value["preprocessor"];
+        aux_preprocessor["widgets_values"][1] = value["preprocessor_params"][0];
+        controlnet_loader["widgets_values"][0] = value["model"];
+        apply_controlnet["widgets_values"][0] = value["weight"];
+        apply_controlnet["widgets_values"][1] = value["starting_end"][0];
+        apply_controlnet["widgets_values"][2] = value["starting_end"][1];
+        this.make_link(wk, load_image_cn, 0, aux_preprocessor, 0);
+        this.make_link(wk, controlnet_loader, 0, apply_controlnet, 2);
+        this.make_link(wk, aux_preprocessor, 0, apply_controlnet, 3);
+        // 完美像素
+        if (value["pixel_perfect"])
+        {
+          aux_preprocessor["inputs"].push({
+            name: "resolution",
+            type: "INT",
+            link: null,
+            widget: {
+              name: "resolution",
+            },
+            label: "分辨率",
+          });
+          var gen_res = {
+            id: wk["last_node_id"] + 1,
+            type: "ImageGenResolutionFromImage",
+            pos: [690 + offset * count, 950],
+            mode: 0,
+            inputs: [
+              {
+                name: "image",
+                type: "IMAGE",
+                link: null,
+                label: "图像",
+              },
+            ],
+            outputs: [
+              {
+                name: "IMAGE_GEN_WIDTH (INT)",
+                type: "INT",
+                links: [],
+                shape: 3,
+                label: "宽度(整数)",
+                slot_index: 0,
+              },
+              {
+                name: "IMAGE_GEN_HEIGHT (INT)",
+                type: "INT",
+                links: [],
+                shape: 3,
+                label: "高度(整数)",
+                slot_index: 1,
+              },
+            ],
+          };
+          var pixel_perfect = {
+            id: wk["last_node_id"] + 2,
+            type: "PixelPerfectResolution",
+            pos: [680 + offset * count, 780],
+            mode: 0,
+            inputs: [
+              {
+                name: "original_image",
+                type: "IMAGE",
+                link: null,
+                label: "图像",
+              },
+              {
+                name: "image_gen_width",
+                type: "INT",
+                link: null,
+                widget: {
+                  name: "image_gen_width",
+                },
+                label: "宽度",
+              },
+              {
+                name: "image_gen_height",
+                type: "INT",
+                link: null,
+                widget: {
+                  name: "image_gen_height",
+                },
+                label: "高度",
+              },
+            ],
+            outputs: [
+              {
+                name: "RESOLUTION (INT)",
+                type: "INT",
+                links: [],
+                shape: 3,
+                label: "分辨率(整数)",
+                slot_index: 0,
+              },
+            ],
+          };
+          wk["last_node_id"] += 2;
+          wk["nodes"].push(gen_res, pixel_perfect);
+          this.make_link(wk, load_image_cn, 0, gen_res, 0);
+          this.make_link(wk, load_image_cn, 0, pixel_perfect, 0);
+          this.make_link(wk, gen_res, 0, pixel_perfect, 1);
+          this.make_link(wk, gen_res, 1, pixel_perfect, 2);
+          this.make_link(wk, pixel_perfect, 0, aux_preprocessor, 1);
+        }
+        if (out_p["type"] === "Efficient Loader") {
+          this.make_link(wk, out_p, 1, apply_controlnet, 0);
+          this.make_link(wk, out_n, 2, apply_controlnet, 1);
+        } else if (out_p["type"] === "CLIPTextEncode") {
+          this.make_link(wk, out_p, 0, apply_controlnet, 0);
+          this.make_link(wk, out_n, 0, apply_controlnet, 1);
+        } else if (out_p["type"] === "ControlNetApplyAdvanced") {
+          this.make_link(wk, out_p, 0, apply_controlnet, 0);
+          this.make_link(wk, out_n, 1, apply_controlnet, 1);
+        }
+        out_p = apply_controlnet;
+        out_n = apply_controlnet;
+        this.make_link(wk, apply_controlnet, 0, ksampler, 1);
+        this.make_link(wk, apply_controlnet, 1, ksampler, 2);
+        var follow_nodes = [ksampler];
+        this.find_following_nodes(wk, ksampler, follow_nodes);
+        this.apply_nodes_offset(follow_nodes, [offset, 0]);
+      }
     }
     _ti_hashes()
     {
@@ -718,7 +1055,7 @@ Steps: 30, Sampler: UniPC, Schedule type: Karras, CFG scale: 7, Seed: 3620085674
             "Size": "1024x1536",
             "Model hash": "3d1b3c42ec",
             "Model": "AWPainting_v1.2",
-            "ControlNet 0": `"Module: tile_resample, Model: control_v11f1e_sd15_tile_fp16 [3b860298], Weight: 0.6, Resize Mode: Crop and Resize, Processor Res: 512, Threshold A: 1.0, Threshold B: 0.5, Guidance Start: 0.0, Guidance End: 1.0, Pixel Perfect: True, Control Mode: Balanced"`,
+            "ControlNet 0": "Module: tile_resample, Model: control_v11f1e_sd15_tile_fp16 [3b860298], Weight: 0.6, Resize Mode: Crop and Resize, Processor Res: 512, Threshold A: 1.0, Threshold B: 0.5, Guidance Start: 0.0, Guidance End: 1.0, Pixel Perfect: True, Control Mode: Balanced",
             "TI hashes": "\"ng_deepnegative_v1_75t: 54e7e4826d53\"",
             // "Pad conds": "True",
             "Version": "v1.9.4"
@@ -748,7 +1085,7 @@ Steps: 25, Sampler: Euler, Schedule type: Automatic, CFG scale: 7, Seed: 8486806
             "Denoising strength": "0.75",
             "Clip skip": "2",
             "Tiled Diffusion": `{"Method": "MultiDiffusion", "Tile tile width": 96, "Tile tile height": 96, "Tile Overlap": 48, "Tile batch size": 4, "Keep input size": true, "NoiseInv": true, "NoiseInv Steps": 10, "NoiseInv Retouch": 1, "NoiseInv Renoise strength": 0.5, "NoiseInv Kernel size": 64}`,
-            "ControlNet 0": `"Module: tile_resample, Model: control_v11f1e_sd15_tile_fp16 [3b860298], Weight: 0.5, Resize Mode: Crop and Resize, Processor Res: 512, Threshold A: 1.0, Threshold B: 0.5, Guidance Start: 0.0, Guidance End: 1.0, Pixel Perfect: True, Control Mode: Balanced"`,
+            "ControlNet 0": "Module: tile_resample, Model: control_v11f1e_sd15_tile_fp16 [3b860298], Weight: 0.5, Resize Mode: Crop and Resize, Processor Res: 512, Threshold A: 1.0, Threshold B: 0.5, Guidance Start: 0.0, Guidance End: 1.0, Pixel Perfect: True, Control Mode: Balanced",
             // "Pad conds": "True",
             "Version": "v1.9.4",
         };
@@ -1014,7 +1351,8 @@ classic, medieval, noble`.trim(),
                     "name": "IMAGE",
                     "type": "IMAGE",
                     "links": [
-                      9
+                      9,
+                      13
                     ],
                     "slot_index": 0,
                     "label": "图像"
