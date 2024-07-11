@@ -8,6 +8,7 @@ from pathlib import Path
 from threading import Thread
 from functools import lru_cache
 from urllib.parse import urlparse
+from ast import literal_eval
 from .kclogger import logger
 from .translations import LANG_TEXT
 from .timer import Timer
@@ -653,10 +654,84 @@ class WebUIToComfyUI:
         "Exponential": "exponential",
         "SGM Uniform": "sgm_uniform",
     }
+    PREPROCESSOR_W2C = {
+        "animal_openpose": "AnimalPosePreprocessor",
+        "blur_gaussian": "*TilePreprocessor",
+        "canny": "CannyEdgePreprocessor",
+        "densepose (pruple bg & purple torso)": "DensePosePreprocessor",
+        "densepose_parula (black bg & blue torso)": "DensePosePreprocessor",
+        "depth_anything": "DepthAnythingPreprocessor",
+        "depth_anything_v2": "DepthAnythingV2Preprocessor",
+        "depth_hand_refiner": "MeshGraphormer+ImpactDetector-DepthMapPreprocessor",
+        "depth_leres": "LeReS-DepthMapPreprocessor",
+        "depth_leres++": "*LeReS-DepthMapPreprocessor",
+        "depth_midas": "MiDaS-DepthMapPreprocessor",
+        "depth_zoe": "Zoe-DepthMapPreprocessor",
+        "dw_openpose_full": "DWPreprocessor",
+        "facexlib": "",
+        "inpaint_global_harmonious": "",
+        "inpaint_only": "InpaintPreprocessor",
+        "inpaint_only+lama": "",
+        "instant_id_face_embedding": "",
+        "instant_id_face_keypoints": "",
+        "invert (from white bg & black line)": "ImageInvert",
+        "ip-adapter-auto": "IPAdapter+IPAdapterUnifiedLoader",
+        "ip-adapter_clip_g": "IPAdapter+IPAdapterUnifiedLoader",
+        "ip-adapter_clip_h": "IPAdapter+IPAdapterUnifiedLoader",
+        "ip-adapter_clip_sdxl_plus_vith": "IPAdapter+IPAdapterUnifiedLoader",
+        "ip-adapter_face_id": "IPAdapterFaceID+IPAdapterUnifiedLoaderFaceID",
+        "ip-adapter_face_id_plus": "IPAdapterFaceID+IPAdapterUnifiedLoaderFaceID",
+        "ip-adapter_pulid": "",
+        "lineart_anime": "AnimeLineArtPreprocessor",
+        "lineart_anime_denoise": "",
+        "lineart_coarse": "LineArtPreprocessor",
+        "lineart_realistic": "LineArtPreprocessor",
+        "lineart_standard (from white bg & black line)": "LineartStandardPreprocessor",
+        "mediapipe_face": "MediaPipe-FaceMeshPreprocessor",
+        "mlsd": "M-LSDPreprocessor",
+        "none": "",
+        "normal_bae": "BAE-NormalMapPreprocessor",
+        "normal_dsine": "DSINE-NormalMapPreprocessor",
+        "normal_midas": "MiDaS-NormalMapPreprocessor",
+        "openpose": "OpenposePreprocessor",
+        "openpose_face": "OpenposePreprocessor",
+        "openpose_faceonly": "OpenposePreprocessor",
+        "openpose_full": "OpenposePreprocessor",
+        "openpose_hand": "OpenposePreprocessor",
+        "recolor_intensity": "ImageIntensityDetector",
+        "recolor_luminance": "ImageLuminanceDetector",
+        "reference_adain": "",
+        "reference_adain+attn": "",
+        "reference_only": "",
+        "revision_clipvision": "",
+        "revision_ignore_prompt": "",
+        "scribble_hed": "FakeScribblePreprocessor",
+        "scribble_pidinet": "Scribble_PiDiNet_Preprocessor",
+        "scribble_xdog": "Scribble_XDoG_Preprocessor",
+        "seg_anime_face": "AnimeFace_SemSegPreprocessor",
+        "seg_ofade20k": "OneFormer-ADE20K-SemSegPreprocessor",
+        "seg_ofcoco": "OneFormer-COCO-SemSegPreprocessor",
+        "seg_ufade20k": "UniFormer-SemSegPreprocessor",
+        "shuffle": "ShufflePreprocessor",
+        "softedge_anyline": "",
+        "softedge_hed": "HEDPreprocessor",
+        "softedge_hedsafe": "HEDPreprocessor",
+        "softedge_pidinet": "PiDiNetPreprocessor",
+        "softedge_pidisafe": "PiDiNetPreprocessor",
+        "softedge_teed": "TEED_Preprocessor",
+        "t2ia_color_grid": "ColorPreprocessor",
+        "t2ia_sketch_pidi": "",
+        "t2ia_style_clipvision": "",
+        "threshold": "BinaryPreprocessor",
+        "tile_colorfix": "",
+        "tile_colorfix+sharp": "",
+        "tile_resample": "TilePreprocessor",
+    }
 
     def __init__(self, text: str = "", ):
         self.text: str = text
         self.params: dict = {}
+        self.parse_cn = False
 
     def is_webui_format(self):
         return "Negative prompt: " in self.text and "Steps: " in self.text
@@ -669,6 +744,29 @@ class WebUIToComfyUI:
     def with_efficient(self):
         registered_node_types = self.get_registered_node_types()
         return "Efficient Loader" in registered_node_types and "KSampler (Efficient)" in registered_node_types
+
+    def apply_nodes_offset(this, nodes, offset=None):
+        if offset is None:
+            return
+        for node in nodes:
+            node["pos"][0] += offset[0]
+            node["pos"][1] += offset[1]
+
+    def find_following_nodes(self, wk, node, _nodes=None):
+        if _nodes is None:
+            _nodes = []
+        for out in node.get("outputs", []):
+            for link_id in out.get("links", []) or []:
+                _l = next((l for l in wk["links"] if l[0] == link_id), None)
+                if not _l:
+                    continue
+                _in = next((n for n in wk["nodes"] if n["id"] == _l[3]), None)
+                if not _in:
+                    continue
+                if _in not in _nodes:
+                    _nodes.append(_in)
+                self.find_following_nodes(wk, _in, _nodes)
+        return _nodes
 
     def make_link(self, workflow, out_node, out_index, in_node, in_index):
         last_link_id = workflow["last_link_id"] + 1
@@ -738,6 +836,7 @@ class WebUIToComfyUI:
     def to_comfyui_format_base(self):
         params = self.params.copy()
         wk = self.base_workflow()
+        self.apply_nodes_offset(wk["nodes"], (-200, 63))
         np = wk["nodes"][0]
         pp = wk["nodes"][1]
         empty_image = wk["nodes"][2]
@@ -782,6 +881,7 @@ class WebUIToComfyUI:
                 ksampler["widgets_values"][4] = self.SAMPLERNAME_W2C[sampler_name]
             if scheduler_name in self.SCHEDULERNAME_W2C:
                 ksampler["widgets_values"][5] = self.SCHEDULERNAME_W2C[scheduler_name]
+            self._gen_control_net(wk, ksampler, pp, np)
 
         if "Denoising strength" in params:
             ksampler["widgets_values"][6] = params["Denoising strength"]
@@ -911,6 +1011,7 @@ class WebUIToComfyUI:
                 ksampler["widgets_values"][4] = self.SAMPLERNAME_W2C[sampler_name]
             if scheduler_name in self.SCHEDULERNAME_W2C:
                 ksampler["widgets_values"][5] = self.SCHEDULERNAME_W2C[scheduler_name]
+            self._gen_control_net(wk, ksampler, loader, loader)
 
         if "Denoising strength" in params:
             ksampler["widgets_values"][6] = params["Denoising strength"]
@@ -998,6 +1099,7 @@ class WebUIToComfyUI:
     def parse(self, text=None):
         self.text = text or self.text
         # self.test()
+        self.parse_cn = True
         self._parse(text)
         return self.params
 
@@ -1036,9 +1138,339 @@ class WebUIToComfyUI:
     def _control_net(self):
         if not re.search(r"(Control[nN]et \d+): ", self.text, re.S):
             return
+
+        def parse_cn_params(text):
+            params = {}
+            new_ver = "preprocessor params: " in text
+            if new_ver:
+                # Controlnet 0: "preprocessor: dw_openpose_full, model:
+                # control_v11p_sd15_openpose, weight: 1.0, starting/ending: (0.0, 1.0),
+                # resize mode: Crop and Resize, pixel_perfect: False, control mode:
+                # Balanced, preprocessor params: (1024, None, None)",
+                preprocessor = re.search("preprocessor: (.*?), ", text, re.S)[1]
+                model = re.search("model: (.*?), ", text, re.S)[1]
+                weight = re.search("weight: (.*?), ", text, re.S)[1]
+                starting_end = re.search(r"starting\/ending: \((.*?)\),", text, re.S)[1]
+                starting_end = literal_eval(f"[{starting_end}]") if starting_end else []
+                resize_mode = re.search("resize mode: (.*?), ", text, re.S)[1]
+                pixel_perfect = re.search("pixel_perfect: (.*?), ", text, re.S)[1] == "True"
+                control_mode = re.search("control mode: (.*?),", text, re.S)[1]
+                pp_params = re.search(r"preprocessor params: \((.*?)\)", text, re.S)[1]
+                # 去掉括号并按逗号分割
+                pp_params = literal_eval(f"[{pp_params}]") if pp_params else []
+
+                params = {
+                    "preprocessor": preprocessor,
+                    "model": model,
+                    "weight": weight,
+                    "starting_end": starting_end,
+                    "resize_mode": resize_mode,
+                    "preprocessor_params": pp_params,
+                    "pixel_perfect": pixel_perfect,
+                    "control_mode": control_mode,
+                }
+            else:
+                # "ControlNet 0": "Module: tile_resample, Model: control_v11f1e_sd15_tile_fp16 [3b860298], Weight: 0.6, Resize Mode: Crop and Resize, Processor Res: 512, Threshold A: 1.0, Threshold B: 0.5, Guidance Start: 0.0, Guidance End: 1.0, Pixel Perfect: True, Control Mode: Balanced",
+                preprocessor = re.search("Module: (.*?), ", text, re.S)[1]
+                model = re.search("Model: (.*?), ", text, re.S)[1]
+                weight = re.search("Weight: (.*?), ", text, re.S)[1]
+                resize_mode = re.search("Resize Mode: (.*?), ", text, re.S)[1]
+
+                pp_param_res = re.search("Processor Res: (.*?), ", text, re.S)[1]
+                pp_param_a = re.search("Threshold A: (.*?), ", text, re.S)[1]
+                pp_param_b = re.search("Threshold B: (.*?), ", text, re.S)[1]
+
+                starting = re.search("Guidance Start: (.*?), ", text, re.S)[1]
+                end = re.search("Guidance End: (.*?), ", text, re.S)[1]
+                pixel_perfect = re.search("Pixel Perfect: (.*?), ", text, re.S)[1]
+                pixel_perfect = pixel_perfect == "True"
+                control_mode = re.search("Control Mode: (.*?)$", text, re.S)[1]
+                params = {
+                    "preprocessor": preprocessor,
+                    "model": model,
+                    "weight": weight,
+                    "starting_end": [starting, end],
+                    "resize_mode": resize_mode,
+                    "preprocessor_params": [pp_param_res, pp_param_a, pp_param_b],
+                    "pixel_perfect": pixel_perfect,
+                    "control_mode": control_mode,
+                }
+            return params
         for cn in re.finditer(r'(Control[nN]et \d+): "(.*?)",', self.text, re.S):
-            self.params[cn[1]] = cn[2]
+            self.params[cn[1]] = parse_cn_params(cn[2]) if self.parse_cn else cn[2]
             self.text = self.text.replace(cn[0], "")
+
+    def _gen_control_net(this, wk, ksampler, out_p, out_n):
+        offset = 500
+        # CN部分
+        load_image_cn = {
+            "id": wk["last_node_id"] + 1,
+            "type": "LoadImage",
+            "pos": [320, 800],
+            "mode": 0,
+            "outputs": [
+                {
+                    "name": "IMAGE",
+                    "type": "IMAGE",
+                    "links": [],
+                    "shape": 3,
+                    "label": "图像",
+                    "slot_index": 0,
+                },
+                {
+                    "name": "MASK",
+                    "type": "MASK",
+                    "links": None,
+                    "shape": 3,
+                    "label": "遮罩",
+                },
+            ],
+            "widgets_values": ["xxx.png", "image"],
+        }
+        wk["nodes"].append(load_image_cn)
+        wk["last_node_id"] += 1
+        count = -1
+        for key, value in this.params.items():
+            if not key.lower().startswith("controlnet"):
+                continue
+            count += 1
+            last_node_id = wk["last_node_id"]
+            # 新增 aux 集成 preproccessor
+            aux_preprocessor = {
+                "id": last_node_id + 1,
+                "type": "AIO_Preprocessor",
+                "pos": [700 + offset * count, 640],
+                "mode": 0,
+                "inputs": [
+                    {
+                        "name": "image",
+                        "type": "IMAGE",
+                        "link": None,
+                        "label": "图像",
+                    },
+                ],
+                "outputs": [
+                    {
+                        "name": "IMAGE",
+                        "type": "IMAGE",
+                        "links": [],
+                        "shape": 3,
+                        "label": "图像",
+                        "slot_index": 0,
+                    },
+                ],
+                "widgets_values": ["CannyEdgePreprocessor", 512],
+            }
+            # 新增 apply controlnet
+            apply_controlnet = {
+                "id": last_node_id + 2,
+                "type": "ControlNetApplyAdvanced",
+                "pos": [710 + offset * count, 270],
+                "mode": 0,
+                "inputs": [
+                    {
+                        "name": "positive",
+                        "type": "CONDITIONING",
+                        "link": None,
+                        "label": "正面条件",
+                    },
+                    {
+                        "name": "negative",
+                        "type": "CONDITIONING",
+                        "link": None,
+                        "label": "负面条件",
+                    },
+                    {
+                        "name": "control_net",
+                        "type": "CONTROL_NET",
+                        "link": None,
+                        "label": "ControlNet",
+                    },
+                    {
+                        "name": "image",
+                        "type": "IMAGE",
+                        "link": None,
+                        "label": "图像",
+                    },
+                ],
+                "outputs": [
+                    {
+                        "name": "positive",
+                        "type": "CONDITIONING",
+                        "links": [],
+                        "shape": 3,
+                        "label": "正面条件",
+                        "slot_index": 0,
+                    },
+                    {
+                        "name": "negative",
+                        "type": "CONDITIONING",
+                        "links": [20],
+                        "shape": 3,
+                        "label": "负面条件",
+                        "slot_index": 1,
+                    },
+                ],
+                "widgets_values": [1, 0, 1],
+            }
+            controlnet_loader = {
+                "id": last_node_id + 3,
+                "type": "ControlNetLoader",
+                "pos": [720 + offset * count, 500],
+                "mode": 0,
+                "outputs": [
+                    {
+                        "name": "CONTROL_NET",
+                        "type": "CONTROL_NET",
+                        "links": [],
+                        "shape": 3,
+                        "label": "ControlNet",
+                    },
+                ],
+                "widgets_values": ["xxx.pth", None],
+            }
+            wk["last_node_id"] += 3
+            wk["nodes"].extend([aux_preprocessor, apply_controlnet, controlnet_loader])
+            # 参数处理
+            if value["preprocessor"] in this.PREPROCESSOR_W2C:
+                pmodel = this.PREPROCESSOR_W2C[value["preprocessor"]]
+                pmodel = pmodel or aux_preprocessor["widgets_values"][0]
+                aux_preprocessor["widgets_values"][0] = pmodel
+
+            aux_preprocessor["widgets_values"][1] = value["preprocessor_params"][0]
+            # controlnet_loader["widgets_values"][0] = value["model"]
+
+            cn_model = value["model"]
+            if "[" in cn_model and "]" in cn_model:
+                cn_model = cn_model[: cn_model.find("[")].strip()
+            cn_model2 = cn_model.replace("_", "-")
+
+            registered_node_types = this.get_registered_node_types()
+            node_type = registered_node_types[controlnet_loader["type"]]
+            ml = node_type.get("input", {}).get("required", {}).get("control_net_name", [[]])[0]
+            ml = ml or []
+            find_cn_model = ml[0] if ml else ""
+            for _m in ml or []:
+                sep_i = _m.rfind("/")
+                if (_m[:sep_i + 1].split(".")[0] in [cn_model, cn_model2]):
+                    find_cn_model = _m
+            controlnet_loader["widgets_values"][0] = find_cn_model
+            apply_controlnet["widgets_values"][0] = value["weight"]
+            apply_controlnet["widgets_values"][1] = value["starting_end"][0]
+            apply_controlnet["widgets_values"][2] = value["starting_end"][1]
+            this.make_link(wk, load_image_cn, 0, aux_preprocessor, 0)
+            this.make_link(wk, controlnet_loader, 0, apply_controlnet, 2)
+            this.make_link(wk, aux_preprocessor, 0, apply_controlnet, 3)
+            # 完美像素
+            if value["pixel_perfect"]:
+                aux_preprocessor["inputs"].append({
+                    "name": "resolution",
+                    "type": "INT",
+                    "link": None,
+                    "widget": {
+                        "name": "resolution",
+                    },
+                    "label": "分辨率",
+                })
+                gen_res = {
+                    "id": wk["last_node_id"] + 1,
+                    "type": "ImageGenResolutionFromImage",
+                    "pos": [690 + offset * count, 950],
+                    "mode": 0,
+                    "inputs": [
+                        {
+                            "name": "image",
+                            "type": "IMAGE",
+                            "link": None,
+                            "label": "图像",
+                        },
+                    ],
+                    "outputs": [
+                        {
+                            "name": "IMAGE_GEN_WIDTH (INT)",
+                            "type": "INT",
+                            "links": [],
+                            "shape": 3,
+                            "label": "宽度(整数)",
+                            "slot_index": 0,
+                        },
+                        {
+                            "name": "IMAGE_GEN_HEIGHT (INT)",
+                            "type": "INT",
+                            "links": [],
+                            "shape": 3,
+                            "label": "高度(整数)",
+                            "slot_index": 1,
+                        },
+                    ],
+                }
+                pixel_perfect = {
+                    "id": wk["last_node_id"] + 2,
+                    "type": "PixelPerfectResolution",
+                    "pos": [680 + offset * count, 780],
+                    "mode": 0,
+                    "inputs": [
+                        {
+                            "name": "original_image",
+                            "type": "IMAGE",
+                            "link": None,
+                            "label": "图像",
+                        },
+                        {
+                            "name": "image_gen_width",
+                            "type": "INT",
+                            "link": None,
+                            "widget": {
+                                "name": "image_gen_width",
+                            },
+                            "label": "宽度",
+                        },
+                        {
+                            "name": "image_gen_height",
+                            "type": "INT",
+                            "link": None,
+                            "widget": {
+                                "name": "image_gen_height",
+                            },
+                            "label": "高度",
+                        },
+                    ],
+                    "outputs": [
+                        {
+                            "name": "RESOLUTION (INT)",
+                            "type": "INT",
+                            "links": [],
+                            "shape": 3,
+                            "label": "分辨率(整数)",
+                            "slot_index": 0,
+                        },
+                    ],
+                    "widgets_values": [512, 512, "Just Resize"],
+                }
+                wk["last_node_id"] += 2
+                wk["nodes"].extend([gen_res, pixel_perfect])
+                this.make_link(wk, load_image_cn, 0, gen_res, 0)
+                this.make_link(wk, load_image_cn, 0, pixel_perfect, 0)
+                this.make_link(wk, gen_res, 0, pixel_perfect, 1)
+                this.make_link(wk, gen_res, 1, pixel_perfect, 2)
+                this.make_link(wk, pixel_perfect, 0, aux_preprocessor, 1)
+
+            if out_p["type"] == "Efficient Loader":
+                this.make_link(wk, out_p, 1, apply_controlnet, 0)
+                this.make_link(wk, out_n, 2, apply_controlnet, 1)
+            elif out_p["type"] == "CLIPTextEncode":
+                this.make_link(wk, out_p, 0, apply_controlnet, 0)
+                this.make_link(wk, out_n, 0, apply_controlnet, 1)
+            elif out_p["type"] == "ControlNetApplyAdvanced":
+                this.make_link(wk, out_p, 0, apply_controlnet, 0)
+                this.make_link(wk, out_n, 1, apply_controlnet, 1)
+            out_p = apply_controlnet
+            out_n = apply_controlnet
+            this.make_link(wk, apply_controlnet, 0, ksampler, 1)
+            this.make_link(wk, apply_controlnet, 1, ksampler, 2)
+            follow_nodes = [ksampler]
+            this.find_following_nodes(wk, ksampler, follow_nodes)
+            this.apply_nodes_offset(follow_nodes, (offset, 0))
 
     def _ti_hashes(self):
         th = re.search('TI hashes: (".*?"),', self.text, re.S)
@@ -1480,7 +1912,8 @@ classic, medieval, noble
                             "name": "IMAGE",
                             "type": "IMAGE",
                             "links": [
-                                9
+                                9,
+                                13
                             ],
                             "slot_index": 0,
                             "label": "图像"
