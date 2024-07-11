@@ -50,6 +50,79 @@ class WebUIToComfyUI
         "Exponential": "exponential",
         "SGM Uniform": "sgm_uniform",
     };
+    static PREPROCESSOR_W2C = {
+        "animal_openpose": "AnimalPosePreprocessor",
+        "blur_gaussian": "*TilePreprocessor",
+        "canny": "CannyEdgePreprocessor",
+        "densepose (pruple bg & purple torso)": "DensePosePreprocessor",
+        "densepose_parula (black bg & blue torso)": "DensePosePreprocessor",
+        "depth_anything": "DepthAnythingPreprocessor",
+        "depth_anything_v2": "DepthAnythingV2Preprocessor",
+        "depth_hand_refiner": "MeshGraphormer+ImpactDetector-DepthMapPreprocessor",
+        "depth_leres": "LeReS-DepthMapPreprocessor",
+        "depth_leres++": "*LeReS-DepthMapPreprocessor",
+        "depth_midas": "MiDaS-DepthMapPreprocessor",
+        "depth_zoe": "Zoe-DepthMapPreprocessor",
+        "dw_openpose_full": "DWPreprocessor",
+        "facexlib": "",
+        "inpaint_global_harmonious": "",
+        "inpaint_only": "InpaintPreprocessor",
+        "inpaint_only+lama": "",
+        "instant_id_face_embedding": "",
+        "instant_id_face_keypoints": "",
+        "invert (from white bg & black line)": "ImageInvert",
+        "ip-adapter-auto": "IPAdapter+IPAdapterUnifiedLoader",
+        "ip-adapter_clip_g": "IPAdapter+IPAdapterUnifiedLoader",
+        "ip-adapter_clip_h": "IPAdapter+IPAdapterUnifiedLoader",
+        "ip-adapter_clip_sdxl_plus_vith": "IPAdapter+IPAdapterUnifiedLoader",
+        "ip-adapter_face_id": "IPAdapterFaceID+IPAdapterUnifiedLoaderFaceID",
+        "ip-adapter_face_id_plus": "IPAdapterFaceID+IPAdapterUnifiedLoaderFaceID",
+        "ip-adapter_pulid": "",
+        "lineart_anime": "AnimeLineArtPreprocessor",
+        "lineart_anime_denoise": "",
+        "lineart_coarse": "LineArtPreprocessor",
+        "lineart_realistic": "LineArtPreprocessor",
+        "lineart_standard (from white bg & black line)": "LineartStandardPreprocessor",
+        "mediapipe_face": "MediaPipe-FaceMeshPreprocessor",
+        "mlsd": "M-LSDPreprocessor",
+        "none": "",
+        "normal_bae": "BAE-NormalMapPreprocessor",
+        "normal_dsine": "DSINE-NormalMapPreprocessor",
+        "normal_midas": "MiDaS-NormalMapPreprocessor",
+        "openpose": "OpenposePreprocessor",
+        "openpose_face": "OpenposePreprocessor",
+        "openpose_faceonly": "OpenposePreprocessor",
+        "openpose_full": "OpenposePreprocessor",
+        "openpose_hand": "OpenposePreprocessor",
+        "recolor_intensity": "ImageIntensityDetector",
+        "recolor_luminance": "ImageLuminanceDetector",
+        "reference_adain": "",
+        "reference_adain+attn": "",
+        "reference_only": "",
+        "revision_clipvision": "",
+        "revision_ignore_prompt": "",
+        "scribble_hed": "FakeScribblePreprocessor",
+        "scribble_pidinet": "Scribble_PiDiNet_Preprocessor",
+        "scribble_xdog": "Scribble_XDoG_Preprocessor",
+        "seg_anime_face": "AnimeFace_SemSegPreprocessor",
+        "seg_ofade20k": "OneFormer-ADE20K-SemSegPreprocessor",
+        "seg_ofcoco": "OneFormer-COCO-SemSegPreprocessor",
+        "seg_ufade20k": "UniFormer-SemSegPreprocessor",
+        "shuffle": "ShufflePreprocessor",
+        "softedge_anyline": "",
+        "softedge_hed": "HEDPreprocessor",
+        "softedge_hedsafe": "HEDPreprocessor",
+        "softedge_pidinet": "PiDiNetPreprocessor",
+        "softedge_pidisafe": "PiDiNetPreprocessor",
+        "softedge_teed": "TEED_Preprocessor",
+        "t2ia_color_grid": "ColorPreprocessor",
+        "t2ia_sketch_pidi": "",
+        "t2ia_style_clipvision": "",
+        "threshold": "BinaryPreprocessor",
+        "tile_colorfix": "",
+        "tile_colorfix+sharp": "",
+        "tile_resample": "TilePreprocessor",
+    }
     constructor(text){
         this.text = text;
         this.parse_cn = false;
@@ -712,9 +785,30 @@ ControlNet 2: "Module: tile_resample, Model: control_v11f1e_sd15_tile_fp16 [3b86
         wk["last_node_id"] += 3;
         wk["nodes"].push(aux_preprocessor, apply_controlnet, controlnet_loader);
         // 参数处理
-        aux_preprocessor["widgets_values"][0] = value["preprocessor"];
+        if(value["preprocessor"] in WebUIToComfyUI.PREPROCESSOR_W2C)
+        {
+          var pmodel = WebUIToComfyUI.PREPROCESSOR_W2C[value["preprocessor"]];
+          pmodel = pmodel || aux_preprocessor["widgets_values"][0];
+          aux_preprocessor["widgets_values"][0] = pmodel;
+        }
         aux_preprocessor["widgets_values"][1] = value["preprocessor_params"][0];
-        controlnet_loader["widgets_values"][0] = value["model"];
+        // controlnet_loader["widgets_values"][0] = value["model"];
+        
+        var cn_model = value["model"];
+        if (cn_model.includes("[") && cn_model.includes("]"))
+          cn_model = cn_model.slice(0, cn_model.indexOf("[")).trim();
+        var cn_model2 = cn_model.replaceAll("_", "-");
+        var node_type = LiteGraph.registered_node_types[controlnet_loader.type];
+        var ml = node_type?.nodeData?.input?.required?.control_net_name?.[0];
+        ml = ml || [];
+        var find_cn_model = "";
+        if (ml) find_cn_model = find_cn_model || ml[0];
+        for (var _m of ml || []) {
+          var sep_i = _m.lastIndexOf("/");
+          if (_m.slice(sep_i + 1).split(".")[0] in [cn_model, cn_model2])
+            find_cn_model = _m;
+        }
+        controlnet_loader["widgets_values"][0] = find_cn_model;
         apply_controlnet["widgets_values"][0] = value["weight"];
         apply_controlnet["widgets_values"][1] = value["starting_end"][0];
         apply_controlnet["widgets_values"][2] = value["starting_end"][1];
