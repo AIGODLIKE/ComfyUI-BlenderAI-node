@@ -1,11 +1,13 @@
 {
-    "Image2Video": {
-        "title": "图像到视频",
+
+    "ToonCrafterNode": {
+        "title": "ToonCrafter节点",
         "inputs": {
             "image": "图像1",
             "image2": "图像2"
         },
         "widgets": {
+            "ckpt_name": "模型",
             "prompt": "提示词",
             "seed": "随机种",
             "control_after_generate": "运行后操作",
