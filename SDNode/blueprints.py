@@ -1761,7 +1761,7 @@ class 截图(BluePrintBase):
         from ..External.mss.tools import to_png
         x1, y1, x2, y2 = self.x1, self.y1, self.x2, self.y2
         if x1 == x2 or y1 == y2:
-            logger.error("%s: %s", _T('Error Capture Screen Region'), (x1, y1, x2, y2))
+            logger.error("%s: %s", _T('Error Capturing Screen Region'), (x1, y1, x2, y2))
             return
         # print("GET REGION:", x1, y1, x2, y2)
         with mss() as sct:
@@ -1790,7 +1790,7 @@ class 截图(BluePrintBase):
             else:
                 x1, y1, x2, y2 = (0, 0, 0, 0)
             if x1 == x2 or y1 == y2:
-                logger.error("%s: %s", _T('Error Capture Screen Region'), (x1, y1, x2, y2))
+                logger.error("%s: %s", _T('Error Capturing Screen Region'), (x1, y1, x2, y2))
                 return
             self.x1, self.y1, self.x2, self.y2 = x1, y1, x2, y2
             s._capture(self)

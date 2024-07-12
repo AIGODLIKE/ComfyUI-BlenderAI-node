@@ -150,7 +150,7 @@ class Prop(bpy.types.PropertyGroup):
                 if mod.__name__ == package:
                     if not mod.bl_info['show_expanded']:
                         bpy.ops.preferences.addon_expand(module=package)
-    open_pref: bpy.props.BoolProperty(default=False, name="Open Addon Preference", update=open_pref_update)
+    open_pref: bpy.props.BoolProperty(default=False, name="Open Addon Preferences", update=open_pref_update)
 
     def restart_webui_update(self, context):
         if self["restart_webui"]:

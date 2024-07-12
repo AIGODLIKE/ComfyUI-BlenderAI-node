@@ -157,7 +157,7 @@ class Panel(bpy.types.Panel):
         row = layout.row(align=True)
         row.alert = True
         row.scale_y = 2
-        row.operator(Ops.bl_idname, text="Launch/Connect ComfyUI", icon="PLAY").action = "Launch"
+        row.operator(Ops.bl_idname, text="Launch/Connect to ComfyUI", icon="PLAY").action = "Launch"
         row.prop(bpy.context.scene.sdn, "show_pref_general", text="", icon="PREFERENCES")
         if bpy.context.scene.sdn.show_pref_general:
             AddonPreference.draw_general(get_pref(), layout.box())
@@ -198,7 +198,7 @@ def draw_header_button(self, context):
         layout = self.layout
         col = layout.column()
         col.alert = True
-        col.operator(Ops.bl_idname, text="", icon="PLAY").action = "Submit"
+        col.operator(Ops.bl_idname, text="", text_ctxt=ctxt, icon="PLAY").action = "Submit"
 
 def draw_sdn_tofrom(self, context):
     layout = self.layout
