@@ -213,6 +213,8 @@ other = {
     "Toggle socket": "切换Socket/属性",
     "Toggle socket visibility": "切换Socket显示隐藏",
     "Toggle whether a socket is or isn't used for input": "切换Socket/属性",
+    "Set Render Resolution": "设置渲染分辨率",
+    "Set the render resolution to be the same as this node's image": "设置渲染分辨率与该节点的图像相同",
     # SDNode/blueprints.py
     "Non-Standard Enum": "非标准枚举",
     "Capture Screen": "截图",

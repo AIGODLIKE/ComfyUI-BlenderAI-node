@@ -1404,7 +1404,8 @@ class Ops_Link_Mask(bpy.types.Operator):
 
 class Set_Render_Res(bpy.types.Operator):
     bl_idname = "sdn.set_render_res"
-    bl_label = ""
+    bl_label = "Set Render Resolution"
+    bl_description = "Set the render resolution to be the same as this node's image"
     bl_translation_context = ctxt
     node_name: bpy.props.StringProperty(default="")
 
