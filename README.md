@@ -3,15 +3,17 @@ This is an addon for using [ComfyUI](https://github.com/comfyanonymous/ComfyUI) 
 ## Features
 
 - Converts ComfyUI nodes to Blender nodes
-- Edit launch arguments in addon preferences, or just connect to a running ComfyUI process
-- Add some special Blender nodes like camera input or compositing data
+- Editable launch arguments in the addon's preferences, or just connect to a running ComfyUI process
+- Adds some special Blender nodes like camera input or compositing data
 - Draw masks with Grease pencil
 - Blender-like node groups
 - Queue batch processing with mission excel
 - Node tree/workflow presets and node group presets
 - Image previews for models in the Load Checkpoint node
 - Can directly input or replace the 3D models in Blender
-- By using composite can output perfect controlnet image
+- Composition output perfect controlnet image
+- Live preview when sampling
+- Easily move images to and from Blender's image editor
 
 Here are some workflow showcases:
 You can find all these workflow presets in `ComfyUI-BlenderAI-node/presets/`
