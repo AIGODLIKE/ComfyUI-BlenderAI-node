@@ -2,7 +2,7 @@ import bpy
 import platform
 from bl_ui.properties_paint_common import UnifiedPaintPanel
 from bpy.types import Context
-from .ops import Ops, Load_History, Copy_Tree, Load_Batch, Fetch_Node_Status, Clear_Node_Cache, SDNode_To_Image, Image_To_SDNode
+from .ops import Ops, Load_History, Copy_Tree, Load_Batch, Fetch_Node_Status, Clear_Node_Cache, SDNode_To_Image, Image_To_SDNode, Image_Set_Channel_Packed
 from .translations import ctxt
 from .SDNode import TaskManager, FakeServer
 from .SDNode.tree import TREE_TYPE
@@ -211,6 +211,7 @@ def draw_sdn_tofrom(self, context):
 def draw_imeditor_tofrom(self, context):
     layout = self.layout
     layout.separator()
+    layout.operator(Image_Set_Channel_Packed.bl_idname, text_ctxt=ctxt)#, icon="MOD_MASK")
     layout.operator(Image_To_SDNode.bl_idname, text="To ComfyUI Node Editor", text_ctxt=ctxt, icon="EXPORT")
     layout.operator(SDNode_To_Image.bl_idname, text="From ComfyUI Node Editor", text_ctxt=ctxt, icon="IMPORT")
 

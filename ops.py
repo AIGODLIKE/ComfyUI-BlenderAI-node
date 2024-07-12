@@ -1082,6 +1082,22 @@ class Image_To_SDNode(bpy.types.Operator):
             sdn_area.spaces[0].node_tree.nodes.active = new_node
 
         return {'FINISHED'}
+    
+# There are a few cases in which images can't have their alpha changed through the UI, and channel packed alpha is needed to paint them properly.
+# This operator lets the user change the alpha forcefully.
+class Image_Set_Channel_Packed(bpy.types.Operator):
+    bl_idname = "sdn.image_set_channel_packed"
+    bl_label = "Set Image Alpha to Channel Packed"
+    bl_description = "Set the current image's alpha to channel packed, even if the option is not displayed in the UI.\nThis allows masks with color to be properly painted onto the image"
+    bl_translation_context = ctxt
+    
+    @classmethod
+    def poll(cls, context: Context):
+        return context.space_data.type == 'IMAGE_EDITOR' and context.space_data.image and context.space_data.image.alpha_mode != 'CHANNEL_PACKED'
+    
+    def execute(self, context):
+        context.space_data.image.alpha_mode = 'CHANNEL_PACKED'
+        return {'FINISHED'}
 
 @bpy.app.handlers.persistent
 def clear(_):

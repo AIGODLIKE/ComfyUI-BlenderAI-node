@@ -349,6 +349,8 @@ other = {
     "The image is not using channel packed alpha. If you have painted a mask, the color underneath is black!": "图像没有使用通道打包 Alpha。如果您绘制了遮罩，下面的颜色就是黑色的！",
     "Force Centered": "以力为中心",
     "If creating a new node, put it in the centre of the editor": "如果创建一个新节点，请将其放在编辑器的中心位置",
+    "Set Image Alpha to Channel Packed": "将图像 Alpha 设置为通道打包",
+    "Set the current image's alpha to channel packed, even if the option is not displayed in the UI.\nThis allows masks with color to be properly painted onto the image": "将当前图像的 alpha 设置为通道打包，即使用户界面中未显示该选项。\n这样就可以在图像上正确绘制带颜色的遮罩",
     # ui.py
     "ComfyUI": "圣杯节点",
     "ClearTask": "清理任务",

@@ -1453,6 +1453,7 @@ class 存储(BluePrintBase):
                         img_src.source = "FILE"
                         if img_src.packed_file:
                             img_src.unpack(method="REMOVE")
+                        img_src.alpha_mode = 'CHANNEL_PACKED' # For painting masks from inside Blender
                         img_src.reload()
                 Timer.put((f, image, img))
         post_fn = partial(__post_fn__, self, mode=self.mode, image=self.image)
