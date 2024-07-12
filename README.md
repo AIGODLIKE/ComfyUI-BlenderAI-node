@@ -3,20 +3,18 @@ This is an addon for using [ComfyUI](https://github.com/comfyanonymous/ComfyUI) 
 ## Features
 
 - Converts ComfyUI nodes to Blender nodes
-- Edit launch arguments in the n-menu (sidebar)/addon preferences, or just connect to a running ComfyUI process
-- Support for Blender nodes like camera input or compositing data
+- Edit launch arguments in addon preferences, or just connect to a running ComfyUI process
+- Add some special Blender nodes like camera input or compositing data
 - Draw masks with Grease pencil
 - Blender-like node groups
 - Queue batch processing with mission excel
 - Node tree/workflow presets and node group presets
-- Image previews for models in the Load Checkpoint / LoRA node
+- Image previews for models in the Load Checkpoint node
 - Can directly input or replace the 3D models in Blender
 - By using composite can output perfect controlnet image
-- Conveniently move images to and from the Image Editor
 
 Here are some workflow showcases:
 You can find all these workflow presets in `ComfyUI-BlenderAI-node/presets/`
-
 ### Camera input
 ![image](https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/f087f254-5486-4d9f-9a13-d327abed3e14)
 
@@ -35,6 +33,10 @@ https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/cb96dd60-b9
 ### Pose characters using Blender's bones
 
 ![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/484c12bf-55b8-4baf-92df-e422fd900cbf)
+
+### Automatic AI gap animation(ToonCrafter)
+
+https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/2c21173b-84e7-433c-bf2f-e61bcca7162c
 
 # Installation
 
@@ -127,10 +129,20 @@ Or, switch the "Server Type" in the addon's preferences to remote server so that
 5. **Add nodes/presets**
 
 Like in the other Node Editors, you can use the shortcut `Shift`+`A` to bring up the Add menu to add nodes. You can also click on the "Replace Node Tree" or "Append Node Tree" buttons in the sidebar to add/append a node tree.
+
 **For image previews and input, you must use the Blender-specific nodes this addon adds, otherwise the results may not be displayed properly! 
 Using the Blender-specific nodes won't affect generation, results will still be saved as ComfyUI standard data.**
 
 ![image](https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/22c68423-07aa-4a07-93a9-9354880276e1)
+
+6. **Generate**
+
+By clicking `Excute Node Tree` in n-panel, or the little red button on the right in header in node editor, current node tree will add to queue list.
+You can cancel current running task by click `Cancel`, clear all task list by click `ClearTask`.
+
+Loop execution is in advanced executing option at the side of `Excute Node Tree` button.
+
+![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/0beacc48-700c-45ec-a460-146ab27905fe)
 
 ## Special Nodes for Blender
 
@@ -140,8 +152,8 @@ Using the Blender-specific nodes won't affect generation, results will still be 
 
 - Input image from directory
 - Input image list from directory
-- Input image from render
-- Input image from viewport
+- Input image from render(Supports current and selected frames)
+- Input image from viewport(Supports real-time refresh)
 
 ### Mask
 
@@ -193,8 +205,6 @@ By pressing `R` when the cursor is near a widget, a pie menu will display all no
 Hold `F` and drag the cursor to a mask node, it will automatically create a camera to genarate mask from the scene
 
 ![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/d97805e5-4f54-4e1a-9fe0-0b98192baab9)
-
-
 
 ## Notes
 - Not every node can work perfectly in Blender, for example nodes regarding videos
@@ -289,6 +299,9 @@ Here are some interesting nodes we've tested in Blender
 |[WAS Suite](https://github.com/WASasquatch/was-node-suite-comfyui)|?|
 |[WD14-Tagger](https://github.com/pythongosssss/ComfyUI-WD14-Tagger)|√|
 |[zfkun](https://github.com/zfkun/ComfyUI_zfkun.git)|√|
+
+# Change Log
+See [Change Log](./CHANGE_LOG.md).
 
 # Links
 ## Tutorial

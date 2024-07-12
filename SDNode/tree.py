@@ -148,6 +148,13 @@ class CFNodeTree(NodeTree):
         def _set_id_pool(self, value):
             if not isinstance(value, set):
                 raise TypeError("ID POOL must be set")
+            try:
+                self.inner_set(value)
+            except AttributeError:
+                logger.error(traceback.format_exc())
+                Timer.put((self.inner_set, value))
+
+        def inner_set(self, value):
             self.tree["ID_POOL"] = pickle.dumps(value)
 
     def get_id_pool(self) -> Pool:
