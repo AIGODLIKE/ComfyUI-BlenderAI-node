@@ -353,6 +353,8 @@ class BluePrintBase:
             reg_name = get_reg_name(inp_name)
             try:
                 v = data["widgets_values"].pop(0)
+            except KeyError:
+                v = data["widgets_values"].pop(inp_name)
             except IndexError:
                 logger.info("%s -> %s<%s>%s " + reg_name, _T('|IGNORED|'), _T('Load'), self.class_type, _T('Params not matching with current node'))
                 continue
