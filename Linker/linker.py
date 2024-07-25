@@ -533,7 +533,7 @@ class Comfyui_Swapper(bpy.types.Operator):
     @classmethod
     def poll(cls, context):
         from ..SDNode.tree import TREE_TYPE
-        return context.space_data.tree_type == TREE_TYPE
+        return context.space_data.type == 'NODE_EDITOR' and context.space_data.tree_type == TREE_TYPE
 
     def NextAssessment(self, context):
         P.foundSocket = None
@@ -620,7 +620,7 @@ class Comfyui_Linker(bpy.types.Operator):
     @classmethod
     def poll(cls, context):
         from ..SDNode.tree import TREE_TYPE
-        return context.space_data.tree_type == TREE_TYPE
+        return context.space_data.type == 'NODE_EDITOR' and context.space_data.tree_type == TREE_TYPE
 
     def NextAssessment(self, context):
         callPos = context.space_data.cursor_location

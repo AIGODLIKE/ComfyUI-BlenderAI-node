@@ -3,6 +3,8 @@ import re
 import json
 import tempfile
 import time
+import re
+import uuid
 from typing import Any
 from pathlib import Path
 from bpy.types import Context, Event
@@ -76,21 +78,21 @@ class Ops(bpy.types.Operator):
         if action == "PresetFromClipBoard":
             desc = _T("Load from ClipBoard")
         elif action == "Launch":
-            desc = _T("Launch/Connect ComfyUI")
+            desc = _T("Launch/Connect to ComfyUI")
         elif action == "Restart":
             desc = _T("Restart ComfyUI")
         elif action == "Connect":
             desc = _T("Connect to existing & running ComfyUI server")
         elif action == "Submit":
-            desc = _T("Submit Task and with Clear Cache if Alt Pressed")
+            desc = _T("Submit Task, with Clear Cache if Alt pressed")
         elif action == "Close":
-            desc = _T("Close/Disconnect ComfyUI")
+            desc = _T("Close/Disconnect from ComfyUI")
         return desc
 
     def draw(self, context):
         layout = self.layout
         if self.action == "Submit" and not TaskManager.is_launched():
-            layout.label(text=_T("ComfyUI not Run,To Run?"), icon="INFO", text_ctxt=ctxt)
+            layout.label(text=_T("ComfyUI not running, run?"), icon="INFO", text_ctxt=ctxt)
         if self.action == "Save":
             if (Path(bpy.context.scene.sdn.presets_dir) / f"{self.save_name}.json").exists():
                 layout.alert = True
@@ -630,7 +632,7 @@ class Copy_Tree(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context: Context):
-        return bpy.context.space_data.edit_tree
+        return getattr(bpy.context.space_data, "edit_tree", False)
 
     def execute(self, context):
         tree: CFNodeTree = get_default_tree(context)
@@ -659,7 +661,7 @@ class Load_Batch(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context: Context):
-        return bpy.context.space_data.edit_tree
+        return getattr(bpy.context.space_data, "edit_tree", False)
 
     def invoke(self, context: Context, event: Event):
         # 弹出文件选择框
@@ -725,7 +727,7 @@ class Fetch_Node_Status(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context: Context):
-        return bpy.context.space_data.edit_tree
+        return getattr(bpy.context.space_data, "edit_tree", False)
 
     def execute(self, context):
         # from .SDNode.tree import rtnode_reg_diff
@@ -780,7 +782,7 @@ class NodeSearch(bpy.types.Operator):
 class Clear_Node_Cache(bpy.types.Operator):
     bl_idname = "sdn.clear_node_cache"
     bl_label = "Clear Node Cache"
-    bl_description = "If node parsing error, you can delete node cache by this button, then restart blender to use it normally"
+    bl_description = "If there is a node parsing error, you can delete the node cache with this button, then restart Blender"
     bl_translation_context = ctxt
 
     def execute(self, context):
@@ -874,7 +876,7 @@ def menu_sync_stencil_image(self: bpy.types.Menu, context: bpy.types.Context):
     if context.area in Sync_Stencil_Image.areas:
         col = self.layout.column()
         col.alert = True
-        col.operator(Sync_Stencil_Image.bl_idname, text="Stop Sync Stencil Image", icon="PAUSE").action = "Clear"
+        col.operator(Sync_Stencil_Image.bl_idname, text="Stop Syncing Stencil Image", icon="PAUSE").action = "Clear"
     else:
         self.layout.operator(Sync_Stencil_Image.bl_idname, icon="PLAY")
 
@@ -882,6 +884,213 @@ def menu_sync_stencil_image(self: bpy.types.Menu, context: bpy.types.Context):
 bpy.types.VIEW3D_PT_tools_brush_settings.append(menu_sync_stencil_image)
 # bpy.types.VIEW3D_PT_tools_brush_display.append(menu_sync_stencil_image)
 
+def sdn_get_image(node: bpy.types.Node):
+    if node.bl_idname in ('PreviewImage', '预览') and len(node.prev) > 0: # '预览' "Preview" Blender-side node
+        return node.prev[0].image
+
+    if node.bl_idname == '输入图像': # "Input Image" Blender-side node
+        return node.prev
+
+    if node.bl_idname == '存储' and node.mode == 'ToImage': # "Save" Blender-side node
+        return node.image
+
+    image = None
+
+    if node.bl_idname == 'SaveImage' or (node.bl_idname == '存储' and node.mode == 'Save'):
+        path = Path(node.output_dir)
+        prefix = node.filename_prefix
+        file_re = re.compile(f'{prefix}_([0-9]+)') # Should the _ at the end be included? 
+        biggest = (None, -1)
+        if (len(node.inputs) == 1 or node.inputs[1].connections == ()) and path.is_dir():
+            # Find newest image, by filename
+            for f in path.iterdir():
+                if f.is_file():
+                    match = file_re.match(f.stem)
+                    if match and int(match.groups()[0]) > biggest[1]:
+                        biggest = (f, int(match.groups()[0]))
+
+            # If found, see if loaded, create if not
+            if biggest[0] != None:
+                for im in bpy.data.images:
+                    if im.filepath == f.as_posix():
+                        image = im
+                        break
+                
+                if image == None:
+                    image = bpy.data.images.new(f.stem + f.suffix, 32, 32)
+                    image.source = 'FILE'
+                    image.filepath = f.as_posix()
+                
+                return image
+    
+    return image
+
+def get_imeditor(context: bpy.types.Context, check_for_image: bool = False):
+    for window in context.window_manager.windows:
+        for area in window.screen.areas:
+            if check_for_image:
+                if area.type == 'IMAGE_EDITOR' and area.spaces[0].image and len(area.spaces[0].image.pixels) > 0:
+                    return area
+            else:
+                if area.type == 'IMAGE_EDITOR' and not area.spaces[0].use_image_pin:
+                    return area
+    
+    return None
+
+def get_sdneditor(context: bpy.types.Context):
+    for window in context.window_manager.windows:
+        for area in window.screen.areas:
+            if area.type == 'NODE_EDITOR' and area.spaces[0].tree_type == TREE_TYPE and area.spaces[0].edit_tree:
+                return area
+    
+    return None
+
+class SDNode_To_Image(bpy.types.Operator):
+    bl_idname = "sdn.sdn_to_image"
+    bl_label = "ComfyUI node to Image Editor"
+    bl_description = "Open the selected Save/Preview/Input Image node's image in an Image Editor"
+    bl_translation_context = ctxt
+
+    @classmethod
+    def poll(cls, context: Context):
+        return (context.space_data.type == 'IMAGE_EDITOR' and context.space_data.image and get_sdneditor(context)) or \
+               (context.space_data.type == 'NODE_EDITOR' and context.space_data.tree_type == TREE_TYPE and get_imeditor(context))
+
+    def execute(self, context):
+
+        node = None
+        ime_area = None
+
+        if context.area.type == 'NODE_EDITOR':
+            node = context.active_node
+            ime_area = get_imeditor(context, False)
+                    
+        if context.area.type == 'IMAGE_EDITOR':
+            ime_area = context.area
+            sdn_area = get_sdneditor(context)
+            if not sdn_area:
+                self.report({'ERROR'}, "No ComfyUI Node Editor found!")
+            node = sdn_area.spaces[0].node_tree.nodes.active
+
+        if not node:
+            self.report({'ERROR'}, "No active ComfyUI node!")
+            return {'CANCELLED'}
+        if not ime_area:
+            self.report({'ERROR'}, "No Image Editor with an open unpinned image found!")
+            return {'CANCELLED'}
+
+        image = sdn_get_image(node)
+        if not image:
+            self.report({'ERROR'}, "Could not retrieve node image!")
+            return {'CANCELLED'}
+
+        ime_area.spaces[0].image = image
+        ime_area.spaces[0].image.alpha_mode = 'CHANNEL_PACKED'
+
+        return {'FINISHED'}
+    
+MODIFIED_IMAGE_SUFFIX = '_m'
+
+class Image_To_SDNode(bpy.types.Operator):
+    bl_idname = "sdn.image_to_sdn"
+    bl_label = "Image Editor to ComfyUI node"
+    bl_description = "Move the current image to a ComfyUI Node Editor node"
+    bl_translation_context = ctxt
+
+    force_centered: bpy.props.BoolProperty(name="Force Centered", description="If creating a new node, put it in the centre of the editor",
+                                           translation_context=ctxt, default=False)
+
+    @classmethod
+    def poll(cls, context: Context):
+
+        return (context.space_data.type == 'IMAGE_EDITOR' and context.space_data.image and get_sdneditor(context)) or \
+               (context.space_data.type == 'NODE_EDITOR' and context.space_data.tree_type == TREE_TYPE and get_imeditor(context, True))
+    
+    def execute(self, context):
+        sdn_area = None
+        ime_area = None
+        image = None
+        new_node_loc = None
+
+        if context.area.type == 'IMAGE_EDITOR':
+            ime_area = context.area
+            image = context.space_data.image
+            sdn_area = get_sdneditor(context)
+            
+            if not sdn_area:
+                self.report({'ERROR'}, "No ComfyUI Node Editor found!")
+                return {'CANCELLED'}
+            
+            new_node_loc = sdn_area.regions[3].view2d.region_to_view(sdn_area.x + sdn_area.width / 2.0, sdn_area.y + sdn_area.height / 2.0)
+            
+        if context.area.type == 'NODE_EDITOR':
+            sdn_area = context.area
+            ime_area = get_imeditor(context, True)
+            image = ime_area.spaces[0].image
+
+            if not ime_area:
+                self.report({'ERROR'}, "No Image Editor with an open image found!")
+                return {'CANCELLED'}
+            
+            if not self.force_centered:
+                new_node_loc = sdn_area.spaces[0].cursor_location
+            else:
+                new_node_loc = sdn_area.regions[3].view2d.region_to_view(sdn_area.x + sdn_area.width / 2.0, sdn_area.y + sdn_area.height / 2.0)
+
+        if image.is_dirty:
+            image.file_format = 'PNG'
+            if image.alpha_mode != 'CHANNEL_PACKED':
+                self.report({'WARNING'}, "The image is not using channel packed alpha. If you have painted a mask, the color underneath is black!")
+            
+            if image.source in ['VIEWER', 'GENERATED']: # viewer = render result
+                filename = f"render_{uuid.uuid4()}"
+                newpath = f"/tmp/{filename}.png"
+                image.alpha_mode = 'CHANNEL_PACKED'
+                image.save_render(filepath=newpath, scene=context.scene)
+                newim = bpy.data.images.new(image.name + MODIFIED_IMAGE_SUFFIX, 32, 32, alpha=True)
+                newim.source = 'FILE'
+                newim.filepath = newpath
+                ime_area.spaces[0].image = newim
+            else:
+                extensionless = image.filepath_raw[:image.filepath_raw.rfind(".")]
+                if not extensionless.endswith(MODIFIED_IMAGE_SUFFIX):
+                    newpath = extensionless + MODIFIED_IMAGE_SUFFIX + ".png"
+                    image.save_render(filepath=newpath, scene=context.scene) # save_render is needed to properly save channel packed images
+                    image.filepath = newpath
+                    image.name = image.name 
+                else:
+                    image.save()
+                
+
+        active = sdn_area.spaces[0].node_tree.nodes.active
+        if active and active.bl_idname == '输入图像' and active.select: # "Input Image" Blender-side node
+            active.image = image.filepath_raw
+        else:
+            new_node = sdn_area.spaces[0].node_tree.nodes.new('输入图像')
+            new_node.location = new_node_loc
+            new_node.image = image.filepath_raw
+            for n in sdn_area.spaces[0].node_tree.nodes:
+                n.select = False
+            new_node.select = True
+            sdn_area.spaces[0].node_tree.nodes.active = new_node
+
+        return {'FINISHED'}
+    
+# There are a few cases in which images can't have their alpha changed through the UI, and channel packed alpha is needed to paint them properly.
+# This operator lets the user change the alpha forcefully.
+class Image_Set_Channel_Packed(bpy.types.Operator):
+    bl_idname = "sdn.image_set_channel_packed"
+    bl_label = "Set Image Alpha to Channel Packed"
+    bl_description = "Set the current image's alpha to channel packed, even if the option is not displayed in the UI.\nThis allows masks with color to be properly painted onto the image"
+    bl_translation_context = ctxt
+    
+    @classmethod
+    def poll(cls, context: Context):
+        return context.space_data.type == 'IMAGE_EDITOR' and context.space_data.image and context.space_data.image.alpha_mode != 'CHANNEL_PACKED'
+    
+    def execute(self, context):
+        context.space_data.image.alpha_mode = 'CHANNEL_PACKED'
+        return {'FINISHED'}
 
 @bpy.app.handlers.persistent
 def clear(_):
