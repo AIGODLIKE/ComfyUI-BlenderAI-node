@@ -276,14 +276,13 @@ class BluePrintBase:
             logger.warning("%s: %s.%s -> %s", _T('Non-Standard Enum'), nname, inp, winfo)
         for k in ["required", "optional"]:
             for inp, inp_desc in desc["input"].get(k, {}).items():
+                if inp_desc[0] == [[True, False]]:
+                    inp_desc[0] = inp_desc[0][0]
                 stype = deepcopy(inp_desc[0])
                 if not stype:
                     continue
                 if not is_all_str_list(stype):
                     log_non_standard(stype, nname, inp)
-                # if isinstance(stype, list) and is_bool_list(stype):
-                #     # 处理 bool 列表
-                #     log_non_standard(stype, nname, inp)
                 if not (isinstance(stype, list) and isinstance(stype[0], dict)):
                     continue
                 rep = [sti["content"] for sti in stype if "content" in sti]

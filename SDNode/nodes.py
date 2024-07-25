@@ -286,14 +286,13 @@ class PropGen:
     @staticmethod
     def BOOLEAN(nname, inp_name, reg_name, inp):
         if len(inp) <= 1:
-            prop = bpy.props.BoolProperty()
-        else:
-            params = {}
-            for k in ["name", "description", "translation_context", "default", "options", "override", "tags", "subtype", "update", "get", "set"]:
-                if k in inp[1]:
-                    params[k] = inp[1][k]
-            prop = bpy.props.BoolProperty(**params)
-        return prop
+            return bpy.props.BoolProperty()
+        params = {}
+        for k in ["name", "description", "translation_context", "default", "options", "override", "tags", "subtype", "update", "get", "set"]:
+            if k not in inp[1]:
+                continue
+            params[k] = inp[1][k]
+        return bpy.props.BoolProperty(**params)
 
     @staticmethod
     def STRING(nname, inp_name, reg_name, inp):
