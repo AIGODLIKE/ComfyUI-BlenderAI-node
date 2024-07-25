@@ -496,7 +496,7 @@ class PackGroupTree(bpy.types.Operator):
                 return {"CANCELLED"}
             # 如果选中的节点中有组节点，则报深度错误
             if any([n.bl_idname == SDNGroup.bl_idname for n in selected]):
-                self.report({"ERROR"}, _T("Node group can't be nested"))
+                self.report({"ERROR"}, _T("Node groups can't be nested"))
                 return {"CANCELLED"}
             bpy.ops.node.clipboard_copy()
             # 记录选中节点的link 以便后续恢复到 节点组外部
