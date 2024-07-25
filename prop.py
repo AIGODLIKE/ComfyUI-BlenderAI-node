@@ -143,14 +143,27 @@ class Prop(bpy.types.PropertyGroup):
                 bpy.context.window_manager.addon_search = bl_info.get('name')
             else:
                 bpy.context.window_manager.addon_filter = category
-
-            addon_utils.modules(refresh=False)[0].__name__
-            package = __package__.split(".")[0]
-            for mod in addon_utils.modules(refresh=False):
-                if mod.__name__ == package:
-                    if not mod.bl_info['show_expanded']:
-                        bpy.ops.preferences.addon_expand(module=package)
-    open_pref: bpy.props.BoolProperty(default=False, name="Open Addon Preferences", update=open_pref_update)
+            try:
+                addon_utils.modules(refresh=False)[0].__name__
+                package = __package__.split(".")[0]
+                for mod in addon_utils.modules(refresh=False):
+                    if mod.__name__ != package:
+                        continue
+                    if mod.bl_info['show_expanded']:
+                        continue
+                    bpy.ops.preferences.addon_expand(module=package)
+            except TypeError:
+                package = __package__.split(".")[0]
+                modules = addon_utils.modules(refresh=False).mapping
+                for mod_key in modules:
+                    mod = modules[mod_key]
+                    if mod_key != package:
+                        continue
+                    if mod.bl_info['show_expanded']:
+                        continue
+                    bpy.ops.preferences.addon_expand(module=package)
+                    bpy.context.window_manager.addon_search = bl_info.get("name")
+    open_pref: bpy.props.BoolProperty(default=False, name="Open Addon Preference", update=open_pref_update)
 
     def restart_webui_update(self, context):
         if self["restart_webui"]:

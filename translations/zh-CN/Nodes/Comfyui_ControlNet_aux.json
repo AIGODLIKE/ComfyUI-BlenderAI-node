@@ -487,7 +487,20 @@
     },
 
     "DepthAnythingPreprocessor": {
-        "title": "DA深度预处理器",
+        "title": "DepthAnything深度预处理器",
+        "inputs": {
+            "image": "图像"
+        },
+        "widgets": {
+            "ckpt_name": "模型名称",
+            "resolution": "分辨率"
+        },
+        "outputs": {
+            "IMAGE": "图像"
+        }
+    },
+    "DepthAnythingV2Preprocessor": {
+        "title": "DepthAnythingV2深度预处理器",
         "inputs": {
             "image": "图像"
         },
@@ -500,7 +513,7 @@
         }
     },
     "Zoe_DepthAnythingPreprocessor": {
-        "title": "Zoe DA深度预处理器",
+        "title": "Zoe DepthAnything深度预处理器",
         "inputs": {
             "image": "图像"
         },
@@ -742,6 +755,30 @@
             "prompt": "提示词"
         }
     },
+    "RenderPeopleKps": {
+        "title": "渲染姿态关键点（人类）",
+        "inputs": {
+            "kps": "姿态关键点"
+        },
+        "widgets": {
+            "render_body": "渲染身体",
+            "render_hand": "渲染手部",
+            "render_face": "渲染面部"
+        },
+        "outputs": {
+            "IMAGE": "图像"
+        }
+    },
+    "RenderAnimalKps": {
+        "title": "渲染姿态关键点（动物）",
+        "inputs": {
+            "kps": "姿态关键点"
+        },
+        "outputs": {
+            "IMAGE": "图像"
+        }
+    },
+
 
     "Unimatch_OptFlowPreprocessor": {
         "title": "Unimatch光流预处理器",
