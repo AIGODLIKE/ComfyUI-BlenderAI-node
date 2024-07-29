@@ -1,5 +1,5 @@
 bl_info = {
-    'name': '无限圣杯-节点 (ComfyUI Node Editor)',
+    'name': 'ComfyUI Node Editor',
     'author': '幻之境开发小组-会飞的键盘侠、只剩一瓶辣椒酱',
     'version': (1, 5, 4),
     'blender': (3, 0, 0),
