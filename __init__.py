@@ -1,7 +1,7 @@
 bl_info = {
     'name': 'ComfyUI Node Editor',
     'author': '幻之境开发小组-会飞的键盘侠、只剩一瓶辣椒酱',
-    'version': (1, 5, 4),
+    'version': (1, 5, 5),
     'blender': (3, 0, 0),
     'location': '3DView->Panel',
     'category': 'AI',
