@@ -361,8 +361,8 @@ other = {
     "Queue Prompt or Launch/Connect to ComfyUI": "队列提示或启动/连接 ComfyUI",
     "To Image Editor": "至图像编辑器",
     "From Image Editor": "来自图像编辑器",
-    "To ComfyUI Node Editor": "前往 ComfyUI 节点编辑器",
-    "From ComfyUI Node Editor": "来自 ComfyUI 节点编辑器",
+    "To ComfyUI Node Editor": "导出到 ComfyUI 节点编辑器",
+    "From ComfyUI Node Editor": "从 ComfyUI 节点编辑器导入",
     # preference.py
     "Server Type": "服务类型",
     "LocalServer": "本机启动",
