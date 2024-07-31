@@ -4,7 +4,7 @@ import bpy
 import typing
 import time
 import sys
-import pickle
+from ast import literal_eval as eval
 import traceback
 import inspect
 import types
@@ -143,12 +143,12 @@ class CFNodeTree(NodeTree):
 
         def _get_id_pool(self) -> set:
             if "ID_POOL" not in self.tree:
-                self.tree["ID_POOL"] = pickle.dumps(set())
+                self.tree["ID_POOL"] = "set()"
             try:
-                return pickle.loads(self.tree["ID_POOL"])
-            except pickle.UnpicklingError:
-                self.tree["ID_POOL"] = pickle.dumps(set())
-            return pickle.loads(self.tree["ID_POOL"])
+                return eval(self.tree["ID_POOL"])
+            except Exception as e:
+                self.tree["ID_POOL"] = "set()"
+            return eval(self.tree["ID_POOL"])
 
         def _set_id_pool(self, value):
             if not isinstance(value, set):
@@ -160,7 +160,7 @@ class CFNodeTree(NodeTree):
                 Timer.put((self.inner_set, value))
 
         def inner_set(self, value):
-            self.tree["ID_POOL"] = pickle.dumps(value)
+            self.tree["ID_POOL"] = str(value)
 
     def get_id_pool(self) -> Pool:
         return self.Pool(self)
