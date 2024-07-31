@@ -94,13 +94,18 @@ class Words:
         for word in self.word_list:
             self.word_map[word[0]] = word
 
+
 words = Words()
 words.read_tags()
 words.load_map()
 
+
 @bpy.app.handlers.persistent
 def f(_):
-    mtw = bpy.context.window_manager.mlt_words
+    try:
+        mtw = bpy.context.window_manager.mlt_words
+    except AttributeError:
+        return
     if len(mtw) != 0:
         return
     ts = time.time()

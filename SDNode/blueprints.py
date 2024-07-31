@@ -276,14 +276,13 @@ class BluePrintBase:
             logger.warning("%s: %s.%s -> %s", _T('Non-Standard Enum'), nname, inp, winfo)
         for k in ["required", "optional"]:
             for inp, inp_desc in desc["input"].get(k, {}).items():
+                if inp_desc[0] == [[True, False]]:
+                    inp_desc[0] = inp_desc[0][0]
                 stype = deepcopy(inp_desc[0])
                 if not stype:
                     continue
                 if not is_all_str_list(stype):
                     log_non_standard(stype, nname, inp)
-                # if isinstance(stype, list) and is_bool_list(stype):
-                #     # 处理 bool 列表
-                #     log_non_standard(stype, nname, inp)
                 if not (isinstance(stype, list) and isinstance(stype[0], dict)):
                     continue
                 rep = [sti["content"] for sti in stype if "content" in sti]
@@ -353,6 +352,8 @@ class BluePrintBase:
             reg_name = get_reg_name(inp_name)
             try:
                 v = data["widgets_values"].pop(0)
+            except KeyError:
+                v = data["widgets_values"].pop(inp_name)
             except IndexError:
                 logger.info("%s -> %s<%s>%s " + reg_name, _T('|IGNORED|'), _T('Load'), self.class_type, _T('Params not matching with current node'))
                 continue
@@ -1455,6 +1456,7 @@ class 存储(BluePrintBase):
                         img_src.source = "FILE"
                         if img_src.packed_file:
                             img_src.unpack(method="REMOVE")
+                        img_src.alpha_mode = 'CHANNEL_PACKED' # For painting masks from inside Blender
                         img_src.reload()
                 Timer.put((f, image, img))
         post_fn = partial(__post_fn__, self, mode=self.mode, image=self.image)
@@ -1762,7 +1764,7 @@ class 截图(BluePrintBase):
         from ..External.mss.tools import to_png
         x1, y1, x2, y2 = self.x1, self.y1, self.x2, self.y2
         if x1 == x2 or y1 == y2:
-            logger.error("%s: %s", _T('Error Capture Screen Region'), (x1, y1, x2, y2))
+            logger.error("%s: %s", _T('Error Capturing Screen Region'), (x1, y1, x2, y2))
             return
         # print("GET REGION:", x1, y1, x2, y2)
         with mss() as sct:
@@ -1791,7 +1793,7 @@ class 截图(BluePrintBase):
             else:
                 x1, y1, x2, y2 = (0, 0, 0, 0)
             if x1 == x2 or y1 == y2:
-                logger.error("%s: %s", _T('Error Capture Screen Region'), (x1, y1, x2, y2))
+                logger.error("%s: %s", _T('Error Capturing Screen Region'), (x1, y1, x2, y2))
                 return
             self.x1, self.y1, self.x2, self.y2 = x1, y1, x2, y2
             s._capture(self)

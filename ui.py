@@ -2,7 +2,7 @@ import bpy
 import platform
 from bl_ui.properties_paint_common import UnifiedPaintPanel
 from bpy.types import Context
-from .ops import Ops, Load_History, Copy_Tree, Load_Batch, Fetch_Node_Status, Clear_Node_Cache
+from .ops import Ops, Load_History, Copy_Tree, Load_Batch, Fetch_Node_Status, Clear_Node_Cache, SDNode_To_Image, Image_To_SDNode, Image_Set_Channel_Packed
 from .translations import ctxt
 from .SDNode import TaskManager, FakeServer
 from .SDNode.tree import TREE_TYPE
@@ -22,7 +22,7 @@ class Panel(bpy.types.Panel):
 
     @classmethod
     def poll(cls, context):
-        return context.space_data.tree_type == TREE_TYPE
+        return context.space_data.type == 'NODE_EDITOR' and context.space_data.tree_type == TREE_TYPE
 
     def draw_header(self, context):
         row = self.layout.row(align=True)
@@ -157,7 +157,7 @@ class Panel(bpy.types.Panel):
         row = layout.row(align=True)
         row.alert = True
         row.scale_y = 2
-        row.operator(Ops.bl_idname, text="Launch/Connect ComfyUI", icon="PLAY").action = "Launch"
+        row.operator(Ops.bl_idname, text="Launch/Connect to ComfyUI", icon="PLAY").action = "Launch"
         row.prop(bpy.context.scene.sdn, "show_pref_general", text="", icon="PREFERENCES")
         if bpy.context.scene.sdn.show_pref_general:
             AddonPreference.draw_general(get_pref(), layout.box())
@@ -194,11 +194,27 @@ class Panel(bpy.types.Panel):
             row.label(text=error_msg, icon="ERROR", text_ctxt=ctxt)
 
 def draw_header_button(self, context):
-    if context.space_data.tree_type == 'CFNodeTree':
+    if context.space_data.tree_type == TREE_TYPE:
         layout = self.layout
         col = layout.column()
         col.alert = True
-        col.operator(Ops.bl_idname, text="", icon="PLAY").action = "Submit"
+        col.operator(Ops.bl_idname, text="", text_ctxt=ctxt, icon="PLAY").action = "Submit"
+
+def draw_sdn_tofrom(self, context):
+    layout = self.layout
+    if context.space_data.tree_type == TREE_TYPE:
+        layout.separator()
+        layout.operator(SDNode_To_Image.bl_idname, text="To Image Editor", text_ctxt=ctxt, icon="EXPORT")
+        props = layout.operator(Image_To_SDNode.bl_idname, text="From Image Editor", text_ctxt=ctxt, icon="IMPORT")
+        props.force_centered = True
+
+def draw_imeditor_tofrom(self, context):
+    layout = self.layout
+    layout.separator()
+    layout.operator(Image_Set_Channel_Packed.bl_idname, text_ctxt=ctxt)#, icon="MOD_MASK")
+    layout.operator(Image_To_SDNode.bl_idname, text="To ComfyUI Node Editor", text_ctxt=ctxt, icon="EXPORT")
+    layout.operator(SDNode_To_Image.bl_idname, text="From ComfyUI Node Editor", text_ctxt=ctxt, icon="IMPORT")
+
 
 class HistoryItem(bpy.types.PropertyGroup):
     name: bpy.props.StringProperty(default="")
@@ -276,8 +292,12 @@ class PanelViewport(bpy.types.Panel):
             brush.stencil_dimension = (length / 2, length / 2)
         Timer.put((f, brush, length, area.width, area.height))
 
-def header_reg():
+def ui_reg():
     bpy.types.NODE_HT_header.append(draw_header_button)
+    bpy.types.IMAGE_MT_image.append(draw_imeditor_tofrom)
+    bpy.types.NODE_MT_node.append(draw_sdn_tofrom)
 
-def header_unreg():
+def ui_unreg():
     bpy.types.NODE_HT_header.remove(draw_header_button)
+    bpy.types.IMAGE_MT_image.remove(draw_imeditor_tofrom)
+    bpy.types.NODE_MT_node.remove(draw_sdn_tofrom)

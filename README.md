@@ -3,16 +3,17 @@ This is an addon for using [ComfyUI](https://github.com/comfyanonymous/ComfyUI) 
 ## Features
 
 - Converts ComfyUI nodes to Blender nodes
-- Edit launch arguments in addon preferences, or just connect to a running ComfyUI process
-- Add some special Blender nodes like camera input or compositing data
+- Editable launch arguments in the addon's preferences, or just connect to a running ComfyUI process
+- Adds some special Blender nodes like camera input or compositing data
 - Draw masks with Grease pencil
 - Blender-like node groups
 - Queue batch processing with mission excel
-- Node tree, workflow presets and node groups
-- Model previews in Loader node
-- Directly import or replace 3D models
+- Node tree/workflow presets and node group presets
+- Image previews for models in the Load Checkpoint node
+- Can directly input or replace the 3D models in Blender
 - Composition output perfect controlnet image
 - Live preview when sampling
+- Easily move images to and from Blender's image editor
 
 Here are some workflow showcases:
 You can find all these workflow presets in `ComfyUI-BlenderAI-node/presets/`
@@ -45,7 +46,7 @@ https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/2c21173b-84
 
 1. **Install Blender**
 
-First, you need to install [Blender](https://www.blender.org/download/)(Recommend Blender 3.5, 3.6.X, or previous 4.0).
+First, you need to install [Blender](https://www.blender.org/download/)(We recommend Blender 3.5, 3.6.X, or 4.0).
 
 ![image](https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/aacf1cfe-ae44-4930-9a93-c226a8408066)
 
@@ -219,7 +220,7 @@ Here are some interesting nodes we've tested in Blender
 
 ? = not all functions work
 
-× = only few or no functions work
+× = only a few or no functions work
 
 |Custom Node Name|Status|
 |:----|:----|

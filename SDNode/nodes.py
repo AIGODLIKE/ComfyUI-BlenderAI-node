@@ -286,14 +286,13 @@ class PropGen:
     @staticmethod
     def BOOLEAN(nname, inp_name, reg_name, inp):
         if len(inp) <= 1:
-            prop = bpy.props.BoolProperty()
-        else:
-            params = {}
-            for k in ["name", "description", "translation_context", "default", "options", "override", "tags", "subtype", "update", "get", "set"]:
-                if k in inp[1]:
-                    params[k] = inp[1][k]
-            prop = bpy.props.BoolProperty(**params)
-        return prop
+            return bpy.props.BoolProperty()
+        params = {}
+        for k in ["name", "description", "translation_context", "default", "options", "override", "tags", "subtype", "update", "get", "set"]:
+            if k not in inp[1]:
+                continue
+            params[k] = inp[1][k]
+        return bpy.props.BoolProperty(**params)
 
     @staticmethod
     def STRING(nname, inp_name, reg_name, inp):
@@ -1212,7 +1211,7 @@ class Ops_Link_Mask(bpy.types.Operator):
     @classmethod
     def poll(cls, context):
         from .tree import TREE_TYPE
-        return context.space_data.tree_type == TREE_TYPE
+        return context.space_data.type == 'NODE_EDITOR' and context.space_data.tree_type == TREE_TYPE
 
     def invoke(self, context: Context, event: Event):
         if self.action == "OnlyFocus":
@@ -1404,7 +1403,8 @@ class Ops_Link_Mask(bpy.types.Operator):
 
 class Set_Render_Res(bpy.types.Operator):
     bl_idname = "sdn.set_render_res"
-    bl_label = ""
+    bl_label = "Set Render Resolution"
+    bl_description = "Set the render resolution to be the same as this node's image"
     bl_translation_context = ctxt
     node_name: bpy.props.StringProperty(default="")
 
@@ -1457,7 +1457,7 @@ class AdvTextEdit(bpy.types.Operator):
     @classmethod
     def poll(cls, context):
         from .tree import TREE_TYPE
-        return context.space_data.tree_type == TREE_TYPE
+        return context.space_data.type == 'NODE_EDITOR' and context.space_data.tree_type == TREE_TYPE
 
     def execute(self, context):
         node: NodeBase = get_ctx_node()

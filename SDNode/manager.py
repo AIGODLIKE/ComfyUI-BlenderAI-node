@@ -1296,6 +1296,8 @@ class TaskManager:
 
             elif mtype == "execution_start":
                 ...
+            elif mtype == "execution_success":
+                logger.warning("%s: %s", _T("Execute Node Success"), data["node"])
             elif mtype == "execution_interrupted":
                 {"type": "execution_interrupted",
                  "data": {"prompt_id": "e1f3cbf9-4b83-47cf-95c3-9f9a76ab5508",
