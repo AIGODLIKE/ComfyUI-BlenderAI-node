@@ -2090,6 +2090,33 @@ const ext = {
         app.ui.menuContainer.appendChild(
             $el("div.comfy-menu-btns", [btnCopy, btnPaste])
         );
+        if(window.__COMFYUI_FRONTEND_VERSION__ > "1.2")
+        {
+          var ComfyButtonGroup = window.comfyAPI.buttonGroup.ComfyButtonGroup;
+          var ComfyButton = window.comfyAPI.button.ComfyButton;
+
+          var btnCopy = new ComfyButton({
+            icon: "content-copy",
+            action: () => {
+              var data = window.app.graph.serialize();
+              navigator.clipboard.writeText(JSON.stringify(data));
+            },
+            tooltip: "PasteTree",
+            content: "",
+            classList: "clipbord-copy-button comfyui-button"
+          });
+          var btnPaste = new ComfyButton({
+            icon: "content-paste",
+            action: () => {
+              navigator.clipboard.readText().then(ext.paste);
+            },
+            tooltip: "CopyTree",
+            content: "",
+            classList: "clipbord-paste-button comfyui-button"
+          });
+          var group = new ComfyButtonGroup(btnCopy.element, btnPaste.element);
+          app.menu?.settingsGroup.element.before(group.element);
+        }
     },
     paste(text){
         var webui_parser = new WebUIToComfyUI(text);

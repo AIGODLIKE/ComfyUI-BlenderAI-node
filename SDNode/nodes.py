@@ -4,6 +4,7 @@ import os
 import json
 import math
 import re
+from collections.abc import Iterable
 from hashlib import md5
 from math import ceil
 from typing import Set, Any
@@ -275,6 +276,13 @@ class PropGen:
                 inp[1]["step"] *= 100
             if inp[1].pop("display", False):
                 inp[1]["subtype"] = "FACTOR"
+            default = inp[1].pop("default", 0)
+            if isinstance(default, Iterable):
+                default = list(default)[0]
+            if isinstance(default, (float, int)):
+                inp[1]["default"] = default
+            else:
+                logger.warning("Default value is not a number: %s.%s -> %s", nname, inp_name, default)
             params = {}
             for k in ["name", "description", "translation_context", "default", "min", "max", "soft_min", "soft_max", "step", "precision", "options", "override", "tags", "subtype", "unit", "update", "get", "set"]:
                 if k in inp[1]:

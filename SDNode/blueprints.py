@@ -300,7 +300,13 @@ class BluePrintBase:
         data = s.load_pre(self, data, with_id)
         pool = self.pool_get()
         pool.discard(self.id)
-        self.location[:] = [data["pos"][0], -data["pos"][1]]
+        pos = data["pos"]
+        if isinstance(pos, dict):
+            if "0" in pos:
+                pos[0] = pos.pop("0")
+            if "1" in pos:
+                pos[1] = pos.pop("1")
+        self.location[:] = [pos[0], -pos[1]]
         size = data.get("size", [200, 200])
         properties = data.get("properties", {})
         self.sdn_hide = properties.get("sdn_hide", False)
@@ -372,7 +378,7 @@ class BluePrintBase:
             elif (enum := re.findall(' enum "(.*?)" not found', str(e), re.S)):
                 logger.warning("%s %s -> %s -> %s: %s", _T('|IGNORED|'), self.class_type, inp_name, _T('Not Found Item'), enum[0])
             else:
-                logger.error("|%s|", e)
+                logger.critical("|%s.%s <- %s|: %s", self.class_type, inp_name, v, e)
         except Exception as e:
             logger.error("%s %s -> %s.%s", _T('Params Loading Error'), self.class_type, self.class_type, inp_name)
             logger.error(" -> %s", e)
