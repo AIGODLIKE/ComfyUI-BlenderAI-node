@@ -568,7 +568,11 @@ class FSWatcher:
         if platform.system() != "Windows":
             return {}
         import subprocess
-        result = subprocess.run("net use", capture_output=True, text=True, encoding="gbk", check=True)
+        try:
+            result = subprocess.run("net use", capture_output=True, text=True, encoding="gbk", check=True)
+        except subprocess.CalledProcessError as e:
+            logger.warning(e)
+            return {}
         if result.returncode != 0 or result.stdout is None:
             return {}
         nas_mapping = {}
