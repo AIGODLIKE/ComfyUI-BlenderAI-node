@@ -14,7 +14,7 @@ from functools import lru_cache
 from mathutils import Vector, Matrix
 from bpy.types import Context, Event
 from .utils import SELECTED_COLLECTIONS, get_default_tree
-from ..utils import logger, Icon, _T, read_json
+from ..utils import logger, Icon, _T, read_json, hex2rgb
 from ..datas import ENUM_ITEMS_CACHE, IMG_SUFFIX
 from ..timer import Timer
 from ..translations import ctxt, get_reg_name, get_ori_name
@@ -37,6 +37,27 @@ SOCKET_HASH_MAP = {  # {HASH: METATYPE}
     "BOOLEAN": "BOOLEAN"
 }
 
+NODE_SLOTS = {
+    "CLIP": "#FFD500",
+    "CLIP_VISION": "#A8DADC",
+    "CLIP_VISION_OUTPUT": "#AD7452",
+    "CONDITIONING": "#FFA931",
+    "CONTROL_NET": "#6EE7B7",
+    "IMAGE": "#64B5F6",
+    "LATENT": "#FF9CF9",
+    "MASK": "#81C784",
+    "MODEL": "#B39DDB",
+    "STYLE_MODEL": "#C2FFAE",
+    "VAE": "#FF6E6E",
+    "TAESD": "#DCC274",
+    "PIPE_LINE": "#7737AA",
+    "PIPE_LINE_SDXL": "#7737AA",
+    "INT": "#29699C",
+    "X_Y": "#38291F",
+    "XYPLOT": "#74DA5D",
+    "LORA_STACK": "#94DCCD",
+    "CONTROL_NET_STACK": "#94DCCD",
+}
 
 name2path = {
     "CheckpointLoader": {"ckpt_name": "checkpoints"},
@@ -728,6 +749,12 @@ class NodeBase(bpy.types.Node):
             return o[inp_name]
         return []
 
+    def is_optional(self, inp_name):
+        return inp_name in self.__metadata__.get("input", {}).get("optional", {})
+
+    def is_required(self, inp_name):
+        return inp_name in self.__metadata__.get("input", {}).get("required", {})
+
     def calc_slot_index(self):
         for i, inp in enumerate(self.inputs):
             inp.slot_index = i
@@ -1069,11 +1096,15 @@ class Ops_Switch_Socket_Disp(bpy.types.Operator):
         otree.restore_toggle_links()
         return {"FINISHED"}
 
+
 def get_ctx_node():
     node = getattr(bpy.context, "node", None)
-    if node: return node
+    if node:
+        return node
     node = getattr(bpy.context, "active_node", None)
-    if node: return node
+    if node:
+        return node
+
 
 class Ops_Switch_Socket_Widget(bpy.types.Operator):
     bl_idname = "sdn.switch_socket_widget"
@@ -1793,11 +1824,14 @@ class NodeParser:
             # 过滤不安全socket
             if stype == "":
                 continue
+
             def draw(self, context, layout, node: NodeBase, text):
                 if not node.is_registered_node_type():
                     return
                 node.draw_socket(self, context, layout, node, text)
             rand_color = (rand()**0.5, rand()**0.5, rand()**0.5, 1)
+            if stype in NODE_SLOTS:
+                rand_color = Vector(hex2rgb(NODE_SLOTS[stype])).to_4d()
             color = bpy.props.FloatVectorProperty(size=4, default=rand_color)
             fields = {
                 "draw": draw,
@@ -1867,14 +1901,14 @@ class NodeParser:
                         continue
                     # logger.warning(inp)
                     in1 = self.inputs.new(socket, get_reg_name(inp_name))
-                    in1.display_shape = "DIAMOND_DOT"
+                    in1.display_shape = "CIRCLE" if self.is_required(inp_name) else "CIRCLE_DOT"
                     # in1.link_limit = 0
                     in1.index = index
                 for index, [out_type, out_name] in enumerate(self.out_types):
                     if out_type in {"ENUM", }:
                         continue
                     out = self.outputs.new(out_type, out_name)
-                    out.display_shape = "DIAMOND_DOT"
+                    out.display_shape = "CIRCLE"
                     # out.link_limit = 0
                     out.index = index
                 self.calc_slot_index()
