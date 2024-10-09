@@ -242,8 +242,8 @@ other = {
     "SDNGroup": "组",
     "NoCategory": "无分类",
     # SDNode/utils.py
-    "AI Node" + get_bl_version(): "无限圣杯 Node" + get_bl_version(),
-    "AI Node": "无限圣杯 Node",
+    "AI Node" + get_bl_version(): "无限圣杯" + get_bl_version(),
+    "AI Node": "无限圣杯",
     "Gen Mask": "遮罩生成",
     "Relink failed: %s": "重连失败: %s",
     "Composite node not found": "未找到合成节点",

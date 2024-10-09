@@ -54,6 +54,7 @@ clss = [Panel, Ops, RenderLayerString, MLTWord, Prop, HISTORY_UL_UIList, History
 reg, unreg = bpy.utils.register_classes_factory(clss)
 from platform import system
 
+
 def dump_info():
     import json
     import os
@@ -109,7 +110,7 @@ def register():
     if bpy.app.background:
         dump_info()
         return
-    
+
     from .translations import translations_dict
     bpy.app.translations.register(__name__, translations_dict)
     reg()
@@ -148,6 +149,7 @@ def unregister():
     del bpy.types.Scene.sdn
     del bpy.types.Scene.sdn_history_item
     del bpy.types.Scene.sdn_history_item_index
+    History.unregister_timer()
     modules_update()
     linker_unregister()
     use_hook(False)

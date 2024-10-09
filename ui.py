@@ -24,13 +24,20 @@ class Panel(bpy.types.Panel):
     def poll(cls, context):
         return context.space_data.type == 'NODE_EDITOR' and context.space_data.tree_type == TREE_TYPE
 
-    def draw_header(self, context):
+    def draw_header(self, context: Context):
         row = self.layout.row(align=True)
         if not hasattr(bpy.context.scene, "sdn"):
             row.operator(Clear_Node_Cache.bl_idname, text="", icon="MODIFIER", text_ctxt=ctxt)
             return
         sdn = bpy.context.scene.sdn
         row.prop(sdn, 'open_pref', text="", icon="PREFERENCES", text_ctxt=ctxt)
+    
+    def draw_header_preset(self, context: Context):
+        row = self.layout.row(align=True)
+        if not hasattr(bpy.context.scene, "sdn"):
+            row.operator(Clear_Node_Cache.bl_idname, text="", icon="MODIFIER", text_ctxt=ctxt)
+            return
+        sdn = bpy.context.scene.sdn
         if platform.system() not in ['Linux', 'Darwin']:
             row.operator("wm.console_toggle", text="", icon="CONSOLE", text_ctxt=ctxt)
         # row.prop(sdn, "restart_webui", text="", icon="RECOVER_LAST")

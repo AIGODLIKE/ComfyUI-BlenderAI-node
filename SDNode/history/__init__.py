@@ -5,6 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from ...utils import read_json
 
+
 class History:
     path = Path(__file__).parent.joinpath("history.json")
     num = 20
@@ -59,3 +60,7 @@ class History:
     @staticmethod
     def register_timer():
         bpy.app.timers.register(History.update_timer, persistent=True)
+
+    @staticmethod
+    def unregister_timer():
+        bpy.app.timers.unregister(History.update_timer)
