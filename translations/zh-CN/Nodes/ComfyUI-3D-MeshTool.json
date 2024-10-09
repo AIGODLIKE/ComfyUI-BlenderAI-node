@@ -66,7 +66,8 @@
     "array-number-to-angle": {
         "title": "数组-数字转角度",
         "inputs": {
-            "array_input": "数组"
+            "array_input": "数组",
+            "array": "数组"
         },
         "widgets": {
             "half_angle": "半角"
@@ -138,22 +139,40 @@
             "reload": "重载"
         },
         "outputs": {
-            "reload": "重载"
+            "mesh": "网格"
         }
     },
-    "Mesh_Data":{
-        "title": "网格数据",
+    "Mesh_Data_Get":{
+        "title": "获取网格体数据",
         "inputs": {
             "mesh": "网格"
         },
         "outputs": {
-            "vertex+face": "顶点+面",
-            "Normal(vn+fn)": "法线(vn+fn)",
-            "UVs(vt+ft)": "UVs(vt+ft)",
-            "vertex_color[N3]": "顶点颜色[N3]",
+            "mesh": "网格",
+            "vertex" : "顶点",
+            "face": "面",
+            "Normal_vnfn": "法线-vnfn",
+            "UVs_vtft": "UV坐标-vtft",
+            "vertex_color": "顶点颜色",
+            "Texture_Diffuse": "贴图-漫反射",
+            "Texture_reflection": "贴图-反射"
+        }
+    },
+    "Mesh_Data_Set":{
+        "title": "修改网格体数据",
+        "inputs": {
+            "mesh": "网格",
+            "vertex" : "顶点",
+            "face": "面",
+            "Normal_vnfn": "法线-vnfn",
+            "UVs_vtft": "UV坐标-vtft",
+            "vertex_color": "顶点颜色",
             "Texture_Diffuse": "贴图-漫反射",
             "Texture_reflection": "贴图-反射",
-            "mesh_device": "设备"
+            "device": "设备"
+        },
+        "outputs": {
+            "mesh": "网格"
         }
     },
     "Mesh_Data_Statistics":{
@@ -190,8 +209,30 @@
             "mesh": "网格"
         }
     },
+    "ply_load": {
+        "title": "加载 PLY",
+        "widgets": {
+            "path": "路径"
+        },
+        "outputs": {
+            "gs_ply": "gs_ply"
+        }
+    },
+    "ply_save": {
+        "title": "保存 PLY",
+        "inputs": {
+            "gs_ply": "gs_ply"
+        },
+        "widgets": {
+            "save_path": "保存路径"
+        },
+        "outputs": {
+            "gs_ply": "gs_ply",
+            "save_path": "保存路径"
+        }
+    },
 
-    "array-to_camposes": {
+    "array-to-camposes": {
         "title": "数组转镜头姿态",
         "inputs": {
             "array_input": "数组"
@@ -282,6 +323,25 @@
         },
         "outputs": {
             "UV_options": "UV设置"
+        }
+    },
+    "ply_normalize": {
+        "title": "规格化 PLY",
+        "inputs": {
+            "gs_ply": "gs_ply"
+        },
+        "widgets": {
+            "xyz_normalize": "规格化 XYZ",
+            "RGB_normalize": "规格化 RGB",
+            "opacity_transfer": "传递不透明",
+            "auto_PointSize": "自动点大小",
+            "PointSize_scale": "缩放点大小",
+            "R": "R",
+            "G": "G",
+            "B": "B"
+        },
+        "outputs": {
+            "gs_ply": "gs_ply"
         }
     },
 
