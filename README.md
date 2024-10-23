@@ -1,5 +1,13 @@
 # Introduction
 This is an addon for using [ComfyUI](https://github.com/comfyanonymous/ComfyUI) in Blender. It will convert ComfyUI nodes into Blender nodes, letting you use ComfyUI inside Blender without having to switch between programs.
+## Upcoming Release
+
+
+
+https://github.com/user-attachments/assets/4e6b4cb1-9a99-4be9-9ada-c4368211f3be
+
+
+
 ## Features
 
 - Converts ComfyUI nodes to Blender nodes
