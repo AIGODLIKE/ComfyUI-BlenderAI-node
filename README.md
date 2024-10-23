@@ -4,7 +4,7 @@ This is an addon for using [ComfyUI](https://github.com/comfyanonymous/ComfyUI) 
 
 
 
-https://github.com/user-attachments/assets/4e6b4cb1-9a99-4be9-9ada-c4368211f3be
+https://github.com/user-attachments/assets/888fca0b-b081-496c-9837-7ff18264519f
 
 
 
