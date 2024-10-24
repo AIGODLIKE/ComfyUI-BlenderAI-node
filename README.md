@@ -148,7 +148,7 @@ Using the Blender-specific nodes won't affect generation, results will still be 
 6. **Generate**
 
 By clicking `Excute Node Tree` in n-panel, or the little red button on the right in header in node editor, current node tree will add to queue list.
-You can cancel current running task by click `Cancel`, clear all task list by click `ClearTask`.
+You can cancel current running task by clicking `Cancel`, clear all task list by clicking `ClearTask`.
 
 Loop execution is in advanced executing option at the side of `Excute Node Tree` button.
 
@@ -212,7 +212,7 @@ By pressing `R` when the cursor is near a widget, a pie menu will display all no
 
 ### Mask Link
 
-Hold `F` and drag the cursor to a mask node, it will automatically create a camera to genarate mask from the scene
+Hold `F` and drag the cursor to a mask node, it will automatically create a camera to generate mask from the scene
 
 ![Mask Link](https://github.com/user-attachments/assets/ce301a58-a322-4b34-a3cf-1394d02e3ace)
 
