@@ -133,6 +133,7 @@ If you're using a virtual environment named `venv`, the executable is in `venv/S
 
 Switch to the ComfyUI Node Editor, press N to open the sidebar/n-menu, and click the `Launch/Connect to ComfyUI` button to launch ComfyUI or connect to it.
 Or, switch the "Server Type" in the addon's preferences to remote server so that you can link your Blender to a running ComfyUI process.
+
 ![Generate](https://github.com/user-attachments/assets/5999d8d4-f380-452d-a604-608b57928a6a)
 
 
