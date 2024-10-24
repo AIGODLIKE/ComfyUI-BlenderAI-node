@@ -34,15 +34,15 @@ https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/cb96dd60-b9
 
 ### Import or replace AI generated meshes in the 3D Viewport
 
-![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/92b2913f-f20b-4e6c-85b6-e9f60a7b58f1)
+![Import Mesh](https://github.com/user-attachments/assets/6aa70423-2cbc-4631-90b2-65808a2a8736)
 
 ### Composite depth channel
 
-![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/2386dc4d-6faa-4054-83e7-93f49a27962a)
+![Depth Composite](https://github.com/user-attachments/assets/04f0f7cd-fc0c-4b7c-bdc2-72f5af3c437a)
 
 ### Pose characters using Blender's bones
 
-![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/484c12bf-55b8-4baf-92df-e422fd900cbf)
+![Pose](https://github.com/user-attachments/assets/0cae1b3f-debf-457f-8934-fabe0f7e4dfd)
 
 ### Automatic AI gap animation(ToonCrafter)
 
@@ -69,7 +69,7 @@ Don't forget to enable the addon by clicking on the tickbox to the left of the a
 
 *Note*: The zip file might not have a preview image. This is normal.
 
-![Pasted image 20240319183259](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/7772234d-6d7c-40da-9a32-ee918ca719fb)
+![Install](https://github.com/user-attachments/assets/24e20504-c754-41e4-b797-808d0b8373f2)
 
 
 - Install manually (recommended)
@@ -133,7 +133,7 @@ If you're using a virtual environment named `venv`, the executable is in `venv/S
 
 Switch to the ComfyUI Node Editor, press N to open the sidebar/n-menu, and click the `Launch/Connect to ComfyUI` button to launch ComfyUI or connect to it.
 Or, switch the "Server Type" in the addon's preferences to remote server so that you can link your Blender to a running ComfyUI process.
-![Pasted image 20240319185542](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/e46c3a5a-ff32-4503-8228-f101c91c6664)
+![Generate](https://github.com/user-attachments/assets/5999d8d4-f380-452d-a604-608b57928a6a)
 
 
 5. **Add nodes/presets**
@@ -152,13 +152,13 @@ You can cancel current running task by click `Cancel`, clear all task list by cl
 
 Loop execution is in advanced executing option at the side of `Excute Node Tree` button.
 
-![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/0beacc48-700c-45ec-a460-146ab27905fe)
+![Generate](https://github.com/user-attachments/assets/5999d8d4-f380-452d-a604-608b57928a6a)
 
 ## Special Nodes for Blender
 
 ### Input Image
 
-![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/d065fa92-9d00-4be3-a867-dbfb4779bdd6)
+![Input Image](https://github.com/user-attachments/assets/2158be8f-eaf8-4a69-b3d0-7de97a93c517)
 
 - Input image from directory
 - Input image list from directory
@@ -167,7 +167,7 @@ Loop execution is in advanced executing option at the side of `Excute Node Tree`
 
 ### Mask
 
-![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/85c29090-b751-4686-b9b9-7373f7b6ffb1)
+![Mask](https://github.com/user-attachments/assets/8fb29634-996e-4390-81da-e33fbd56489c)
 
 - Create a mask from Grease Pencil
 - Create a mask by projecting an object on the camera
@@ -175,14 +175,14 @@ Loop execution is in advanced executing option at the side of `Excute Node Tree`
 
 ### Mat Image
 
-![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/8fff5b65-9c7f-4053-8bc6-ea16184774ad)
+![Mat Image](https://github.com/user-attachments/assets/65844d9a-820f-4a7d-ae5e-1c438b5724ae)
 
 - Input texture from object
 - Input textures from collection objects
 
 ### Save Image
 
-![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/edbc273d-40cd-482b-835f-fb8b69812684)
+![Save Image](https://github.com/user-attachments/assets/f431e952-9541-4a40-a288-46abd66fa859)
 
 - Normally saves to a folder
 - Can save to an image in Blender to replace it
@@ -190,7 +190,7 @@ Loop execution is in advanced executing option at the side of `Excute Node Tree`
 
 ### Multiline Textbox
 
-![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/bdc796c0-7dec-4c5d-922e-17860941a23e)
+![Multiline Textbox](https://github.com/user-attachments/assets/423c3b65-45fc-4726-afe4-1f73d0a5e6b7)
 
 To improve writing long prompts, we made a button that can show all prompts in a separate textbox since Blender doesn't support multiline textboxes in nodes.
 When you click the button on the side of the textbox, a window will open to write prompts in.
@@ -202,19 +202,19 @@ The first time you do this, you might need to wait. Keep your cursor over the wi
 
 Select a node, then hold `D` and drag the cursor to another node's center, you can link all available widgets between them
 
-![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/eae1061a-c4f5-4f0c-becf-501176a7aaa2)
+![Link](https://github.com/user-attachments/assets/ec9c8f8f-96b7-4269-8837-63017df17b3b)
 
 ### Search Widgets
 
 By pressing `R` when the cursor is near a widget, a pie menu will display all nodes that have this widget
 
-![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/2dcffa51-a261-4e22-9692-00863e4faa33)
+![Search Widgets](https://github.com/user-attachments/assets/a385f35c-bcec-4f2d-9f8b-4989530170d3)
 
 ### Mask Link
 
 Hold `F` and drag the cursor to a mask node, it will automatically create a camera to genarate mask from the scene
 
-![image](https://github.com/DorotaLuna/ComfyUI-BlenderAI-node/assets/122320001/d97805e5-4f54-4e1a-9fe0-0b98192baab9)
+![Mask Link](https://github.com/user-attachments/assets/ce301a58-a322-4b34-a3cf-1394d02e3ace)
 
 ## Notes
 - Not every node can work perfectly in Blender, for example nodes regarding videos
