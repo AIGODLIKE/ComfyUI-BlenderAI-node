@@ -42,7 +42,7 @@ https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node/assets/116185401/cb96dd60-b9
 
 ### Pose characters using Blender's bones
 
-![Pose](https://github.com/user-attachments/assets/c5cd3004-bb03-410d-bbfb-be39e259f844)
+![屏幕截图 2024-10-24 173546](https://github.com/user-attachments/assets/fc698396-7369-448a-a7d7-c07ef54aa438)
 
 ### Automatic AI gap animation(ToonCrafter)
 
