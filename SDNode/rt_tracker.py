@@ -36,8 +36,8 @@ class TrackerStatus:
             elif t in {Object, Mesh, Collection}:
                 self.push_status(t.__name__)
                 break
-            else:
-                print(f"{t.__name__} {update.id.name} changed")
+            # else:
+            #     print(f"{t.__name__} {update.id.name} changed")
 
     def push_status(self, name):
         while not self.status.empty():

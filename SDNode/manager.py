@@ -623,7 +623,7 @@ class LocalServer(Server):
         pidpath = Path(__file__).parent / "pid"
         if pidpath.exists():
             self.force_kill(pidpath.read_text())
-            pidpath.unlink()
+            pidpath.unlink(missing_ok=True)
 
         pref = get_pref()
         model_path = pref.model_path
@@ -669,7 +669,7 @@ class LocalServer(Server):
                     t = t.replace("FORCE_LOG = False", f"FORCE_LOG = {get_pref().force_log}")
                     Path(model_path).joinpath("custom_nodes", file.name, cup_py.name).write_text(t, encoding="utf-8")
                 if old_cup_py.exists():
-                    Path(model_path).joinpath("custom_nodes", cup_py.name).unlink()
+                    Path(model_path).joinpath("custom_nodes", cup_py.name).unlink(missing_ok=True)
             except Exception as e:
                 # 可能会拷贝失败(权限问题)
                 ...
@@ -703,7 +703,7 @@ class LocalServer(Server):
         pidpath = Path(__file__).parent / "pid"
         if pidpath.exists():
             self.force_kill(pidpath.read_text())
-            pidpath.unlink()
+            pidpath.unlink(missing_ok=True)
 
         if self.child:
             self.child.kill()
@@ -720,7 +720,7 @@ class LocalServer(Server):
             update_screen()
             import requests
             try:
-                if requests.get(f"{self.get_url()}/object_info", proxies={"http": None, "https": None}, timeout=1).status_code == 200:
+                if requests.get(f"{self.get_url()}/object_info", proxies={"http": None, "https": None}, timeout=5).status_code == 200:
                     get_pref().preview_method = get_pref().preview_method
                     return True
             except requests.exceptions.ConnectionError:

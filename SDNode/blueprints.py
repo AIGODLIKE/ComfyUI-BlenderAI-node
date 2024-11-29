@@ -101,6 +101,9 @@ def draw_prop_with_link(layout, self, prop, swsock, swdisp=False, row=True, pre=
     return layout
 
 
+hack_nodes_num = [0]
+
+
 def setwidth(self: NodeBase, w, count=1):
     if get_pref().preview_image_size_type == "DEFAULT":
         def delegate(self: NodeBase):
@@ -119,7 +122,7 @@ def setwidth(self: NodeBase, w, count=1):
     sw = w
     w *= count
 
-    def delegate(self, w, fpis):
+    def delegate(self: NodeBase, w, fpis):
         """
         可能会因为 width 访问导致crash, 可以先清理Timer
         """
@@ -128,6 +131,12 @@ def setwidth(self: NodeBase, w, count=1):
             self.bl_width_min = 32
         if self.width == w and not fpis:
             return
+        # 避免删除所有节点时导致blender崩溃
+        if len(self.get_tree().nodes) != hack_nodes_num[0]:
+            hack_nodes_num[0] = len(self.get_tree().nodes)
+            Timer.clear()
+            return
+        hack_nodes_num[0] = len(self.get_tree().nodes)
         self.width = w
         if self.bl_width_max < w or fpis:
             self.bl_width_max = w
@@ -310,6 +319,7 @@ class BluePrintBase:
         size = data.get("size", [200, 200])
         properties = data.get("properties", {})
         self.sdn_hide = properties.get("sdn_hide", False)
+        self.label = properties.get("label", "")
         color = data.get("bgcolor", None)
         if color:
             self.color = hex2rgb(color)
@@ -463,6 +473,8 @@ class BluePrintBase:
             "properties": {"sdn_hide": self.sdn_hide, },
             "widgets_values": widgets_values
         }
+        if self.label:
+            cfg["properties"]["label"] = self.label
         if self.use_custom_color:
             color = rgb2hex(*self.color)
             cfg["bgcolor"] = color
@@ -1462,7 +1474,7 @@ class 存储(BluePrintBase):
                         img_src.source = "FILE"
                         if img_src.packed_file:
                             img_src.unpack(method="REMOVE")
-                        img_src.alpha_mode = 'CHANNEL_PACKED' # For painting masks from inside Blender
+                        img_src.alpha_mode = 'CHANNEL_PACKED'  # For painting masks from inside Blender
                         img_src.reload()
                 Timer.put((f, image, img))
         post_fn = partial(__post_fn__, self, mode=self.mode, image=self.image)
@@ -2834,6 +2846,8 @@ class SDNGroupBP(BluePrintBase):
             "properties": {"sdn_hide": self.sdn_hide, },
             "widgets_values": widgets_values
         }
+        if self.label:
+            cfg["properties"]["label"] = self.label
         if self.use_custom_color:
             color = rgb2hex(*self.color)
             cfg["bgcolor"] = color

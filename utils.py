@@ -250,11 +250,11 @@ class Icon(metaclass=MetaIn):
         Icon.reg_icon(Icon.NONE_IMAGE)
 
     @staticmethod
-    def reg_icon(path, reload=False):
+    def reg_icon(path, reload=False, hq=False):
         path = FSWatcher.to_str(path)
         if not Icon.can_mark_image(path):
             return Icon[path]
-        if Icon.ENABLE_HQ_PREVIEW:
+        if Icon.ENABLE_HQ_PREVIEW and hq:
             try:
                 Icon.reg_icon_hq(path)
             except BaseException:
