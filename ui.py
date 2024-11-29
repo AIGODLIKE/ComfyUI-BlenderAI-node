@@ -2,10 +2,11 @@ import bpy
 import platform
 from bl_ui.properties_paint_common import UnifiedPaintPanel
 from bpy.types import Context
-from .ops import Ops, Load_History, Copy_Tree, Load_Batch, Fetch_Node_Status, Clear_Node_Cache, SDNode_To_Image, Image_To_SDNode, Image_Set_Channel_Packed
+from .ops import Ops, Load_History, Copy_Tree, Load_Batch, Fetch_Node_Status, Clear_Node_Cache, SDNode_To_Image, Image_To_SDNode, Image_Set_Channel_Packed, ConnectorRun
 from .translations import ctxt
 from .SDNode import TaskManager, FakeServer
 from .SDNode.tree import TREE_TYPE
+from .SDNode.nodes import NodeBase
 from .SDNode.rt_tracker import Tracker_Loop, is_looped
 from .preference import get_pref, AddonPreference
 from .utils import get_addon_name, _T
@@ -31,7 +32,7 @@ class Panel(bpy.types.Panel):
             return
         sdn = bpy.context.scene.sdn
         row.prop(sdn, 'open_pref', text="", icon="PREFERENCES", text_ctxt=ctxt)
-    
+
     def draw_header_preset(self, context: Context):
         row = self.layout.row(align=True)
         if not hasattr(bpy.context.scene, "sdn"):
@@ -200,12 +201,118 @@ class Panel(bpy.types.Panel):
             row.alert = True
             row.label(text=error_msg, icon="ERROR", text_ctxt=ctxt)
 
+
+class AIPanelViewport(bpy.types.Panel):
+    bl_idname = "SDN_V3D_PT_UI"
+    bl_translation_context = ctxt
+    bl_label = "ComfyUI Connector"
+    bl_description = ""
+    bl_space_type = "VIEW_3D"
+    bl_region_type = "UI"
+    bl_category = "ComfyUI X Blender"
+
+    def draw(self, context: Context):
+        layout = self.layout
+        if not hasattr(bpy.context.scene, "sdn"):
+            row = layout.row()
+            row.operator(Clear_Node_Cache.bl_idname, text="Clear Node Cache", icon="MODIFIER")
+            row.alert = True
+            row.scale_y = 2
+            return
+        if TaskManager.server == FakeServer._instance:
+            self.show_launch_cnn(layout)
+            return
+        elif TaskManager.is_launching():
+            box = layout.box()
+            box.alert = True
+            box.scale_y = 2
+            row = box.row()
+            row.alignment = "CENTER"
+            row.label(text="ComfyUI Launching/Connecting...", icon="INFO")
+            row = box.row()
+            row.alignment = "CENTER"
+            row.label(text=TaskManager.server.get_running_info(), icon="TIME")
+            return
+        self.show_common(layout)
+        self.show_nodes(layout)
+
+    def show_common(self, layout: bpy.types.UILayout):
+        layout.prop(bpy.context.scene.sdn, "comfyui_tree", text="")
+        col = layout.column(align=True)
+        col.scale_y = 1.5
+        col.operator(ConnectorRun.bl_idname, text_ctxt=ctxt, icon="PLAY")
+        self.show_progress(layout)
+
+    def show_launch_cnn(self, layout: bpy.types.UILayout):
+        if TaskManager.server != FakeServer._instance:
+            return
+        row = layout.row()
+        row.alignment = "CENTER"
+        row.label(text="↓↓ComfyUI Not Launched, Click to Launch↓↓")
+        row = layout.row(align=True)
+        row.alert = True
+        row.scale_y = 2
+        row.operator(Ops.bl_idname, text="Launch/Connect to ComfyUI", icon="PLAY").action = "Launch"
+        row.prop(bpy.context.scene.sdn, "show_pref_general", text="", icon="PREFERENCES")
+        if bpy.context.scene.sdn.show_pref_general:
+            AddonPreference.draw_general(get_pref(), layout.box())
+        self.show_error(layout)
+
+    def show_error(self, layout):
+        for error_msg in TaskManager.get_error_msg():
+            row = layout.row()
+            row.alert = True
+            row.label(text=error_msg, icon="ERROR", text_ctxt=ctxt)
+
+    def show_progress(self, layout: bpy.types.UILayout):
+        layout = layout.box()
+        from .SDNode.custom_support import cup_monitor
+        cup_monitor.draw(layout)
+        self.show_error(layout)
+        if TaskManager.get_error_msg():
+            row = layout.box().row()
+            row.alignment = "CENTER"
+            row.alert = True
+            row.label(text="Adjust node tree and try again", text_ctxt=ctxt)
+
+    def show_nodes(self, layout: bpy.types.UILayout):
+        nodes: list[NodeBase] = []
+        tree_name = bpy.context.scene.sdn.comfyui_tree
+        tree: bpy.types.NodeTree = bpy.data.node_groups.get(tree_name)
+        if not tree:
+            return
+        for node in tree.nodes:
+            if len(node.label) != 3:
+                continue
+            # 判断 label 为 001 - 999 之间的字符串
+            if not node.label.isdigit() or int(node.label) < 1 or int(node.label) > 999:
+                continue
+            nodes.append(node)
+        nodes.sort(key=lambda x: x.label)
+        for node in nodes:
+            box = layout.box()
+            row = box.row()
+            row.prop(node, "ac_expand", icon="TRIA_DOWN" if node.ac_expand else "TRIA_RIGHT", text="", emboss=False)
+            if node.type != "GROUP":
+                row.label(text=node.name)
+            elif node.node_tree:
+                row.label(text=node.node_tree.name)
+            if node.ac_expand is False:
+                continue
+            if bpy.app.version >= (4, 2):
+                box.separator(type="LINE")
+            else:
+                box.separator()
+            node.draw_buttons(bpy.context, box)
+
+
 def draw_header_button(self, context):
     if context.space_data.tree_type == TREE_TYPE:
         layout = self.layout
         col = layout.column()
         col.alert = True
         col.operator(Ops.bl_idname, text="", text_ctxt=ctxt, icon="PLAY").action = "Submit"
+
 
 def draw_sdn_tofrom(self, context):
     layout = self.layout
@@ -215,10 +322,11 @@ def draw_sdn_tofrom(self, context):
         props = layout.operator(Image_To_SDNode.bl_idname, text="From Image Editor", text_ctxt=ctxt, icon="IMPORT")
         props.force_centered = True
 
+
 def draw_imeditor_tofrom(self, context):
     layout = self.layout
     layout.separator()
-    layout.operator(Image_Set_Channel_Packed.bl_idname, text_ctxt=ctxt)#, icon="MOD_MASK")
+    layout.operator(Image_Set_Channel_Packed.bl_idname, text_ctxt=ctxt)  # , icon="MOD_MASK")
     layout.operator(Image_To_SDNode.bl_idname, text="To ComfyUI Node Editor", text_ctxt=ctxt, icon="EXPORT")
     layout.operator(SDNode_To_Image.bl_idname, text="From ComfyUI Node Editor", text_ctxt=ctxt, icon="IMPORT")
 
@@ -299,12 +407,16 @@ class PanelViewport(bpy.types.Panel):
             brush.stencil_dimension = (length / 2, length / 2)
         Timer.put((f, brush, length, area.width, area.height))
 
+
 def ui_reg():
+    bpy.utils.register_class(AIPanelViewport)
     bpy.types.NODE_HT_header.append(draw_header_button)
     bpy.types.IMAGE_MT_image.append(draw_imeditor_tofrom)
     bpy.types.NODE_MT_node.append(draw_sdn_tofrom)
+
 
 def ui_unreg():
     bpy.types.NODE_HT_header.remove(draw_header_button)
     bpy.types.IMAGE_MT_image.remove(draw_imeditor_tofrom)
     bpy.types.NODE_MT_node.remove(draw_sdn_tofrom)
+    bpy.utils.unregister_class(AIPanelViewport)

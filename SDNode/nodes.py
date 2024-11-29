@@ -250,6 +250,9 @@ class PropGen:
                     if icon_id:
                         ENUM_ITEMS_CACHE[nname][inp_name] = items
                     si = str(item)
+                    if si in spec_trans:
+                        items.append((si, spec_trans.get(si, si), ""))
+                        continue
                     items.append((si, spec_trans.get(si, si), "", icon_id, len(items)))
                 return items
             return wrap

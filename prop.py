@@ -229,7 +229,8 @@ class Prop(bpy.types.PropertyGroup):
     def search_tag_update(self, context):
         from .MultiLineText.words_collection import words
         from .kclogger import logger
-        if not Trie.TRIE: return
+        if not Trie.TRIE:
+            return
         mtw = bpy.context.window_manager.mlt_words
         mtw.clear()
         ts = time.time()
@@ -249,6 +250,23 @@ class Prop(bpy.types.PropertyGroup):
         logger.info(f"Update Search Words: {time.time()-ts:.4f}s")
 
     search_tag: bpy.props.StringProperty(update=search_tag_update)
+
+    _trees = []
+
+    def tree_items(self, context):
+        from .SDNode.tree import TREE_TYPE
+        trees = []
+        for node_group in bpy.data.node_groups:
+            if node_group.bl_idname != TREE_TYPE:
+                continue
+            trees.append((node_group.name, node_group.name, node_group.name))
+        if trees:
+            self._trees.clear()
+            self._trees.extend(trees)
+        return self._trees
+
+    comfyui_tree: bpy.props.EnumProperty(items=tree_items)
+
 
 def render_layer_update():
     try:
