@@ -4,6 +4,14 @@ This is an addon for using [ComfyUI](https://github.com/comfyanonymous/ComfyUI) 
 
 
 
+
+
+
+https://github.com/user-attachments/assets/564667d4-588e-47ca-9a28-d983b1f30bd2
+
+
+
+
 https://github.com/user-attachments/assets/888fca0b-b081-496c-9837-7ff18264519f
 
 
