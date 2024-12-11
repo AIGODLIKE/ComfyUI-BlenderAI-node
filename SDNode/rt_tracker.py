@@ -4,6 +4,7 @@ from queue import Queue
 from functools import lru_cache
 from time import time
 from ..preference import get_pref
+from .manager import TaskManager
 from .utils import get_default_tree
 
 
@@ -22,7 +23,9 @@ class TrackerStatus:
         self.last_time = 0
         self._init = True
 
-    def update_deps(self, depsgraph):
+    def update_deps(self, depsgraph: bpy.types.Depsgraph):
+        if depsgraph.id_type_updated("NODETREE"):
+            return
         check_list = ["MESH", "OBJECT", "COLLECTION"]
         for i in check_list:
             if not depsgraph.id_type_updated(i):
@@ -57,7 +60,6 @@ class TrackerStatus:
         tstatus = self.get_status()
         if not tstatus:
             return
-        from .manager import TaskManager
         qr_num = len(TaskManager.query_server_task().get('queue_running', []))
         qp_num = TaskManager.get_task_num()
         if qp_num or qr_num:

@@ -154,6 +154,29 @@ other = {
     "STDOUT Listen Thread Exit": "输出监听线程关闭",
     "Time Elapsed": "已耗时",
     "Error when playing sound:": "播放声音出错:",
+    "Node Error Parse": "节点错误解析",
+    "Prompt has no outputs": "提示词没有输出节点",
+    "No Image Provided": "未提供图像",
+    "Image Not Found": "未找到图像",
+    # SDNode/operators.py
+    "AI Mat Solution Load": "AI材质方案载入",
+    "Load AI Mat Solution": "载入AI材质方案预设",
+    "Save AI Mat Solution": "保存AI材质方案预设",
+    "Delete AI Mat Solution": "删除AI材质方案预设",
+    "Run AI Mat Solution": "生成",
+    "Can't find CFNodeTree": "未找到ComfyUI节点树",
+    "No active material": "当前物体没有材质",
+    "Use depth and normal map to Gen Mesh Mat": "使用深度图和法线图生成网格材质",
+    "Backups": "备份",
+    "Clear Material Slots": "清空材质槽",
+    "00-Default": "00-默认",
+    "Apply": "应用",
+    "Restore": "还原",
+    "AI Mat already exists, Overwrite?": "已存在AI Mat，是否覆盖？",
+    "Already exists, Overwrite?": "已存在，是否覆盖？",
+    "Can't find ComfyUI Node Tree": "未找到ComfyUI节点树",
+    # SDNode/rt_tracker.py
+    "Tracker Loop": "循环生成",
     # SDNode/node_process.py
     "Executing": "执行中",
     # SDNode/nodes.py
@@ -310,6 +333,7 @@ other = {
     "Show General Setting": "显示启动设置",
     "Image not found or format error(png/json)": "魔法图鉴不存在或格式不正确(仅png/json)",
     "Load Preset from Image Error -> MetaData Not Found in": "从图鉴加载失败, 元数据为",
+    "Sync AI Mat Tree to Editor": "同步AI材质生成树到编辑器",
     # ops.py
     "No NodeTree Found": "节点树为空",
     "Node Not Found: ": "节点未找到",
@@ -363,6 +387,8 @@ other = {
     "From Image Editor": "来自图像编辑器",
     "To ComfyUI Node Editor": "导出到 ComfyUI 节点编辑器",
     "From ComfyUI Node Editor": "从 ComfyUI 节点编辑器导入",
+    "Bake Tree": "烘焙节点树",
+    "No Bake Tree Found": "未找到烘焙节点树",
     # preference.py
     "Server Type": "服务类型",
     "LocalServer": "本机启动",

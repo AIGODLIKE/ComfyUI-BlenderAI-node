@@ -2,13 +2,16 @@ import bpy
 import platform
 from bl_ui.properties_paint_common import UnifiedPaintPanel
 from bpy.types import Context
-from .ops import Ops, Load_History, Copy_Tree, Load_Batch, Fetch_Node_Status, Clear_Node_Cache, SDNode_To_Image, Image_To_SDNode, Image_Set_Channel_Packed
+from .ops import Ops, Load_History, Copy_Tree, Load_Batch, Fetch_Node_Status, Clear_Node_Cache, SDNode_To_Image, Image_To_SDNode, Image_Set_Channel_Packed, Open_Log_Window
 from .translations import ctxt
 from .SDNode import TaskManager, FakeServer
 from .SDNode.tree import TREE_TYPE
+from .SDNode.nodes import NodeBase
 from .SDNode.rt_tracker import Tracker_Loop, is_looped
+from .SDNode.operators import AIMatSolutionLoad, AIMatSolutionRun, AIMatSolutionSave, AIMatSolutionDel, AIMatSolutionApply, AIMatSolutionRestore
+from .utils import Icon
 from .preference import get_pref, AddonPreference
-from .utils import get_addon_name, _T
+from .utils import get_addon_name, _T, get_ai_mat_tree
 
 
 class Panel(bpy.types.Panel):
@@ -31,7 +34,7 @@ class Panel(bpy.types.Panel):
             return
         sdn = bpy.context.scene.sdn
         row.prop(sdn, 'open_pref', text="", icon="PREFERENCES", text_ctxt=ctxt)
-    
+
     def draw_header_preset(self, context: Context):
         row = self.layout.row(align=True)
         if not hasattr(bpy.context.scene, "sdn"):
@@ -200,12 +203,14 @@ class Panel(bpy.types.Panel):
             row.alert = True
             row.label(text=error_msg, icon="ERROR", text_ctxt=ctxt)
 
+
 def draw_header_button(self, context):
     if context.space_data.tree_type == TREE_TYPE:
         layout = self.layout
         col = layout.column()
         col.alert = True
         col.operator(Ops.bl_idname, text="", text_ctxt=ctxt, icon="PLAY").action = "Submit"
+
 
 def draw_sdn_tofrom(self, context):
     layout = self.layout
@@ -215,10 +220,11 @@ def draw_sdn_tofrom(self, context):
         props = layout.operator(Image_To_SDNode.bl_idname, text="From Image Editor", text_ctxt=ctxt, icon="IMPORT")
         props.force_centered = True
 
+
 def draw_imeditor_tofrom(self, context):
     layout = self.layout
     layout.separator()
-    layout.operator(Image_Set_Channel_Packed.bl_idname, text_ctxt=ctxt)#, icon="MOD_MASK")
+    layout.operator(Image_Set_Channel_Packed.bl_idname, text_ctxt=ctxt)  # , icon="MOD_MASK")
     layout.operator(Image_To_SDNode.bl_idname, text="To ComfyUI Node Editor", text_ctxt=ctxt, icon="EXPORT")
     layout.operator(SDNode_To_Image.bl_idname, text="From ComfyUI Node Editor", text_ctxt=ctxt, icon="IMPORT")
 
@@ -236,6 +242,154 @@ class HISTORY_UL_UIList(bpy.types.UIList):
         row = layout.row(align=True)
         row.label(text="  " + item.name)
         row.operator(Load_History.bl_idname, text="", icon="TIME").name = item.name
+
+
+class AIPanelViewport(bpy.types.Panel):
+    bl_idname = "SDN_V3D_PT_UI"
+    bl_translation_context = ctxt
+    bl_label = get_addon_name()
+    bl_description = ""
+    bl_space_type = "VIEW_3D"
+    bl_region_type = "UI"
+    bl_category = "AI"
+
+    def draw_header_preset(self, context: Context):
+        layout = self.layout
+        layout.prop(bpy.context.scene.sdn, "open_ai_sol_dir", text="", icon="FILE_FOLDER")
+
+    def draw(self, context: Context):
+        layout = self.layout
+        if not hasattr(bpy.context.scene, "sdn"):
+            row = layout.row()
+            row.operator(Clear_Node_Cache.bl_idname, text="Clear Node Cache", icon="MODIFIER")
+            row.alert = True
+            row.scale_y = 2
+            return
+        if TaskManager.server == FakeServer._instance:
+            self.show_launch_cnn(layout)
+            return
+        elif TaskManager.is_launching():
+            box = layout.box()
+            box.alert = True
+            box.scale_y = 2
+            row = box.row()
+            row.alignment = "CENTER"
+            row.label(text="ComfyUI Launching/Connecting...", icon="INFO")
+            row = box.row()
+            row.alignment = "CENTER"
+            row.label(text=TaskManager.server.get_running_info(), icon="TIME")
+            return
+        self.show_common(layout)
+        self.show_nodes(layout)
+
+    def show_common(self, layout: bpy.types.UILayout):
+        row = layout.row(align=True)
+        row.prop(bpy.context.scene.sdn, "ai_gen_solution", text="")
+        row.prop(bpy.context.scene.sdn, "clear_material_slots", text="", icon="CON_TRANSLIKE")
+        row.operator(AIMatSolutionSave.bl_idname, text="", icon="FILE_TICK")
+        row.operator(AIMatSolutionDel.bl_idname, text="", icon="TRASH")
+        layout.template_icon_view(bpy.context.scene.sdn, "ai_gen_solution", show_labels=True, scale_popup=5)
+        row = layout.row(align=True)
+        row.prop(bpy.context.scene.sdn, "ai_mat_tex_size", text="")
+        row.operator(AIMatSolutionLoad.bl_idname, text_ctxt=ctxt)
+        col = layout.column(align=True)
+        col.scale_y = 1.5
+        col.alert = bool(get_ai_mat_tree(bpy.context.object))
+        crow = col.row(align=True)
+        crow.operator(AIMatSolutionRun.bl_idname, text_ctxt=ctxt, icon="PLAY")
+        crcol = crow.column(align=True)
+        crcol.enabled = bool(get_ai_mat_tree(bpy.context.object))
+        crcol.prop(bpy.context.scene.sdn, "send_ai_tree_to_editor", text="", icon="FILE_REFRESH")
+        row = layout.row(align=True)
+        if bpy.context.object and bpy.context.object.get("AI_Mat_Gen_Applied", None):
+            row.alert = True
+            row.label(text="Applying...", icon="RECORD_ON")
+            row.label(text="", icon="RECORD_ON")
+            row.label(text="", icon="RECORD_ON")
+            row.label(text="", icon="RECORD_ON")
+            row.label(text="", icon="RECORD_ON")
+            row.label(text="", icon="RECORD_ON")
+        else:
+            row.operator(AIMatSolutionApply.bl_idname, text_ctxt=ctxt, icon="EVENT_RETURN")  # KEY_RETURN_FILLED
+            row.operator(AIMatSolutionRestore.bl_idname, text_ctxt=ctxt, icon="LOOP_BACK")  # KEY_BACKSPACE_FILLED
+            layout.prop(bpy.context.scene.sdn, "apply_bake_pass", text="")
+        self.show_progress(layout)
+        # if bpy.context.object and "AI_Mat_Gen_TexID" in bpy.context.object:
+        #     layout.template_icon(bpy.context.object["AI_Mat_Gen_TexID"], scale=10)
+        #     # layout.template_preview(bpy.context.object["AI_Mat_Gen_Tex"].preview.icon_id)
+
+    def show_launch_cnn(self, layout: bpy.types.UILayout):
+        if TaskManager.server != FakeServer._instance:
+            return
+        row = layout.row()
+        row.alignment = "CENTER"
+        row.label(text="↓↓ComfyUI Not Launched, Click to Launch↓↓")
+        row = layout.row(align=True)
+        row.alert = True
+        row.scale_y = 2
+        row.operator(Ops.bl_idname, text="Launch/Connect to ComfyUI", icon="PLAY").action = "Launch"
+        row.prop(bpy.context.scene.sdn, "show_pref_general", text="", icon="PREFERENCES")
+        if bpy.context.scene.sdn.show_pref_general:
+            AddonPreference.draw_general(get_pref(), layout.box())
+        self.show_error(layout)
+
+    def show_error(self, layout):
+        for error_msg in TaskManager.get_error_msg():
+            row = layout.row()
+            row.alert = True
+            row.label(text=error_msg, icon="ERROR", text_ctxt=ctxt)
+
+    def show_progress(self, layout: bpy.types.UILayout):
+        layout = layout.box()
+        from .SDNode.custom_support import cup_monitor
+        cup_monitor.draw(layout)
+        self.show_error(layout)
+        if TaskManager.get_error_msg():
+            row = layout.box().row()
+            row.alignment = "CENTER"
+            row.alert = True
+            row.label(text="Adjust node tree and try again", text_ctxt=ctxt)
+
+    def show_nodes(self, layout: bpy.types.UILayout):
+        tree = get_ai_mat_tree(bpy.context.object)
+        if not tree:
+            return
+        nodes: list[NodeBase] = []
+        for node in tree.nodes:
+            if len(node.label) != 3:
+                continue
+            # 判断 label 为 001 - 999 之间的字符串
+            if not node.label.isdigit() or int(node.label) < 1 or int(node.label) > 999:
+                continue
+            nodes.append(node)
+        nodes.sort(key=lambda x: x.label)
+        for node in nodes:
+            box = layout.box()
+            row = box.row()
+            row.prop(node, "ac_expand", icon="TRIA_DOWN" if node.ac_expand else "TRIA_RIGHT", text="", emboss=False)
+            if node.type != "GROUP":
+                row.label(text=node.name)
+            elif node.node_tree:
+                row.label(text=node.node_tree.name)
+            if node.ac_expand is False:
+                continue
+            if bpy.app.version >= (4, 2):
+                box.separator(type="LINE")
+            else:
+                box.separator()
+            node.draw_buttons(bpy.context, box)
+
+    def find_node_input(self, node) -> list[bpy.types.NodeSocket]:
+        sockets = []
+        for inp in node.inputs:
+            if inp.is_linked:
+                continue
+            if inp.enabled is False or inp.hide:
+                continue
+            if inp.type == "RGBA" and inp.hide_value:
+                continue
+            sockets.append(inp)
+        return sockets
 
 
 class PanelViewport(bpy.types.Panel):
@@ -299,12 +453,34 @@ class PanelViewport(bpy.types.Panel):
             brush.stencil_dimension = (length / 2, length / 2)
         Timer.put((f, brush, length, area.width, area.height))
 
+
+def status_bar_draw(self: bpy.types.UILayout, context: bpy.types.Context):
+    layout = self.layout
+    layout.label(text="[")
+    from .SDNode.custom_support import cup_monitor
+    cup_monitor.draw(layout, use_region_width=False)
+    layout.operator(Open_Log_Window.bl_idname, text="", icon="WORDWRAP_ON")
+    layout.label(text="]")
+
+
+clss = (
+    AIPanelViewport,
+)
+
+register, unregister = bpy.utils.register_classes_factory(clss)
+
+
 def ui_reg():
+    register()
     bpy.types.NODE_HT_header.append(draw_header_button)
     bpy.types.IMAGE_MT_image.append(draw_imeditor_tofrom)
     bpy.types.NODE_MT_node.append(draw_sdn_tofrom)
+    bpy.types.STATUSBAR_HT_header.append(status_bar_draw)
+
 
 def ui_unreg():
+    bpy.types.STATUSBAR_HT_header.remove(status_bar_draw)
     bpy.types.NODE_HT_header.remove(draw_header_button)
     bpy.types.IMAGE_MT_image.remove(draw_imeditor_tofrom)
     bpy.types.NODE_MT_node.remove(draw_sdn_tofrom)
+    unregister()

@@ -147,6 +147,8 @@ def get_icon_path(nname):
             PREVICONPATH[class_type] = path_list
             for name, mpath in pathmap.items():
                 reg_name = get_reg_name(name)
+                if mpath not in d:
+                    continue
                 path_list[reg_name] = d[mpath][0]
     return PREVICONPATH.get(nname, {})
 
@@ -250,6 +252,9 @@ class PropGen:
                     if icon_id:
                         ENUM_ITEMS_CACHE[nname][inp_name] = items
                     si = str(item)
+                    if si in spec_trans:
+                        items.append((si, spec_trans.get(si, si), ""))
+                        continue
                     items.append((si, spec_trans.get(si, si), "", icon_id, len(items)))
                 return items
             return wrap
@@ -294,7 +299,7 @@ class PropGen:
         {'default': 8.0, 'min': 0.0, 'max': 100.0}
         if len(inp) > 1:
             if "step" in inp[1]:
-                inp[1]["step"] *= 100
+                inp[1]["step"] = min(inp[1]["step"] * 100, 100)
             if inp[1].pop("display", False):
                 inp[1]["subtype"] = "FACTOR"
             default = inp[1].pop("default", 0)

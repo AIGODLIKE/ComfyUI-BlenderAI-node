@@ -196,7 +196,7 @@ class AddonPreference(bpy.types.AddonPreferences):
     disable_ipex_optimize: bpy.props.BoolProperty(default=False, name="disable ipex optimize", description="Disables ipex.optimize when loading models with Intel GPUs.")  # --disable-ipex-optimize
 
     attn: bpy.props.EnumProperty(name="attn",
-                                 default="--use-pytorch-cross-attention",
+                                 default="default",
                                  items=[("default", "Auto", "", 0),
                                         ("--use-split-cross-attention", "split-cross-attention", "Use the split cross attention optimization. Ignored when xformers is used.", 1),
                                         ("--use-quad-cross-attention", "quad-cross-attention", "Use the sub-quadratic cross attention optimization . Ignored when xformers is used.", 2),
@@ -413,6 +413,8 @@ class AddonPreference(bpy.types.AddonPreferences):
             args.append("--disable-metadata")
         if self.windows_standalone_build:
             args.append("--windows-standalone-build")
+        # args.append("--front-end-version")
+        # args.append("Comfy-Org/ComfyUI_frontend@latest")
         return args
 
     def update_count_page_next(self, context):

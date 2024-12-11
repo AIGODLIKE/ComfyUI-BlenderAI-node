@@ -17,7 +17,7 @@ from .timer import Timer, Worker, WorkerFunc
 from .SDNode import TaskManager
 from .SDNode.history import History
 from .SDNode.tree import InvalidNodeType, CFNodeTree, TREE_TYPE, rtnode_reg, rtnode_unreg
-from .SDNode.utils import get_default_tree
+from .SDNode.utils import get_default_tree, WindowLogger
 from .datas import IMG_SUFFIX
 from .preference import get_pref
 
@@ -190,6 +190,7 @@ class Ops(bpy.types.Operator):
             return
 
         tree.reset_error_mark()
+        WindowLogger.clear()
 
         if bpy.context.scene.sdn.advanced_exe and not Ops.is_advanced_enable:
             Ops.is_advanced_enable = True
@@ -1101,6 +1102,15 @@ class Image_Set_Channel_Packed(bpy.types.Operator):
 
     def execute(self, context):
         context.space_data.image.alpha_mode = 'CHANNEL_PACKED'
+        return {'FINISHED'}
+
+
+class Open_Log_Window(bpy.types.Operator):
+    bl_idname = "sdn.open_log_window"
+    bl_label = ""
+
+    def execute(self, context: bpy.types.Context):
+        WindowLogger.open_window()
         return {'FINISHED'}
 
 

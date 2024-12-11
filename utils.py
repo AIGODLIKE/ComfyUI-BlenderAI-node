@@ -4,6 +4,7 @@ import platform
 import time
 import re
 import json
+import bpy
 from pathlib import Path
 from threading import Thread
 from functools import lru_cache
@@ -14,6 +15,47 @@ from .translations import LANG_TEXT
 from .timer import Timer
 from .datas import IMG_SUFFIX, get_bl_version
 translation = {}
+
+addon_bl_info = {}
+
+
+def get_bl_info():
+    return addon_bl_info
+
+
+def popup_folder(path: Path):
+    import os
+    if platform.system() == "Windows":
+        if path.is_file():
+            path = path.parent
+        path = path.as_posix()
+        os.startfile(path)
+    else:
+        os.system(f"open {path}")
+
+
+def get_ai_mat_tree(obj: bpy.types.Object):
+    if not obj or obj.type != "MESH":
+        return None
+    if hasattr(obj, "ai_mat_tree"):
+        return getattr(obj, "ai_mat_tree")
+    tree_name = obj.get("AI_Mat_Gen", "")
+    if not tree_name:
+        return None
+    sdn_time_code = obj.get("AI_Mat_Gen_Id", "-1")
+    tree = bpy.data.node_groups.get(tree_name, None)
+    if not tree or tree.get("sdn_time_code", "0") != sdn_time_code:
+        for ng in bpy.data.node_groups:
+            if ng.get("sdn_time_code", "0") == sdn_time_code:
+                return ng
+        return None
+    return tree
+
+
+def set_ai_mat_tree(obj: bpy.types.Object, tree: bpy.types.NodeTree):
+    obj["AI_Mat_Gen"] = tree.name
+    tree.set_sdn_time_code()
+    obj["AI_Mat_Gen_Id"] = tree.sdn_time_code
 
 
 def read_json(path: Path | str) -> dict:
@@ -76,6 +118,7 @@ def update_screen():
         import bpy
         for area in bpy.context.screen.areas:
             area.tag_redraw()
+        bpy.context.workspace.status_text_set_internal(None)
     except BaseException:
         ...
 
@@ -297,7 +340,9 @@ class Icon(metaclass=MetaIn):
         import bpy
         p = FSWatcher.to_path(path)
         path = FSWatcher.to_str(path)
-
+        # ctrl + z 导致bpy.data中的图像被删除
+        if path not in Icon.PATH2BPY:
+            Icon.IMG_STATUS.pop(path, None)
         if not Icon.can_mark_image(path):
             return
 

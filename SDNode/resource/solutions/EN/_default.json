@@ -1,0 +1,763 @@
+{
+    "last_node_id": 19,
+    "last_link_id": 16,
+    "nodes": [
+        {
+            "id": 10,
+            "type": "VAELoader",
+            "pos": [
+                817,
+                1253
+            ],
+            "size": {
+                "0": 200,
+                "1": 30
+            },
+            "flags": {},
+            "order": 0,
+            "mode": 0,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "VAE",
+                    "type": "VAE",
+                    "links": [
+                        7
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "VAE加载器",
+            "properties": {
+                "sdn_hide": false
+            },
+            "widgets_values": [
+                "pastel-waifu-diffusion.vae.pt"
+            ]
+        },
+        {
+            "id": 12,
+            "type": "输入图像",
+            "pos": [
+                -17,
+                1501
+            ],
+            "size": {
+                "0": 256,
+                "1": 30
+            },
+            "flags": {},
+            "order": 1,
+            "mode": 0,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "IMAGE",
+                    "type": "IMAGE",
+                    "links": [
+                        11
+                    ],
+                    "slot_index": 0
+                },
+                {
+                    "name": "MASK",
+                    "type": "MASK",
+                    "links": [],
+                    "slot_index": 1
+                }
+            ],
+            "title": "输入图像",
+            "properties": {
+                "sdn_hide": false,
+                "label": "(NORMAL)"
+            },
+            "widgets_values": [
+                "C:/Users/NIER/AppData/Local/Temp/_gen_大理石胸像01_Copyac241_NORMAL.png",
+                "输入"
+            ]
+        },
+        {
+            "id": 13,
+            "type": "ControlNetLoader",
+            "pos": [
+                -2,
+                1281
+            ],
+            "size": {
+                "0": 200,
+                "1": 30
+            },
+            "flags": {},
+            "order": 2,
+            "mode": 0,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "CONTROL_NET",
+                    "type": "CONTROL_NET",
+                    "links": [
+                        8
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "ControlNetLoader",
+            "properties": {
+                "sdn_hide": false
+            },
+            "widgets_values": [
+                "SD1.5\\control_v11p_sd15_normalbae.pth"
+            ]
+        },
+        {
+            "id": 14,
+            "type": "ControlNetApply",
+            "pos": [
+                389,
+                1138
+            ],
+            "size": {
+                "0": 200,
+                "1": 30
+            },
+            "flags": {},
+            "order": 10,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "conditioning",
+                    "type": "CONDITIONING",
+                    "link": 12,
+                    "label": "conditioning"
+                },
+                {
+                    "name": "control_net",
+                    "type": "CONTROL_NET",
+                    "link": 8,
+                    "label": "control_net"
+                },
+                {
+                    "name": "image",
+                    "type": "IMAGE",
+                    "link": 11,
+                    "label": "image"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "CONDITIONING",
+                    "type": "CONDITIONING",
+                    "links": [
+                        9
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "ControlNet应用",
+            "properties": {
+                "sdn_hide": false
+            },
+            "widgets_values": [
+                1.0
+            ]
+        },
+        {
+            "id": 16,
+            "type": "存储",
+            "pos": [
+                1476,
+                402
+            ],
+            "size": {
+                "0": 200,
+                "1": 30
+            },
+            "flags": {},
+            "order": 14,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "images",
+                    "type": "IMAGE",
+                    "link": 10,
+                    "label": "images"
+                }
+            ],
+            "outputs": [],
+            "title": "ToMatImage",
+            "properties": {
+                "sdn_hide": false
+            },
+            "widgets_values": [
+                "ComfyUI",
+                ""
+            ]
+        },
+        {
+            "id": 17,
+            "type": "ControlNetApply",
+            "pos": [
+                6,
+                1105
+            ],
+            "size": {
+                "0": 200,
+                "1": 30
+            },
+            "flags": {},
+            "order": 9,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "conditioning",
+                    "type": "CONDITIONING",
+                    "link": 13,
+                    "label": "conditioning"
+                },
+                {
+                    "name": "control_net",
+                    "type": "CONTROL_NET",
+                    "link": 14,
+                    "label": "control_net"
+                },
+                {
+                    "name": "image",
+                    "type": "IMAGE",
+                    "link": 15,
+                    "label": "image"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "CONDITIONING",
+                    "type": "CONDITIONING",
+                    "links": [
+                        12
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "ControlNet应用.001",
+            "properties": {
+                "sdn_hide": false
+            },
+            "widgets_values": [
+                1.0
+            ]
+        },
+        {
+            "id": 18,
+            "type": "ControlNetLoader",
+            "pos": [
+                -384,
+                1191
+            ],
+            "size": {
+                "0": 200,
+                "1": 30
+            },
+            "flags": {},
+            "order": 3,
+            "mode": 0,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "CONTROL_NET",
+                    "type": "CONTROL_NET",
+                    "links": [
+                        14
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "ControlNetLoader.001",
+            "properties": {
+                "sdn_hide": false
+            },
+            "widgets_values": [
+                "SD1.5\\control_v11p_sd15_depth.pth"
+            ]
+        },
+        {
+            "id": 19,
+            "type": "输入图像",
+            "pos": [
+                -443,
+                1409
+            ],
+            "size": {
+                "0": 256,
+                "1": 30
+            },
+            "flags": {},
+            "order": 4,
+            "mode": 0,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "IMAGE",
+                    "type": "IMAGE",
+                    "links": [
+                        15
+                    ],
+                    "slot_index": 0
+                },
+                {
+                    "name": "MASK",
+                    "type": "MASK",
+                    "links": [],
+                    "slot_index": 1
+                }
+            ],
+            "title": "输入图像.001",
+            "properties": {
+                "sdn_hide": false,
+                "label": "(DEPTH)"
+            },
+            "widgets_values": [
+                "C:/Users/NIER/AppData/Local/Temp/_gen_大理石胸像01_Copyac241_DEPTH.png",
+                "输入"
+            ]
+        },
+        {
+            "id": 3,
+            "type": "KSampler",
+            "pos": [
+                824,
+                511
+            ],
+            "size": {
+                "0": 200,
+                "1": 30
+            },
+            "flags": {},
+            "order": 11,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "model",
+                    "type": "MODEL",
+                    "link": 3,
+                    "label": "model"
+                },
+                {
+                    "name": "positive",
+                    "type": "CONDITIONING",
+                    "link": 9,
+                    "label": "positive"
+                },
+                {
+                    "name": "negative",
+                    "type": "CONDITIONING",
+                    "link": 1,
+                    "label": "negative"
+                },
+                {
+                    "name": "latent_image",
+                    "type": "LATENT",
+                    "link": 4,
+                    "label": "latent_image"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "LATENT",
+                    "type": "LATENT",
+                    "links": [
+                        5
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "K采样器",
+            "properties": {
+                "sdn_hide": false,
+                "label": "003"
+            },
+            "widgets_values": [
+                "2791066226",
+                "fixed",
+                20,
+                8.0,
+                "euler",
+                "karras",
+                1.0
+            ]
+        },
+        {
+            "id": 4,
+            "type": "CheckpointLoaderSimple",
+            "pos": [
+                -698,
+                823
+            ],
+            "size": {
+                "0": 200,
+                "1": 30
+            },
+            "flags": {},
+            "order": 5,
+            "mode": 0,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "MODEL",
+                    "type": "MODEL",
+                    "links": [
+                        3
+                    ],
+                    "slot_index": 0
+                },
+                {
+                    "name": "CLIP",
+                    "type": "CLIP",
+                    "links": [
+                        0,
+                        2
+                    ],
+                    "slot_index": 1
+                },
+                {
+                    "name": "VAE",
+                    "type": "VAE",
+                    "links": [],
+                    "slot_index": 2
+                }
+            ],
+            "title": "CheckpointLoaderSimple",
+            "properties": {
+                "sdn_hide": false,
+                "label": "001"
+            },
+            "widgets_values": [
+                "GuoFeng3.2_f16.safetensors"
+            ]
+        },
+        {
+            "id": 5,
+            "type": "CLIPTextEncode",
+            "pos": [
+                -459,
+                1008
+            ],
+            "size": {
+                "0": 347,
+                "1": 30
+            },
+            "flags": {},
+            "order": 7,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "clip",
+                    "type": "CLIP",
+                    "link": 0,
+                    "label": "clip"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "CONDITIONING",
+                    "type": "CONDITIONING",
+                    "links": [
+                        13
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "CLIPTextEncode(Positive)",
+            "properties": {
+                "sdn_hide": false,
+                "label": "002"
+            },
+            "widgets_values": [
+                "Model, Masterpiece, Best Quality, Octane Rendering, UE5 Rendering, Realistic, Film and Television Grade"
+            ]
+        },
+        {
+            "id": 6,
+            "type": "CLIPTextEncode",
+            "pos": [
+                -129,
+                764
+            ],
+            "size": {
+                "0": 306,
+                "1": 30
+            },
+            "flags": {},
+            "order": 8,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "clip",
+                    "type": "CLIP",
+                    "link": 2,
+                    "label": "clip"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "CONDITIONING",
+                    "type": "CONDITIONING",
+                    "links": [
+                        1
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "CLIPTextEncode(Negative)",
+            "properties": {
+                "sdn_hide": false
+            },
+            "widgets_values": [
+                "embedding:EasyNegative"
+            ]
+        },
+        {
+            "id": 7,
+            "type": "EmptyLatentImage",
+            "pos": [
+                389,
+                1336
+            ],
+            "size": {
+                "0": 200,
+                "1": 30
+            },
+            "flags": {},
+            "order": 6,
+            "mode": 0,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "LATENT",
+                    "type": "LATENT",
+                    "links": [
+                        4
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "空Latent图像",
+            "properties": {
+                "sdn_hide": false
+            },
+            "widgets_values": [
+                1024,
+                1024,
+                1
+            ]
+        },
+        {
+            "id": 8,
+            "type": "VAEDecode",
+            "pos": [
+                1176,
+                867
+            ],
+            "size": {
+                "0": 200,
+                "1": 30
+            },
+            "flags": {},
+            "order": 12,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "samples",
+                    "type": "LATENT",
+                    "link": 5,
+                    "label": "samples"
+                },
+                {
+                    "name": "vae",
+                    "type": "VAE",
+                    "link": 7,
+                    "label": "vae"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "IMAGE",
+                    "type": "IMAGE",
+                    "links": [
+                        6,
+                        10
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "VAE解码",
+            "properties": {
+                "sdn_hide": false
+            },
+            "widgets_values": []
+        },
+        {
+            "id": 9,
+            "type": "PreviewImage",
+            "pos": [
+                1476,
+                602
+            ],
+            "size": {
+                "0": 256,
+                "1": 30
+            },
+            "flags": {},
+            "order": 13,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "images",
+                    "type": "IMAGE",
+                    "link": 6,
+                    "label": "images"
+                }
+            ],
+            "outputs": [],
+            "title": "预览(Blender专用)",
+            "properties": {
+                "sdn_hide": false
+            },
+            "widgets_values": []
+        }
+    ],
+    "links": [
+        [
+            0,
+            4,
+            1,
+            5,
+            0,
+            "CLIP"
+        ],
+        [
+            1,
+            6,
+            0,
+            3,
+            2,
+            "CONDITIONING"
+        ],
+        [
+            2,
+            4,
+            1,
+            6,
+            0,
+            "CLIP"
+        ],
+        [
+            3,
+            4,
+            0,
+            3,
+            0,
+            "MODEL"
+        ],
+        [
+            4,
+            7,
+            0,
+            3,
+            3,
+            "LATENT"
+        ],
+        [
+            5,
+            3,
+            0,
+            8,
+            0,
+            "LATENT"
+        ],
+        [
+            6,
+            8,
+            0,
+            9,
+            0,
+            "IMAGE"
+        ],
+        [
+            7,
+            10,
+            0,
+            8,
+            1,
+            "VAE"
+        ],
+        [
+            8,
+            13,
+            0,
+            14,
+            1,
+            "CONTROL_NET"
+        ],
+        [
+            9,
+            14,
+            0,
+            3,
+            1,
+            "CONDITIONING"
+        ],
+        [
+            10,
+            8,
+            0,
+            16,
+            0,
+            "IMAGE"
+        ],
+        [
+            11,
+            12,
+            0,
+            14,
+            2,
+            "IMAGE"
+        ],
+        [
+            12,
+            17,
+            0,
+            14,
+            0,
+            "CONDITIONING"
+        ],
+        [
+            13,
+            5,
+            0,
+            17,
+            0,
+            "CONDITIONING"
+        ],
+        [
+            14,
+            18,
+            0,
+            17,
+            1,
+            "CONTROL_NET"
+        ],
+        [
+            15,
+            19,
+            0,
+            17,
+            2,
+            "IMAGE"
+        ]
+    ],
+    "groups": [],
+    "config": {},
+    "extra": {
+        "groupNodes": {}
+    },
+    "version": 0.4
+}

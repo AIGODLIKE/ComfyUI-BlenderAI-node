@@ -15,7 +15,7 @@ from copy import deepcopy
 from bpy.types import Context, UILayout
 
 from .nodegroup import LABEL_TAG, SOCK_TAG, SDNGroup
-from .utils import gen_mask, THelper
+from .utils import gen_mask, THelper, WindowLogger
 from .plugins.animatedimageplayer import AnimatedImagePlayer as AIP
 from .nodes import NodeBase, Ops_Add_SaveImage, Ops_Link_Mask, Ops_Active_Tex, Set_Render_Res, Ops_Switch_Socket_Widget
 from .nodes import name2path, get_icon_path, Images
@@ -115,21 +115,21 @@ def setwidth(self: NodeBase, w, count=1):
         return 0
     oriw = w
     w = max(self.bl_width_min, w)
-    fpis = get_pref().preview_image_size_type == "FIXED"
-    if fpis:
+    fixed = get_pref().preview_image_size_type == "FIXED"
+    if fixed:
         pw = get_pref().preview_image_size
         w = min(oriw, pw)
     sw = w
     w *= count
 
-    def delegate(self: NodeBase, w, fpis):
+    def delegate(self: NodeBase, w, fixed):
         """
         可能会因为 width 访问导致crash, 可以先清理Timer
         """
-        if not fpis:
+        if not fixed:
             self.bl_width_max = 8192
             self.bl_width_min = 32
-        if self.width == w and not fpis:
+        if self.width == w and not fixed:
             return
         # 避免删除所有节点时导致blender崩溃
         if len(self.get_tree().nodes) != hack_nodes_num[0]:
@@ -137,11 +137,13 @@ def setwidth(self: NodeBase, w, count=1):
             Timer.clear()
             return
         hack_nodes_num[0] = len(self.get_tree().nodes)
-        self.width = w
-        if self.bl_width_max < w or fpis:
-            self.bl_width_max = w
+        if w != self.width:
+            self.width = w
+        if self.bl_width_max < w or fixed:
+            self.bl_width_max = w + 32
 
-    Timer.put((delegate, self, w, fpis))
+    # Timer.put((delegate, self, w, fixed))
+    delegate(self, w, fixed)
     return sw
 
 
@@ -176,6 +178,9 @@ class BluePrintBase:
 
     def new_btn_enable(s, self, layout, context):
         return True
+
+    def set_width(s, self: NodeBase):
+        ...
 
     def draw_button(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swsock=True, swdisp=False):
         def show_model_preview(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILayout, prop: str):
@@ -692,6 +697,7 @@ class WD14Tagger(BluePrintBase):
 
     def post_fn(s, self: NodeBase, t: Task, result):
         logger.debug("%s%s->%s", self.class_type, _T('Post Function'), result)
+        WindowLogger.push_log("%s%s->%s", self.class_type, _T('Post Function'), result)
         text = result.get("output", {}).get("tags", [])
         text = "".join(text)
 
@@ -740,6 +746,7 @@ class PreviewTextNode(BluePrintBase):
 
     def post_fn(s, self: NodeBase, t: Task, result):
         logger.debug("%s%s->%s", self.class_type, _T('Post Function'), result)
+        WindowLogger.push_log("%s%s->%s", self.class_type, _T('Post Function'), result)
         text = result.get("output", {}).get("string", [])
         if text and isinstance(text[0], str):
             self.text = text[0]
@@ -1160,6 +1167,17 @@ def cache_to_local(data, suffix="png", save_path="") -> Path:
 class 预览(BluePrintBase):
     comfyClass = "预览"
 
+    def set_width(s, self: NodeBase):
+        if not self.prev:
+            return self.width
+        pnum = len(self.prev)
+        p0 = self.prev[0].image
+        w = max(p0.size[0], p0.size[1])
+        if w == 0:
+            return self.width
+        w = setwidth(self, w, count=min(self.lnum, pnum))
+        return w
+
     def spec_extra_properties(s, properties, nname, ndesc):
         prop = bpy.props.CollectionProperty(type=Images)
         properties["prev"] = prop
@@ -1180,10 +1198,6 @@ class 预览(BluePrintBase):
             if pnum == 0:
                 return True
             p0 = self.prev[0].image
-            w = max(p0.size[0], p0.size[1])
-            if w == 0:
-                return True
-            w = setwidth(self, w, count=min(self.lnum, pnum))
             layout.label(text=f"{p0.file_format} : [{p0.size[0]} x {p0.size[1]}]")
             col = layout.column(align=True)
             for i, p in enumerate(self.prev):
@@ -1193,7 +1207,7 @@ class 预览(BluePrintBase):
                 if prev.name not in Icon:
                     Icon.reg_icon_by_pixel(prev, prev.name)
                 icon_id = Icon[prev.name]
-                fcol.template_icon(icon_id, scale=w // 20)
+                fcol.template_icon(icon_id, scale=self.width // 20)
             return True
 
     def serialize_pre_specific(s, self: NodeBase):
@@ -1203,11 +1217,14 @@ class 预览(BluePrintBase):
 
     def post_fn(s, self: NodeBase, t: Task, result):
         logger.debug("%s%s->%s", self.class_type, _T('Post Function'), result)
+        WindowLogger.push_log("%s%s->%s", self.class_type, _T('Post Function'), result)
         img_paths = result.get("output", {}).get("images", [])
         if not img_paths:
             logger.error('response is %s, cannot find images in it', result)
+            WindowLogger.push_log('response is %s, cannot find images in it', result)
             return
         logger.warning("%s: %s", _T('Load Preview Image'), img_paths)
+        WindowLogger.push_log("%s: %s", _T('Load Preview Image'), img_paths)
 
         def f(self, img_paths: list[dict]):
             self.prev.clear()
@@ -1235,6 +1252,16 @@ class 预览(BluePrintBase):
 class PreviewImage(BluePrintBase):
     comfyClass = "PreviewImage"
 
+    def set_width(s, self: NodeBase):
+        if not self.prev:
+            return self.width
+        pnum = len(self.prev)
+        p0 = self.prev[0].image
+        w = max(p0.size[0], p0.size[1])
+        if w == 0:
+            return self.width
+        return setwidth(self, w, count=min(self.lnum, pnum))
+
     def spec_extra_properties(s, properties, nname, ndesc):
         prop = bpy.props.CollectionProperty(type=Images)
         properties["prev"] = prop
@@ -1255,10 +1282,6 @@ class PreviewImage(BluePrintBase):
             if pnum == 0:
                 return True
             p0 = self.prev[0].image
-            w = max(p0.size[0], p0.size[1])
-            if w == 0:
-                return True
-            w = setwidth(self, w, count=min(self.lnum, pnum))
             layout.label(text=f"{p0.file_format} : [{p0.size[0]} x {p0.size[1]}]")
             col = layout.column(align=True)
             for i, p in enumerate(self.prev):
@@ -1268,7 +1291,7 @@ class PreviewImage(BluePrintBase):
                 if prev.name not in Icon:
                     Icon.reg_icon_by_pixel(prev, prev.name)
                 icon_id = Icon[prev.name]
-                fcol.template_icon(icon_id, scale=w // 20)
+                fcol.template_icon(icon_id, scale=self.width // 20)
             return True
 
     def serialize_pre_specific(s, self: NodeBase):
@@ -1278,11 +1301,14 @@ class PreviewImage(BluePrintBase):
 
     def post_fn(s, self: NodeBase, t: Task, result):
         logger.debug("%s%s->%s", self.class_type, _T('Post Function'), result)
+        WindowLogger.push_log("%s%s->%s", self.class_type, _T('Post Function'), result)
         img_paths = result.get("output", {}).get("images", [])
         if not img_paths:
             logger.error('response is %s, cannot find images in it', result)
+            WindowLogger.push_log('response is %s, cannot find images in it', result)
             return
         logger.warning("%s: %s", _T('Load Preview Image'), img_paths)
+        WindowLogger.push_log("%s: %s", _T('Load Preview Image'), img_paths)
 
         def f(self, img_paths: list[dict]):
             self.prev.clear()
@@ -1535,6 +1561,11 @@ class SaveImage(BluePrintBase):
 class 输入图像(BluePrintBase):
     comfyClass = "输入图像"
 
+    def set_width(s, self: NodeBase):
+        if not self.prev:
+            return self.width
+        return setwidth(self, max(self.prev.size[0], self.prev.size[1]))
+
     def spec_extra_properties(s, properties, nname, ndesc):
         prop = bpy.props.PointerProperty(type=bpy.types.Image)
         properties["prev"] = prop
@@ -1598,8 +1629,6 @@ class 输入图像(BluePrintBase):
                     if not (img := Icon.find_image(self.image)):
                         return
                     self.prev = img
-                    w = max(self.prev.size[0], self.prev.size[1])
-                    setwidth(self, w)
                     update_screen()
                 if Icon.try_mark_image(self.image) or not self.prev:
                     Timer.put((f, self))
@@ -1618,9 +1647,7 @@ class 输入图像(BluePrintBase):
                 row = layout.row(align=True)
                 row.label(text=f"{self.prev.file_format} : [{self.prev.size[0]} x {self.prev.size[1]}]")
                 row.operator(Set_Render_Res.bl_idname, text="", icon="LOOP_FORWARDS").node_name = self.name
-                w = max(self.prev.size[0], self.prev.size[1])
-                w = setwidth(self, w)
-                layout.template_icon(icon_id, scale=w // 20)
+                layout.template_icon(icon_id, scale=self.width // 20)
             return True
         elif prop in {"render_layer", "out_layers", "frames_dir", "disable_render", "use_current_frame", "input_frame"}:
             return True
@@ -1738,6 +1765,11 @@ class 材质图(BluePrintBase):
 class 截图(BluePrintBase):
     comfyClass = "截图"
 
+    def set_width(s, self: NodeBase):
+        if not self.prev:
+            return self.width
+        return setwidth(self, max(self.prev.size[0], self.prev.size[1]))
+
     def draw_button(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swsock=True, swdisp=False):
         if prop in {"x1", "y1", "x2", "y2"}:
             return True
@@ -1751,8 +1783,6 @@ class 截图(BluePrintBase):
                     if not (img := Icon.find_image(self.image)):
                         return
                     self.prev = img
-                    w = max(self.prev.size[0], self.prev.size[1])
-                    setwidth(self, w)
                     update_screen()
                 if Icon.try_mark_image(self.image) or not self.prev:
                     Timer.put((f, self))
@@ -1771,9 +1801,7 @@ class 截图(BluePrintBase):
                 row = layout.row(align=True)
                 row.label(text=f"{self.prev.file_format} : [{self.prev.size[0]} x {self.prev.size[1]}]")
                 row.operator(Set_Render_Res.bl_idname, text="", icon="LOOP_FORWARDS").node_name = self.name
-                w = max(self.prev.size[0], self.prev.size[1])
-                w = setwidth(self, w)
-                layout.template_icon(icon_id, scale=w // 20)
+                layout.template_icon(icon_id, scale=self.width // 20)
             return True
         return super().draw_button(self, context, layout, prop, swsock, swdisp)
 
@@ -1853,12 +1881,15 @@ class AnimateDiffCombine(BluePrintBase):
         result : {'node': '11', 'output': {'videos': [{'filename': 'img.gif', 'subfolder': '', 'type': 'output', 'format': 'image/gif'}]}, 'prompt_id': ''}
         """
         logger.debug("%s%s->%s", self.class_type, _T('Post Function'), result)
+        WindowLogger.push_log("%s%s->%s", self.class_type, _T('Post Function'), result)
         # img_paths = link_get(result, "output.videos")
         img_paths = result.get("output", {}).get("videos", [])
         if not img_paths:
             logger.error(f'response is {result}, cannot find images in it')
+            WindowLogger.push_log(f'response is {result}, cannot find images in it')
             return
         logger.warning("%s: %s", _T('Load Preview Image'), img_paths)
+        WindowLogger.push_log("%s: %s", _T('Load Preview Image'), img_paths)
 
         def f(self, img_paths: list[dict]):
             """
@@ -1922,12 +1953,15 @@ class VHS_VideoCombine(BluePrintBase):
             {'node': '9', 'output': {'gifs': [{'filename': 'AnimateDiff_00003.mov', 'subfolder': '', 'type': 'output', 'format': 'video/ProRes'}]}, 'prompt_id': '462c8f2d-7e1b-4003-9a12-36b43bec6743'}
         """
         logger.debug("%s%s->%s", self.class_type, _T('Post Function'), result)
+        WindowLogger.push_log("%s%s->%s", self.class_type, _T('Post Function'), result)
         # img_paths = link_get(result, "output.videos")
         img_paths = result.get("output", {}).get("gifs", [])
         if not img_paths:
             logger.error(f'response is {result}, cannot find images in it')
+            WindowLogger.push_log(f'response is {result}, cannot find images in it')
             return
         logger.warning("%s: %s", _T('Load Preview Image'), img_paths)
+        WindowLogger.push_log("%s: %s", _T('Load Preview Image'), img_paths)
 
         def f(self, img_paths: list[dict]):
             """
@@ -2018,12 +2052,15 @@ class SaveAnimatedPNG(BluePrintBase):
     def post_fn(s, self: NodeBase, t: Task, result):
 
         logger.debug("%s%s->%s", self.class_type, _T('Post Function'), result)
+        WindowLogger.push_log("%s%s->%s", self.class_type, _T('Post Function'), result)
         # img_paths = link_get(result, "output.videos")
         img_paths = result.get("output", {}).get("images", [])
         if not img_paths:
             logger.error(f'response is {result}, cannot find images in it')
+            WindowLogger.push_log(f'response is {result}, cannot find images in it')
             return
         logger.warning("%s: %s", _T('Load Preview Image'), img_paths)
+        WindowLogger.push_log("%s: %s", _T('Load Preview Image'), img_paths)
 
         def f(self, img_paths: list[dict]):
             """
@@ -2085,12 +2122,15 @@ class SaveAnimatedWEBP(BluePrintBase):
 
     def post_fn(s, self: NodeBase, t: Task, result):
         logger.debug("%s%s->%s", self.class_type, _T('Post Function'), result)
+        WindowLogger.push_log("%s%s->%s", self.class_type, _T('Post Function'), result)
         # img_paths = link_get(result, "output.videos")
         img_paths = result.get("output", {}).get("images", [])
         if not img_paths:
             logger.error(f'response is {result}, cannot find images in it')
+            WindowLogger.push_log(f'response is {result}, cannot find images in it')
             return
         logger.warning("%s: %s", _T('Load Preview Image'), img_paths)
+        WindowLogger.push_log("%s: %s", _T('Load Preview Image'), img_paths)
 
         def f(self, img_paths: list[dict]):
             """
@@ -2221,6 +2261,7 @@ class TripoSRViewer(BluePrintBase):
 
     def post_fn(s, self: NodeBase, t: Task, result):
         logger.debug("%s%s->%s", self.class_type, _T('Post Function'), result)
+        WindowLogger.push_log("%s%s->%s", self.class_type, _T('Post Function'), result)
         # result = {'node': '4', 'output': {'mesh': [{'filename': 'meshsave_00002_.obj', 'type': 'output', 'subfolder': ''}]}}
         output = result.get("output", {})
         meshes = output.get("mesh", [])
@@ -2232,6 +2273,7 @@ class TripoSRViewer(BluePrintBase):
                 filename = data.get("filename", "")
                 if not filename.lower().endswith(".obj"):
                     logger.warning(f"Not process {filename}")
+                    WindowLogger.push_log(f"Not process {filename}")
                     continue
 
                 if self.mode in {"Import", "Replace"}:
@@ -2336,6 +2378,7 @@ class TripoGLBViewer(BluePrintBase):
 
     def post_fn(s, self: NodeBase, t: Task, result):
         logger.debug("%s%s->%s", self.class_type, _T('Post Function'), result)
+        WindowLogger.push_log("%s%s->%s", self.class_type, _T('Post Function'), result)
         # result = {'node': '4', 'output': {'mesh': [{'filename': 'meshsave_00002_.obj', 'type': 'output', 'subfolder': ''}]}}
         output = result.get("output", {})
         meshes = output.get("mesh", [])
@@ -2347,6 +2390,7 @@ class TripoGLBViewer(BluePrintBase):
                 filename = data.get("filename", "")
                 if not filename.lower().endswith(".glb"):
                     logger.warning(f"Not process {filename}")
+                    WindowLogger.push_log(f"Not process {filename}")
                     continue
 
                 if self.mode in {"Import", "Replace"}:
@@ -2574,11 +2618,14 @@ class PreviewAudio(BluePrintBase):
 
     def post_fn(s, self: NodeBase, t: Task, result):
         logger.debug("%s%s->%s", self.class_type, _T('Post Function'), result)
+        WindowLogger.push_log("%s%s->%s", self.class_type, _T('Post Function'), result)
         audio_paths = result.get("output", {}).get("audio", [])
         if not audio_paths:
             logger.error('response is %s, cannot find audio in it', result)
+            WindowLogger.push_log('response is %s, cannot find audio in it', result)
             return
         logger.warning("%s: %s", _T('Load Preview Audio'), audio_paths)
+        WindowLogger.push_log("%s: %s", _T('Load Preview Audio'), audio_paths)
 
         def f(self, audio_paths: list[dict]):
             if not audio_paths:

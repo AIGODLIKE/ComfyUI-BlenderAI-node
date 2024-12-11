@@ -168,7 +168,7 @@ class CupMonitor:
         Timer.put((f, data, mtype))
         return True
 
-    def draw(self, layout: bpy.types.UILayout, ctxt=""):
+    def draw(self, layout: bpy.types.UILayout, ctxt="", use_region_width=True):
         from . import TaskManager
         if self.enable:
             cp = bpy.context.screen.sdn_custom
@@ -187,9 +187,11 @@ class CupMonitor:
             import blf
             per = prog["value"] / prog["max"]
             content = f"{per*100:3.0f}% "
-            lnum = int(bpy.context.region.width / bpy.context.preferences.view.ui_scale / 7 - 21)
-            lnum = int(lnum * 0.3)
-            lnum = int((bpy.context.region.width - blf.dimensions(0, content)[0]) / blf.dimensions(0, "█")[0]) - 10
+            lnum = 20
+            if use_region_width:
+                lnum = int(bpy.context.region.width / bpy.context.preferences.view.ui_scale / 7 - 21)
+                lnum = int(lnum * 0.3)
+                lnum = int((bpy.context.region.width - blf.dimensions(0, content)[0]) / blf.dimensions(0, "█")[0]) - 10
             v = int(per * lnum)
             content = content + "█" * v + "░" * (lnum - v)
             row = layout.row()
