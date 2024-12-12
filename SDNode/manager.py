@@ -9,6 +9,7 @@ import atexit
 import aud
 from platform import system
 import struct
+from ast import literal_eval
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 from shutil import rmtree
@@ -19,6 +20,7 @@ from threading import Thread
 from subprocess import Popen, PIPE, STDOUT
 from pathlib import Path
 from queue import Queue
+from .utils import WindowLogger
 from ..utils import rmtree as rt, logger, _T, PkgInstaller, update_screen
 from ..timer import Timer
 from ..preference import get_pref
@@ -150,8 +152,17 @@ class TaskErrPaser:
 
         def get_print(self, info):
             etype = info["type"]
+            if isinstance(etype, str) and etype.endswith("cup.CupException"):
+                info = literal_eval(info["message"])
+                etype = info["type"]
             func = getattr(self, etype, self.unknown)
             return func(info)
+
+        def sdn_no_image_provided(self, info):
+            return self.__print__(info)
+
+        def sdn_image_not_found(self, info):
+            return self.__print__(info)
 
         def unknown(self, info):
             if self.WITH_PRINT:
@@ -179,8 +190,10 @@ class TaskErrPaser:
             info_list = []
             if msg:
                 info_list.append(msg)
+                WindowLogger.push_log(msg)
             if dt:
                 info_list.append(dt)
+                WindowLogger.push_log(dt)
             return info_list
 
         def required_input_missing(self, info):
@@ -412,7 +425,8 @@ class TaskErrPaser:
         node_errors = self.error_info["node_errors"]
         import bpy
         from .utils import get_tree
-        logger.error("Node Error Parse")
+        logger.error(_T("Node Error Parse"))
+        WindowLogger.push_log(_T("Node Error Parse"))
         for sc in bpy.data.screens:
             try:
                 tree = get_tree(screen=sc)
@@ -623,20 +637,23 @@ class LocalServer(Server):
         pidpath = Path(__file__).parent / "pid"
         if pidpath.exists():
             self.force_kill(pidpath.read_text())
-            pidpath.unlink()
+            pidpath.unlink(missing_ok=True)
 
         pref = get_pref()
         model_path = pref.model_path
         if not model_path or not Path(model_path).exists():
             logger.error(_T("ComfyUI Path Not Found"))
             TaskManager.put_error_msg(_T("ComfyUI Path Not Found"))
+            WindowLogger.push_log(_T("ComfyUI Path Not Found"))
             return
         logger.debug("%s: %s", _T("Model Path"), model_path)
+        WindowLogger.push_log("%s: %s", _T("Model Path"), model_path)
         python = pref.get_python()
         if pref.install_deps:
             self.run_pre()
 
         logger.warning(_T("Server Launching"))
+        WindowLogger.push_log(_T("Server Launching"))
         if sys.platform == "win32" and not python.exists():
             logger.error("%s:", _T("python interpreter not found"))
             logger.error("   ↳%s:", _T("Ensure that the python_embeded located in the same level as ComfyUI dir"))
@@ -646,6 +663,14 @@ class LocalServer(Server):
             logger.error("      │ ├─ python.exe")
             logger.error("      │ └─ ...")
             logger.error("      └─ ...")
+            WindowLogger.push_log("%s:", _T("python interpreter not found"))
+            WindowLogger.push_log("   ↳%s:", _T("Ensure that the python_embeded located in the same level as ComfyUI dir"))
+            WindowLogger.push_log("      SomeDirectory")
+            WindowLogger.push_log("      ├─ ComfyUI")
+            WindowLogger.push_log("      ├─ python_embeded")
+            WindowLogger.push_log("      │ ├─ python.exe")
+            WindowLogger.push_log("      │ └─ ...")
+            WindowLogger.push_log("      └─ ...")
             return
 
         # custom_nodes
@@ -669,7 +694,7 @@ class LocalServer(Server):
                     t = t.replace("FORCE_LOG = False", f"FORCE_LOG = {get_pref().force_log}")
                     Path(model_path).joinpath("custom_nodes", file.name, cup_py.name).write_text(t, encoding="utf-8")
                 if old_cup_py.exists():
-                    Path(model_path).joinpath("custom_nodes", cup_py.name).unlink()
+                    Path(model_path).joinpath("custom_nodes", cup_py.name).unlink(missing_ok=True)
             except Exception as e:
                 # 可能会拷贝失败(权限问题)
                 ...
@@ -703,7 +728,7 @@ class LocalServer(Server):
         pidpath = Path(__file__).parent / "pid"
         if pidpath.exists():
             self.force_kill(pidpath.read_text())
-            pidpath.unlink()
+            pidpath.unlink(missing_ok=True)
 
         if self.child:
             self.child.kill()
@@ -720,7 +745,7 @@ class LocalServer(Server):
             update_screen()
             import requests
             try:
-                if requests.get(f"{self.get_url()}/object_info", proxies={"http": None, "https": None}, timeout=1).status_code == 200:
+                if requests.get(f"{self.get_url()}/object_info", proxies={"http": None, "https": None}, timeout=5).status_code == 200:
                     get_pref().preview_method = get_pref().preview_method
                     return True
             except requests.exceptions.ConnectionError:
@@ -961,10 +986,12 @@ class TaskManager:
         running = TaskManager.server.run()
         if not TaskManager.server.exited() and running:
             logger.warning(_T("Server Launched"))
+            WindowLogger.push_log(_T("Server Launched"))
             TaskManager.start_polling()
             callback()
         else:
             logger.error(_T("Server Launch Failed"))
+            WindowLogger.push_log(_T("Server Launch Failed"))
             TaskManager.server.close()
         return running
 
@@ -992,10 +1019,14 @@ class TaskManager:
     @staticmethod
     def push_task(task, pre=None, post=None, tree=None):
         logger.debug(_T('Add Task'))
+        WindowLogger.push_log(_T('Add Task'))
         if not TaskManager.is_launched():
             TaskManager.put_error_msg(_T("Server Not Launched, Add Task Failed"))
+            WindowLogger.push_log(_T("Server Not Launched, Add Task Failed"))
             TaskManager.put_error_msg(_T("Please Check ComfyUI Directory"))
+            WindowLogger.push_log(_T("Please Check ComfyUI Directory"))
             logger.error(_T("Server Not Launched"))
+            WindowLogger.push_log(_T("Server Not Launched"))
             return
         TaskManager.task_queue.put(Task(task, pre=pre, post=post, tree=tree))
 
@@ -1055,6 +1086,7 @@ class TaskManager:
             task = TaskManager.task_queue.get()
             TaskManager.progress = {'value': 0, 'max': 1}
             logger.debug(_T("Submit Task"))
+            WindowLogger.push_log(_T("Submit Task"))
             TaskManager.cur_task = task
             try:
                 TaskManager.submit(task)
@@ -1088,6 +1120,7 @@ class TaskManager:
         def queue_task(task: dict):
             res = TaskManager.query_server_task()
             logger.debug("P/R: %s/%s", len(res["queue_pending"]), len(res["queue_running"]))
+            WindowLogger.push_log("P/R: %s/%s", len(res["queue_pending"]), len(res["queue_running"]))
 
             api = task.get("api")
             if api == "prompt":
@@ -1220,16 +1253,23 @@ class TaskManager:
                 n = data.get("node", "")
                 if n:
                     logger.debug("%s: %s", _T("Executing Node"), n)
+                    WindowLogger.push_log("%s: %s", _T("Executing Node"), n)
             elif mtype == "execution_start":
                 ...
             elif mtype == "execution_cached":
                 logger.debug("%s: %s", _T("Execution Cached"), data.get("nodes", ""))
-            elif mtype == "status":
+                WindowLogger.push_log("%s: %s", _T("Execution Cached"), data.get("nodes", ""))
+            elif mtype == "executed":
+                ...
+            elif mtype == "execution_success":
                 ...
             elif mtype == "execution_error":
                 ...
+            elif mtype == "status":
+                ...
             elif mtype != "progress":
                 logger.debug("%s: %s", _T("Message Type"), mtype)
+                WindowLogger.push_log("%s: %s", _T("Message Type"), mtype)
 
             Timer.put(update_screen)
 
@@ -1273,6 +1313,7 @@ class TaskManager:
                     TaskManager.progress_bar = 0
                 tm.push_res(data)
                 logger.warning("%s: %s", _T("Ran Node"), data["node"])
+                WindowLogger.push_log("%s: %s", _T("Ran Node"), data["node"])
             elif mtype == "execution_error":
                 _msg = data.get("message", None)
                 if not _msg:
@@ -1298,6 +1339,7 @@ class TaskManager:
                 ...
             elif mtype == "execution_success":
                 logger.warning("%s: %s", _T("Execute Node Success"), data["node"])
+                WindowLogger.push_log("%s: %s", _T("Execute Node Success"), data["node"])
             elif mtype == "execution_interrupted":
                 {"type": "execution_interrupted",
                  "data": {"prompt_id": "e1f3cbf9-4b83-47cf-95c3-9f9a76ab5508",
@@ -1331,6 +1373,7 @@ class TaskManager:
             except ConnectionClosedError:
                 ...
         logger.debug(_T("Poll Result Thread Exit"))
+        # WindowLogger.push_log(_T("Poll Result Thread Exit")) # 可能是blender退出, 会导致crash
         TaskManager.ws = None
         if TaskManager.server.is_launched():
             Timer.put((TaskManager.restart_server, True))

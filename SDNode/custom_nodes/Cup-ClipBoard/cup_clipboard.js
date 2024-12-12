@@ -2101,7 +2101,7 @@ const ext = {
               var data = window.app.graph.serialize();
               navigator.clipboard.writeText(JSON.stringify(data));
             },
-            tooltip: "PasteTree",
+            tooltip: "CopyTree",
             content: "",
             classList: "clipbord-copy-button comfyui-button"
           });
@@ -2110,7 +2110,7 @@ const ext = {
             action: () => {
               navigator.clipboard.readText().then(ext.paste);
             },
-            tooltip: "CopyTree",
+            tooltip: "PasteTree",
             content: "",
             classList: "clipbord-paste-button comfyui-button"
           });

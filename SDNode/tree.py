@@ -105,7 +105,14 @@ class CFNodeTree(NodeTree):
     outUpdate: bpy.props.BoolProperty(default=False)
     root: bpy.props.BoolProperty(default=True)
     freeze: bpy.props.BoolProperty(default=False, description="冻结更新")
+    sdn_time_code: bpy.props.StringProperty(default="0")
     __metadata__ = {}
+
+    def set_sdn_time_code(self):
+        if self.sdn_time_code != "0":
+            return
+        self.sdn_time_code = str(time.time_ns())
+        logger.info(f"Set Tree Time Code {self.sdn_time_code}")
 
     class Pool:
         def __init__(self, tree: CFNodeTree) -> None:
@@ -693,6 +700,7 @@ class CFNodeTree(NodeTree):
             self.primitive_node_update(node)
             self.dirty_nodes_update(node)
             self.group_nodes_update(node)
+            self.set_width_update(node)
 
     def id_clear_update(self):
         ids = set()
@@ -706,6 +714,10 @@ class CFNodeTree(NodeTree):
         pool = self.get_id_pool()
         pool.clear()
         pool.update(ids)
+
+    def set_width_update(self, node: NodeBase):
+        bp = node.get_blueprints()
+        bp.set_width(node)
 
     def primitive_node_update(self, node: NodeBase):
         from .nodes import get_reg_name
@@ -916,6 +928,7 @@ class CFNodeTree(NodeTree):
             group: CFNodeTree = group
             if group.bl_idname != TREE_TYPE:
                 continue
+            group.set_sdn_time_code()
             for node in group.get_nodes():
                 node.update()
 
@@ -932,6 +945,22 @@ class CFNodeTree(NodeTree):
     @staticmethod
     def unreg_switch_update():
         bpy.msgbus.clear_by_owner(CFNodeTree)
+
+    @staticmethod
+    def update_tree_handler():
+        try:
+            for group in bpy.data.node_groups:
+                group: CFNodeTree = group
+                if group.bl_idname != TREE_TYPE:
+                    continue
+                group.update_tick()
+        except ReferenceError:
+            ...
+        except Exception as e:
+            # logger.warn(str(e))
+            traceback.print_exc()
+            logger.error(f"{type(e).__name__}: {e}")
+        return 1
 
 
 class CFNodeCategory(NodeCategory):
@@ -1114,22 +1143,6 @@ def reg_class_internal():
     bpy.types.NodeFrame.class_type = "NodeFrame"
 
 
-def update_tree_handler():
-    try:
-        for group in bpy.data.node_groups:
-            group: CFNodeTree = group
-            if group.bl_idname != TREE_TYPE:
-                continue
-            group.update_tick()
-    except ReferenceError:
-        ...
-    except Exception as e:
-        # logger.warn(str(e))
-        traceback.print_exc()
-        logger.error(f"{type(e).__name__}: {e}")
-    return 1
-
-
 def draw_intern(self, context):
     layout: bpy.types.UILayout = self.layout
     props = layout.operator("node.add_node", text="NodeFrame", text_ctxt=ctxt)
@@ -1209,12 +1222,11 @@ def rtnode_reg():
     set_draw_intern(reg=True)
     if CFNodeTree.reinit not in bpy.app.handlers.load_post:
         bpy.app.handlers.load_post.append(CFNodeTree.reinit)
-    if not bpy.app.timers.is_registered(update_tree_handler):
-        bpy.app.timers.register(update_tree_handler, persistent=True)
+    if not bpy.app.timers.is_registered(CFNodeTree.update_tree_handler):
+        bpy.app.timers.register(CFNodeTree.update_tree_handler, persistent=True)
 
 
 def rtnode_unreg():
-    # bpy.app.timers.unregister(update_tree_handler)
     if CFNodeTree.reinit in bpy.app.handlers.load_post:
         bpy.app.handlers.load_post.remove(CFNodeTree.reinit)
     set_draw_intern(reg=False)

@@ -17,7 +17,7 @@ from .timer import Timer, Worker, WorkerFunc
 from .SDNode import TaskManager
 from .SDNode.history import History
 from .SDNode.tree import InvalidNodeType, CFNodeTree, TREE_TYPE, rtnode_reg, rtnode_unreg
-from .SDNode.utils import get_default_tree
+from .SDNode.utils import get_default_tree, WindowLogger
 from .datas import IMG_SUFFIX
 from .preference import get_pref
 
@@ -123,7 +123,10 @@ class Ops(bpy.types.Operator):
         wm = bpy.context.window_manager
         self.alt = event.alt
         self.select_nodes = []
-        self.init_pos = context.space_data.cursor_location.copy()
+        self.init_pos = (0, 0)
+        if hasattr(context.space_data, "cursor_location"):
+            self.init_pos = context.space_data.cursor_location.copy()
+
         if self.action == "Submit" and not TaskManager.is_launched():
             return wm.invoke_props_dialog(self, width=200)
         if self.action in {"Load", "Del"}:
@@ -187,6 +190,7 @@ class Ops(bpy.types.Operator):
             return
 
         tree.reset_error_mark()
+        WindowLogger.clear()
 
         if bpy.context.scene.sdn.advanced_exe and not Ops.is_advanced_enable:
             Ops.is_advanced_enable = True
@@ -244,6 +248,7 @@ class Ops(bpy.types.Operator):
                     # logger.debug(f"F {frame}: {fnode.image}")
                 else:
                     logger.debug(_T("Frame Task <{}> Added!").format(frame))
+
                     def pre(pre_img_map: dict):
                         for fnode, fpath in pre_img_map.items():
                             try:
@@ -884,14 +889,15 @@ def menu_sync_stencil_image(self: bpy.types.Menu, context: bpy.types.Context):
 bpy.types.VIEW3D_PT_tools_brush_settings.append(menu_sync_stencil_image)
 # bpy.types.VIEW3D_PT_tools_brush_display.append(menu_sync_stencil_image)
 
+
 def sdn_get_image(node: bpy.types.Node):
-    if node.bl_idname in ('PreviewImage', '预览') and len(node.prev) > 0: # '预览' "Preview" Blender-side node
+    if node.bl_idname in ('PreviewImage', '预览') and len(node.prev) > 0:  # '预览' "Preview" Blender-side node
         return node.prev[0].image
 
-    if node.bl_idname == '输入图像': # "Input Image" Blender-side node
+    if node.bl_idname == '输入图像':  # "Input Image" Blender-side node
         return node.prev
 
-    if node.bl_idname == '存储' and node.mode == 'ToImage': # "Save" Blender-side node
+    if node.bl_idname == '存储' and node.mode == 'ToImage':  # "Save" Blender-side node
         return node.image
 
     image = None
@@ -899,7 +905,7 @@ def sdn_get_image(node: bpy.types.Node):
     if node.bl_idname == 'SaveImage' or (node.bl_idname == '存储' and node.mode == 'Save'):
         path = Path(node.output_dir)
         prefix = node.filename_prefix
-        file_re = re.compile(f'{prefix}_([0-9]+)') # Should the _ at the end be included? 
+        file_re = re.compile(f'{prefix}_([0-9]+)')  # Should the _ at the end be included?
         biggest = (None, -1)
         if (len(node.inputs) == 1 or node.inputs[1].connections == ()) and path.is_dir():
             # Find newest image, by filename
@@ -910,20 +916,21 @@ def sdn_get_image(node: bpy.types.Node):
                         biggest = (f, int(match.groups()[0]))
 
             # If found, see if loaded, create if not
-            if biggest[0] != None:
+            if biggest[0] is not None:
                 for im in bpy.data.images:
                     if im.filepath == f.as_posix():
                         image = im
                         break
-                
-                if image == None:
+
+                if image is None:
                     image = bpy.data.images.new(f.stem + f.suffix, 32, 32)
                     image.source = 'FILE'
                     image.filepath = f.as_posix()
-                
+
                 return image
-    
+
     return image
+
 
 def get_imeditor(context: bpy.types.Context, check_for_image: bool = False):
     for window in context.window_manager.windows:
@@ -934,16 +941,18 @@ def get_imeditor(context: bpy.types.Context, check_for_image: bool = False):
             else:
                 if area.type == 'IMAGE_EDITOR' and not area.spaces[0].use_image_pin:
                     return area
-    
+
     return None
+
 
 def get_sdneditor(context: bpy.types.Context):
     for window in context.window_manager.windows:
         for area in window.screen.areas:
             if area.type == 'NODE_EDITOR' and area.spaces[0].tree_type == TREE_TYPE and area.spaces[0].edit_tree:
                 return area
-    
+
     return None
+
 
 class SDNode_To_Image(bpy.types.Operator):
     bl_idname = "sdn.sdn_to_image"
@@ -964,7 +973,7 @@ class SDNode_To_Image(bpy.types.Operator):
         if context.area.type == 'NODE_EDITOR':
             node = context.active_node
             ime_area = get_imeditor(context, False)
-                    
+
         if context.area.type == 'IMAGE_EDITOR':
             ime_area = context.area
             sdn_area = get_sdneditor(context)
@@ -988,8 +997,10 @@ class SDNode_To_Image(bpy.types.Operator):
         ime_area.spaces[0].image.alpha_mode = 'CHANNEL_PACKED'
 
         return {'FINISHED'}
-    
+
+
 MODIFIED_IMAGE_SUFFIX = '_m'
+
 
 class Image_To_SDNode(bpy.types.Operator):
     bl_idname = "sdn.image_to_sdn"
@@ -1005,7 +1016,7 @@ class Image_To_SDNode(bpy.types.Operator):
 
         return (context.space_data.type == 'IMAGE_EDITOR' and context.space_data.image and get_sdneditor(context)) or \
                (context.space_data.type == 'NODE_EDITOR' and context.space_data.tree_type == TREE_TYPE and get_imeditor(context, True))
-    
+
     def execute(self, context):
         sdn_area = None
         ime_area = None
@@ -1016,13 +1027,13 @@ class Image_To_SDNode(bpy.types.Operator):
             ime_area = context.area
             image = context.space_data.image
             sdn_area = get_sdneditor(context)
-            
+
             if not sdn_area:
                 self.report({'ERROR'}, "No ComfyUI Node Editor found!")
                 return {'CANCELLED'}
-            
+
             new_node_loc = sdn_area.regions[3].view2d.region_to_view(sdn_area.x + sdn_area.width / 2.0, sdn_area.y + sdn_area.height / 2.0)
-            
+
         if context.area.type == 'NODE_EDITOR':
             sdn_area = context.area
             ime_area = get_imeditor(context, True)
@@ -1031,7 +1042,7 @@ class Image_To_SDNode(bpy.types.Operator):
             if not ime_area:
                 self.report({'ERROR'}, "No Image Editor with an open image found!")
                 return {'CANCELLED'}
-            
+
             if not self.force_centered:
                 new_node_loc = sdn_area.spaces[0].cursor_location
             else:
@@ -1041,8 +1052,8 @@ class Image_To_SDNode(bpy.types.Operator):
             image.file_format = 'PNG'
             if image.alpha_mode != 'CHANNEL_PACKED':
                 self.report({'WARNING'}, "The image is not using channel packed alpha. If you have painted a mask, the color underneath is black!")
-            
-            if image.source in ['VIEWER', 'GENERATED']: # viewer = render result
+
+            if image.source in ['VIEWER', 'GENERATED']:  # viewer = render result
                 filename = f"render_{uuid.uuid4()}"
                 newpath = f"/tmp/{filename}.png"
                 image.alpha_mode = 'CHANNEL_PACKED'
@@ -1055,15 +1066,14 @@ class Image_To_SDNode(bpy.types.Operator):
                 extensionless = image.filepath_raw[:image.filepath_raw.rfind(".")]
                 if not extensionless.endswith(MODIFIED_IMAGE_SUFFIX):
                     newpath = extensionless + MODIFIED_IMAGE_SUFFIX + ".png"
-                    image.save_render(filepath=newpath, scene=context.scene) # save_render is needed to properly save channel packed images
+                    image.save_render(filepath=newpath, scene=context.scene)  # save_render is needed to properly save channel packed images
                     image.filepath = newpath
-                    image.name = image.name 
+                    image.name = image.name
                 else:
                     image.save()
-                
 
         active = sdn_area.spaces[0].node_tree.nodes.active
-        if active and active.bl_idname == '输入图像' and active.select: # "Input Image" Blender-side node
+        if active and active.bl_idname == '输入图像' and active.select:  # "Input Image" Blender-side node
             active.image = image.filepath_raw
         else:
             new_node = sdn_area.spaces[0].node_tree.nodes.new('输入图像')
@@ -1075,22 +1085,34 @@ class Image_To_SDNode(bpy.types.Operator):
             sdn_area.spaces[0].node_tree.nodes.active = new_node
 
         return {'FINISHED'}
-    
+
 # There are a few cases in which images can't have their alpha changed through the UI, and channel packed alpha is needed to paint them properly.
 # This operator lets the user change the alpha forcefully.
+
+
 class Image_Set_Channel_Packed(bpy.types.Operator):
     bl_idname = "sdn.image_set_channel_packed"
     bl_label = "Set Image Alpha to Channel Packed"
     bl_description = "Set the current image's alpha to channel packed, even if the option is not displayed in the UI.\nThis allows masks with color to be properly painted onto the image"
     bl_translation_context = ctxt
-    
+
     @classmethod
     def poll(cls, context: Context):
         return context.space_data.type == 'IMAGE_EDITOR' and context.space_data.image and context.space_data.image.alpha_mode != 'CHANNEL_PACKED'
-    
+
     def execute(self, context):
         context.space_data.image.alpha_mode = 'CHANNEL_PACKED'
         return {'FINISHED'}
+
+
+class Open_Log_Window(bpy.types.Operator):
+    bl_idname = "sdn.open_log_window"
+    bl_label = ""
+
+    def execute(self, context: bpy.types.Context):
+        WindowLogger.open_window()
+        return {'FINISHED'}
+
 
 @bpy.app.handlers.persistent
 def clear(_):

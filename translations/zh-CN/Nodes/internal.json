@@ -145,6 +145,19 @@
             "SIGMAS": "Sigmas"
         }
     },
+    "LaplaceScheduler": {
+        "title": "Laplace调度器",
+        "widgets": {
+            "steps": "步数",
+            "sigma_max": "最大Sigma",
+            "sigma_min": "最小Sigma",
+            "mu": "mu",
+            "beta": "beta"
+        },
+        "outputs": {
+            "SIGMAS": "Sigmas"
+        }
+    },
     "VPScheduler": {
         "title": "VP调度器",
         "widgets": {
@@ -223,6 +236,12 @@
             "r": "r",
             "noise_device": "设备"
         },
+        "outputs": {
+            "SAMPLER": "采样器"
+        }
+    },
+    "SamplerDPMPP_2S_Ancestral": {
+        "title": "DPMPP_2S_Ancestral采样器",
         "outputs": {
             "SAMPLER": "采样器"
         }
@@ -465,7 +484,8 @@
         },
         "outputs": {
             "MODEL": "模型"
-        }
+        },
+        "description": "用于微调扩散模型和 CLIP 模型，改变 Latent 降噪的效果，实现控制风格等功能。多个 LoRA 可以直接连接到一起。"
     },
 
 
@@ -748,7 +768,7 @@
 
 
     "ControlNetApply": {
-        "title": "ControlNet应用",
+        "title": "ControlNet应用（旧版）",
         "inputs": {
             "conditioning": "条件",
             "control_net": "ControlNet",
@@ -762,7 +782,7 @@
         }
     },
     "ControlNetApplyAdvanced": {
-        "title": "ControlNet应用(高级)",
+        "title": "ControlNet应用（旧版高级）",
         "inputs": {
             "positive": "正面条件",
             "negative": "负面条件",
@@ -780,7 +800,7 @@
         }
     },
     "ControlNetApplySD3": {
-        "title": "ControlNet应用_SD3/HunYuan",
+        "title": "ControlNet应用",
         "inputs": {
             "positive": "正面条件",
             "negative": "负面条件",
@@ -808,6 +828,26 @@
         },
         "outputs": {
             "CONTROL_NET": "ControlNet"
+        }
+    },
+    "ControlNetInpaintingAliMamaApply": {
+        "title": "ControlNet应用_阿里妈妈局部重绘",
+        "inputs": {
+            "positive": "正面条件",
+            "negative": "负面条件",
+            "control_net": "ControlNet",
+            "vae": "VAE",
+            "image": "图像",
+            "mask": "遮罩"
+        },
+        "widgets": {
+            "strength": "强度",
+            "start_percent": "开始时间",
+            "end_percent": "结束时间"
+        },
+        "outputs": {
+            "positive": "正面条件",
+            "negative": "负面条件"
         }
     },
 
@@ -1229,7 +1269,8 @@
         "outputs": {
             "IMAGE": "图像",
             "The decoded image.": "解码后的图像"
-        }
+        },
+        "description": "将 Latent 图像解码为像素空间的图像。"
     },
     "VAEEncode": {
         "title": "VAE编码",
@@ -1674,6 +1715,17 @@
             "IMAGE": "图像"
         }
     },
+    "WebcamCapture": {
+        "title": "网页镜头捕捉",
+        "widgets": {
+            "width": "宽度",
+            "height": "高度",
+            "capture_on_queue": "执行时捕捉"
+        },
+        "outputs": {
+            "IMAGE": "图像"
+        }
+    },
     "SaveImageWithAlpha": {
         "title": "保存图像(Alpha)",
         "inputs": {
@@ -1953,6 +2005,11 @@
 
     "EmptyLatentAudio": {
         "title": "空Latent_Audio",
+        "widgets": {
+            "seconds": "秒数",
+            "batch_size": "批次大小",
+            "The number of latent images in the batch.": "单个批次中 Latent 的数量。"
+        },
         "outputs": {
             "LATENT": "Latent"
         }
@@ -2089,7 +2146,8 @@
         },
         "widgets": {
             "samples": "Latent",
-            "latent": "Latent"
+            "latent": "Latent",
+            "filename_prefix": "文件名前缀"
         }
     },
     "LoadLatent": {
@@ -2099,6 +2157,25 @@
         },
         "outputs": {
             "LATENT": "Latent"
+        }
+    },
+    "LoraSave": {
+        "title": "保存 LoRA",
+        "inputs": {
+            "model_diff": "模型"
+        },
+        "widgets": {
+            "filename_prefix": "文件名前缀",
+            "rank": "rank"
+        }
+    },
+    "TorchCompileModel": {
+        "title": "Torch编译模型",
+        "inputs": {
+            "model": "模型"
+        },
+        "outputs": {
+            "MODEL": "模型"
         }
     },
     "LatentBlend": {
@@ -2283,7 +2360,8 @@
     "CLIPLoader": {
         "title": "CLIP加载器",
         "widgets": {
-            "clip_name": "CLIP名称"
+            "clip_name": "CLIP名称",
+            "type": "类型"
         },
         "outputs": {
             "CLIP": "CLIP"
@@ -2544,6 +2622,15 @@
         "title": "保存VAE",
         "inputs": {
             "VAE": "VAE"
+        },
+        "widgets": {
+            "filename_prefix": "文件名前缀"
+        }
+    },
+    "ModelSave": {
+        "title": "保存模型",
+        "inputs": {
+            "model": "模型"
         },
         "widgets": {
             "filename_prefix": "文件名前缀"

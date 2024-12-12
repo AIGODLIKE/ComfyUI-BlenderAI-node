@@ -8,37 +8,49 @@ from .kclogger import logger
 class Timer:
     TimerQueue = Queue()
     TimerQueue2 = Queue()
+    stoped = False
 
-    @staticmethod
-    def put(delegate: Any):
-        Timer.TimerQueue.put(delegate)
+    @classmethod
+    def put(cls, delegate: Any):
+        if cls.stoped:
+            return
+        cls.TimerQueue.put(delegate)
 
-    @staticmethod
-    def put2(delegate: Any):
-        Timer.TimerQueue2.put(delegate)
+    @classmethod
+    def put2(cls, delegate: Any):
+        if cls.stoped:
+            return
+        cls.TimerQueue2.put(delegate)
 
-    @staticmethod
-    def executor(t):
+    @classmethod
+    def executor(cls, t):
         if type(t) in {list, tuple}:
             t[0](*t[1:])
         else:
             t()
 
-    @staticmethod
-    def run1():
-        return Timer.run_ex(Timer.TimerQueue)
+    @classmethod
+    def stop_added(cls):
+        cls.stoped = True
 
-    @staticmethod
-    def run2():
-        return Timer.run_ex(Timer.TimerQueue2)
+    @classmethod
+    def start_added(cls):
+        cls.stoped = False
 
-    @staticmethod
-    def run_ex(queue: Queue):
+    @classmethod
+    def run1(cls):
+        return cls.run_ex(cls.TimerQueue)
+
+    @classmethod
+    def run2(cls):
+        return cls.run_ex(cls.TimerQueue2)
+
+    @classmethod
+    def run_ex(cls, queue: Queue):
         while not queue.empty():
             t = queue.get()
-            # Timer.executor(t)
             try:
-                Timer.executor(t)
+                cls.executor(t)
             except Exception as e:
                 traceback.print_exc()
                 logger.error("%s: %s", type(e).__name__, e)
@@ -46,15 +58,15 @@ class Timer:
                 ...
         return 0.016666666666666666
 
-    @staticmethod
-    def clear():
-        while not Timer.TimerQueue.empty():
-            Timer.TimerQueue.get()
-        while not Timer.TimerQueue2.empty():
-            Timer.TimerQueue2.get()
+    @classmethod
+    def clear(cls):
+        while not cls.TimerQueue.empty():
+            cls.TimerQueue.get()
+        while not cls.TimerQueue2.empty():
+            cls.TimerQueue2.get()
 
-    @staticmethod
-    def wait_run(func):
+    @classmethod
+    def wait_run(cls, func):
         def wrap(*args, **kwargs):
             q = Queue()
 
@@ -65,7 +77,7 @@ class Timer:
                 except Exception as e:
                     q.put(e)
 
-            Timer.put((wrap_job, q))
+            cls.put((wrap_job, q))
             res = q.get()
             if isinstance(res, Exception):
                 raise res
@@ -73,17 +85,17 @@ class Timer:
 
         return wrap
 
-    @staticmethod
-    def reg():
-        bpy.app.timers.register(Timer.run1, persistent=True)
-        bpy.app.timers.register(Timer.run2, persistent=True)
+    @classmethod
+    def reg(cls):
+        bpy.app.timers.register(cls.run1, persistent=True)
+        bpy.app.timers.register(cls.run2, persistent=True)
 
-    @staticmethod
-    def unreg():
-        Timer.clear()
+    @classmethod
+    def unreg(cls):
+        cls.clear()
         try:
-            bpy.app.timers.unregister(Timer.run1)
-            bpy.app.timers.unregister(Timer.run2)
+            bpy.app.timers.unregister(cls.run1)
+            bpy.app.timers.unregister(cls.run2)
         except Exception:
             ...
 

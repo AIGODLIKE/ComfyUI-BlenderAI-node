@@ -28,6 +28,14 @@
     "Double click group title to edit": "双击框标题以编辑",
 
 
+    "Link Release": "连接",
+    "Action on link release (Shift)": "连线松开行为（Shift）",
+    "context menu": "添加菜单",
+    "search box": "搜索框",
+    "no action": "无",
+    "Action on link release (No modifier)": "连线松开行为（正常）",
+    
+
     "Group Selected Nodes": "节点框",
     "Group selected nodes padding": "默认外边距",
 
@@ -35,6 +43,7 @@
     "Logging": "日志",
     "View Logs": "显示日志",
     "Comfy.Logging.Enabled": "启用",
+    "Enable logging": "启用",
 
 
     "Menu": "菜单",
@@ -116,6 +125,25 @@
     "Prompt for filename when saving workflow": "保存工作流需要填入文件名",
     "Require confirmation when clearing workflow": "清理工作流需要确认",
 
+    "Other": "其他",
+
+
+    "About": "关于",
+    "System Info": "系统信息",
+    "OS": "系统",
+    "Python Version": "Python 版本",
+    "Embedded Python": "Embedded Python",
+    "Pytorch Version": "Pytorch 版本",
+    "Arguments": "启动项",
+    
+    "Devices": "设备",
+    "Name": "名称",
+    "Type": "类型",
+    "VRAM Total": "总数 VRAM",
+    "VRAM Free": "可用 VRAM",
+    "Torch VRAM Total": "总数 Torch VRAM",
+    "Torch VRAM Free": "可用 Torch VRAM",
+
 
     "SideBar": "SideBar",
     
@@ -123,7 +151,8 @@
     "QUEUE": "队列",
     "No Tasks Found": "无任务",
     "There are no tasks in the queue.": "队列中没有任务。",
-    "Fit Image Preview": "缩放图像预览",
+    "Fit Image Preview": "适应图像预览",
+    "Fill Image Preview": "填充图像预览",
     "Show Flat List": "显示列表",
     "Do you want to delete all tasks?": "删除全部任务？",
     "Node Library": "节点库",
@@ -154,17 +183,25 @@
     "Refresh widgets in nodes to find new models or files": "刷新节点",
     "Open Clipspace window": "打开剪贴板",
     "Reset the canvas view": "重置画面视图",
-    "Clear current workflow": "清空当前工作流",
+    "Clears current workflow": "清空当前工作流",
     "Cancel current generation": "取消当前任务",
     "Auto Queue:": "自动执行",
     "Instant": "实时",
-    "On change": "变动",
+    "On Change": "变动",
 
+    "searchBox": "searchBox",
+
+    "Add node filter condition": "添加节点筛选条件",
+    "Input Type": "输入类型",
+    "Output Type": "输出类型",
+    "Category": "分类",
+    "Source": "来源",
+    "Add": "加",
 
 
 
     "Add Node": "新建节点",
-    "Add Group": "新建分组",
+    "Add Group": "新建框",
     "Add Stack": "新建Stack堆叠",
     "Save Selected as Template": "存储选中为模板",
     "Edit Group": "编辑框",
@@ -276,8 +313,6 @@
     "Clear Queue": "清除队列",
     "Export logs...": "导出日志",
     "View exported logs...": "显示导出日志",
-    "Source": "源",
-    "Type": "类型",
     "Timestamp": "时间戳",
     "Message": "消息",
     "default": "默认",

@@ -1,7 +1,7 @@
 bl_info = {
     'name': 'ComfyUI Node Editor',
     'author': '幻之境开发小组-会飞的键盘侠、只剩一瓶辣椒酱、a-One-Fan、DorotaLuna、hugeproblem、heredos、ra100',
-    'version': (1, 5, 7),
+    'version': (1, 6, 0),
     'blender': (3, 0, 0),
     'location': '3DView->Panel',
     'category': 'AI',
@@ -38,21 +38,25 @@ from addon_utils import disable
 from .SDNode import rtnode_unreg, TaskManager
 from .MultiLineText import EnableMLT
 
-from .utils import Icon, FSWatcher, ScopeTimer
+from .utils import Icon, FSWatcher, ScopeTimer, addon_bl_info
 from .timer import timer_reg, timer_unreg
 from .preference import pref_register, pref_unregister
-from .ops import Ops, Ops_Mask, Load_History, Popup_Load, Copy_Tree, Load_Batch, Fetch_Node_Status, Clear_Node_Cache, Sync_Stencil_Image, NodeSearch, SDNode_To_Image, Image_To_SDNode, Image_Set_Channel_Packed
+from .ops import Ops, Ops_Mask, Load_History, Popup_Load, Copy_Tree, Load_Batch, Fetch_Node_Status, Clear_Node_Cache, Sync_Stencil_Image, NodeSearch, SDNode_To_Image, Image_To_SDNode, Image_Set_Channel_Packed, Open_Log_Window
 from .ui import ui_reg, ui_unreg, Panel, HISTORY_UL_UIList, HistoryItem
 from .SDNode.history import History
 from .SDNode.rt_tracker import reg_tracker, unreg_tracker
 from .SDNode.nodegroup import nodegroup_reg, nodegroup_unreg
+from .SDNode.operators import ops_register, ops_unregister
 from .SDNode.custom_support import custom_support_reg, custom_support_unreg
 from .prop import RenderLayerString, MLTWord, Prop
 from .Linker import linker_register, linker_unregister
 from .hook import use_hook
-clss = [Panel, Ops, RenderLayerString, MLTWord, Prop, HISTORY_UL_UIList, HistoryItem, Ops_Mask, Load_History, Popup_Load, Copy_Tree, Load_Batch, Fetch_Node_Status, Clear_Node_Cache, Sync_Stencil_Image, NodeSearch, SDNode_To_Image, Image_To_SDNode, Image_Set_Channel_Packed, EnableMLT]
+clss = [Panel, Ops, RenderLayerString, MLTWord, Prop, HISTORY_UL_UIList, HistoryItem, Ops_Mask, Load_History, Popup_Load, Copy_Tree, Load_Batch, Fetch_Node_Status, Clear_Node_Cache, Sync_Stencil_Image, NodeSearch, SDNode_To_Image, Image_To_SDNode, Image_Set_Channel_Packed, Open_Log_Window, EnableMLT]
 reg, unreg = bpy.utils.register_classes_factory(clss)
 from platform import system
+
+addon_bl_info.update(bl_info)
+
 
 def dump_info():
     import json
@@ -109,7 +113,7 @@ def register():
     if bpy.app.background:
         dump_info()
         return
-    
+
     from .translations import translations_dict
     bpy.app.translations.register(__name__, translations_dict)
     reg()
@@ -123,12 +127,14 @@ def register():
     bpy.types.Scene.sdn = bpy.props.PointerProperty(type=Prop)
     bpy.types.Scene.sdn_history_item = bpy.props.CollectionProperty(type=HistoryItem)
     bpy.types.Scene.sdn_history_item_index = bpy.props.IntProperty(default=0)
+    bpy.types.Node.ac_expand = bpy.props.BoolProperty(name="Expand", default=True)
     History.register_timer()
     linker_register()
     use_hook()
     FSWatcher.init()
     disable_reload()
     nodegroup_reg()
+    ops_register()
     custom_support_reg()
     print(f"{__package__} Launch Time: {time.time() - ts:.4f}s")
 
@@ -148,9 +154,11 @@ def unregister():
     del bpy.types.Scene.sdn
     del bpy.types.Scene.sdn_history_item
     del bpy.types.Scene.sdn_history_item_index
+    History.unregister_timer()
     modules_update()
     linker_unregister()
     use_hook(False)
+    ops_unregister()
     nodegroup_unreg()
     custom_support_unreg()
     FSWatcher.stop()

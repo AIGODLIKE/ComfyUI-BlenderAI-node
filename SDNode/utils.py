@@ -307,6 +307,58 @@ class THelper:
         return link if find_link else node
 
 
+class WindowLogger:
+    _logs = []
+    _window = None
+
+    @classmethod
+    def push_log(cls, pattern, *msg):
+        s = pattern % msg
+        cls._logs.append(s)
+        cls.move_cursor_to_last()
+        text = cls.get_text()
+        text.write(s + "\n")
+
+    @classmethod
+    def move_cursor_to_last(cls):
+        text = cls.get_text()
+        if not text:
+            return
+        text.cursor_set(len(text.lines), character=2**30)
+
+    @classmethod
+    def clear(cls):
+        text = cls.get_text()
+        text.clear()
+        cls._logs.clear()
+        cls._window = None
+
+    @classmethod
+    def init(cls):
+        text = cls.get_text()
+        text.clear()
+
+    @classmethod
+    def get_text(cls) -> bpy.types.Text:
+        if "ComfyUI Log" not in bpy.data.texts:
+            bpy.data.texts.new("ComfyUI Log")
+        return bpy.data.texts.get("ComfyUI Log")
+
+    @classmethod
+    def open_window(cls):
+        text = cls.get_text()
+        cls.move_cursor_to_last()
+        if not text:
+            return
+        bpy.ops.wm.window_new()
+        cls._window = bpy.context.window_manager.windows[-1]
+        area = cls._window.screen.areas[0]
+        area.type = "TEXT_EDITOR"
+        area.spaces[0].text = text
+        area.spaces[0].show_word_wrap = True
+        bpy.ops.text.jump(line=1)
+
+
 def get_default_tree(context=None) -> bpy.types.NodeTree:
     if context is None:
         context = bpy.context
