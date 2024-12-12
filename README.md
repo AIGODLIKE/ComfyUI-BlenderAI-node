@@ -1,23 +1,17 @@
 # Introduction
-This is an addon for using [ComfyUI](https://github.com/comfyanonymous/ComfyUI) in Blender. It will convert ComfyUI nodes into Blender nodes, letting you use ComfyUI inside Blender without having to switch between programs.
-## Upcoming Release(2024.12.12)
+This is an addon for using [ComfyUI](https://github.com/comfyanonymous/ComfyUI) in Blender. 
 
+ComfyUI : It will convert ComfyUI nodes into Blender nodes, letting you use ComfyUI inside Blender without having to switch between programs.
 
+Blender : Based on ComfyUI, you can directly generate AI full angle materials, use cameras as real-time input sources, and combine with other ComfyUI custom nodes to achieve functions such as AI animation interpolation and style transfer.
 
-
-
+## Features
+- 【New】AI material creation and [texture baking](https://github.com/AIGODLIKE/EasyBakeNode)
 
 https://github.com/user-attachments/assets/564667d4-588e-47ca-9a28-d983b1f30bd2
 
-
-
-
 https://github.com/user-attachments/assets/888fca0b-b081-496c-9837-7ff18264519f
-
-
-
-## Features
-
+  
 - Converts ComfyUI nodes to Blender nodes
 - Editable launch arguments in the addon's preferences, or just connect to a running ComfyUI process
 - Adds some special Blender nodes like camera input or compositing data
@@ -91,6 +85,18 @@ git clone https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node.git --recursive
 Then you can see the addon after refreshing the addons menu or restarting Blender.
 It is in the Node category, search for "ComfyUI".
 Don't forget to enable the addon by clicking on the tickbox to the left of the addon's name!
+
+3.**AI material generation**
+(Baking requires the use of the add-on EasyBakeNode)
+
+1. Install the add-on [EasyBakeNode](https://github.com/AIGODLIKE/EasyBakeNode)
+   
+2. Your [ComfyUI](https://github.com/comfyanonymous/ComfyUI) is working properly
+
+3. You need to download [Controlnet model](https://huggingface.co/lllyasviel/ControlNet-v1-1/tree/main) (At least download the following ones)and install [comfyui controlnet aux](https://github.com/Fannovel16/comfyui_controlnet_aux)
+   
+![img_v3_02hg_1b4afd70-a35f-40ce-b251-10d9da7b4d5g](https://github.com/user-attachments/assets/a4098e3e-881e-43e7-bbe1-5ffa19b89f73)
+
 
 ## Linux
 If you're using Linux, assuming you have some experience:
@@ -229,6 +235,7 @@ Hold `F` and drag the cursor to a mask node, it will automatically create a came
 - Not every node can work perfectly in Blender, for example nodes regarding videos
 - You can enable the console under `Window`>`Toggle System Console` at the top left
 - Model preview images need to have the same name as the model, including the extension, for example - `model.ckpt.jpg`
+- **Do not install as extensions**
 
 ## Tested Nodes
 Here are some interesting nodes we've tested in Blender
@@ -324,6 +331,9 @@ See [Change Log](./CHANGE_LOG.md).
 
 # Links
 ## Tutorial
+
+[[CN]How to create and bake AI materials in Blender](https://www.bilibili.com/video/BV1NKqkY8ETU/)
+
 [[EN]BSLIVE ComfyUI Blender AI Node Addon for Generative AI(By Jimmy Gunawan)](https://www.youtube.com/watch?v=OvrKpAVwyco)
 
 [[EN]Generate AI Rendering with Blender ComfyUI AddOn(By Gioxyer)](https://www.youtube.com/watch?v=9rb-8D3NQ58)
