@@ -5,7 +5,7 @@ ComfyUI : It will convert ComfyUI nodes into Blender nodes, letting you use Comf
 
 Blender : Based on ComfyUI, you can directly generate AI full angle materials, use cameras as real-time input sources, and combine with other ComfyUI custom nodes to achieve functions such as AI animation interpolation and style transfer.
 
-(My dream: I hope Blender and ComfyUI can fight side by side in the future)
+(My dream: I hope Blender and ComfyUI can fight side by side in the future ദ്ദി˶>𖥦<)✧ )
 
 ## Features
 - 【New】AI material creation and [texture baking](https://github.com/AIGODLIKE/EasyBakeNode)
