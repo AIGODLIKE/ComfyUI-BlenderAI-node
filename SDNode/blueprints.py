@@ -1200,14 +1200,20 @@ class 预览(BluePrintBase):
             p0 = self.prev[0].image
             layout.label(text=f"{p0.file_format} : [{p0.size[0]} x {p0.size[1]}]")
             col = layout.column(align=True)
+            w = self.width / max(1, min(self.lnum, pnum)) // 20
             for i, p in enumerate(self.prev):
                 if i % self.lnum == 0:
-                    fcol = col.column_flow(columns=min(self.lnum, pnum), align=True)
+                    fcol = col.column_flow(columns=min(self.lnum, pnum))
                 prev = p.image
                 if prev.name not in Icon:
                     Icon.reg_icon_by_pixel(prev, prev.name)
                 icon_id = Icon[prev.name]
-                fcol.template_icon(icon_id, scale=self.width // 20)
+                cfcol = fcol.column(align=True)
+                cfcol.template_icon(icon_id, scale=w)
+                cfrow = cfcol.row(align=True)
+                cfrow.prop(prev, "name", text="")
+                from ..ops import CopyToClipboard
+                cfrow.operator(CopyToClipboard.bl_idname, text="", icon="COPYDOWN").info = prev.name
             return True
 
     def serialize_pre_specific(s, self: NodeBase):
@@ -1284,14 +1290,20 @@ class PreviewImage(BluePrintBase):
             p0 = self.prev[0].image
             layout.label(text=f"{p0.file_format} : [{p0.size[0]} x {p0.size[1]}]")
             col = layout.column(align=True)
+            w = self.width / max(1, min(self.lnum, pnum)) // 20
             for i, p in enumerate(self.prev):
                 if i % self.lnum == 0:
-                    fcol = col.column_flow(columns=min(self.lnum, pnum), align=True)
+                    fcol = col.column_flow(columns=min(self.lnum, pnum))
                 prev = p.image
                 if prev.name not in Icon:
                     Icon.reg_icon_by_pixel(prev, prev.name)
                 icon_id = Icon[prev.name]
-                fcol.template_icon(icon_id, scale=self.width // 20)
+                cfcol = fcol.column(align=True)
+                cfcol.template_icon(icon_id, scale=w)
+                cfrow = cfcol.row(align=True)
+                cfrow.prop(prev, "name", text="")
+                from ..ops import CopyToClipboard
+                cfrow.operator(CopyToClipboard.bl_idname, text="", icon="COPYDOWN").info = prev.name
             return True
 
     def serialize_pre_specific(s, self: NodeBase):

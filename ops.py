@@ -3,7 +3,6 @@ import re
 import json
 import tempfile
 import time
-import re
 import uuid
 from typing import Any
 from pathlib import Path
@@ -799,6 +798,17 @@ class Clear_Node_Cache(bpy.types.Operator):
             self.report({"INFO"}, _T("Node Cache Cleared!"))
         except Exception as e:
             self.report({"ERROR"}, _T("Node Cache Clear Failed!") + f" {e}")
+        return {"FINISHED"}
+
+
+class CopyToClipboard(bpy.types.Operator):
+    bl_idname = "sdn.copy_iname_to_clipboard"
+    bl_label = "Copy Image Name to Clipboard"
+    bl_translation_context = ctxt
+    info: bpy.props.StringProperty(default="")
+
+    def execute(self, context):
+        bpy.context.window_manager.clipboard = self.info
         return {"FINISHED"}
 
 

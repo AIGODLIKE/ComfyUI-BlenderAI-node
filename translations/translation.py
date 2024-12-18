@@ -376,6 +376,7 @@ other = {
     "If creating a new node, put it in the centre of the editor": "如果创建一个新节点，请将其放在编辑器的中心位置",
     "Set Image Alpha to Channel Packed": "将图像 Alpha 设置为通道打包",
     "Set the current image's alpha to channel packed, even if the option is not displayed in the UI.\nThis allows masks with color to be properly painted onto the image": "将当前图像的 alpha 设置为通道打包，即使用户界面中未显示该选项。\n这样就可以在图像上正确绘制带颜色的遮罩",
+    "Copy Image Name to Clipboard": "复制图像名称到剪贴板",
     # ui.py
     "ComfyUI": "圣杯节点",
     "ClearTask": "清理任务",
