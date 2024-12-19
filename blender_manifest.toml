@@ -3,7 +3,7 @@ schema_version = "1.0.0"
 # Example of manifest file for a Blender extension
 # Change the values according to your extension
 id = "BlenderAI_Node"
-version = "1.5.7"
+version = "1.6.0"
 name = "ComfyUI BlenderAI node"
 tagline = "ComfyUI texture generation"
 maintainer = "AIGODLIKE <karrycharon@qq.com>"
