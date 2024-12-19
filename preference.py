@@ -4,6 +4,7 @@ import sys
 import json
 import re
 from pathlib import Path
+from platform import system
 
 from .utils import Icon, _T, FSWatcher
 from .External.lupawrapper import toggle_debug
@@ -320,7 +321,9 @@ class AddonPreference(bpy.types.AddonPreferences):
         model_path = Path(self.model_path)
         args = [python.as_posix()]
         # arg = f"-s {str(model_path)}/main.py"
-        args.append("-s")
+        # 因为在Linux下，python3 -s 会导致 找不到包
+        if system() != "Linux":
+            args.append("-s")
 
         # 备份main.py 为 main-bak.py
         # 为main-bak.py新增 sys.path代码
