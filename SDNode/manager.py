@@ -1111,6 +1111,9 @@ class TaskManager:
     @staticmethod
     def submit(task: Task):
         task.submit_pre()
+        # 判断 task.task 是否是可被调用的对象(可以让task动态生成)
+        if callable(task.task):
+            task.task = task.task()
         task: dict[str, tuple] = task.task
         prompt = task["prompt"]
         for node in prompt:
