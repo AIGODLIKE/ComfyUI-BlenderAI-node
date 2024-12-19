@@ -883,9 +883,54 @@ class CFNodeTree(NodeTree):
                 Timer.put((vlink.relink, node, self))
             # logger.debug(f"{node} restore_links {vlink}")
 
+    def update_key_frame(self):
+        if not self.animation_data:
+            return
+        if not self.animation_data.action:
+            return
+
+        def value_set(obj, path, value):
+            if "." in path:
+                path_prop, path_attr = path.rsplit(".", 1)
+                prop = obj.path_resolve(path_prop)
+            else:
+                prop = obj
+                path_attr = path
+            value = type(obj.path_resolve(path))(value)
+            setattr(prop, path_attr, value)
+
+        current_frame = bpy.context.scene.frame_current
+        for fc in self.animation_data.action.fcurves:
+            if not fc.keyframe_points:
+                continue
+            ks: bpy.types.Keyframe = fc.keyframe_points[0]
+            ke: bpy.types.Keyframe = fc.keyframe_points[-1]
+            for kp in fc.keyframe_points:
+                if kp.co[0] <= current_frame and kp.co[0] > ks.co[0]:
+                    ks = kp
+                if kp.co[0] >= current_frame and kp.co[0] < ke.co[0]:
+                    ke = kp
+            value = ks.co[1]  # 默认ks
+            # 正确找到ks和ke
+            if ks and ke and ks != ke:
+                value = ks.co[1] + (ke.co[1] - ks.co[1]) * (current_frame - ks.co[0]) / (ke.co[0] - ks.co[0])
+            value_set(self, fc.data_path, value)
+
+    @staticmethod
+    @bpy.app.handlers.persistent
+    def frame_change_handler(scene):
+        for ng in bpy.data.node_groups:
+            ng: CFNodeTree = ng
+            if ng.bl_idname != TREE_TYPE:
+                continue
+            ng.update_key_frame()
+
     @staticmethod
     @bpy.app.handlers.persistent
     def reinit(scene):
+        if CFNodeTree.frame_change_handler in bpy.app.handlers.frame_change_pre:
+            bpy.app.handlers.frame_change_pre.remove(CFNodeTree.frame_change_handler)
+        bpy.app.handlers.frame_change_pre.append(CFNodeTree.frame_change_handler)
         Timer.unreg()
         Icon.clear()
         EnumCache.clear()
@@ -991,6 +1036,8 @@ def gen_cat_id(idstr):
 
 
 registered_menus = {}
+
+
 def reg_nodetree(identifier, cat_list, sub=False):
     if not cat_list:
         return
