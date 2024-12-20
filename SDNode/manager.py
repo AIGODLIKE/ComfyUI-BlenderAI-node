@@ -65,6 +65,17 @@ class Task:
             return
         self.node_ref_map = {n.id: n.bl_idname for n in tree.nodes if hasattr(n, "id")}
 
+    def build_task(self):
+        # 判断 task 是否是可被调用的对象(可以让task动态生成)
+        if not callable(self.task):
+            return
+
+        @Timer.wait_run
+        def job(self: Task):
+            self.task = self.task()
+
+        job(self)
+
     def submit_pre(self):
         if not self._pre:
             return
@@ -1111,9 +1122,7 @@ class TaskManager:
     @staticmethod
     def submit(task: Task):
         task.submit_pre()
-        # 判断 task.task 是否是可被调用的对象(可以让task动态生成)
-        if callable(task.task):
-            task.task = task.task()
+        task.build_task()
         task: dict[str, tuple] = task.task
         prompt = task["prompt"]
         for node in prompt:
