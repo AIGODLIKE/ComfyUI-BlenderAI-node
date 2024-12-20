@@ -278,9 +278,9 @@ class Icon(metaclass=MetaIn):
     @staticmethod
     def remove_mark(name) -> bool:
         name = FSWatcher.to_str(name)
-        Icon.IMG_STATUS.pop(name)
-        Icon.PIX_STATUS.pop(name)
-        Icon.PREV_DICT.pop(name)
+        Icon.IMG_STATUS.pop(name, None)
+        Icon.PIX_STATUS.pop(name, None)
+        Icon.PREV_DICT.pop(name, None)
         return True
 
     @staticmethod
@@ -551,8 +551,8 @@ class FSWatcher:
     @classmethod
     def unregister(cls, path):
         path = cls.to_path(path)
-        cls._watcher_path.pop(path)
-        cls._watcher_callback.pop(path)
+        cls._watcher_path.pop(path, None)
+        cls._watcher_callback.pop(path, None)
 
     @classmethod
     def _run(cls):

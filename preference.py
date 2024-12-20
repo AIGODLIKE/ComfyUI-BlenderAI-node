@@ -109,9 +109,12 @@ class PresetsDirEdit(bpy.types.Operator):
             FSWatcher.register(p.joinpath("presets"), dir_cb_test)
             FSWatcher.register(p.joinpath("groups"), dir_cb_test)
         elif self.action == "REMOVE":
+            from .prop import Prop
+            Prop.mark_dirty()
+            p = pref.pref_dirs[self.index].path
+            FSWatcher.unregister(Path(p).joinpath("presets"))
+            FSWatcher.unregister(Path(p).joinpath("groups"))
             pref.pref_dirs.remove(self.index)
-            FSWatcher.unregister(Path(self.directory).joinpath("presets"))
-            FSWatcher.unregister(Path(self.directory).joinpath("groups"))
         return {"FINISHED"}
 
 
