@@ -258,6 +258,7 @@ other = {
     "Use Current Frame": "使用当前帧",
     "Input Frame": "输入帧",
     "Total Time": "总时长",
+    "Not reaches output node, skip render proc": "未连接至输出类节点, 跳过渲染",
     # SDNode/tree.py
     "Invalid Node Type: {}": "检查到无效的节点: {}",
     "ParseNode Time:": "解析节点耗时:",

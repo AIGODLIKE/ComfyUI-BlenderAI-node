@@ -708,6 +708,23 @@ class NodeBase(bpy.types.Node):
             stat[name] = {}
         stat[name]["stat"]
 
+    def is_output_node(self):
+        return self.__metadata__.get("output_node", False)
+
+    def reaches_output(self):
+        """
+            判断当前节点是否最终连接到ouput_node
+        """
+        if self.is_output_node():
+            return True
+        reached = False
+        for out in self.outputs:
+            if not out.is_linked:
+                continue
+            for link in out.links:
+                reached |= link.to_node.reaches_output()
+        return reached
+
     def is_base_type(self, name):
         """
         是基本类型?

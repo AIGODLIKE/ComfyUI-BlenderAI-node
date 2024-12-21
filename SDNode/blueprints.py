@@ -1665,6 +1665,10 @@ class 输入图像(BluePrintBase):
             return True
 
     def pre_fn(s, self: NodeBase):
+        if not self.reaches_output():
+            logger.warning("Not reaches output node, skip render proc")
+            return
+
         def render():
             if self.mode not in {"渲染", "视口"}:
                 return
@@ -1721,7 +1725,7 @@ class 输入图像(BluePrintBase):
         r()
 
     def serialize_pre(s, self: NodeBase):
-        if self.mode == "视口":
+        if self.mode == "视口" and self.reaches_output():
             if not self.image:
                 self.image = Path(tempfile.gettempdir()).joinpath("viewport.png").as_posix()
             if Path(self.image).is_dir():
@@ -1866,6 +1870,10 @@ class 截图(BluePrintBase):
         properties["y2"] = prop
 
     def pre_fn(s, self: NodeBase):
+        if not self.reaches_output():
+            logger.warning("Not reaches output node, skip render proc")
+            return
+
         @Timer.wait_run
         def f():
             s._capture(self)
