@@ -768,10 +768,10 @@ class ImageAsPBRMat(bpy.types.Operator):
             return {"FINISHED"}
         obj = bpy.context.object
         mtl = self.create_mat()
-        obj.data.materials.append(mtl)
         if bpy.context.mode == "OBJECT":
             obj.active_material = mtl
             obj.data.materials.clear()
+        obj.data.materials.append(mtl)
         obj.active_material_index = len(obj.data.materials) - 1
         if bpy.context.mode == "EDIT_MESH":
             bpy.ops.object.material_slot_assign("INVOKE_DEFAULT")
