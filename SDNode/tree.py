@@ -942,6 +942,15 @@ class CFNodeTree(NodeTree):
         CFNodeTree.switch_tree_update()
 
     @staticmethod
+    @bpy.app.handlers.persistent
+    def save_pre(scene):
+        for ng in bpy.data.node_groups:
+            ng: CFNodeTree = ng
+            if ng.bl_idname != TREE_TYPE:
+                continue
+            ng.use_fake_user = True
+
+    @staticmethod
     def reset_node():
         for ng in bpy.data.node_groups:
             if ng.bl_idname != CFNodeTree.bl_idname:
@@ -1269,11 +1278,15 @@ def rtnode_reg():
     set_draw_intern(reg=True)
     if CFNodeTree.reinit not in bpy.app.handlers.load_post:
         bpy.app.handlers.load_post.append(CFNodeTree.reinit)
+    if CFNodeTree.save_pre not in bpy.app.handlers.save_pre:
+        bpy.app.handlers.save_pre.append(CFNodeTree.save_pre)
     if not bpy.app.timers.is_registered(CFNodeTree.update_tree_handler):
         bpy.app.timers.register(CFNodeTree.update_tree_handler, persistent=True)
 
 
 def rtnode_unreg():
+    if CFNodeTree.save_pre in bpy.app.handlers.save_pre:
+        bpy.app.handlers.save_pre.remove(CFNodeTree.save_pre)
     if CFNodeTree.reinit in bpy.app.handlers.load_post:
         bpy.app.handlers.load_post.remove(CFNodeTree.reinit)
     set_draw_intern(reg=False)
