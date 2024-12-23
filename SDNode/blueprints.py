@@ -19,6 +19,7 @@ from .utils import gen_mask, THelper, WindowLogger
 from .plugins.animatedimageplayer import AnimatedImagePlayer as AIP
 from .nodes import NodeBase, Ops_Add_SaveImage, Ops_Link_Mask, Ops_Active_Tex, Set_Render_Res, Ops_Switch_Socket_Widget
 from .nodes import name2path, get_icon_path, Images
+from .operators import PreviewImageInPlane, ImageAsPBRMat
 from ..SDNode.manager import Task
 from ..timer import Timer
 from ..preference import get_pref
@@ -1214,6 +1215,8 @@ class 预览(BluePrintBase):
                 cfrow.prop(prev, "name", text="")
                 from ..ops import CopyToClipboard
                 cfrow.operator(CopyToClipboard.bl_idname, text="", icon="COPYDOWN").info = prev.name
+                cfrow.operator(PreviewImageInPlane.bl_idname, text="", icon="HIDE_OFF").img_name = prev.name
+                cfrow.operator(ImageAsPBRMat.bl_idname, text="", icon="MATERIAL").img_name = prev.name
             return True
 
     def serialize_pre_specific(s, self: NodeBase):
@@ -1304,6 +1307,8 @@ class PreviewImage(BluePrintBase):
                 cfrow.prop(prev, "name", text="")
                 from ..ops import CopyToClipboard
                 cfrow.operator(CopyToClipboard.bl_idname, text="", icon="COPYDOWN").info = prev.name
+                cfrow.operator(PreviewImageInPlane.bl_idname, text="", icon="HIDE_OFF").img_name = prev.name
+                cfrow.operator(ImageAsPBRMat.bl_idname, text="", icon="MATERIAL").img_name = prev.name
             return True
 
     def serialize_pre_specific(s, self: NodeBase):

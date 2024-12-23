@@ -4,7 +4,7 @@ import json
 import time
 from hashlib import md5
 from pathlib import Path
-
+from mathutils import Vector
 from bpy.types import Context, Event
 from .tree import CFNodeTree, TREE_TYPE
 from ..translations import ctxt
@@ -680,6 +680,104 @@ class AIMatSolutionRestore(bpy.types.Operator):
         return {"FINISHED"}
 
 
+class PreviewImageInPlane(bpy.types.Operator):
+    bl_idname = "sdn.prev_img_in_plane"
+    bl_label = "PreviewImage"
+    bl_translation_context = ctxt
+
+    img_name: bpy.props.StringProperty(name="Image Name", default="PreviewImage")
+
+    def execute(self, context):
+        if not self.img_name or self.img_name not in bpy.data.images:
+            self.report({"ERROR"}, "Image not found")
+            return {"FINISHED"}
+        cam = bpy.context.scene.camera
+        # 1. 创建一个平面
+        bpy.ops.mesh.primitive_plane_add(size=2, align="VIEW", location=cam.location, rotation=cam.rotation_euler)
+        obj = bpy.context.object
+        local_translation = obj.matrix_world.to_3x3() @  Vector((0, 0, -4))
+        obj.location += local_translation
+        bpy.context.view_layer.objects.active.visible_shadow = False
+        # 2. 赋予一个材质: 一张图像输入, 一个原理化, 一个材质输出, 图像的输出连接到原理化的自发光
+        mtl = bpy.data.materials.new(name="PreviewImage")
+        mtl.use_nodes = True
+        obj.data.materials.append(mtl)
+        obj.active_material = mtl
+        nodes = mtl.node_tree.nodes
+        nodes.clear()
+        img_node = nodes.new("ShaderNodeTexImage")
+        img_node.image = bpy.data.images.get(self.img_name)
+        img_node.location = -300, 0
+        principled_node = nodes.new("ShaderNodeBsdfPrincipled")
+        principled_node.location = 0, 0
+        principled_node.inputs["Roughness"].default_value = 1
+        principled_node.inputs["Emission Strength"].default_value = 1
+        output_node = nodes.new("ShaderNodeOutputMaterial")
+        output_node.location = 300, 0
+        mtl.node_tree.links.new(img_node.outputs["Color"], principled_node.inputs["Emission Color"])
+        mtl.node_tree.links.new(img_node.outputs["Alpha"], principled_node.inputs["Alpha"])
+        mtl.node_tree.links.new(img_node.outputs["Color"], principled_node.inputs["Base Color"])
+        mtl.node_tree.links.new(principled_node.outputs[0], output_node.inputs[0])
+        return {"FINISHED"}
+
+
+class ImageAsPBRMat(bpy.types.Operator):
+    bl_idname = "sdn.img_as_pbr_mat"
+    bl_label = "PreviewImage"
+    bl_translation_context = ctxt
+
+    img_name: bpy.props.StringProperty(name="Image Name", default="PreviewImage")
+
+    def create_mat(self):
+        mtl = bpy.data.materials.new(name=f"PBRMat_{self.img_name}")
+        mtl.use_nodes = True
+        nodes = mtl.node_tree.nodes
+        nodes.clear()
+        texcoord_node = nodes.new("ShaderNodeTexCoord")
+        mapping_node = nodes.new("ShaderNodeMapping")
+        img_node = nodes.new("ShaderNodeTexImage")
+        bump_node = nodes.new("ShaderNodeBump")
+        principled_node = nodes.new("ShaderNodeBsdfPrincipled")
+        output_node = nodes.new("ShaderNodeOutputMaterial")
+        texcoord_node.location = -1200, 0
+        mapping_node.location = -900, 0
+
+        img_node.image = bpy.data.images.get(self.img_name)
+        img_node.interpolation = "Cubic"
+        img_node.location = -600, 0
+
+        principled_node.location = 0, 0
+
+        bump_node.inputs["Strength"].default_value = 0.1
+        bump_node.location = -300, 0
+
+        output_node.location = 300, 0
+
+        mtl.node_tree.links.new(texcoord_node.outputs["UV"], mapping_node.inputs[0])
+        mtl.node_tree.links.new(mapping_node.outputs[0], img_node.inputs[0])
+        mtl.node_tree.links.new(img_node.outputs["Alpha"], principled_node.inputs["Alpha"])
+        mtl.node_tree.links.new(img_node.outputs["Color"], bump_node.inputs["Height"])
+        mtl.node_tree.links.new(img_node.outputs["Color"], principled_node.inputs["Base Color"])
+        mtl.node_tree.links.new(bump_node.outputs[0], principled_node.inputs["Normal"])
+        mtl.node_tree.links.new(principled_node.outputs[0], output_node.inputs[0])
+        return mtl
+
+    def execute(self, context):
+        if not self.img_name or self.img_name not in bpy.data.images:
+            self.report({"ERROR"}, "Image not found")
+            return {"FINISHED"}
+        obj = bpy.context.object
+        mtl = self.create_mat()
+        obj.data.materials.append(mtl)
+        if bpy.context.mode == "OBJECT":
+            obj.active_material = mtl
+            obj.data.materials.clear()
+        obj.active_material_index = len(obj.data.materials) - 1
+        if bpy.context.mode == "EDIT_MESH":
+            bpy.ops.object.material_slot_assign("INVOKE_DEFAULT")
+        return {"FINISHED"}
+
+
 clss = (
     AIMatSolutionLoad,
     AIMatSolutionRun,
@@ -687,6 +785,8 @@ clss = (
     AIMatSolutionDel,
     AIMatSolutionApply,
     AIMatSolutionRestore,
+    PreviewImageInPlane,
+    ImageAsPBRMat,
 )
 
 ops_register, ops_unregister = bpy.utils.register_classes_factory(clss)
