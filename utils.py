@@ -5,6 +5,7 @@ import time
 import re
 import json
 import bpy
+import addon_utils
 from pathlib import Path
 from functools import lru_cache
 from urllib.parse import urlparse
@@ -14,12 +15,27 @@ from .translations import LANG_TEXT
 from .timer import Timer
 from .datas import IMG_SUFFIX, get_bl_version
 translation = {}
+meta_info = {}
 
-addon_bl_info = {}
+
+def get_bl_info() -> dict:
+    module = get_bl_module()
+    return addon_utils.module_bl_info(module) or meta_info.get("bl_info", {})
 
 
-def get_bl_info():
-    return addon_bl_info
+def get_name():
+    return meta_info.get("package", "")
+
+
+def get_bl_module(name=None):
+    if not name:
+        name = get_name()
+    try:
+        return addon_utils.addons_fake_modules[name]
+    except Exception:
+        for mod in addon_utils.modules(refresh=False):
+            if mod.__name__ == name:
+                return mod
 
 
 def popup_folder(path: Path):

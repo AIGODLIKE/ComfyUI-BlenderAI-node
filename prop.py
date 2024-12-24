@@ -7,7 +7,7 @@ from pathlib import Path
 from .MultiLineText.trie import Trie
 
 from .preference import get_pref
-from .utils import Icon, FSWatcher, ScopeTimer, popup_folder, get_bl_info, get_ai_mat_tree
+from .utils import Icon, FSWatcher, ScopeTimer, popup_folder, get_bl_info, get_name, get_ai_mat_tree
 from .datas import PRESETS_DIR, PROP_CACHE, GROUPS_DIR, IMG_SUFFIX
 
 FSWatcher.register(PRESETS_DIR)
@@ -135,38 +135,19 @@ class Prop(bpy.types.PropertyGroup):
     open_groups_dir: bpy.props.BoolProperty(default=False, name="Open NodeTree Presets Folder", update=update_open_groups_dir)
 
     def open_pref_update(self, context):
+        if not self.open_pref:
+            return
         bl_info = get_bl_info()
-        if self.open_pref:
-            self.open_pref = False
-            category = bl_info.get('category')
+        self.open_pref = False
 
-            import addon_utils
-            bpy.ops.screen.userpref_show()
-            bpy.context.preferences.active_section = 'ADDONS'
-            if category is None:
-                bpy.context.window_manager.addon_search = bl_info.get('name')
-            else:
-                bpy.context.window_manager.addon_filter = category
-            try:
-                addon_utils.modules(refresh=False)[0].__name__
-                package = __package__.split(".")[0]
-                for mod in addon_utils.modules(refresh=False):
-                    if mod.__name__ != package:
-                        continue
-                    if mod.bl_info['show_expanded']:
-                        continue
-                    bpy.ops.preferences.addon_expand(module=package)
-            except TypeError:
-                package = __package__.split(".")[0]
-                modules = addon_utils.modules(refresh=False).mapping
-                for mod_key in modules:
-                    mod = modules[mod_key]
-                    if mod_key != package:
-                        continue
-                    if mod.bl_info['show_expanded']:
-                        continue
-                    bpy.ops.preferences.addon_expand(module=package)
-                    bpy.context.window_manager.addon_search = bl_info.get("name")
+        bpy.ops.screen.userpref_show()
+        bpy.context.preferences.active_section = 'ADDONS'
+        bpy.context.window_manager.addon_search = bl_info.get('name')
+        try:
+            bpy.context.window_manager.addon_filter = bl_info.get("category", "")
+        except TypeError:
+            pass
+        bpy.ops.preferences.addon_expand(module=get_name())
     open_pref: bpy.props.BoolProperty(default=False, name="Open Addon Preference", update=open_pref_update)
 
     def restart_webui_update(self, context):

@@ -38,7 +38,7 @@ from addon_utils import disable
 from .SDNode import rtnode_unreg, TaskManager
 from .MultiLineText import EnableMLT
 
-from .utils import Icon, FSWatcher, ScopeTimer, addon_bl_info
+from .utils import Icon, FSWatcher, ScopeTimer, meta_info
 from .timer import timer_reg, timer_unreg
 from .preference import pref_register, pref_unregister
 from .ops import Ops, Ops_Mask, Load_History, Popup_Load, Copy_Tree, Load_Batch, Fetch_Node_Status, Clear_Node_Cache, CopyToClipboard, Sync_Stencil_Image, NodeSearch, SDNode_To_Image, Image_To_SDNode, Image_Set_Channel_Packed, Open_Log_Window
@@ -54,8 +54,9 @@ from .hook import use_hook
 clss = [Panel, Ops, RenderLayerString, MLTWord, Prop, HISTORY_UL_UIList, HistoryItem, Ops_Mask, Load_History, Popup_Load, Copy_Tree, Load_Batch, Fetch_Node_Status, Clear_Node_Cache, CopyToClipboard, Sync_Stencil_Image, NodeSearch, SDNode_To_Image, Image_To_SDNode, Image_Set_Channel_Packed, Open_Log_Window, EnableMLT]
 reg, unreg = bpy.utils.register_classes_factory(clss)
 from platform import system
-
-addon_bl_info.update(bl_info)
+meta_info["bl_info"] = bl_info
+meta_info["package"] = __package__
+meta_info["name"] = __name__
 
 
 def dump_info():
