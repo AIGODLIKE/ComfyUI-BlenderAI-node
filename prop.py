@@ -378,6 +378,13 @@ def clear_cache(_):
     Prop._ref_items.clear()
 
 
-bpy.app.timers.register(render_layer_update, persistent=True)
-bpy.app.timers.register(send_ai_tree_to_editor, persistent=True)
-bpy.app.handlers.load_post.append(clear_cache)
+def prop_reg():
+    bpy.app.timers.register(render_layer_update, persistent=True)
+    bpy.app.timers.register(send_ai_tree_to_editor, persistent=True)
+    bpy.app.handlers.load_post.append(clear_cache)
+
+
+def prop_unreg():
+    bpy.app.timers.unregister(render_layer_update)
+    bpy.app.timers.unregister(send_ai_tree_to_editor)
+    bpy.app.handlers.load_post.remove(clear_cache)

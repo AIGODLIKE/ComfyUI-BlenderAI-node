@@ -35,7 +35,7 @@ clear_pyc()
 import bpy
 import sys
 from addon_utils import disable
-from .SDNode import rtnode_unreg, TaskManager
+from .SDNode import rtnode_reg, rtnode_unreg, TaskManager
 from .MultiLineText import EnableMLT
 
 from .utils import Icon, FSWatcher, ScopeTimer, meta_info
@@ -48,7 +48,7 @@ from .SDNode.rt_tracker import reg_tracker, unreg_tracker
 from .SDNode.nodegroup import nodegroup_reg, nodegroup_unreg
 from .SDNode.operators import ops_register, ops_unregister
 from .SDNode.custom_support import custom_support_reg, custom_support_unreg
-from .prop import RenderLayerString, MLTWord, Prop
+from .prop import RenderLayerString, MLTWord, Prop, prop_reg, prop_unreg
 from .Linker import linker_register, linker_unregister
 from .hook import use_hook
 clss = [Panel, Ops, RenderLayerString, MLTWord, Prop, HISTORY_UL_UIList, HistoryItem, Ops_Mask, Load_History, Popup_Load, Copy_Tree, Load_Batch, Fetch_Node_Status, Clear_Node_Cache, CopyToClipboard, Sync_Stencil_Image, NodeSearch, SDNode_To_Image, Image_To_SDNode, Image_Set_Channel_Packed, Open_Log_Window, EnableMLT]
@@ -119,7 +119,9 @@ def register():
     bpy.app.translations.register(__name__, translations_dict)
     reg()
     ui_reg()
+    prop_reg()
     Icon.set_hq_preview()
+    rtnode_reg(rereg=False)
     TaskManager.run_server(fake=True)
     timer_reg()
     # mlt_words注册到 sdn中会导致访问其他属性卡顿 what?
@@ -149,6 +151,7 @@ def unregister():
         return
     bpy.app.translations.unregister(__name__)
     unreg()
+    prop_unreg()
     ui_unreg()
     rtnode_unreg()
     timer_unreg()

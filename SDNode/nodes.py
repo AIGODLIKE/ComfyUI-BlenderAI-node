@@ -2003,6 +2003,65 @@ class NodeParser:
         return node_clss
 
 
+class NodeRegister:
+    CLSS_MAP: dict[str, NodeBase] = {}
+
+    @classmethod
+    def is_new(cls, node_cls: NodeBase) -> bool:
+        if node_cls.bl_label not in cls.CLSS_MAP:
+            return True
+        old = cls.CLSS_MAP[node_cls.bl_label]
+        if isinstance(node_cls, NodeBase):
+            # 节点描述信息发生变化时重新注册
+            if old.__metadata__ == node_cls.__metadata__:
+                return False
+            return True
+        # 不是节点时不更新
+        return False
+
+    @classmethod
+    def reg_cls(cls, clss: NodeBase):
+        if not cls.is_new(clss):
+            return
+        is_in = clss.bl_label in cls.CLSS_MAP
+        cls.unreg_cls(clss)
+        bpy.utils.register_class(clss)
+        cls.CLSS_MAP[clss.bl_label] = clss
+        if is_in:
+            logger.warning(f"{clss.bl_label} is updated")
+
+    @classmethod
+    def reg_clss(cls, clss):
+        for _cls in clss:
+            cls.reg_cls(_cls)
+
+    @classmethod
+    def unreg_cls(cls, _cls: NodeBase):
+        if _cls.bl_label not in cls.CLSS_MAP:
+            return
+        bpy.utils.unregister_class(cls.CLSS_MAP.pop(_cls.bl_label))
+
+    @classmethod
+    def unreg_unused(cls, clss):
+        label_map = {_c.bl_label: _c for _c in clss}
+        for label in list(cls.CLSS_MAP):
+            if label in label_map:
+                continue
+            bpy.utils.unregister_class(cls.CLSS_MAP.pop(label))
+            logger.warning(f"Unused {label} is unregistered")
+
+    @classmethod
+    def unreg_clss(cls, clss):
+        for _cls in clss:
+            cls.unreg_cls(_cls)
+
+    @classmethod
+    def unreg_all(cls):
+        for _cls in cls.CLSS_MAP.values():
+            bpy.utils.unregister_class(_cls)
+        cls.CLSS_MAP.clear()
+
+
 class Images(bpy.types.PropertyGroup):
     image: bpy.props.PointerProperty(type=bpy.types.Image)
 

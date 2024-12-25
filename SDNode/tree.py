@@ -17,7 +17,7 @@ from functools import partial
 from collections import OrderedDict
 from bpy.types import NodeTree
 from nodeitems_utils import NodeCategory, NodeItem, unregister_node_categories, _node_categories
-from .nodes import nodes_reg, nodes_unreg, NodeParser, NodeBase, clear_nodes_data_cache
+from .nodes import nodes_reg, nodes_unreg, NodeParser, NodeRegister, NodeBase, clear_nodes_data_cache
 from ..utils import logger, Icon, rgb2hex, hex2rgb, _T, FSWatcher
 from ..datas import EnumCache
 from ..timer import Timer
@@ -1145,11 +1145,6 @@ def register_classes_factory(classes):
     return register, unregister
 
 
-clss = []
-
-reg, unreg = register_classes_factory(clss)
-
-
 def reg_class_internal():
     from .nodes import NodeBase, SDNConfig
     bpy.types.NodeSocketColor.slot_index = bpy.props.IntProperty(default=0)
@@ -1245,23 +1240,11 @@ def rtnode_reg_diff():
         return
     logger.info(f"{_T('Changed Node')}: {[c.bl_label for c in node_clss]}")
     clear_nodes_data_cache()
-    clss_map = {}
-    for c in clss:
-        clss_map[c.bl_label] = c
-    for c in node_clss:
-        old_c = clss_map.pop(c.bl_label, None)
-        if old_c:
-            bpy.utils.unregister_class(old_c)
-            clss.remove(old_c)
-        bpy.utils.register_class(c)
-        clss.append(c)
+    NodeRegister.reg_clss(node_clss)
     logger.info(_T("RegNodeDiff Time:") + f" {time.time()-t1:.2f}s")
 
 
-def rtnode_reg():
-    nodes_reg()
-    reg_class_internal()
-    clss.append(CFNodeTree)
+def rtnode_rereg():
     t1 = time.time()
     # nt_desc = {name: {items:[], menus:[nt_desc...]}}
     try:
@@ -1269,12 +1252,27 @@ def rtnode_reg():
         t2 = time.time()
         logger.info(_T("ParseNode Time:") + f" {t2-t1:.2f}s")
         node_cat = load_node(nodetree_desc=nt_desc)
-        clss.extend(node_clss)
-        clss.extend(socket_clss)
+        all_clss = node_clss + socket_clss
+        NodeRegister.unreg_unused(all_clss)
+        NodeRegister.reg_clss(all_clss)
     except Exception:
+        import traceback
+        traceback.print_exc()
         node_cat = []
-    reg()
+    if TREE_NAME in _node_categories:
+        try:
+            unregister_node_categories(TREE_NAME)
+        except RuntimeError:
+            ...
     reg_nodetree(TREE_NAME, node_cat)  # register_node_categories(TREE_NAME, node_cat)
+
+
+def rtnode_reg(rereg=True):
+    nodes_reg()
+    reg_class_internal()
+    bpy.utils.register_class(CFNodeTree)
+    if rereg:
+        rtnode_rereg()
     set_draw_intern(reg=True)
     if CFNodeTree.reinit not in bpy.app.handlers.load_post:
         bpy.app.handlers.load_post.append(CFNodeTree.reinit)
@@ -1296,9 +1294,13 @@ def rtnode_unreg():
             unregister_node_categories(TREE_NAME)
         except RuntimeError:
             ...
-    unreg()
+        for menu in registered_menus.values():
+            if not getattr(menu, "is_registered"):
+                continue
+            bpy.utils.unregister_class(menu)
     nodes_unreg()
-    clss.clear()
+    bpy.utils.unregister_class(CFNodeTree)
+    NodeRegister.unreg_all()
 
 
 def cb(path):
