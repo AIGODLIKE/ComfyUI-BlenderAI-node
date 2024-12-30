@@ -2,6 +2,7 @@ import bpy
 import tempfile
 import json
 import time
+from random import uniform
 from hashlib import md5
 from pathlib import Path
 from mathutils import Vector
@@ -693,7 +694,8 @@ class PreviewImageInPlane(bpy.types.Operator):
             return {"FINISHED"}
         cam = bpy.context.scene.camera
         # 1. 创建一个平面
-        bpy.ops.mesh.primitive_plane_add(size=2, align="VIEW", location=cam.location, rotation=cam.rotation_euler)
+        rot = Vector(cam.rotation_euler) + Vector((uniform(-1, 1), uniform(-1, 1), 0)) * 0.002
+        bpy.ops.mesh.primitive_plane_add(size=2, calc_uvs=True, align="VIEW", location=cam.location, rotation=rot.to_tuple())
         obj = bpy.context.object
         local_translation = obj.matrix_world.to_3x3() @  Vector((0, 0, -4))
         obj.location += local_translation
