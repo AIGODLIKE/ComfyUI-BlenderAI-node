@@ -128,6 +128,17 @@ def _T2(word):
     return REPLACE_DICT.get(locale, {}).get(word, word)
 
 
+def find_areas_of_type(screen: bpy.types.Screen, area_type) -> list[bpy.types.Area]:
+    return [area for area in screen.areas if area.type == area_type]
+
+
+def find_area_by_type(screen: bpy.types.Screen, area_type, index) -> bpy.types.Area:
+    areas = find_areas_of_type(screen, area_type)
+    if areas:
+        return areas[index]
+    return None
+
+
 def update_screen():
     try:
         import bpy
