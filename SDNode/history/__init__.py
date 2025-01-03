@@ -48,6 +48,8 @@ class History:
 
     @staticmethod
     def update_timer():
+        if not bpy.context.scene:
+            return 1
         try:
             bpy.context.scene.sdn_history_item.clear()
             for i in History.get_history():
