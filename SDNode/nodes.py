@@ -2011,7 +2011,7 @@ class NodeRegister:
         if node_cls.bl_label not in cls.CLSS_MAP:
             return True
         old = cls.CLSS_MAP[node_cls.bl_label]
-        if isinstance(node_cls, NodeBase):
+        if issubclass(node_cls, NodeBase):
             # 节点描述信息发生变化时重新注册
             if old.__metadata__ == node_cls.__metadata__:
                 return False
