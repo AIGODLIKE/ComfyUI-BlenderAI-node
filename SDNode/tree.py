@@ -1240,7 +1240,8 @@ def rtnode_reg_diff():
         return
     clear_nodes_data_cache()
     diff_clss = NodeRegister.reg_clss(node_clss)
-    logger.info(f"{_T('Changed Node')}: {[c.bl_label for c in diff_clss]}")
+    if diff_clss:
+        logger.info(f"{_T('Changed Node')}: {[c.bl_label for c in diff_clss]}")
     logger.info(_T("RegNodeDiff Time:") + f" {time.time()-t1:.2f}s")
 
 
