@@ -523,7 +523,7 @@ class CFNodeTree(NodeTree):
             gtree.__metadata__ = group
 
         for node_info in data.get("nodes", []):
-            t = node_info["type"]
+            t: str = node_info["type"]
             if t == "Reroute":
                 node: NodeBase = self.nodes.new(type="NodeReroute")
             elif t.startswith("workflow/"):
@@ -1238,9 +1238,9 @@ def rtnode_reg_diff():
     _, node_clss, _ = NodeParser().parse(diff=True)
     if not node_clss:
         return
-    logger.info(f"{_T('Changed Node')}: {[c.bl_label for c in node_clss]}")
     clear_nodes_data_cache()
-    NodeRegister.reg_clss(node_clss)
+    diff_clss = NodeRegister.reg_clss(node_clss)
+    logger.info(f"{_T('Changed Node')}: {[c.bl_label for c in diff_clss]}")
     logger.info(_T("RegNodeDiff Time:") + f" {time.time()-t1:.2f}s")
 
 

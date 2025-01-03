@@ -1889,6 +1889,10 @@ class NodeParser:
         nodes_desc = self._get_n_desc()
         node_clss = []
         for nname, ndesc in nodes_desc.items():
+            # TODO: 暂时删除两个变更key, 由IPAdapter 导致
+            ndesc.pop("input_order", None)
+            ndesc.pop("python_module", None)
+            ndesc.pop("description", None)  # 删除description
             opt_types: dict = ndesc["input"].get("optional", {})
             rqr_types: dict = ndesc["input"].get("required", {})
             inp_types = {}
@@ -2015,6 +2019,18 @@ class NodeRegister:
             # 节点描述信息发生变化时重新注册
             if old.__metadata__ == node_cls.__metadata__:
                 return False
+            # 调试节点描述信息变更
+            # a = old.__metadata__
+            # b = node_cls.__metadata__
+            # import sys
+            # p = Path(__file__).parent.parent.joinpath("TestLib").as_posix()
+            # if sys.path[-1] != p:
+            #     sys.path.append(p)
+            # from deepdiff import DeepDiff
+            # diff = DeepDiff(a, b)
+            # logger.debug(f"Diff: {node_cls.bl_label}")
+            # for k, v in diff.items():
+            #     logger.debug(f"{k}: {v}")
             return True
         # 不是节点时不更新
         return False
@@ -2029,11 +2045,12 @@ class NodeRegister:
         cls.CLSS_MAP[clss.bl_label] = clss
         if is_in:
             logger.warning(f"{clss.bl_label} is updated")
+        return clss
 
     @classmethod
     def reg_clss(cls, clss):
-        for _cls in clss:
-            cls.reg_cls(_cls)
+        diff_clss = [c for c in clss if cls.reg_cls(c)]
+        return diff_clss
 
     @classmethod
     def unreg_cls(cls, _cls: NodeBase):
