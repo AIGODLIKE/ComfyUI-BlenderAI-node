@@ -197,14 +197,14 @@ class Panel(bpy.types.Panel):
             row.alert = True
             row.label(text="Adjust node tree and try again", text_ctxt=ctxt)
 
-    def show_error(self, layout):
+    def show_error(self, layout: bpy.types.UILayout):
         for error_msg in TaskManager.get_error_msg():
             row = layout.row()
             row.alert = True
             row.label(text=error_msg, icon="ERROR", text_ctxt=ctxt)
 
 
-def draw_header_button(self, context):
+def draw_header_button(self: bpy.types.Menu, context):
     if context.space_data.tree_type == TREE_TYPE:
         layout = self.layout
         col = layout.column()
@@ -212,7 +212,7 @@ def draw_header_button(self, context):
         col.operator(Ops.bl_idname, text="", text_ctxt=ctxt, icon="PLAY").action = "Submit"
 
 
-def draw_sdn_tofrom(self, context):
+def draw_sdn_tofrom(self: bpy.types.Menu, context):
     layout = self.layout
     if context.space_data.tree_type == TREE_TYPE:
         layout.separator()
@@ -221,7 +221,7 @@ def draw_sdn_tofrom(self, context):
         props.force_centered = True
 
 
-def draw_imeditor_tofrom(self, context):
+def draw_imeditor_tofrom(self: bpy.types.Menu, context):
     layout = self.layout
     layout.separator()
     layout.operator(Image_Set_Channel_Packed.bl_idname, text_ctxt=ctxt)  # , icon="MOD_MASK")
@@ -380,7 +380,7 @@ class AIMatPanel(bpy.types.Panel):
                 box.separator()
             node.draw_buttons(bpy.context, box)
 
-    def find_node_input(self, node) -> list[bpy.types.NodeSocket]:
+    def find_node_input(self, node: bpy.types.Node) -> list[bpy.types.NodeSocket]:
         sockets = []
         for inp in node.inputs:
             if inp.is_linked:
@@ -455,7 +455,7 @@ class PanelViewport(bpy.types.Panel):
         Timer.put((f, brush, length, area.width, area.height))
 
 
-def status_bar_draw(self: bpy.types.UILayout, context: bpy.types.Context):
+def status_bar_draw(self: bpy.types.Header, context: bpy.types.Context):
     layout = self.layout
     layout.label(text="[")
     from .SDNode.custom_support import cup_monitor
