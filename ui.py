@@ -252,6 +252,7 @@ class AIPanelViewport(bpy.types.Panel):
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
     bl_category = "AI"
+    bl_order = 0
 
     def draw_header_preset(self, context: Context):
         layout = self.layout
