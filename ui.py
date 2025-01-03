@@ -244,8 +244,8 @@ class HISTORY_UL_UIList(bpy.types.UIList):
         row.operator(Load_History.bl_idname, text="", icon="TIME").name = item.name
 
 
-class AIPanelViewport(bpy.types.Panel):
-    bl_idname = "SDN_V3D_PT_UI"
+class AIMatPanel(bpy.types.Panel):
+    bl_idname = "SDN_AIMAT_PT_UI"
     bl_translation_context = ctxt
     bl_label = get_addon_name()
     bl_description = ""
@@ -465,7 +465,7 @@ def status_bar_draw(self: bpy.types.UILayout, context: bpy.types.Context):
 
 
 clss = (
-    AIPanelViewport,
+    AIMatPanel,
 )
 
 register, unregister = bpy.utils.register_classes_factory(clss)
