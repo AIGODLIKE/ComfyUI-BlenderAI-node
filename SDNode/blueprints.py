@@ -1380,6 +1380,7 @@ class 存储(BluePrintBase):
         properties["current_frame_as_fs"] = bpy.props.BoolProperty(default=False, description="Use Current Frame as Start Frame")
         properties["cut_off"] = bpy.props.BoolProperty(default=False, description="Cut off frames behand insert")
         properties["frame_final_duration"] = bpy.props.IntProperty(default=1, min=1)
+        properties["frame_tween"] = bpy.props.IntProperty(default=0, name="Frame Tween", min=0, max=32)
 
     def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swsock=True, swdisp=False) -> bool:
         if prop == "mode":
@@ -1430,6 +1431,8 @@ class 存储(BluePrintBase):
                 col.prop(self, "frame_final_duration")
                 if self.seq_mode == "SeqReplace":
                     col.prop(self, "cut_off", toggle=True, text="", icon="TRACKING_CLEAR_FORWARDS")
+                if self.seq_mode == "SeqAppend":
+                    col.prop(self, "frame_tween")
                 return True
         return True
 
@@ -1444,11 +1447,84 @@ class 存储(BluePrintBase):
 
                 def push_images_seq(imgs: list[str], channel, frame_start, frame_final_duration):
                     seqe = bpy.context.scene.sequence_editor
+                    seqs = []
                     for img in imgs:
                         name = Path(img).name
                         seq = seqe.sequences.new_image(name, img, channel, frame_start)
                         seq.frame_final_duration = frame_final_duration
                         frame_start += frame_final_duration
+                        seqs.append(seq)
+                    return seqs
+
+                class SeqSegmentTree:
+                    def __init__(self, sequences: list["bpy.types.Sequence"] = None, sce: "bpy.types.Scene" = None):
+                        self.frame_to_channel: dict[int, dict[int, "bpy.types.Sequence"]] = {}
+                        self.channel_to_frame: dict[int, dict[int, "bpy.types.Sequence"]] = {}
+                        if not sequences and sce:
+                            sequences = sce.sequence_editor.sequences
+                        self.update(sequences)
+
+                    def __repr__(self):
+                        lines = []
+                        lines.append("C to F:")
+                        for c in self.channel_to_frame:
+                            lines.append(f"\t{c}")
+                            line = "\t"
+                            for f in sorted(self.channel_to_frame[c]):
+                                line += f"{f: 4}"
+                            lines.append(line)
+                        return "\n".join(lines)
+
+                    def update(self, sequences: list["bpy.types.Sequence"] = None):
+                        self.frame_to_channel.clear()
+                        self.channel_to_frame.clear()
+                        if not sequences:
+                            return
+                        for seq in sequences:
+                            self.insert_sequence(seq)
+
+                    def insert_sequence(self, seq: "bpy.types.Sequence"):
+                        if seq.channel not in self.channel_to_frame:
+                            self.channel_to_frame[seq.channel]: dict[int, "bpy.types.Sequence"] = {}
+                        for f in range(seq.frame_final_start, seq.frame_final_end):
+                            if f not in self.frame_to_channel:
+                                self.frame_to_channel[f]: dict[int, "bpy.types.Sequence"] = {}
+                            self.channel_to_frame[seq.channel][f] = seq
+                            self.frame_to_channel[f][seq.channel] = seq
+
+                    def get_frames_by_chan(self, channel, reverse=False):
+                        return sorted(self.channel_to_frame.get(channel, []), reverse=reverse)
+
+                    def get_chans_by_frame(self, frame, reverse=False):
+                        return sorted(self.frame_to_channel.get(frame, []), reverse=reverse)
+
+                    def find_top_chan_by_frame(self, frame: int, duration=1) -> int:
+                        cs = self.get_chans_by_frame(frame) or [0]
+                        if duration != 1:
+                            cs = []
+                            for f in range(frame, frame + duration):
+                                res = self.find_top_chan_by_frame(f)
+                        return cs[-1]
+
+                def do_tween(self, seqs: list[bpy.types.Sequence]):
+                    if self.seq_mode != "SeqAppend" or not self.frame_tween:
+                        return
+                    seqe = bpy.context.scene.sequence_editor
+                    st = SeqSegmentTree(seqe.sequences)
+                    for seq in seqs:
+                        ele = seq.elements[0]
+                        imgpath = Path(seq.directory, ele.filename).as_posix()
+                        duration = seq.frame_final_duration
+                        for tw in range(0, self.frame_tween):
+                            name = f"{seq.name}_Copy_{tw}"
+                            chan = seq.channel + self.frame_tween - tw
+                            frames = st.get_frames_by_chan(chan) or [seq.frame_final_start - (self.frame_tween - tw) * duration - 1]
+                            frame = round(frames[-1]) + 1
+                            seq_copy = seqe.sequences.new_image(name, imgpath, chan, frame)
+                            seq_copy.blend_type = "ALPHA_OVER"
+                            seq_copy.blend_alpha = (tw + 1) / (self.frame_tween + 1)
+                            seq_copy.frame_final_duration = duration
+                            st.insert_sequence(seq_copy)
 
                 def f(self, imgs):
                     seqe = bpy.context.scene.sequence_editor
@@ -1488,7 +1564,9 @@ class 存储(BluePrintBase):
                     elif mode == "SeqStack":
                         # 堆叠模式: 直接新建, blender会自己堆叠
                         ...
-                    push_images_seq(imgs, channel, frame_start, frame_final_duration)
+                    seqs = push_images_seq(imgs, channel, frame_start, frame_final_duration)
+                    do_tween(self, seqs)
+
                 Timer.put((f, self, imgs))
                 return
             for img in img_paths:
