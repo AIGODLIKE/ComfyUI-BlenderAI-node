@@ -1120,6 +1120,53 @@ class PrimitiveNode(BluePrintBase):
             setattr(link.to_node, get_reg_name(link.to_socket.name), prop)
 
 
+class ConditioningMultiCombine(BluePrintBase):
+    comfyClass = "ConditioningMultiCombine"
+
+    def spec_extra_properties(s, properties, nname, ndesc):
+        inputcount_config = ndesc.get("input", {}).get("required", {}).get("inputcount", {})
+        if not inputcount_config:
+            return
+        reg_name = get_reg_name("inputcount")
+        config_params = s.get_inputcount_params(inputcount_config)
+
+        def update(self: NodeBase, context):
+            reg_name = get_reg_name("inputcount")
+            input_count = getattr(self, reg_name, -1)
+            if input_count == -1:
+                return
+            while len(self.inputs) < input_count:
+                self.inputs.new(type=self.inputs[0].bl_idname, name=f"conditioning_{len(self.inputs) + 1}")
+            while len(self.inputs) > input_count:
+                for inp in self.inputs[input_count:]:
+                    self.inputs.remove(inp)
+        config_params["update"] = update
+        properties[reg_name] = bpy.props.IntProperty(**config_params)
+
+    def get_inputcount_params(s, inp):
+        from math import ceil
+        if len(inp) == 1:
+            return {}
+        inp[1]["max"] = min(int(inp[1].get("max", 9999999)), 2**31 - 1)
+        inp[1]["min"] = max(int(inp[1].get("min", -999999)), -2**31)
+        default = inp[1].get("default", 0)
+        if not default:
+            default = 0
+        inp[1]["default"] = int(default)
+        if inp[1]["default"] > 2**31 - 1:
+            inp[1]["default"] = min(inp[1]["default"], 2**31 - 1)
+        elif inp[1]["default"] < -2**31:
+            inp[1]["default"] = max(inp[1]["default"], -2**31)
+        inp[1]["step"] = ceil(inp[1].get("step", 1))
+        if inp[1].pop("display", False):
+            inp[1]["subtype"] = "FACTOR"
+        params = {}
+        for k in ["name", "description", "translation_context", "default", "min", "max", "soft_min", "soft_max", "step", "options", "override", "tags", "subtype", "update", "get", "set",]:
+            if k in inp[1]:
+                params[k] = inp[1][k]
+        return params
+
+
 def upload_image(img_path):
     from .manager import TaskManager
 
