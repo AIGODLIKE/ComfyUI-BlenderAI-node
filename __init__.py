@@ -90,12 +90,24 @@ def disable_reload():
     # reset disable
     _disable = disable
 
-    def hd(mod, *, default_set=False, handle_error=None):
-        if default_set and mod == __package__:
-            __dict__["NOT_RELOAD_BUILTIN"] = True
-        _disable(mod, default_set=default_set, handle_error=handle_error)
-        if default_set and mod == __package__:
-            __dict__.pop("NOT_RELOAD_BUILTIN")
+    def hd(*args, **kwargs):
+        stat = 0
+        try:
+            stat = 1
+            mod = args[0]
+            default_set = kwargs.get("default_set")
+            # mod, *, default_set=False, handle_error=None
+            if default_set and mod == __package__:
+                __dict__["NOT_RELOAD_BUILTIN"] = True
+            stat = 2
+            _disable(*args, **kwargs)
+            stat = 3
+            if default_set and mod == __package__:
+                __dict__.pop("NOT_RELOAD_BUILTIN")
+        except Exception:
+            ...
+        if stat in (1, 2):
+            _disable(*args, **kwargs)
     sys.modules["addon_utils"].disable = hd
 
 
