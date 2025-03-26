@@ -3,7 +3,6 @@ import re
 import json
 import tempfile
 import time
-import re
 import uuid
 from typing import Any
 from pathlib import Path
@@ -16,7 +15,7 @@ from .utils import _T, logger, FSWatcher, read_json
 from .timer import Timer, Worker, WorkerFunc
 from .SDNode import TaskManager
 from .SDNode.history import History
-from .SDNode.tree import InvalidNodeType, CFNodeTree, TREE_TYPE, rtnode_reg, rtnode_unreg
+from .SDNode.tree import InvalidNodeType, CFNodeTree, TREE_TYPE, rtnode_rereg
 from .SDNode.utils import get_default_tree, WindowLogger
 from .datas import IMG_SUFFIX
 from .preference import get_pref
@@ -343,7 +342,7 @@ class Ops(bpy.types.Operator):
                     def pre(cf):
                         bpy.context.scene.frame_set(cf)
                     pre = partial(pre, cf)
-                    TaskManager.push_task(tree.get_task(), pre, tree=tree)
+                    TaskManager.push_task(tree.get_task, pre, tree=tree)
             elif bpy.context.scene.sdn.frame_mode == "Batch":
                 batch_dir = bpy.context.scene.sdn.batch_dir
                 select_node = tree.nodes.active
@@ -389,8 +388,7 @@ class Ops(bpy.types.Operator):
             TaskManager.launch_ip = get_pref().ip
             TaskManager.launch_port = get_pref().port
             TaskManager.launch_url = f"http://{get_pref().ip}:{get_pref().port}"
-            rtnode_unreg()
-            rtnode_reg()
+            rtnode_rereg()
             CFNodeTree.refresh_current_tree()
             TaskManager.start_polling()
 
@@ -735,20 +733,11 @@ class Fetch_Node_Status(bpy.types.Operator):
         return getattr(bpy.context.space_data, "edit_tree", False)
 
     def execute(self, context):
-        # from .SDNode.tree import rtnode_reg_diff
-        # t0 = time.time()
-        # rtnode_reg_diff()
-        # logger.info(_T("RegNodeDiff Time:") + f" {time.time()-t0:.2f}s")
         Timer.clear()
         t1 = time.time()
-        rtnode_unreg()
+        rtnode_rereg()
         t2 = time.time()
-        logger.info(_T("UnregNode Time:") + f" {t2-t1:.2f}s")
-
-        t3 = time.time()
-        rtnode_reg()
-        t4 = time.time()
-        logger.info(_T("RegNode Time:") + f" {t4-t3:.2f}s")
+        logger.info(_T("RegNode Time:") + f" {t2-t1:.2f}s")
         CFNodeTree.refresh_current_tree()
         return {"FINISHED"}
 
@@ -799,6 +788,17 @@ class Clear_Node_Cache(bpy.types.Operator):
             self.report({"INFO"}, _T("Node Cache Cleared!"))
         except Exception as e:
             self.report({"ERROR"}, _T("Node Cache Clear Failed!") + f" {e}")
+        return {"FINISHED"}
+
+
+class CopyToClipboard(bpy.types.Operator):
+    bl_idname = "sdn.copy_iname_to_clipboard"
+    bl_label = "Copy Image Name to Clipboard"
+    bl_translation_context = ctxt
+    info: bpy.props.StringProperty(default="")
+
+    def execute(self, context):
+        bpy.context.window_manager.clipboard = self.info
         return {"FINISHED"}
 
 

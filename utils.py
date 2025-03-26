@@ -5,8 +5,8 @@ import time
 import re
 import json
 import bpy
+import addon_utils
 from pathlib import Path
-from threading import Thread
 from functools import lru_cache
 from urllib.parse import urlparse
 from ast import literal_eval
@@ -15,12 +15,27 @@ from .translations import LANG_TEXT
 from .timer import Timer
 from .datas import IMG_SUFFIX, get_bl_version
 translation = {}
+meta_info = {}
 
-addon_bl_info = {}
+
+def get_bl_info() -> dict:
+    module = get_bl_module()
+    return addon_utils.module_bl_info(module) or meta_info.get("bl_info", {})
 
 
-def get_bl_info():
-    return addon_bl_info
+def get_name():
+    return meta_info.get("package", "")
+
+
+def get_bl_module(name=None):
+    if not name:
+        name = get_name()
+    try:
+        return addon_utils.addons_fake_modules[name]
+    except Exception:
+        for mod in addon_utils.modules(refresh=False):
+            if mod.__name__ == name:
+                return mod
 
 
 def popup_folder(path: Path):
@@ -111,6 +126,17 @@ def _T2(word):
     from .translations.translation import REPLACE_DICT
     locale = bpy.context.preferences.view.language
     return REPLACE_DICT.get(locale, {}).get(word, word)
+
+
+def find_areas_of_type(screen: bpy.types.Screen, area_type) -> list[bpy.types.Area]:
+    return [area for area in screen.areas if area.type == area_type]
+
+
+def find_area_by_type(screen: bpy.types.Screen, area_type, index) -> bpy.types.Area:
+    areas = find_areas_of_type(screen, area_type)
+    if areas:
+        return areas[index]
+    return None
 
 
 def update_screen():
@@ -279,9 +305,9 @@ class Icon(metaclass=MetaIn):
     @staticmethod
     def remove_mark(name) -> bool:
         name = FSWatcher.to_str(name)
-        Icon.IMG_STATUS.pop(name)
-        Icon.PIX_STATUS.pop(name)
-        Icon.PREV_DICT.pop(name)
+        Icon.IMG_STATUS.pop(name, None)
+        Icon.PIX_STATUS.pop(name, None)
+        Icon.PREV_DICT.pop(name, None)
         return True
 
     @staticmethod
@@ -535,81 +561,110 @@ class FSWatcher:
     _watcher_callback = {}
     _watcher_queue = queue.Queue()
     _running = False
+    _use_threading = False
 
-    @staticmethod
-    def init() -> None:
-        FSWatcher._run()
+    @classmethod
+    def init(cls) -> None:
+        cls._run()
 
-    @staticmethod
-    def register(path, callback=None):
-        path = FSWatcher.to_path(path)
-        if path in FSWatcher._watcher_path:
+    @classmethod
+    def register(cls, path, callback=None):
+        path = cls.to_path(path)
+        if path in cls._watcher_path:
             return
-        FSWatcher._watcher_path[path] = False
-        FSWatcher._watcher_callback[path] = callback
+        cls._watcher_path[path] = False
+        cls._watcher_callback[path] = callback
 
-    @staticmethod
-    def unregister(path):
-        path = FSWatcher.to_path(path)
-        FSWatcher._watcher_path.pop(path)
-        FSWatcher._watcher_callback.pop(path)
+    @classmethod
+    def unregister(cls, path):
+        path = cls.to_path(path)
+        cls._watcher_path.pop(path, None)
+        cls._watcher_callback.pop(path, None)
 
-    @staticmethod
-    def _run():
-        if FSWatcher._running:
+    @classmethod
+    def _run(cls):
+        if cls._running:
             return
-        FSWatcher._running = True
-        Thread(target=FSWatcher._loop, daemon=True).start()
-        Thread(target=FSWatcher._run_ex, daemon=True).start()
+        cls._running = True
+        if cls._use_threading:
+            # use threading
+            from threading import Thread
+            Thread(target=cls._loop, daemon=True).start()
+            Thread(target=cls._run_ex, daemon=True).start()
+        else:
+            # use timer
+            import bpy
+            bpy.app.timers.register(cls._loop_timer, persistent=True)
+            bpy.app.timers.register(cls._run_ex_timer, persistent=True)
 
-    @staticmethod
-    def _run_ex():
-        while FSWatcher._running:
-            try:
-                path = FSWatcher._watcher_queue.get(timeout=0.1)
-                if path not in FSWatcher._watcher_path:
-                    continue
-                if callback := FSWatcher._watcher_callback[path]:
-                    callback(path)
-            except queue.Empty:
-                pass
+    @classmethod
+    def _run_ex_timer(cls):
+        cls._run_ex_one()
+        return 0.5
 
-    @staticmethod
-    def _loop():
+    @classmethod
+    def _run_ex(cls):
+        while cls._running:
+            cls._run_ex_one()
+            time.sleep(0.1)
+
+    @classmethod
+    def _run_ex_one(cls):
+        if not cls._running:
+            return
+        while not cls._watcher_queue.empty():
+            path = cls._watcher_queue.get()
+            if path not in cls._watcher_path:
+                continue
+            if callback := cls._watcher_callback[path]:
+                callback(path)
+
+    @classmethod
+    def _loop_timer(cls):
+        cls._loop_one()
+        return 1
+
+    @classmethod
+    def _loop(cls):
         """
             监听所有注册的路径, 有变化时记录为changed
         """
-        while FSWatcher._running:
-            # list() avoid changed while iterating
-            for path, changed in list(FSWatcher._watcher_path.items()):
-                if changed:
-                    continue
-                if not path.exists():
-                    continue
-                mtime = path.stat().st_mtime_ns
-                if FSWatcher._watcher_stat.get(path, None) == mtime:
-                    continue
-                FSWatcher._watcher_stat[path] = mtime
-                FSWatcher._watcher_path[path] = True
-                FSWatcher._watcher_queue.put(path)
+        while cls._running:
+            cls._loop_one()
             time.sleep(0.5)
 
-    @staticmethod
-    def stop():
-        FSWatcher._watcher_queue.put(None)
-        FSWatcher._running = False
+    @classmethod
+    def _loop_one(cls):
+        if not cls._running:
+            return
+        for path, changed in list(cls._watcher_path.items()):
+            if changed:
+                continue
+            if not path.exists():
+                continue
+            mtime = path.stat().st_mtime_ns
+            if cls._watcher_stat.get(path, None) == mtime:
+                continue
+            cls._watcher_stat[path] = mtime
+            cls._watcher_path[path] = True
+            cls._watcher_queue.put(path)
 
-    @staticmethod
-    def consume_change(path) -> bool:
-        path = FSWatcher.to_path(path)
-        if path in FSWatcher._watcher_path and FSWatcher._watcher_path[path]:
-            FSWatcher._watcher_path[path] = False
+    @classmethod
+    def stop(cls):
+        cls._watcher_queue.put(None)
+        cls._running = False
+
+    @classmethod
+    def consume_change(cls, path) -> bool:
+        path = cls.to_path(path)
+        if path in cls._watcher_path and cls._watcher_path[path]:
+            cls._watcher_path[path] = False
             return True
         return False
 
-    @lru_cache
-    @staticmethod
-    def get_nas_mapping():
+    @classmethod
+    @lru_cache(maxsize=1024)
+    def get_nas_mapping(cls):
         if platform.system() != "Windows":
             return {}
         import subprocess
@@ -634,9 +689,9 @@ class FSWatcher:
             ...
         return nas_mapping
 
+    @classmethod
     @lru_cache(maxsize=1024)
-    @staticmethod
-    def to_str(path: Path):
+    def to_str(cls, path: Path):
         p = Path(path)
         try:
             res_str = p.resolve().as_posix()
@@ -644,15 +699,15 @@ class FSWatcher:
             res_str = p.as_posix()
             logger.warning(e)
         # 处理nas路径
-        for local_drive, nas_path in FSWatcher.get_nas_mapping().items():
+        for local_drive, nas_path in cls.get_nas_mapping().items():
             if not res_str.startswith(nas_path):
                 continue
             return res_str.replace(nas_path, local_drive)
         return res_str
 
+    @classmethod
     @lru_cache(maxsize=1024)
-    @staticmethod
-    def to_path(path: Path):
+    def to_path(cls, path: Path):
         return Path(path)
 
 

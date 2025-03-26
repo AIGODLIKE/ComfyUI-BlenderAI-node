@@ -175,6 +175,9 @@ other = {
     "AI Mat already exists, Overwrite?": "已存在AI Mat，是否覆盖？",
     "Already exists, Overwrite?": "已存在，是否覆盖？",
     "Can't find ComfyUI Node Tree": "未找到ComfyUI节点树",
+    "Apply/Project this Image on active object": "将此图像应用/投影到活动物体上",
+    "Projects/Applys this Image to the object. like painting it. IF Using in object mode = it will project the image through whole object (using UV project from view). IF Using in EDIT MODE = it will only paint the image to the visible mesh, remember to have not overlappen UVmap before when using in object mode..": "将此图像应用/投影到物体上。就像绘画一样。物体模式下使用=>整个物体投影图像(使用视图投影UV)。编辑模式下使用=>只将图像绘制到可见的面上.注意: 在使用物体模式时UV不要重叠",
+    "Will bake image to previous UV map that was as active render, if didnt had any UV map then it will create new one...": "将图像烘焙到之前作为活动渲染的UV贴图上，如果没有任何UV贴图，则会创建新的...",
     # SDNode/rt_tracker.py
     "Tracker Loop": "循环生成",
     # SDNode/node_process.py
@@ -258,6 +261,8 @@ other = {
     "Use Current Frame": "使用当前帧",
     "Input Frame": "输入帧",
     "Total Time": "总时长",
+    "Not reaches output node, skip render proc": "未连接至输出类节点, 跳过渲染",
+    "Frame Tween": "渐变帧",
     # SDNode/tree.py
     "Invalid Node Type: {}": "检查到无效的节点: {}",
     "ParseNode Time:": "解析节点耗时:",
@@ -376,6 +381,7 @@ other = {
     "If creating a new node, put it in the centre of the editor": "如果创建一个新节点，请将其放在编辑器的中心位置",
     "Set Image Alpha to Channel Packed": "将图像 Alpha 设置为通道打包",
     "Set the current image's alpha to channel packed, even if the option is not displayed in the UI.\nThis allows masks with color to be properly painted onto the image": "将当前图像的 alpha 设置为通道打包，即使用户界面中未显示该选项。\n这样就可以在图像上正确绘制带颜色的遮罩",
+    "Copy Image Name to Clipboard": "复制图像名称到剪贴板",
     # ui.py
     "ComfyUI": "圣杯节点",
     "ClearTask": "清理任务",

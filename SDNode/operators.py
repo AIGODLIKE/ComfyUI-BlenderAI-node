@@ -2,13 +2,14 @@ import bpy
 import tempfile
 import json
 import time
+from random import uniform
 from hashlib import md5
 from pathlib import Path
-
+from mathutils import Vector
 from bpy.types import Context, Event
 from .tree import CFNodeTree, TREE_TYPE
 from ..translations import ctxt
-from ..utils import Timer, _T, get_ai_mat_tree, set_ai_mat_tree
+from ..utils import Timer, _T, get_ai_mat_tree, set_ai_mat_tree, find_area_by_type, find_areas_of_type
 
 
 class AIMatSolutionLoad(bpy.types.Operator):
@@ -680,6 +681,312 @@ class AIMatSolutionRestore(bpy.types.Operator):
         return {"FINISHED"}
 
 
+class PreviewImageInPlane(bpy.types.Operator):
+    bl_idname = "sdn.prev_img_in_plane"
+    bl_label = "PreviewImage"
+    bl_translation_context = ctxt
+
+    img_name: bpy.props.StringProperty(name="Image Name", default="PreviewImage")
+
+    def execute(self, context):
+        if not self.img_name or self.img_name not in bpy.data.images:
+            self.report({"ERROR"}, "Image not found")
+            return {"FINISHED"}
+        cam = bpy.context.scene.camera
+        # 1. 创建一个平面
+        rot = Vector(cam.rotation_euler) + Vector((uniform(-1, 1), uniform(-1, 1), 0)) * 0.002
+        bpy.ops.mesh.primitive_plane_add(size=2, calc_uvs=True, align="VIEW", location=cam.location, rotation=rot.to_tuple())
+        obj = bpy.context.object
+        local_translation = obj.matrix_world.to_3x3() @  Vector((0, 0, -4))
+        obj.location += local_translation
+        bpy.context.view_layer.objects.active.visible_shadow = False
+        # 2. 赋予一个材质: 一张图像输入, 一个原理化, 一个材质输出, 图像的输出连接到原理化的自发光
+        mtl = bpy.data.materials.new(name="PreviewImage")
+        mtl.use_nodes = True
+        obj.data.materials.append(mtl)
+        obj.active_material = mtl
+        nodes = mtl.node_tree.nodes
+        nodes.clear()
+        img_node = nodes.new("ShaderNodeTexImage")
+        img_node.image = bpy.data.images.get(self.img_name)
+        img_node.location = -300, 0
+        principled_node = nodes.new("ShaderNodeBsdfPrincipled")
+        principled_node.location = 0, 0
+        principled_node.inputs["Roughness"].default_value = 1
+        principled_node.inputs["Emission Strength"].default_value = 1
+        output_node = nodes.new("ShaderNodeOutputMaterial")
+        output_node.location = 300, 0
+        mtl.node_tree.links.new(img_node.outputs["Color"], principled_node.inputs["Emission Color"])
+        mtl.node_tree.links.new(img_node.outputs["Alpha"], principled_node.inputs["Alpha"])
+        mtl.node_tree.links.new(img_node.outputs["Color"], principled_node.inputs["Base Color"])
+        mtl.node_tree.links.new(principled_node.outputs[0], output_node.inputs[0])
+        return {"FINISHED"}
+
+
+class ImageAsPBRMat(bpy.types.Operator):
+    bl_idname = "sdn.img_as_pbr_mat"
+    bl_label = "PreviewImage"
+    bl_translation_context = ctxt
+
+    img_name: bpy.props.StringProperty(name="Image Name", default="PreviewImage")
+
+    def create_mat(self):
+        mtl = bpy.data.materials.new(name=f"PBRMat_{self.img_name}")
+        mtl.use_nodes = True
+        nodes = mtl.node_tree.nodes
+        nodes.clear()
+        texcoord_node = nodes.new("ShaderNodeTexCoord")
+        mapping_node = nodes.new("ShaderNodeMapping")
+        img_node = nodes.new("ShaderNodeTexImage")
+        bump_node = nodes.new("ShaderNodeBump")
+        principled_node = nodes.new("ShaderNodeBsdfPrincipled")
+        output_node = nodes.new("ShaderNodeOutputMaterial")
+        texcoord_node.location = -1200, 0
+        mapping_node.location = -900, 0
+
+        img_node.image = bpy.data.images.get(self.img_name)
+        img_node.interpolation = "Cubic"
+        img_node.location = -600, 0
+
+        principled_node.location = 0, 0
+
+        bump_node.inputs["Strength"].default_value = 0.1
+        bump_node.location = -300, 0
+
+        output_node.location = 300, 0
+
+        mtl.node_tree.links.new(texcoord_node.outputs["UV"], mapping_node.inputs[0])
+        mtl.node_tree.links.new(mapping_node.outputs[0], img_node.inputs[0])
+        mtl.node_tree.links.new(img_node.outputs["Alpha"], principled_node.inputs["Alpha"])
+        mtl.node_tree.links.new(img_node.outputs["Color"], bump_node.inputs["Height"])
+        mtl.node_tree.links.new(img_node.outputs["Color"], principled_node.inputs["Base Color"])
+        mtl.node_tree.links.new(bump_node.outputs[0], principled_node.inputs["Normal"])
+        mtl.node_tree.links.new(principled_node.outputs[0], output_node.inputs[0])
+        return mtl
+
+    def execute(self, context):
+        if not self.img_name or self.img_name not in bpy.data.images:
+            self.report({"ERROR"}, "Image not found")
+            return {"FINISHED"}
+        obj = bpy.context.object
+        mtl = self.create_mat()
+        if bpy.context.mode == "OBJECT":
+            obj.active_material = mtl
+            obj.data.materials.clear()
+        obj.data.materials.append(mtl)
+        obj.active_material_index = len(obj.data.materials) - 1
+        if bpy.context.mode == "EDIT_MESH":
+            bpy.ops.object.material_slot_assign("INVOKE_DEFAULT")
+        return {"FINISHED"}
+
+
+class ImageProjectOnObject(bpy.types.Operator):
+    bl_idname = "sdn.img_project_on_obj"
+    bl_label = "Apply/Project this Image on active object"
+    bl_description = "Projects/Applys this Image to the object. like painting it. IF Using in object mode = it will project the image through whole object (using UV project from view). IF Using in EDIT MODE = it will only paint the image to the visible mesh, remember to have not overlappen UVmap before when using in object mode.."
+    bl_translation_context = ctxt
+
+    bl_options = {"REGISTER", "UNDO"}
+
+    img_name: bpy.props.StringProperty(name="Image Name", default="PreviewImage")
+    
+    _pass_args = {
+        "active_uvmap_render_by_index": 0,
+        "active_uvmap_name_from_index": "",
+        "active_selected_uvmap_by_index": 0,
+    }
+    
+    @classmethod
+    def poll(cls, context):
+        return context.object and context.object.type == "MESH" and context.object.mode in {"OBJECT", "EDIT"} and context.scene.camera
+
+    def find_biggest_area_by_type(self, screen: bpy.types.Screen, area_type):
+        areas = find_areas_of_type(screen, area_type)
+        if not areas:
+            return []
+        max_area = (areas[0], areas[0].width * areas[0].height)
+        for area in areas:
+            if area.width * area.height > max_area[1]:
+                max_area = (area, area.width * area.height)
+        return max_area[0]
+
+    def create_mtl_pbr(self, mtl_name, image) -> bpy.types.Material:
+        mtl = bpy.data.materials.new(name=mtl_name)
+        mtl.use_nodes = True
+        nodes = mtl.node_tree.nodes
+        nodes.clear()
+        texcoord_node = nodes.new("ShaderNodeTexCoord")
+        mapping_node = nodes.new("ShaderNodeMapping")
+        img_node = nodes.new("ShaderNodeTexImage")
+        bump_node = nodes.new("ShaderNodeBump")
+        principled_node = nodes.new("ShaderNodeBsdfPrincipled")
+        output_node = nodes.new("ShaderNodeOutputMaterial")
+        texcoord_node.location = -1200, 0
+        mapping_node.location = -900, 0
+
+        img_node.image = image
+        img_node.interpolation = "Cubic"
+        img_node.location = -600, 0
+
+        principled_node.location = 0, 0
+
+        bump_node.inputs["Strength"].default_value = 0.1
+        bump_node.location = -300, 0
+
+        output_node.location = 300, 0
+
+        mtl.node_tree.links.new(texcoord_node.outputs["UV"], mapping_node.inputs[0])
+        mtl.node_tree.links.new(mapping_node.outputs[0], img_node.inputs[0])
+        mtl.node_tree.links.new(img_node.outputs["Alpha"], principled_node.inputs["Alpha"])
+        mtl.node_tree.links.new(img_node.outputs["Color"], bump_node.inputs["Height"])
+        mtl.node_tree.links.new(img_node.outputs["Color"], principled_node.inputs["Base Color"])
+        mtl.node_tree.links.new(bump_node.outputs[0], principled_node.inputs["Normal"])
+        mtl.node_tree.links.new(principled_node.outputs[0], output_node.inputs[0])
+        return mtl
+
+    def ensure_uv(self, obj: bpy.types.Object):
+        if "Comfy_Project_Through_UVMAP" not in obj.data.uv_layers:
+            uv_layer = obj.data.uv_layers.new(name="Comfy_Project_Through_UVMAP")
+            uv_layer.active_render = True
+            uv_layer.active = True
+            obj.data.uv_layers.active_index = len(obj.data.uv_layers) - 1
+        uv_layer = obj.data.uv_layers[obj.data.uv_layers.active_index]
+        return uv_layer
+
+    def execute(self, context):
+        self._pass_args.clear()
+        act_obj = bpy.context.view_layer.objects.active
+        if "OBJECT" == bpy.context.mode:
+            active_uvmap_render_by_index = 0
+            active_selected_uvmap_by_index = act_obj.data.uv_layers.active_index
+            active_uvmap_name_from_index = ""
+            for i, l in enumerate(act_obj.data.uv_layers):
+                if not l.active_render:
+                    continue
+                active_uvmap_render_by_index = i
+                active_uvmap_name_from_index = l.name
+            self.ensure_uv(act_obj)
+            w, h = bpy.context.scene.render.resolution_x, bpy.context.scene.render.resolution_y
+            proj_img_name = f"Image_Name_from_Preview_Node_{hash(act_obj)}"
+            bpy.ops.image.new(name=proj_img_name, width=w, height=h)
+            proj_img = bpy.data.images[proj_img_name]
+            proj_mtl = self.create_mtl_pbr(f"Material_Name_From_Project_Image_{hash(act_obj)}", proj_img)
+            act_obj.data.materials.append(material=proj_mtl, )
+            area = find_area_by_type(bpy.context.screen, 'VIEW_3D', 0)
+            with bpy.context.temp_override(area=area, region=area.regions[0], ):
+                bpy.ops.view3d.view_camera()
+            bpy.ops.object.mode_set("INVOKE_DEFAULT", mode='EDIT')
+            bpy.ops.mesh.select_all("INVOKE_DEFAULT", action='SELECT')
+            with bpy.context.temp_override(area=area, region=area.regions[7], ):
+                bpy.ops.uv.project_from_view("INVOKE_DEFAULT", )
+            context.object.active_material_index = len(act_obj.material_slots)
+            bpy.ops.object.material_slot_assign("INVOKE_DEFAULT", )
+            bpy.ops.object.mode_set("INVOKE_DEFAULT", mode="TEXTURE_PAINT")
+            bpy.ops.object.mode_set("INVOKE_DEFAULT", mode="OBJECT")
+            bpy.ops.object.shade_flat("INVOKE_DEFAULT", )
+            bpy.ops.paint.project_image(image=self.img_name)
+            self._pass_args.update({
+                "active_uvmap_render_by_index": active_uvmap_render_by_index,
+                "active_uvmap_name_from_index": active_uvmap_name_from_index,
+                "active_selected_uvmap_by_index": active_selected_uvmap_by_index,
+
+            })
+            with bpy.context.temp_override(area=area, region=area.regions[0]):
+                bpy.ops.view3d.view_camera()
+                bpy.ops.wm.call_menu(name=OkBakeMenu.bl_idname)
+        if "EDIT_MESH" == bpy.context.mode:
+            bpy.ops.object.mode_set("INVOKE_DEFAULT", mode="TEXTURE_PAINT")
+            bpy.ops.object.mode_set("INVOKE_DEFAULT", mode="OBJECT")
+            bpy.ops.object.shade_flat("INVOKE_DEFAULT", )
+            bpy.ops.paint.project_image(image=self.img_name)
+            bpy.ops.object.mode_set("INVOKE_DEFAULT", mode="EDIT")
+
+        return {"FINISHED"}
+
+    def invoke(self, context, event):
+
+        return self.execute(context)
+
+
+class ProjectThenBake(bpy.types.Operator):
+    bl_idname = "sdn.proj_then_bake"
+    bl_label = "OK BAKE"
+    bl_translation_context = ctxt
+    bl_description = "Will bake image to previous UV map that was as active render, if didnt had any UV map then it will create new one..."
+    bl_options = {"REGISTER", "UNDO"}
+
+    def execute(self, context):
+        old_engine = bpy.context.scene.render.engine
+        act_obj = context.object
+        if act_obj.data.uv_layers:
+            active_uvmap_name_from_index = ImageProjectOnObject._pass_args["active_uvmap_name_from_index"]
+            bpy.context.scene.render.engine = "CYCLES"
+            active_uvmap_render_by_index = ImageProjectOnObject._pass_args["active_uvmap_render_by_index"]
+            active_selected_uvmap_by_index = ImageProjectOnObject._pass_args["active_selected_uvmap_by_index"]
+            bpy.ops.object.bake(
+                type="DIFFUSE",
+                pass_filter={"COLOR"},
+                width=bpy.context.scene.render.resolution_x,
+                height=bpy.context.scene.render.resolution_y,
+                margin=16,
+                margin_type="ADJACENT_FACES",
+                use_selected_to_active=False,
+                target="IMAGE_TEXTURES",
+                save_mode="INTERNAL",
+                use_clear=False,
+                uv_layer=active_uvmap_name_from_index,
+            )
+            bpy.context.scene.render.engine = old_engine
+            bpy.ops.mesh.uv_texture_remove("INVOKE_DEFAULT")
+            for i, l in enumerate(act_obj.data.uv_layers):
+                if (i == active_uvmap_render_by_index):
+                    l.active_render = True
+            bpy.context.active_object.data.uv_layers.active_index = active_selected_uvmap_by_index
+        else:
+            uv_layer = act_obj.data.uv_layers.new(name="Image_Name_from_Preview_Node")
+            act_obj.data.uv_layers.active_index = 1
+            bpy.ops.object.mode_set(mode="EDIT")
+            area = find_area_by_type(bpy.context.screen, 'VIEW_3D', 0)
+            with bpy.context.temp_override(area=area, region=area.regions[7], ):
+                bpy.ops.uv.smart_project()
+            bpy.ops.object.mode_set(mode="OBJECT")
+            bpy.context.scene.render.engine = "CYCLES"
+            bpy.ops.object.bake(
+                type="DIFFUSE",
+                pass_filter={"COLOR"},
+                width=bpy.context.scene.render.resolution_x,
+                height=bpy.context.scene.render.resolution_y,
+                margin=16,
+                margin_type="ADJACENT_FACES",
+                use_selected_to_active=False,
+                target="IMAGE_TEXTURES",
+                save_mode="INTERNAL",
+                use_clear=False,
+                uv_layer=uv_layer.name,
+            )
+            bpy.context.scene.render.engine = old_engine
+            act_obj.data.uv_layers[1].active_render = True
+            act_obj.data.uv_layers.remove(layer=act_obj.data.uv_layers["Comfy_Project_Through_UVMAP"], )
+        return {"FINISHED"}
+
+    def invoke(self, context, event):
+        return self.execute(context)
+
+
+class OkBakeMenu(bpy.types.Menu):
+    bl_idname = "SDN_MT_OKBAKE"
+    bl_label = "Bake Image?"
+
+    @classmethod
+    def poll(cls, context):
+        return not (False)
+
+    def draw(self, context):
+        layout = self.layout.column_flow(columns=2)
+        layout.operator_context = "INVOKE_DEFAULT"
+        layout.operator(ProjectThenBake.bl_idname, text="YES", icon_value=0, emboss=True, depress=False)
+
+
 clss = (
     AIMatSolutionLoad,
     AIMatSolutionRun,
@@ -687,6 +994,11 @@ clss = (
     AIMatSolutionDel,
     AIMatSolutionApply,
     AIMatSolutionRestore,
+    PreviewImageInPlane,
+    ImageAsPBRMat,
+    ImageProjectOnObject,
+    ProjectThenBake,
+    OkBakeMenu,
 )
 
 ops_register, ops_unregister = bpy.utils.register_classes_factory(clss)

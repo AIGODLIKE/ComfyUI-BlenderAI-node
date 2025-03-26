@@ -37,7 +37,7 @@ class EnumCache(metaclass=MetaIn):
 
     @staticmethod
     def unreg_cache(name):
-        EnumCache.CACHE.pop(name)
+        EnumCache.CACHE.pop(name, None)
 
     @staticmethod
     def clear(name=None):

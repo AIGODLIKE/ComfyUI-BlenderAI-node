@@ -1,7 +1,7 @@
 bl_info = {
     'name': 'ComfyUI Node Editor',
     'author': '幻之境开发小组-会飞的键盘侠、只剩一瓶辣椒酱、a-One-Fan、DorotaLuna、hugeproblem、heredos、ra100',
-    'version': (1, 6, 0),
+    'version': (1, 6, 1),
     'blender': (3, 0, 0),
     'location': '3DView->Panel',
     'category': 'AI',
@@ -35,27 +35,28 @@ clear_pyc()
 import bpy
 import sys
 from addon_utils import disable
-from .SDNode import rtnode_unreg, TaskManager
+from .SDNode import rtnode_reg, rtnode_unreg, TaskManager
 from .MultiLineText import EnableMLT
 
-from .utils import Icon, FSWatcher, ScopeTimer, addon_bl_info
+from .utils import Icon, FSWatcher, ScopeTimer, meta_info
 from .timer import timer_reg, timer_unreg
 from .preference import pref_register, pref_unregister
-from .ops import Ops, Ops_Mask, Load_History, Popup_Load, Copy_Tree, Load_Batch, Fetch_Node_Status, Clear_Node_Cache, Sync_Stencil_Image, NodeSearch, SDNode_To_Image, Image_To_SDNode, Image_Set_Channel_Packed, Open_Log_Window
+from .ops import Ops, Ops_Mask, Load_History, Popup_Load, Copy_Tree, Load_Batch, Fetch_Node_Status, Clear_Node_Cache, CopyToClipboard, Sync_Stencil_Image, NodeSearch, SDNode_To_Image, Image_To_SDNode, Image_Set_Channel_Packed, Open_Log_Window
 from .ui import ui_reg, ui_unreg, Panel, HISTORY_UL_UIList, HistoryItem
 from .SDNode.history import History
 from .SDNode.rt_tracker import reg_tracker, unreg_tracker
 from .SDNode.nodegroup import nodegroup_reg, nodegroup_unreg
 from .SDNode.operators import ops_register, ops_unregister
 from .SDNode.custom_support import custom_support_reg, custom_support_unreg
-from .prop import RenderLayerString, MLTWord, Prop
+from .prop import RenderLayerString, MLTWord, Prop, prop_reg, prop_unreg
 from .Linker import linker_register, linker_unregister
 from .hook import use_hook
-clss = [Panel, Ops, RenderLayerString, MLTWord, Prop, HISTORY_UL_UIList, HistoryItem, Ops_Mask, Load_History, Popup_Load, Copy_Tree, Load_Batch, Fetch_Node_Status, Clear_Node_Cache, Sync_Stencil_Image, NodeSearch, SDNode_To_Image, Image_To_SDNode, Image_Set_Channel_Packed, Open_Log_Window, EnableMLT]
+clss = [Panel, Ops, RenderLayerString, MLTWord, Prop, HISTORY_UL_UIList, HistoryItem, Ops_Mask, Load_History, Popup_Load, Copy_Tree, Load_Batch, Fetch_Node_Status, Clear_Node_Cache, CopyToClipboard, Sync_Stencil_Image, NodeSearch, SDNode_To_Image, Image_To_SDNode, Image_Set_Channel_Packed, Open_Log_Window, EnableMLT]
 reg, unreg = bpy.utils.register_classes_factory(clss)
 from platform import system
-
-addon_bl_info.update(bl_info)
+meta_info["bl_info"] = bl_info
+meta_info["package"] = __package__
+meta_info["name"] = __name__
 
 
 def dump_info():
@@ -89,12 +90,24 @@ def disable_reload():
     # reset disable
     _disable = disable
 
-    def hd(mod, *, default_set=False, handle_error=None):
-        if default_set and mod == __package__:
-            __dict__["NOT_RELOAD_BUILTIN"] = True
-        _disable(mod, default_set=default_set, handle_error=handle_error)
-        if default_set and mod == __package__:
-            __dict__.pop("NOT_RELOAD_BUILTIN")
+    def hd(*args, **kwargs):
+        stat = 0
+        try:
+            stat = 1
+            mod = args[0]
+            default_set = kwargs.get("default_set")
+            # mod, *, default_set=False, handle_error=None
+            if default_set and mod == __package__:
+                __dict__["NOT_RELOAD_BUILTIN"] = True
+            stat = 2
+            _disable(*args, **kwargs)
+            stat = 3
+            if default_set and mod == __package__:
+                __dict__.pop("NOT_RELOAD_BUILTIN")
+        except Exception:
+            ...
+        if stat in (1, 2):
+            _disable(*args, **kwargs)
     sys.modules["addon_utils"].disable = hd
 
 
@@ -118,7 +131,9 @@ def register():
     bpy.app.translations.register(__name__, translations_dict)
     reg()
     ui_reg()
+    prop_reg()
     Icon.set_hq_preview()
+    rtnode_reg(rereg=False)
     TaskManager.run_server(fake=True)
     timer_reg()
     # mlt_words注册到 sdn中会导致访问其他属性卡顿 what?
@@ -148,6 +163,7 @@ def unregister():
         return
     bpy.app.translations.unregister(__name__)
     unreg()
+    prop_unreg()
     ui_unreg()
     rtnode_unreg()
     timer_unreg()

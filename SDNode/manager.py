@@ -48,7 +48,7 @@ if not WITH_PROXY:
 class Task:
     def __init__(self, task=None, pre=None, post=None, tree=None) -> None:
         self.task = task
-        self.res = Queue()
+        self.res: Queue[dict] = Queue()
         self._pre = pre
         self._post = post
         from .tree import CFNodeTree
@@ -64,6 +64,17 @@ class Task:
         if not tree:
             return
         self.node_ref_map = {n.id: n.bl_idname for n in tree.nodes if hasattr(n, "id")}
+
+    def build_task(self):
+        # 判断 task 是否是可被调用的对象(可以让task动态生成)
+        if not callable(self.task):
+            return
+
+        @Timer.wait_run
+        def job(self: Task):
+            self.task = self.task()
+
+        job(self)
 
     def submit_pre(self):
         if not self._pre:
@@ -861,7 +872,7 @@ class TaskManager:
     _instance = None
     server: Server = FakeServer()
     task_queue = Queue()
-    res_queue = Queue()
+    res_queue: Queue[Task] = Queue()
     SessionId = {"SessionId": "ComfyUICUP" + str(time.time_ns())}
     status = {}
     progress = {}
@@ -935,14 +946,11 @@ class TaskManager:
     def run_server(fake=False):
         def refresh_node():
             Timer.clear()  # timer may cause crash
-            from .tree import rtnode_reg, rtnode_unreg
+            from .tree import rtnode_rereg
             t1 = time.time()
-            rtnode_unreg()
+            rtnode_rereg()
             t2 = time.time()
-            logger.info(_T("UnregNode Time:") + f" {t2 - t1:.2f}s")
-            rtnode_reg()
-            t3 = time.time()
-            logger.info(_T("RegNode Time:") + f" {t3 - t2:.2f}s")
+            logger.info(_T("RegNode Time:") + f" {t2 - t1:.2f}s")
         if TaskManager.is_launching():
             return
 
@@ -1111,6 +1119,7 @@ class TaskManager:
     @staticmethod
     def submit(task: Task):
         task.submit_pre()
+        task.build_task()
         task: dict[str, tuple] = task.task
         prompt = task["prompt"]
         for node in prompt:
@@ -1195,7 +1204,8 @@ class TaskManager:
             node = res["node"]
             prompt = task.task["prompt"]
             if node in prompt:
-                prompt[node][2](task, res)
+                Timer.put((prompt[node][2], task, res))
+                # prompt[node][2](task, res)
         logger.debug(_T("Proc Task Thread Exit"))
 
     @staticmethod

@@ -17,7 +17,7 @@ from functools import partial
 from collections import OrderedDict
 from bpy.types import NodeTree
 from nodeitems_utils import NodeCategory, NodeItem, unregister_node_categories, _node_categories
-from .nodes import nodes_reg, nodes_unreg, NodeParser, NodeBase, clear_nodes_data_cache
+from .nodes import nodes_reg, nodes_unreg, NodeParser, NodeRegister, NodeBase, clear_nodes_data_cache
 from ..utils import logger, Icon, rgb2hex, hex2rgb, _T, FSWatcher
 from ..datas import EnumCache
 from ..timer import Timer
@@ -523,7 +523,7 @@ class CFNodeTree(NodeTree):
             gtree.__metadata__ = group
 
         for node_info in data.get("nodes", []):
-            t = node_info["type"]
+            t: str = node_info["type"]
             if t == "Reroute":
                 node: NodeBase = self.nodes.new(type="NodeReroute")
             elif t.startswith("workflow/"):
@@ -883,9 +883,54 @@ class CFNodeTree(NodeTree):
                 Timer.put((vlink.relink, node, self))
             # logger.debug(f"{node} restore_links {vlink}")
 
+    def update_key_frame(self):
+        if not self.animation_data:
+            return
+        if not self.animation_data.action:
+            return
+
+        def value_set(obj, path, value):
+            if "." in path:
+                path_prop, path_attr = path.rsplit(".", 1)
+                prop = obj.path_resolve(path_prop)
+            else:
+                prop = obj
+                path_attr = path
+            value = type(obj.path_resolve(path))(value)
+            setattr(prop, path_attr, value)
+
+        current_frame = bpy.context.scene.frame_current
+        for fc in self.animation_data.action.fcurves:
+            if not fc.keyframe_points:
+                continue
+            ks: bpy.types.Keyframe = fc.keyframe_points[0]
+            ke: bpy.types.Keyframe = fc.keyframe_points[-1]
+            for kp in fc.keyframe_points:
+                if kp.co[0] <= current_frame and kp.co[0] > ks.co[0]:
+                    ks = kp
+                if kp.co[0] >= current_frame and kp.co[0] < ke.co[0]:
+                    ke = kp
+            value = ks.co[1]  # 默认ks
+            # 正确找到ks和ke
+            if ks and ke and ks != ke:
+                value = ks.co[1] + (ke.co[1] - ks.co[1]) * (current_frame - ks.co[0]) / (ke.co[0] - ks.co[0])
+            value_set(self, fc.data_path, value)
+
+    @staticmethod
+    @bpy.app.handlers.persistent
+    def frame_change_handler(scene):
+        for ng in bpy.data.node_groups:
+            ng: CFNodeTree = ng
+            if ng.bl_idname != TREE_TYPE:
+                continue
+            ng.update_key_frame()
+
     @staticmethod
     @bpy.app.handlers.persistent
     def reinit(scene):
+        if CFNodeTree.frame_change_handler in bpy.app.handlers.frame_change_pre:
+            bpy.app.handlers.frame_change_pre.remove(CFNodeTree.frame_change_handler)
+        bpy.app.handlers.frame_change_pre.append(CFNodeTree.frame_change_handler)
         Timer.unreg()
         Icon.clear()
         EnumCache.clear()
@@ -895,6 +940,15 @@ class CFNodeTree(NodeTree):
         CFNodeTree.unreg_switch_update()
         CFNodeTree.reg_switch_update()
         CFNodeTree.switch_tree_update()
+
+    @staticmethod
+    @bpy.app.handlers.persistent
+    def save_pre(scene):
+        for ng in bpy.data.node_groups:
+            ng: CFNodeTree = ng
+            if ng.bl_idname != TREE_TYPE:
+                continue
+            ng.use_fake_user = True
 
     @staticmethod
     def reset_node():
@@ -991,6 +1045,8 @@ def gen_cat_id(idstr):
 
 
 registered_menus = {}
+
+
 def reg_nodetree(identifier, cat_list, sub=False):
     if not cat_list:
         return
@@ -1089,11 +1145,6 @@ def register_classes_factory(classes):
     return register, unregister
 
 
-clss = []
-
-reg, unreg = register_classes_factory(clss)
-
-
 def reg_class_internal():
     from .nodes import NodeBase, SDNConfig
     bpy.types.NodeSocketColor.slot_index = bpy.props.IntProperty(default=0)
@@ -1187,25 +1238,14 @@ def rtnode_reg_diff():
     _, node_clss, _ = NodeParser().parse(diff=True)
     if not node_clss:
         return
-    logger.info(f"{_T('Changed Node')}: {[c.bl_label for c in node_clss]}")
     clear_nodes_data_cache()
-    clss_map = {}
-    for c in clss:
-        clss_map[c.bl_label] = c
-    for c in node_clss:
-        old_c = clss_map.pop(c.bl_label, None)
-        if old_c:
-            bpy.utils.unregister_class(old_c)
-            clss.remove(old_c)
-        bpy.utils.register_class(c)
-        clss.append(c)
+    diff_clss = NodeRegister.reg_clss(node_clss)
+    if diff_clss:
+        logger.info(f"{_T('Changed Node')}: {[c.bl_label for c in diff_clss]}")
     logger.info(_T("RegNodeDiff Time:") + f" {time.time()-t1:.2f}s")
 
 
-def rtnode_reg():
-    nodes_reg()
-    reg_class_internal()
-    clss.append(CFNodeTree)
+def rtnode_rereg():
     t1 = time.time()
     # nt_desc = {name: {items:[], menus:[nt_desc...]}}
     try:
@@ -1213,20 +1253,39 @@ def rtnode_reg():
         t2 = time.time()
         logger.info(_T("ParseNode Time:") + f" {t2-t1:.2f}s")
         node_cat = load_node(nodetree_desc=nt_desc)
-        clss.extend(node_clss)
-        clss.extend(socket_clss)
+        all_clss = node_clss + socket_clss
+        NodeRegister.unreg_unused(all_clss)
+        NodeRegister.reg_clss(all_clss)
     except Exception:
+        import traceback
+        traceback.print_exc()
         node_cat = []
-    reg()
+    if TREE_NAME in _node_categories:
+        try:
+            unregister_node_categories(TREE_NAME)
+        except RuntimeError:
+            ...
     reg_nodetree(TREE_NAME, node_cat)  # register_node_categories(TREE_NAME, node_cat)
+
+
+def rtnode_reg(rereg=True):
+    nodes_reg()
+    reg_class_internal()
+    bpy.utils.register_class(CFNodeTree)
+    if rereg:
+        rtnode_rereg()
     set_draw_intern(reg=True)
     if CFNodeTree.reinit not in bpy.app.handlers.load_post:
         bpy.app.handlers.load_post.append(CFNodeTree.reinit)
+    if CFNodeTree.save_pre not in bpy.app.handlers.save_pre:
+        bpy.app.handlers.save_pre.append(CFNodeTree.save_pre)
     if not bpy.app.timers.is_registered(CFNodeTree.update_tree_handler):
         bpy.app.timers.register(CFNodeTree.update_tree_handler, persistent=True)
 
 
 def rtnode_unreg():
+    if CFNodeTree.save_pre in bpy.app.handlers.save_pre:
+        bpy.app.handlers.save_pre.remove(CFNodeTree.save_pre)
     if CFNodeTree.reinit in bpy.app.handlers.load_post:
         bpy.app.handlers.load_post.remove(CFNodeTree.reinit)
     set_draw_intern(reg=False)
@@ -1236,9 +1295,13 @@ def rtnode_unreg():
             unregister_node_categories(TREE_NAME)
         except RuntimeError:
             ...
-    unreg()
+        for menu in registered_menus.values():
+            if not getattr(menu, "is_registered"):
+                continue
+            bpy.utils.unregister_class(menu)
     nodes_unreg()
-    clss.clear()
+    bpy.utils.unregister_class(CFNodeTree)
+    NodeRegister.unreg_all()
 
 
 def cb(path):

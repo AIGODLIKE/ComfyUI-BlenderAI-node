@@ -708,6 +708,23 @@ class NodeBase(bpy.types.Node):
             stat[name] = {}
         stat[name]["stat"]
 
+    def is_output_node(self):
+        return self.__metadata__.get("output_node", False)
+
+    def reaches_output(self):
+        """
+            判断当前节点是否最终连接到ouput_node
+        """
+        if self.is_output_node():
+            return True
+        reached = False
+        for out in self.outputs:
+            if not out.is_linked:
+                continue
+            for link in out.links:
+                reached |= link.to_node.reaches_output()
+        return reached
+
     def is_base_type(self, name):
         """
         是基本类型?
@@ -1872,6 +1889,10 @@ class NodeParser:
         nodes_desc = self._get_n_desc()
         node_clss = []
         for nname, ndesc in nodes_desc.items():
+            # TODO: 暂时删除两个变更key, 由IPAdapter 导致
+            ndesc.pop("input_order", None)
+            ndesc.pop("python_module", None)
+            ndesc.pop("description", None)  # 删除description
             opt_types: dict = ndesc["input"].get("optional", {})
             rqr_types: dict = ndesc["input"].get("required", {})
             inp_types = {}
@@ -1984,6 +2005,78 @@ class NodeParser:
             NodeDesc.dcolor = (rand() / 2, rand() / 2, rand() / 2)
             node_clss.append(NodeDesc)
         return node_clss
+
+
+class NodeRegister:
+    CLSS_MAP: dict[str, NodeBase] = {}
+
+    @classmethod
+    def is_new(cls, node_cls: NodeBase) -> bool:
+        if node_cls.bl_label not in cls.CLSS_MAP:
+            return True
+        old = cls.CLSS_MAP[node_cls.bl_label]
+        if issubclass(node_cls, NodeBase):
+            # 节点描述信息发生变化时重新注册
+            if old.__metadata__ == node_cls.__metadata__:
+                return False
+            # 调试节点描述信息变更
+            # a = old.__metadata__
+            # b = node_cls.__metadata__
+            # import sys
+            # p = Path(__file__).parent.parent.joinpath("TestLib").as_posix()
+            # if sys.path[-1] != p:
+            #     sys.path.append(p)
+            # from deepdiff import DeepDiff
+            # diff = DeepDiff(a, b)
+            # logger.debug(f"Diff: {node_cls.bl_label}")
+            # for k, v in diff.items():
+            #     logger.debug(f"{k}: {v}")
+            return True
+        # 不是节点时不更新
+        return False
+
+    @classmethod
+    def reg_cls(cls, clss: NodeBase):
+        if not cls.is_new(clss):
+            return
+        is_in = clss.bl_label in cls.CLSS_MAP
+        cls.unreg_cls(clss)
+        bpy.utils.register_class(clss)
+        cls.CLSS_MAP[clss.bl_label] = clss
+        if is_in:
+            logger.warning(f"{clss.bl_label} is updated")
+        return clss
+
+    @classmethod
+    def reg_clss(cls, clss):
+        diff_clss = [c for c in clss if cls.reg_cls(c)]
+        return diff_clss
+
+    @classmethod
+    def unreg_cls(cls, _cls: NodeBase):
+        if _cls.bl_label not in cls.CLSS_MAP:
+            return
+        bpy.utils.unregister_class(cls.CLSS_MAP.pop(_cls.bl_label))
+
+    @classmethod
+    def unreg_unused(cls, clss):
+        label_map = {_c.bl_label: _c for _c in clss}
+        for label in list(cls.CLSS_MAP):
+            if label in label_map:
+                continue
+            bpy.utils.unregister_class(cls.CLSS_MAP.pop(label))
+            logger.warning(f"Unused {label} is unregistered")
+
+    @classmethod
+    def unreg_clss(cls, clss):
+        for _cls in clss:
+            cls.unreg_cls(_cls)
+
+    @classmethod
+    def unreg_all(cls):
+        for _cls in cls.CLSS_MAP.values():
+            bpy.utils.unregister_class(_cls)
+        cls.CLSS_MAP.clear()
 
 
 class Images(bpy.types.PropertyGroup):
