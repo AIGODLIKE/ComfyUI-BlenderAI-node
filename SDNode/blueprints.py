@@ -1553,7 +1553,7 @@ class 存储(BluePrintBase):
                                 res = self.find_top_chan_by_frame(f)
                         return cs[-1]
 
-                def do_tween(self, seqs: list[bpy.types.Sequence]):
+                def do_tween(self, seqs: list["bpy.types.Sequence"]):
                     if self.seq_mode != "SeqAppend" or not self.frame_tween:
                         return
                     seqe = bpy.context.scene.sequence_editor
