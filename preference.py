@@ -421,6 +421,10 @@ class AddonPreference(bpy.types.AddonPreferences):
             args.append("--windows-standalone-build")
         # args.append("--front-end-version")
         # args.append("Comfy-Org/ComfyUI_frontend@latest")
+        args.append("--front-end-root")
+        root = model_path.joinpath('web_custom_versions/my_web').resolve().as_posix()
+        args.append(root)
+        # args.append("--disable-compres-response-body")
         return args
 
     def update_count_page_next(self, context):

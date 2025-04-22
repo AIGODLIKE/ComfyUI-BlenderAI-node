@@ -810,6 +810,10 @@ class Sync_Stencil_Image(bpy.types.Operator):
     action: bpy.props.StringProperty(default="")
     areas = set()
 
+    @classmethod
+    def poll(cls, context: Context):
+        return context.area.type == "VIEW_3D" and context.mode == "PAINT_TEXTURE"
+
     def execute(self, context: Context):
         if self.action == "Clear":
             self.areas.discard(context.area)
@@ -842,6 +846,8 @@ class Sync_Stencil_Image(bpy.types.Operator):
         length = max(area.width, area.height) * fac
 
         settings = UnifiedPaintPanel.paint_settings(context)
+        if not settings:
+            return {"PASS_THROUGH"}
         brush: bpy.types.Brush = settings.brush  # 可能报错 没brush(settings为空)
         width, height = area.width, area.height
         if not brush:

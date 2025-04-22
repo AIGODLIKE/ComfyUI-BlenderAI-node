@@ -9,7 +9,7 @@ from mathutils import Vector
 from bpy.types import Context, Event
 from .tree import CFNodeTree, TREE_TYPE
 from ..translations import ctxt
-from ..utils import Timer, _T, get_ai_mat_tree, set_ai_mat_tree, find_area_by_type, find_areas_of_type
+from ..utils import Timer, NodeTreeUtil, _T, get_ai_mat_tree, get_ai_brush_tree, set_ai_mat_tree, set_ai_brush_tree, find_area_by_type, find_areas_of_type
 
 
 class AIMatSolutionLoad(bpy.types.Operator):
@@ -681,6 +681,181 @@ class AIMatSolutionRestore(bpy.types.Operator):
         return {"FINISHED"}
 
 
+class AIBrushLoad(bpy.types.Operator):
+    bl_idname = "sdn.ai_brush_load"
+    bl_label = "AI Brush Load"
+    bl_description = "Load AI Brush"
+    bl_translation_context = ctxt
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context):
+        p1 = context.object and context.object.type == "MESH"
+        if not p1:
+            return False
+        ob: bpy.types.Object = context.object
+        mtl = ob.active_material
+        for mod in ob.modifiers:
+            if not mod.name.startswith(f"AI_Tex_Preview_Mod_{ob.name}"):
+                continue
+            if not mod.type == "NODES":
+                continue
+            set_mtl_node = NodeTreeUtil.find_node_by_type(mod.node_group, "SET_MATERIAL")
+            if not set_mtl_node:
+                continue
+            mtl = set_mtl_node.inputs["Material"].default_value
+        if not mtl:
+            return False
+        tex_node = NodeTreeUtil.find_node_by_type(mtl.node_tree, "TEX_IMAGE")
+        return tex_node and tex_node.image
+
+    def execute(self, context: Context):
+        self.obj = context.object
+        if context.mode != "PAINT_TEXTURE":
+            bpy.ops.object.mode_set(mode="TEXTURE_PAINT")
+            self.ts = time.time()
+            context.window_manager.modal_handler_add(self)
+            return {"RUNNING_MODAL"}
+        self.do(context)
+        return {"FINISHED"}
+        # brush = bpy.data.brushes.new("DDD", mode="TEXTURE_PAINT")
+        # brush = bpy.data.brushes['Smear']  # Soften Mask Fill Clone
+
+        # brush.use_paint_image = True
+        # brush.use_paint_vertex = True
+        # brush.use_paint_weight = True
+        # brush.asset_clear()
+        # brush.asset_mark()
+        # bpy.context.view_layer.update()
+        # 用于设置笔刷的工作模式
+        # ws_tool = bpy.context.workspace.tools.from_space_view3d_mode(bpy.context.mode)
+        # print("1", bpy.context.mode, ws_tool.idname)
+
+    def modal(self, context, event):
+        if time.time() - self.ts > 0.1:
+            self.do(context)
+            return {"FINISHED"}
+        return {"PASS_THROUGH"}
+
+    def do(self, context: Context):
+        ob = self.obj
+        workflow = self.read_workflow()
+        brush = self.prepare_brush()
+        if not brush:
+            self.report({"ERROR"}, "Brush not found")
+        brush.asset_clear()
+        brush.asset_mark()
+        brush.texture_slot.map_mode = "STENCIL"
+        context.tool_settings.image_paint.brush = brush
+
+        workflow = workflow.replace("\"{w}\"", str(self.get_resolution()[0]))
+        workflow = workflow.replace("\"{h}\"", str(self.get_resolution()[1]))
+        workflow = json.loads(workflow)
+        node_tree = self.get_sdn_tree()
+        node_tree.load_json(workflow)
+        node_tree.name += "_" + ob.name
+        # replace edit_tree
+        for area in bpy.context.screen.areas:
+            for space in area.spaces:
+                if space.type != "NODE_EDITOR" or space.tree_type != TREE_TYPE:
+                    continue
+                space.node_tree = node_tree
+
+        def prepare(ob: bpy.types.Object, brush: bpy.types.Brush, node_tree: CFNodeTree):
+            mtl = ob.active_material
+            for mod in ob.modifiers:
+                if not mod.name.startswith(f"AI_Tex_Preview_Mod_{ob.name}"):
+                    continue
+                if not mod.type == "NODES":
+                    continue
+                set_mtl_node = NodeTreeUtil.find_node_by_type(mod.node_group, "SET_MATERIAL")
+                if not set_mtl_node:
+                    continue
+                mtl = set_mtl_node.inputs["Material"].default_value
+            assert mtl, "No material found"
+            tex_node = NodeTreeUtil.find_node_by_type(mtl.node_tree, "TEX_IMAGE")
+            assert tex_node, "No material texture node found"
+            # 设置笔刷
+            print("set brush", brush.texture.image, tex_node.image)
+            bpy.context.tool_settings.image_paint.mode = "IMAGE"
+            bpy.context.tool_settings.image_paint.canvas = tex_node.image
+            # 设置AI节点树输出图
+            if "ToTexImage" in node_tree.nodes:
+                to_mtl_img_node = node_tree.nodes["ToTexImage"]
+                to_mtl_img_node.mode = "ToImage"
+                to_mtl_img_node.image = brush.texture.image
+            if brush.texture.image:
+                bpy.context.object["AI_Brush_Gen_Tex"] = brush.texture.image
+            for node in node_tree.nodes:
+                if hasattr(node, "exe_rand"):
+                    node.exe_rand = True
+
+        Timer.put((prepare, ob, brush, node_tree))
+        set_ai_brush_tree(ob, node_tree)
+
+    def get_resolution(self):
+        size = bpy.context.scene.sdn.ai_brush_tex_size
+        return size, size
+
+    def get_sdn_tree(self) -> CFNodeTree:
+        return bpy.data.node_groups.new(name="AI_Brush_Gen", type=TREE_TYPE)
+
+    def prepare_brush(self) -> bpy.types.Brush:
+        brush_path = self.get_brush_path().as_posix()
+        old_brushes = set(bpy.data.brushes)
+        with bpy.data.libraries.load(brush_path) as (df, dt):
+            dt.brushes = df.brushes
+        new_brushes = list(set(bpy.data.brushes) - old_brushes)
+        for new_brush in new_brushes:
+            return new_brush
+        return None
+
+    def read_workflow(self):
+        wk_path = self.get_brush_path().with_suffix(".json")
+        if not wk_path.exists():
+            wk_path = wk_path.parent.joinpath("_default.json")
+        with open(wk_path) as f:
+            return f.read()
+        return "{}"
+
+    def get_brush_path(self):
+        return Path(bpy.context.scene.sdn.ai_brush)
+
+
+class AIBrushSolutionRun(bpy.types.Operator):
+    bl_idname = "sdn.ai_brush_sol_run"
+    bl_label = "Run AI Brush Solution"
+    bl_translation_context = ctxt
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context):
+        return get_ai_brush_tree(context.object)
+
+    def execute(self, context):
+        tree: CFNodeTree = get_ai_brush_tree(context.object)
+        if not tree:
+            self.report({"ERROR"}, "Can't find ComfyUI Node Tree")
+            return {"CANCELLED"}
+        tree.execute()
+        return {"FINISHED"}
+
+
+class AIBrushDel(bpy.types.Operator):
+    bl_idname = "sdn.ai_brush_del"
+    bl_label = "Delete AI Brush"
+    bl_translation_context = ctxt
+
+    def execute(self, context: Context):
+        res_path = self.get_brush_path()
+        res_path.unlink(missing_ok=True)
+        res_path.with_suffix(".blend").unlink(missing_ok=True)
+        return {"FINISHED"}
+
+    def get_brush_path(self):
+        return Path(bpy.context.scene.sdn.ai_brush)
+
+
 class PreviewImageInPlane(bpy.types.Operator):
     bl_idname = "sdn.prev_img_in_plane"
     bl_label = "PreviewImage"
@@ -789,13 +964,13 @@ class ImageProjectOnObject(bpy.types.Operator):
     bl_options = {"REGISTER", "UNDO"}
 
     img_name: bpy.props.StringProperty(name="Image Name", default="PreviewImage")
-    
+
     _pass_args = {
         "active_uvmap_render_by_index": 0,
         "active_uvmap_name_from_index": "",
         "active_selected_uvmap_by_index": 0,
     }
-    
+
     @classmethod
     def poll(cls, context):
         return context.object and context.object.type == "MESH" and context.object.mode in {"OBJECT", "EDIT"} and context.scene.camera
@@ -994,6 +1169,9 @@ clss = (
     AIMatSolutionDel,
     AIMatSolutionApply,
     AIMatSolutionRestore,
+    AIBrushLoad,
+    AIBrushSolutionRun,
+    AIBrushDel,
     PreviewImageInPlane,
     ImageAsPBRMat,
     ImageProjectOnObject,

@@ -7,7 +7,7 @@ from pathlib import Path
 from .MultiLineText.trie import Trie
 
 from .preference import get_pref
-from .utils import Icon, FSWatcher, ScopeTimer, popup_folder, get_bl_info, get_name, get_ai_mat_tree
+from .utils import Icon, FSWatcher, ScopeTimer, popup_folder, get_bl_info, get_name, get_ai_mat_tree, get_ai_brush_tree
 from .datas import PRESETS_DIR, PROP_CACHE, GROUPS_DIR, IMG_SUFFIX
 
 FSWatcher.register(PRESETS_DIR)
@@ -261,6 +261,10 @@ class Prop(bpy.types.PropertyGroup):
         return cls.get_resource_dir() / "solutions" / cls._get_locale_suffix()
 
     @classmethod
+    def get_brush_dir(cls) -> Path:
+        return cls.get_resource_dir() / "brushes" / cls._get_locale_suffix()
+
+    @classmethod
     def find_icon(cls, name: str, path: Path) -> Path:
         SUFFIXES = [".png", ".jpg", ".jpeg", ".tiff"]
         for suf in SUFFIXES:
@@ -270,21 +274,24 @@ class Prop(bpy.types.PropertyGroup):
             return img
         return cls.get_resource_dir().joinpath("icons/none.jpeg")
 
-    _ref_items = {}
+    _ref_items: dict[str, dict[str, list]] = {}
 
     def ai_gen_solution_items(self, context):
+        if "AI_GEN_SOLUTION" not in self._ref_items:
+            self._ref_items["AI_GEN_SOLUTION"] = {}
+        ref_items = self._ref_items["AI_GEN_SOLUTION"]
         rdir = self.get_solution_dir()
         FSWatcher.register(rdir)
-        if not FSWatcher.consume_change(rdir) and rdir in self._ref_items:
-            return self._ref_items.get(rdir, [])
+        if not FSWatcher.consume_change(rdir) and rdir in ref_items:
+            return ref_items.get(rdir, [])
         items = []
-        self._ref_items[rdir] = items
+        ref_items[rdir] = items
         for f in sorted(rdir.glob("*.blend"), key=lambda x: x.name):
             icon_path = self.find_icon(f.stem, rdir)
             Icon.reg_icon(icon_path.as_posix(), hq=True)
             icon_id = Icon.get_icon_id(icon_path)
             items.append((f.as_posix(), f.stem, f.stem, icon_id, len(items)))
-        return self._ref_items.get(rdir, [])
+        return ref_items.get(rdir, [])
 
     ai_gen_solution: bpy.props.EnumProperty(name="AI Mat Solution", items=ai_gen_solution_items)
     clear_material_slots: bpy.props.BoolProperty(name="Clear Material Slots", default=True)
@@ -318,7 +325,11 @@ class Prop(bpy.types.PropertyGroup):
 
     bake_tree: bpy.props.EnumProperty(items=tree_items)
 
-    send_ai_tree_to_editor: bpy.props.BoolProperty(name="Sync AI Mat Tree to Editor", default=False)
+    def update_send_ai_mat_tree_to_editor(self, context):
+        if self.send_ai_mat_tree_to_editor:
+            self.send_ai_brush_tree_to_editor = False
+
+    send_ai_mat_tree_to_editor: bpy.props.BoolProperty(name="Sync AI Mat Tree to Editor", default=False, update=update_send_ai_mat_tree_to_editor)
 
     apply_bake_pass: bpy.props.EnumProperty(items=[("COMBINED", "Combined", "", "NONE", 2 ** 0),
                                                    ("AO", "Ambient Occlusion", "", "NONE", 2 ** 1),
@@ -336,6 +347,46 @@ class Prop(bpy.types.PropertyGroup):
                                             default="COMBINED",
                                             name="Pass")
 
+    # --------------------------AI笔刷--------------------------
+    def ai_brush_items(self, context):
+        if "AI_BRUSH" not in self._ref_items:
+            self._ref_items["AI_BRUSH"] = {}
+        ref_items = self._ref_items["AI_BRUSH"]
+        rdir = self.get_brush_dir()
+        FSWatcher.register(rdir)
+        if not FSWatcher.consume_change(rdir) and rdir in ref_items:
+            return ref_items.get(rdir, [])
+        items = []
+        ref_items[rdir] = items
+        for f in sorted(rdir.glob("*.blend"), key=lambda x: x.name):
+            icon_path = self.find_icon(f.stem, rdir)
+            Icon.reg_icon(icon_path.as_posix(), hq=True)
+            icon_id = Icon.get_icon_id(icon_path)
+            items.append((f.as_posix(), f.stem, f.stem, icon_id, len(items)))
+        return ref_items.get(rdir, [])
+
+    ai_brush: bpy.props.EnumProperty(name="AI Brush", items=ai_brush_items)
+
+    def update_open_ai_brush_dir(self, context):
+        if self.open_ai_brush_dir:
+            self.open_ai_brush_dir = False
+            popup_folder(self.get_brush_dir())
+
+    open_ai_brush_dir: bpy.props.BoolProperty(default=False, name="Open Brush Presets Folder", update=update_open_ai_brush_dir)
+
+    def update_ai_brush_tex_size(self, context):
+        if self.ai_brush_tex_size % 32 == 0:
+            return
+        self.ai_brush_tex_size = self.ai_brush_tex_size // 32 * 32
+
+    ai_brush_tex_size: bpy.props.IntProperty(name="AI Brush Tex Size", default=1024, min=64, max=2**16, step=32, update=update_ai_brush_tex_size)
+
+    def update_send_ai_brush_tree_to_editor(self, context):
+        if self.send_ai_brush_tree_to_editor:
+            self.send_ai_mat_tree_to_editor = False
+
+    send_ai_brush_tree_to_editor: bpy.props.BoolProperty(name="Sync AI Brush Tree to Editor", default=False, update=update_send_ai_brush_tree_to_editor)
+
 
 def render_layer_update():
     try:
@@ -352,11 +403,31 @@ def render_layer_update():
     return 1
 
 
-def send_ai_tree_to_editor():
+def send_ai_mat_tree_to_editor():
     if not bpy.context.object:
         return 1
     node_tree = get_ai_mat_tree(bpy.context.object)
-    if not bpy.context.scene.sdn.send_ai_tree_to_editor or not node_tree:
+    if not bpy.context.scene.sdn.send_ai_mat_tree_to_editor or not node_tree:
+        return 1
+
+    from .SDNode.tree import TREE_TYPE
+    for area in bpy.context.screen.areas:
+        for space in area.spaces:
+            if space.type != "NODE_EDITOR" or space.tree_type != TREE_TYPE:
+                continue
+            try:
+                if space.node_tree != node_tree:
+                    space.node_tree = node_tree
+            except BaseException:
+                ...
+    return 1
+
+
+def send_ai_brush_tree_to_editor():
+    if not bpy.context.object:
+        return 1
+    node_tree = get_ai_brush_tree(bpy.context.object)
+    if not bpy.context.scene.sdn.send_ai_brush_tree_to_editor or not node_tree:
         return 1
 
     from .SDNode.tree import TREE_TYPE
@@ -380,11 +451,13 @@ def clear_cache(_):
 
 def prop_reg():
     bpy.app.timers.register(render_layer_update, persistent=True)
-    bpy.app.timers.register(send_ai_tree_to_editor, persistent=True)
+    bpy.app.timers.register(send_ai_mat_tree_to_editor, persistent=True)
+    bpy.app.timers.register(send_ai_brush_tree_to_editor, persistent=True)
     bpy.app.handlers.load_post.append(clear_cache)
 
 
 def prop_unreg():
     bpy.app.timers.unregister(render_layer_update)
-    bpy.app.timers.unregister(send_ai_tree_to_editor)
+    bpy.app.timers.unregister(send_ai_brush_tree_to_editor)
+    bpy.app.timers.unregister(send_ai_mat_tree_to_editor)
     bpy.app.handlers.load_post.remove(clear_cache)

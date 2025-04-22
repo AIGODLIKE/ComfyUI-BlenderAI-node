@@ -164,6 +164,10 @@ other = {
     "Save AI Mat Solution": "保存AI材质方案预设",
     "Delete AI Mat Solution": "删除AI材质方案预设",
     "Run AI Mat Solution": "生成",
+    "Run AI Brush Solution": "生成",
+    "AI Brush Load": "AI笔刷方案载入",
+    "Load AI Brush": "载入AI笔刷方案",
+    "Delete AI Brush": "删除AI笔刷方案预设",
     "Can't find CFNodeTree": "未找到ComfyUI节点树",
     "No active material": "当前物体没有材质",
     "Use depth and normal map to Gen Mesh Mat": "使用深度图和法线图生成网格材质",
@@ -339,6 +343,8 @@ other = {
     "Image not found or format error(png/json)": "魔法图鉴不存在或格式不正确(仅png/json)",
     "Load Preset from Image Error -> MetaData Not Found in": "从图鉴加载失败, 元数据为",
     "Sync AI Mat Tree to Editor": "同步AI材质生成树到编辑器",
+    "AI Mat Tex Size": "AI材质纹理尺寸",
+    "AI Brush Tex Size": "AI笔刷纹理尺寸",
     # ops.py
     "No NodeTree Found": "节点树为空",
     "Node Not Found: ": "节点未找到",
@@ -395,6 +401,7 @@ other = {
     "From ComfyUI Node Editor": "从 ComfyUI 节点编辑器导入",
     "Bake Tree": "烘焙节点树",
     "No Bake Tree Found": "未找到烘焙节点树",
+    "AI Brush": "AI笔刷",
     # preference.py
     "Server Type": "服务类型",
     "LocalServer": "本机启动",

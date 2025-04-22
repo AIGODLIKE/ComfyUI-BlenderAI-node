@@ -1,0 +1,530 @@
+{
+    "last_node_id": 16,
+    "last_link_id": 12,
+    "nodes": [
+        {
+            "id": 10,
+            "type": "VAELoader",
+            "pos": [
+                303,
+                954
+            ],
+            "size": {
+                "0": 200,
+                "1": 30
+            },
+            "flags": {},
+            "order": 0,
+            "mode": 0,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "VAE",
+                    "type": "VAE",
+                    "links": [
+                        6
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "VAE加载器",
+            "properties": {
+                "sdn_hide": false
+            },
+            "widgets_values": [
+                "pastel-waifu-diffusion.vae.pt"
+            ]
+        },
+        {
+            "id": 11,
+            "type": "VAEEncode",
+            "pos": [
+                -177,
+                1025
+            ],
+            "size": {
+                "0": 200,
+                "1": 100
+            },
+            "flags": {},
+            "order": 5,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "pixels",
+                    "type": "IMAGE",
+                    "link": 9,
+                    "label": "pixels"
+                },
+                {
+                    "name": "vae",
+                    "type": "VAE",
+                    "link": 10,
+                    "label": "vae"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "LATENT",
+                    "type": "LATENT",
+                    "links": [
+                        11
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "VAE编码",
+            "properties": {
+                "sdn_hide": false
+            },
+            "widgets_values": []
+        },
+        {
+            "id": 16,
+            "type": "存储",
+            "pos": [
+                977,
+                479
+            ],
+            "size": {
+                "0": 200,
+                "1": 30
+            },
+            "flags": {},
+            "order": 9,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "images",
+                    "type": "IMAGE",
+                    "link": 7,
+                    "label": "images"
+                }
+            ],
+            "outputs": [],
+            "title": "ToTexImage",
+            "properties": {
+                "sdn_hide": false
+            },
+            "widgets_values": [
+                "ComfyUI",
+                ""
+            ]
+        },
+        {
+            "id": 3,
+            "type": "KSampler",
+            "pos": [
+                304,
+                616
+            ],
+            "size": {
+                "0": 200,
+                "1": 30
+            },
+            "flags": {},
+            "order": 6,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "model",
+                    "type": "MODEL",
+                    "link": 3,
+                    "label": "model"
+                },
+                {
+                    "name": "positive",
+                    "type": "CONDITIONING",
+                    "link": 8,
+                    "label": "positive"
+                },
+                {
+                    "name": "negative",
+                    "type": "CONDITIONING",
+                    "link": 1,
+                    "label": "negative"
+                },
+                {
+                    "name": "latent_image",
+                    "type": "LATENT",
+                    "link": 11,
+                    "label": "latent_image"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "LATENT",
+                    "type": "LATENT",
+                    "links": [
+                        4
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "K采样器",
+            "properties": {
+                "sdn_hide": false,
+                "label": "003"
+            },
+            "widgets_values": [
+                "2791066226",
+                "fixed",
+                20,
+                8.0,
+                "euler",
+                "karras",
+                1.0
+            ]
+        },
+        {
+            "id": 4,
+            "type": "CheckpointLoaderSimple",
+            "pos": [
+                -701,
+                799
+            ],
+            "size": {
+                "0": 200,
+                "1": 30
+            },
+            "flags": {},
+            "order": 1,
+            "mode": 0,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "MODEL",
+                    "type": "MODEL",
+                    "links": [
+                        3
+                    ],
+                    "slot_index": 0
+                },
+                {
+                    "name": "CLIP",
+                    "type": "CLIP",
+                    "links": [
+                        0,
+                        2
+                    ],
+                    "slot_index": 1
+                },
+                {
+                    "name": "VAE",
+                    "type": "VAE",
+                    "links": [
+                        10
+                    ],
+                    "slot_index": 2
+                }
+            ],
+            "title": "Checkpoint简易加载器",
+            "properties": {
+                "sdn_hide": false,
+                "label": "001"
+            },
+            "widgets_values": [
+                "GuoFeng3.2_f16.safetensors"
+            ]
+        },
+        {
+            "id": 5,
+            "type": "CLIPTextEncode",
+            "pos": [
+                -244,
+                567
+            ],
+            "size": {
+                "0": 347,
+                "1": 30
+            },
+            "flags": {},
+            "order": 3,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "clip",
+                    "type": "CLIP",
+                    "link": 0,
+                    "label": "clip"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "CONDITIONING",
+                    "type": "CONDITIONING",
+                    "links": [
+                        8
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "CLIP文本编码器(正)",
+            "properties": {
+                "sdn_hide": false,
+                "label": "002"
+            },
+            "widgets_values": [
+                "Model, Masterpiece, Best Quality, Octane Rendering, UE5 Rendering, Realistic, Film and Television Grade"
+            ]
+        },
+        {
+            "id": 6,
+            "type": "CLIPTextEncode",
+            "pos": [
+                -228,
+                860
+            ],
+            "size": {
+                "0": 306,
+                "1": 30
+            },
+            "flags": {},
+            "order": 4,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "clip",
+                    "type": "CLIP",
+                    "link": 2,
+                    "label": "clip"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "CONDITIONING",
+                    "type": "CONDITIONING",
+                    "links": [
+                        1
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "CLIP文本编码器(反)",
+            "properties": {
+                "sdn_hide": false
+            },
+            "widgets_values": [
+                "embedding:EasyNegative"
+            ]
+        },
+        {
+            "id": 7,
+            "type": "输入图像",
+            "pos": [
+                -517,
+                1085
+            ],
+            "size": {
+                "0": 200,
+                "1": 100
+            },
+            "flags": {},
+            "order": 2,
+            "mode": 0,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "IMAGE",
+                    "type": "IMAGE",
+                    "links": [
+                        9
+                    ],
+                    "slot_index": 0
+                },
+                {
+                    "name": "MASK",
+                    "type": "MASK",
+                    "links": [],
+                    "slot_index": 1
+                }
+            ],
+            "title": "输入图像",
+            "properties": {
+                "sdn_hide": false
+            },
+            "widgets_values": [
+                "",
+                "渲染"
+            ]
+        },
+        {
+            "id": 8,
+            "type": "VAEDecode",
+            "pos": [
+                610,
+                621
+            ],
+            "size": {
+                "0": 200,
+                "1": 30
+            },
+            "flags": {},
+            "order": 7,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "samples",
+                    "type": "LATENT",
+                    "link": 4,
+                    "label": "samples"
+                },
+                {
+                    "name": "vae",
+                    "type": "VAE",
+                    "link": 6,
+                    "label": "vae"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "IMAGE",
+                    "type": "IMAGE",
+                    "links": [
+                        5,
+                        7
+                    ],
+                    "slot_index": 0
+                }
+            ],
+            "title": "VAE解码",
+            "properties": {
+                "sdn_hide": false
+            },
+            "widgets_values": []
+        },
+        {
+            "id": 9,
+            "type": "PreviewImage",
+            "pos": [
+                977,
+                679
+            ],
+            "size": {
+                "0": 256,
+                "1": 30
+            },
+            "flags": {},
+            "order": 8,
+            "mode": 0,
+            "inputs": [
+                {
+                    "name": "images",
+                    "type": "IMAGE",
+                    "link": 5,
+                    "label": "images"
+                }
+            ],
+            "outputs": [],
+            "title": "预览(Blender专用)",
+            "properties": {
+                "sdn_hide": false
+            },
+            "widgets_values": []
+        }
+    ],
+    "links": [
+        [
+            0,
+            4,
+            1,
+            5,
+            0,
+            "CLIP"
+        ],
+        [
+            1,
+            6,
+            0,
+            3,
+            2,
+            "CONDITIONING"
+        ],
+        [
+            2,
+            4,
+            1,
+            6,
+            0,
+            "CLIP"
+        ],
+        [
+            3,
+            4,
+            0,
+            3,
+            0,
+            "MODEL"
+        ],
+        [
+            4,
+            3,
+            0,
+            8,
+            0,
+            "LATENT"
+        ],
+        [
+            5,
+            8,
+            0,
+            9,
+            0,
+            "IMAGE"
+        ],
+        [
+            6,
+            10,
+            0,
+            8,
+            1,
+            "VAE"
+        ],
+        [
+            7,
+            8,
+            0,
+            16,
+            0,
+            "IMAGE"
+        ],
+        [
+            8,
+            5,
+            0,
+            3,
+            1,
+            "CONDITIONING"
+        ],
+        [
+            9,
+            7,
+            0,
+            11,
+            0,
+            "IMAGE"
+        ],
+        [
+            10,
+            4,
+            2,
+            11,
+            1,
+            "VAE"
+        ],
+        [
+            11,
+            11,
+            0,
+            3,
+            3,
+            "LATENT"
+        ]
+    ],
+    "groups": [],
+    "config": {},
+    "extra": {
+        "groupNodes": {}
+    },
+    "version": 0.4
+}

@@ -40,6 +40,8 @@ def get_bl_module(name=None):
 
 def popup_folder(path: Path):
     import os
+    if not path.exists():
+        path.mkdir(parents=True, exist_ok=True)
     if platform.system() == "Windows":
         if path.is_file():
             path = path.parent
@@ -71,6 +73,30 @@ def set_ai_mat_tree(obj: bpy.types.Object, tree: bpy.types.NodeTree):
     obj["AI_Mat_Gen"] = tree.name
     tree.set_sdn_time_code()
     obj["AI_Mat_Gen_Id"] = tree.sdn_time_code
+
+
+def get_ai_brush_tree(obj: bpy.types.Object):
+    if not obj or obj.type != "MESH":
+        return None
+    if hasattr(obj, "ai_brush_tree"):
+        return getattr(obj, "ai_brush_tree")
+    tree_name = obj.get("AI_Brush_Gen", "")
+    if not tree_name:
+        return None
+    sdn_time_code = obj.get("AI_Brush_Gen_Id", "-1")
+    tree = bpy.data.node_groups.get(tree_name, None)
+    if not tree or tree.get("sdn_time_code", "0") != sdn_time_code:
+        for ng in bpy.data.node_groups:
+            if ng.get("sdn_time_code", "0") == sdn_time_code:
+                return ng
+        return None
+    return tree
+
+
+def set_ai_brush_tree(obj: bpy.types.Object, tree: bpy.types.NodeTree):
+    obj["AI_Brush_Gen"] = tree.name
+    tree.set_sdn_time_code()
+    obj["AI_Brush_Gen_Id"] = tree.sdn_time_code
 
 
 def read_json(path: Path | str) -> dict:
@@ -137,6 +163,111 @@ def find_area_by_type(screen: bpy.types.Screen, area_type, index) -> bpy.types.A
     if areas:
         return areas[index]
     return None
+
+
+class WindowUtil:
+    @classmethod
+    def find_areas_by_type(cls, screen: bpy.types.Screen, area_type) -> list[bpy.types.Area]:
+        return [area for area in screen.areas if area.type == area_type]
+
+    @classmethod
+    def find_area_by_type(cls, screen: bpy.types.Screen, area_type) -> bpy.types.Area:
+        for area in screen.areas:
+            if area.type == area_type:
+                return area
+        return None
+
+    @classmethod
+    def find_area_by_ui_type(cls, screen: bpy.types.Screen, ui_type) -> bpy.types.Area:
+        for area in screen.areas:
+            if area.ui_type == ui_type:
+                return area
+        return None
+
+    @classmethod
+    def find_space_by_type(cls, area: bpy.types.Area, space_type) -> bpy.types.Space:
+        for space in area.spaces:
+            if space.type == space_type:
+                return space
+        return None
+
+    @classmethod
+    def find_region_by_type(cls, area: bpy.types.Area, region_type) -> bpy.types.Region:
+        for region in area.regions:
+            if region.type == region_type:
+                return region
+        return None
+
+    @classmethod
+    def find_node_editor_areas(cls, screen: bpy.types.Screen) -> list[bpy.types.Area]:
+        return [area for area in screen.areas if area.type == "NODE_EDITOR"]
+
+    @classmethod
+    def find_node_editor_spaces_by_tree_type(cls, screen: bpy.types.Screen, tree_type) -> bpy.types.Area:
+        node_editor_areas = cls.find_node_editor_areas(screen)
+        node_editor_spaces = []
+        for area in node_editor_areas:
+            node_editor_spaces.extend(filter(lambda s: s.tree_type == tree_type, area.spaces))
+        return node_editor_spaces
+
+
+class NodeTreeUtil:
+    @classmethod
+    def find_node(cls, nt: bpy.types.NodeTree, cb, filter_cb=None):
+        if not nt:
+            return None
+        for node in filter(filter_cb, nt.nodes):
+            if cb(node):
+                return node
+            if node.type == "GROUP":
+                if node := cls.find_node(node.node_tree, cb, filter_cb):
+                    return node
+        return None
+
+    @classmethod
+    def find_nodes(cls, nt: bpy.types.NodeTree, cb, filter_cb=None):
+        nodes = []
+        if not nt:
+            return nodes
+        fnodes = filter(filter_cb, nt.nodes)
+        for node in fnodes:
+            if cb(node):
+                nodes.append(node)
+            if node.type == "GROUP":
+                nodes.extend(cls.find_nodes(node.node_tree, cb, filter_cb))
+        return nodes
+
+    @classmethod
+    def find_node_by_name(cls, nt: bpy.types.NodeTree, nname, filter_cb=None):
+        return cls.find_node(nt, lambda n: n.name == nname, filter_cb)
+
+    @classmethod
+    def find_nodes_by_name(cls, nt: bpy.types.NodeTree, nname, filter_cb=None):
+        return cls.find_nodes(nt, lambda n: n.name == nname, filter_cb)
+
+    @classmethod
+    def find_node_by_label(cls, nt: bpy.types.NodeTree, label, filter_cb=None):
+        return cls.find_node(nt, lambda n: n.label == label, filter_cb)
+
+    @classmethod
+    def find_nodes_by_label(cls, nt: bpy.types.NodeTree, label, filter_cb=None):
+        return cls.find_nodes(nt, lambda n: n.label == label, filter_cb)
+
+    @classmethod
+    def find_node_by_type(cls, nt: bpy.types.NodeTree, ntype, filter_cb=None):
+        return cls.find_node(nt, lambda n: n.type == ntype, filter_cb)
+
+    @classmethod
+    def find_nodes_by_type(cls, nt: bpy.types.NodeTree, ntype, filter_cb=None):
+        return cls.find_nodes(nt, lambda n: n.type == ntype, filter_cb)
+
+    @classmethod
+    def find_node_by_idname(cls, nt: bpy.types.NodeTree, idname, filter_cb=None):
+        return cls.find_node(nt, lambda n: n.bl_idname == idname, filter_cb)
+
+    @classmethod
+    def find_nodes_by_idname(cls, nt: bpy.types.NodeTree, idname, filter_cb=None):
+        return cls.find_nodes(nt, lambda n: n.bl_idname == idname, filter_cb)
 
 
 def update_screen():
