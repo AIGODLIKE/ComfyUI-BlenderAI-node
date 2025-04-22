@@ -326,6 +326,15 @@ class PropGen:
             if k not in inp[1]:
                 continue
             params[k] = inp[1][k]
+        if "default" in params:
+            default_value = params["default"]
+            if isinstance(default_value, str):
+                try:
+                    from ast import literal_eval
+                    default_value = literal_eval(default_value)
+                except Exception:
+                    pass
+            params["default"] = bool(default_value)
         return bpy.props.BoolProperty(**params)
 
     @staticmethod
