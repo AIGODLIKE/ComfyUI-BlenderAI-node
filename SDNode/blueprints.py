@@ -1806,9 +1806,7 @@ class 输入图像(BluePrintBase):
                 return
             if self.disable_render or bpy.context.scene.sdn.disable_render_all:
                 return
-            if self.mode == "视口":
-                # 使用临时文件
-                self.image = Path(tempfile.gettempdir()).joinpath("viewport.png").as_posix()
+            s.ensure_img_path(self)
             logger.warning("%s->%s", _T('Render'), self.image)
             old = bpy.context.scene.render.filepath
             bpy.context.scene.render.filepath = self.image
@@ -1856,14 +1854,23 @@ class 输入图像(BluePrintBase):
             upload_image(self.image)
         r()
 
+    def ensure_img_path(s, self: NodeBase):
+        if not self.image:
+            self.image = Path(tempfile.gettempdir()).joinpath("_render.png").as_posix()
+        p = Path(self.image)
+        if p.is_dir():
+            p = p.joinpath("_render.png")
+        if p.suffix.lower() not in [".png"]:
+            p = p.with_suffix(".png")
+        try:
+            p.parent.mkdir(exist_ok=True)
+        except BaseException:
+            ...
+        self.image = p.as_posix()
+
     def serialize_pre(s, self: NodeBase):
-        if self.mode == "视口" and self.reaches_output():
-            if not self.image:
-                self.image = Path(tempfile.gettempdir()).joinpath("viewport.png").as_posix()
-            if Path(self.image).is_dir():
-                self.image = Path(self.image).joinpath("viewport.png").as_posix()
-            if Path(self.image).suffix not in {".png", ".jpg", ".jpeg"}:
-                self.image = Path(self.image).with_suffix(".png").as_posix()
+        if self.mode in {"渲染", "视口"} and self.reaches_output():
+            s.ensure_img_path(self)
         super().serialize_pre(self)
 
     def serialize_specific(s, self: NodeBase, cfg, execute):
