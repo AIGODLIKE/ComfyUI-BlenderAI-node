@@ -98,6 +98,32 @@ INTERNAL_NAMES = {
     "width_hidden"
 }
 
+class ComfyPropNameTranslate:
+    PROP_REG_NAME_MAPS = {}
+    PROP_ORI_NAME_MAPS = {}
+
+    @classmethod
+    def get_prop_reg_name(self, comfyClass, inp_name):
+        reg_names = self.PROP_REG_NAME_MAPS.setdefault(comfyClass, {})
+        if inp_name in reg_names:
+            return reg_names[inp_name]
+        reg_name = get_reg_name(inp_name)
+        reg_name = bpy.path.clean_name(reg_name)
+        if len(reg_name) > 63:
+            from hashlib import md5
+            reg_name = reg_name[:50] + md5(reg_name.encode("utf-8")).hexdigest()[:5]
+        reg_names[inp_name] = reg_name
+        self.PROP_ORI_NAME_MAPS.setdefault(comfyClass, {})[reg_name] = inp_name
+        return reg_name
+    
+    @classmethod
+    def get_prop_ori_name(self, comfyClass, inp_name):
+        ori_names = self.PROP_ORI_NAME_MAPS.setdefault(comfyClass, {})
+        if inp_name in ori_names:
+            return ori_names[inp_name]
+        ori_name = get_ori_name(inp_name)
+        ori_names[inp_name] = ori_name
+        return ori_name
 
 def get_reg_name(inp_name):
     if inp_name.startswith("_"):
@@ -645,7 +671,7 @@ def reg_node_ctxt(tdict: dict, replace_dict: dict, in_locale: str):
             if not isinstance(part, dict):
                 continue
             for wn, wv in part.items():
-                wn = get_reg_name(wn)
+                wn = ComfyPropNameTranslate.get_prop_reg_name(node_name, wn)
                 td[(t_ctxt, wn)] = wv
                 td[(None, wn)] = wv
                 rd[wn] = wv

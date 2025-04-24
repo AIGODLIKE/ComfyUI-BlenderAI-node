@@ -25,7 +25,7 @@ from ..timer import Timer
 from ..preference import get_pref
 from ..kclogger import logger
 from ..utils import _T, Icon, update_screen, PrevMgr, rgb2hex, hex2rgb
-from ..translations import get_reg_name, get_ori_name
+from ..translations import ComfyPropNameTranslate
 
 
 def get_next_filename(save_path, max_len=4):
@@ -158,6 +158,12 @@ def link_get(d: dict, path: str):
 
 class BluePrintBase:
     comfyClass = ""
+
+    def get_prop_reg_name(self, inp_name):
+        return ComfyPropNameTranslate.get_prop_reg_name(self.comfyClass, inp_name)
+    
+    def get_prop_ori_name(self, inp_name):
+        return ComfyPropNameTranslate.get_prop_ori_name(self.comfyClass, inp_name)
 
     def getattr(s, self, prop_name):
         meta = self.get_meta(prop_name)
@@ -363,7 +369,7 @@ class BluePrintBase:
                 continue
             if not (default := inp.get("widget", {}).get("config", {}).get("default")):
                 continue
-            # reg_name = get_reg_name(name)
+            # reg_name = s.get_prop_reg_name(name)
             # s.setattr(self, reg_name, default)
             s.try_set_widget(self, name, default)
 
@@ -371,7 +377,7 @@ class BluePrintBase:
         for inp_name in self.inp_types:
             if not self.is_base_type(inp_name):
                 continue
-            reg_name = get_reg_name(inp_name)
+            reg_name = s.get_prop_reg_name(inp_name)
             try:
                 v = data["widgets_values"].pop(0)
             except KeyError:
@@ -384,7 +390,7 @@ class BluePrintBase:
     def try_set_widget(s, self: NodeBase, inp_name, v):
         if not self.is_base_type(inp_name):
             return
-        reg_name = get_reg_name(inp_name)
+        reg_name = s.get_prop_reg_name(inp_name)
         try:
             s.setattr(self, reg_name, v)
             return True
@@ -431,10 +437,10 @@ class BluePrintBase:
         for inp_name in self.inp_types:
             if not self.is_base_type(inp_name):
                 continue
-            widgets_values.append(s.getattr(self, get_reg_name(inp_name)))
+            widgets_values.append(s.getattr(self, s.get_prop_reg_name(inp_name)))
         for inp in self.inputs:
             inp_name = inp.name
-            ori_name = get_ori_name(inp_name)
+            ori_name = s.get_prop_ori_name(inp_name)
             md = self.get_meta(ori_name)
             inp_info = {"name": ori_name,
                         "type": inp.bl_idname,
@@ -519,7 +525,7 @@ class BluePrintBase:
         1. 当为接口时返回连接情况
         2. 当为widget时返回widget值
         """
-        reg_name = get_reg_name(inp_name)
+        reg_name = s.get_prop_reg_name(inp_name)
         inp = self.get_input(inp_name)
         # ---------------- widget ----------------
         # 1. 未在输入接口中
@@ -592,7 +598,7 @@ class BluePrintBase:
             # inp = self.inp_types[inp_name]
             s._serialize_input(self, inp_name, inputs, parent)
             continue
-            reg_name = get_reg_name(inp_name)
+            reg_name = s.get_prop_reg_name(inp_name)
             if inp := self.inputs.get(reg_name):
                 link = self.get_from_link(inp)
                 if link:
@@ -1090,7 +1096,7 @@ class PrimitiveNode(BluePrintBase):
                 return True
             if self.get_blueprints().draw_button(node, context, layout, self.prop, swsock=False, swdisp=swdisp):
                 return True
-            layout.prop(node, get_reg_name(self.prop))
+            layout.prop(node, s.get_prop_reg_name(self.prop))
         return True
 
     def dump_specific(s, self: NodeBase = None, cfg=None, selected_only=False, **kwargs):
@@ -1115,9 +1121,9 @@ class PrimitiveNode(BluePrintBase):
     def serialize_pre_specific(s, self: NodeBase):
         if not self.outputs[0].is_linked:
             return
-        prop = s.getattr(self.outputs[0].links[0].to_node, get_reg_name(self.prop))
+        prop = s.getattr(self.outputs[0].links[0].to_node, s.get_prop_reg_name(self.prop))
         for link in self.outputs[0].links[1:]:
-            setattr(link.to_node, get_reg_name(link.to_socket.name), prop)
+            setattr(link.to_node, s.get_prop_reg_name(link.to_socket.name), prop)
 
 
 class ConditioningMultiCombine(BluePrintBase):
@@ -1127,11 +1133,11 @@ class ConditioningMultiCombine(BluePrintBase):
         inputcount_config = ndesc.get("input", {}).get("required", {}).get("inputcount", {})
         if not inputcount_config:
             return
-        reg_name = get_reg_name("inputcount")
+        reg_name = s.get_prop_reg_name("inputcount")
         config_params = s.get_inputcount_params(inputcount_config)
 
         def update(self: NodeBase, context):
-            reg_name = get_reg_name("inputcount")
+            reg_name = s.get_prop_reg_name("inputcount")
             input_count = getattr(self, reg_name, -1)
             if input_count == -1:
                 return
@@ -2895,7 +2901,7 @@ class SDNGroupBP(BluePrintBase):
             #     if sn.bl_idname == "NodeGroupOutput":
             #         continue
             #     if sn.is_base_type(tsock.name):
-            #         widgets_values.append(s.getattr(sn, get_reg_name(tsock.name)))
+            #         widgets_values.append(s.getattr(sn, s.get_prop_reg_name(tsock.name)))
             #         continue
 
             if sn.bl_idname in {"NodeGroupInput", "NodeGroupOutput", "NodeUndefined"}:
@@ -2906,7 +2912,7 @@ class SDNGroupBP(BluePrintBase):
             # for inp_name in self.inp_types:
             #     if not self.is_base_type(inp_name):
             #         continue
-            #     widgets_values.append(s.getattr(self, get_reg_name(inp_name)))
+            #     widgets_values.append(s.getattr(self, s.get_prop_reg_name(inp_name)))
             # 需要将已经转为socket的widgets移除
             rm_index = []
             for i, inp_name in enumerate([it for it in sn.inp_types if sn.is_base_type(it)]):
@@ -2933,13 +2939,13 @@ class SDNGroupBP(BluePrintBase):
             inp = slink.to_socket
             snode: NodeBase = slink.to_node
             inp_name = inp.name
-            ori_name = get_ori_name(inp_name)
+            ori_name = s.get_prop_ori_name(inp_name)
             if not snode.is_base_type(inp_name):
                 continue
             md = snode.get_meta(ori_name)
             if not snode.query_stat(inp_name) or not md:
                 continue
-            out_inp_widget = s.getattr(snode, get_reg_name(inp_name))
+            out_inp_widget = s.getattr(snode, s.get_prop_reg_name(inp_name))
             widgets_values.append(out_inp_widget)
             if inp_name in {"seed", "noise_seed"}:
                 widgets_values.append("fixed")
@@ -2951,7 +2957,7 @@ class SDNGroupBP(BluePrintBase):
             inp = slink.to_socket
             snode: NodeBase = slink.to_node
             inp_name = inp.name
-            ori_name = get_ori_name(inp_name)
+            ori_name = s.get_prop_ori_name(inp_name)
             inp_info = {"name": ori_name,
                         "type": inp.bl_idname,
                         "link": None}
@@ -3089,9 +3095,10 @@ class SDParameterGenerator(BluePrintBase):
 
 
 @lru_cache(maxsize=1024)
-def get_blueprints(comfyClass, default=BluePrintBase) -> BluePrintBase:
+def get_blueprints(comfyClass="", default=BluePrintBase) -> BluePrintBase:
     for cls in BluePrintBase.__subclasses__():
         if cls.comfyClass != comfyClass:
             continue
         return cls()
-    return default()
+    new_comfy_bp = type(comfyClass, (default,), {"comfyClass": comfyClass})
+    return new_comfy_bp()
