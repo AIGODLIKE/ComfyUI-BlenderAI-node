@@ -34,7 +34,8 @@ SOCKET_HASH_MAP = {  # {HASH: METATYPE}
     "INT": "INT",
     "FLOAT": "FLOAT",
     "STRING": "STRING",
-    "BOOLEAN": "BOOLEAN"
+    "BOOLEAN": "BOOLEAN",
+    "COMBO": "COMBO",
 }
 
 NODE_SLOTS = {
@@ -244,10 +245,12 @@ class PropGen:
                     return ENUM_ITEMS_CACHE[nname][inp_name]
                 items = []
                 # 专门用于 老版本的 翻译
-                spec_trans = {"输入": "Input",
-                              "渲染": "Render",
-                              "序列图": "Sequence",
-                              "视口": "Viewport"}
+                spec_trans = {
+                    "输入": "Input",
+                    "渲染": "Render",
+                    "序列图": "Sequence",
+                    "视口": "Viewport",
+                }
                 for item in inp[0]:
                     icon_id = PropGen._find_icon(nname, inp_name, item)
                     if icon_id:
@@ -258,13 +261,62 @@ class PropGen:
                         continue
                     items.append((si, spec_trans.get(si, si), "", icon_id, len(items)))
                 return items
-            return wrap
-        prop = bpy.props.EnumProperty(items=get_items(nname, reg_name, inp))
-        # 判断可哈希
 
+            return wrap
+
+        prop = bpy.props.EnumProperty(items=get_items(nname, reg_name, inp))
+
+        # 判断可哈希
         def is_all_hashable(some_list):
             return all(hasattr(item, "__hash__") for item in some_list)
+
         if is_all_hashable(inp[0]) and set(inp[0]) == {True, False}:
+            prop = bpy.props.BoolProperty()
+        return prop
+
+    @staticmethod
+    def COMBO(nname, inp_name, reg_name, inp):
+        def get_items(nname, inp_name, inp_params):
+            def wrap(self, context):
+                if nname not in ENUM_ITEMS_CACHE:
+                    ENUM_ITEMS_CACHE[nname] = {}
+                if inp_name in ENUM_ITEMS_CACHE[nname]:
+                    return ENUM_ITEMS_CACHE[nname][inp_name]
+                items = []
+                # 专门用于 老版本的 翻译
+                spec_trans = {
+                    "输入": "Input",
+                    "渲染": "Render",
+                    "序列图": "Sequence",
+                    "视口": "Viewport",
+                }
+                for item in inp_params.get("options", []):
+                    icon_id = PropGen._find_icon(nname, inp_name, item)
+                    if icon_id:
+                        ENUM_ITEMS_CACHE[nname][inp_name] = items
+                    si = str(item)
+                    if si in spec_trans:
+                        items.append((si, spec_trans.get(si, si), ""))
+                        continue
+                    items.append((si, spec_trans.get(si, si), "", icon_id, len(items)))
+                return items
+
+            return wrap
+
+        inp_params: dict = inp[1] if len(inp) > 1 else {}
+        items_ori: list = inp_params.get("options", [])
+        kwargs = {}
+        if default := inp_params.get("default"):
+            kwargs["default"] = items_ori.index(default)
+        if tooltip := inp_params.get("tooltip"):
+            kwargs["description"] = tooltip
+        prop = bpy.props.EnumProperty(items=get_items(nname, reg_name, inp_params), **kwargs)
+
+        # 判断可哈希
+        def is_all_hashable(some_list):
+            return all(hasattr(item, "__hash__") for item in some_list)
+
+        if is_all_hashable(items_ori) and set(items_ori) == {True, False}:
             prop = bpy.props.BoolProperty()
         return prop
 
@@ -438,7 +490,7 @@ class PropGen:
 
             def getter(self):
                 if "seed" not in self:
-                    self["seed"] = "0"
+                    return "0"
                 return str(self["seed"])
             prop = bpy.props.StringProperty(default="0", set=setter, get=getter)
         return prop
@@ -895,7 +947,7 @@ class NodeBase(bpy.types.Node):
                 ts = l.to_socket
                 if ts.bl_idname == "*" or fs.bl_idname == "*":
                     continue
-                if fs.bl_idname == "*" and SOCKET_HASH_MAP.get(ts.bl_idname) in {"ENUM", "INT", "FLOAT", "STRING", "BOOLEAN"}:
+                if fs.bl_idname == "*" and SOCKET_HASH_MAP.get(ts.bl_idname) in {"ENUM", "INT", "FLOAT", "STRING", "BOOLEAN", "COMBO"}:
                     continue
                 if fs.bl_idname == ts.bl_idname:
                     continue
@@ -1815,28 +1867,12 @@ class NodeParser:
                         _desc.add(inp_desc[0])
                         self.SOCKET_TYPE[name][inp] = inp_desc[0]
             for index, out_type in enumerate(desc["output"]):
-                # _desc.add(out_type[0])
                 if isinstance(out_type, list) and desc.get("output_name", []):
                     out_type = desc["output_name"][index]
                 if isinstance(out_type, str):
                     _desc.add(out_type)
                 else:
                     _desc.add(out_type[0])
-                continue
-                # _desc.add(out_type[0])
-                stype = out_type[0]
-                if isinstance(stype, list):
-                    _desc.add("ENUM")
-                    # 太长 不能注册为 socket type(<64)
-                    hash_type = calc_hash_type(stype)
-                    _desc.add(hash_type)
-                    SOCKET_HASH_MAP[hash_type] = "ENUM"
-                    # self.SOCKET_TYPE[name][inp] = hash_type
-                elif isinstance(out_type, str):
-                    _desc.add(out_type)
-                else:
-                    _desc.add(out_type[0])
-                    # self.SOCKET_TYPE[name][inp] = inp_desc[0]
         for name in list(self.object_info.keys()):
             desc = self.object_info[name]
             self.SOCKET_TYPE[name] = {}
@@ -1933,7 +1969,7 @@ class NodeParser:
                         # socket = "ENUM"
                         socket = calc_hash_type(inp[0])
                         continue
-                    if socket in {"ENUM", "INT", "FLOAT", "STRING", "BOOLEAN"}:
+                    if socket in {"ENUM", "INT", "FLOAT", "STRING", "BOOLEAN", "COMBO"}:
                         continue
                     # logger.warning(inp)
                     in1 = self.inputs.new(socket, self.get_blueprints().get_prop_reg_name(inp_name))
@@ -1974,7 +2010,7 @@ class NodeParser:
                 if isinstance(inp[0], list):
                     proptype = "ENUM"
                 validate_inp(inp)
-                if proptype not in {"ENUM", "INT", "FLOAT", "STRING", "BOOLEAN"}:
+                if proptype not in {"ENUM", "INT", "FLOAT", "STRING", "BOOLEAN", "COMBO"}:
                     continue
                 try:
                     prop = PropGen.Gen(proptype, nname, inp_name, inp)
