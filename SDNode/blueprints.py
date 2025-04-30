@@ -1405,6 +1405,53 @@ class PreviewImage(BluePrintBase):
         Timer.put((f, self, img_paths))
 
 
+class Preview3D(BluePrintBase):
+    comfyClass = "Preview3D"
+
+    def post_fn(s, self: NodeBase, t: Task, result):
+        logger.debug("%s%s->%s", self.class_type, _T('Post Function'), result)
+        WindowLogger.push_log("%s%s->%s", self.class_type, _T('Post Function'), result)
+        # {'result': ['3d/未命名.glb', None]}
+        model_paths = result.get("output", {}).get("result", [])
+        if not model_paths:
+            logger.error('response is %s, cannot find models in it', result)
+            WindowLogger.push_log('response is %s, cannot find models in it', result)
+            return
+        logger.warning("%s: %s", _T('Load Preview Model'), model_paths)
+        WindowLogger.push_log("%s: %s", _T('Load Preview Model'), model_paths)
+
+        def f(self, model_paths):
+            from tempfile import gettempdir
+            save_dir = Path(gettempdir()).joinpath("ComfyUI_Temp_Models")
+            save_dir.mkdir(exist_ok=True)
+            for file_name in model_paths:
+                if not file_name:
+                    continue
+                save_path = save_dir.joinpath(file_name)
+                save_path.parent.mkdir(exist_ok=True)
+                suffix = save_path.suffix
+                # view?filename=meshsave_00001_.glb&type=output&subfolder=3d
+                data = {"filename": file_name, "subfolder": "3d", "type": "output"}
+                obj = cache_to_local(data, suffix=suffix, save_path=save_path).as_posix()
+                # active_object = bpy.context.object
+                if suffix == ".obj":
+                    bpy.ops.wm.obj_import(filepath=obj)
+                elif suffix in {".gltf", ".glb"}:
+                    bpy.ops.import_scene.gltf(filepath=obj)
+                elif suffix == ".fbx":
+                    bpy.ops.import_scene.fbx(filepath=obj)
+                elif suffix == ".stl":
+                    bpy.ops.wm.stl_import(filepath=obj)
+                elif suffix == ".usdz":
+                    texture_dir = Path(obj).with_suffix("").as_posix()
+                    bpy.ops.wm.usd_import(
+                        filepath=obj.as_posix(),
+                        import_textures_mode="IMPORT_COPY",
+                        import_textures_dir=texture_dir,
+                    )
+        Timer.put((f, self, model_paths))
+
+
 class 存储(BluePrintBase):
     comfyClass = "存储"
 
