@@ -36,7 +36,7 @@ import bpy
 import sys
 from addon_utils import disable
 from .SDNode import rtnode_reg, rtnode_unreg, TaskManager
-from .MultiLineText import EnableMLT
+from .MultiLineText import EnableMLT, PasteClipboardToMLT
 
 from .utils import Icon, FSWatcher, ScopeTimer, meta_info
 from .timer import timer_reg, timer_unreg
@@ -51,7 +51,33 @@ from .SDNode.custom_support import custom_support_reg, custom_support_unreg
 from .prop import RenderLayerString, MLTWord, Prop, prop_reg, prop_unreg
 from .Linker import linker_register, linker_unregister
 from .hook import use_hook
-clss = [Panel, Ops, RenderLayerString, MLTWord, Prop, HISTORY_UL_UIList, HistoryItem, Ops_Mask, Load_History, Popup_Load, Copy_Tree, Load_Batch, Fetch_Node_Status, Clear_Node_Cache, CopyToClipboard, Sync_Stencil_Image, NodeSearch, SDNode_To_Image, Image_To_SDNode, Image_Set_Channel_Packed, Open_Log_Window, EnableMLT]
+
+clss = [
+    Panel,
+    Ops,
+    RenderLayerString,
+    MLTWord,
+    Prop,
+    HISTORY_UL_UIList,
+    HistoryItem,
+    Ops_Mask,
+    Load_History,
+    Popup_Load,
+    Copy_Tree,
+    Load_Batch,
+    Fetch_Node_Status,
+    Clear_Node_Cache,
+    CopyToClipboard,
+    Sync_Stencil_Image,
+    NodeSearch,
+    SDNode_To_Image,
+    Image_To_SDNode,
+    Image_Set_Channel_Packed,
+    Open_Log_Window,
+    EnableMLT,
+    PasteClipboardToMLT,
+]
+
 reg, unreg = bpy.utils.register_classes_factory(clss)
 from platform import system
 meta_info["bl_info"] = bl_info

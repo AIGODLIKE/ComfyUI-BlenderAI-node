@@ -42,3 +42,20 @@ class EnableMLT(bpy.types.Operator):
             return {"FINISHED"}
         bpy.ops.sdn.multiline_text("INVOKE_DEFAULT")
         return {"FINISHED"}
+
+
+class PasteClipboardToMLT(bpy.types.Operator):
+    bl_idname = "sdn.paste_clipboard_to_mlt"
+    bl_label = "Paste Clipboard"
+    bl_description = "Paste clipboard to multiline text"
+    bl_translation_context = ctxt
+    socket_name: bpy.props.StringProperty()
+
+    def execute(self, context):
+        clipboard = bpy.context.window_manager.clipboard
+        if not clipboard:
+            self.report({"ERROR"}, "Clipboard is empty")
+            return {"FINISHED"}
+        node = context.active_node
+        setattr(node, self.socket_name, clipboard)
+        return {"FINISHED"}

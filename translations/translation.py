@@ -537,6 +537,8 @@ other = {
     "MLT": "多行文本",
     "Enable MLT": "开启多行文本",
     "Enable multiline text for this textbox": "开启多行文本",
+    "Paste Clipboard": "粘贴剪切板",
+    "Paste clipboard to multiline text": "粘贴剪切板到文本",
     # oooo
     "enable": "开",
     "disable": "关",
