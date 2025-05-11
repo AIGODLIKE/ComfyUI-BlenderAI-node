@@ -208,6 +208,7 @@ class BluePrintBase:
                 layout.label(text=line, text_ctxt=self.get_ctxt())
             row = draw_prop_with_link(layout, self, prop, swsock, swdisp)
             row.operator("sdn.enable_mlt", text="", icon="TEXT")
+            op = row.operator("sdn.paste_clipboard_to_mlt", text="", icon="PASTEDOWN").socket_name = prop
             if not swdisp:
                 return True
             stat = self.mlt_stats.get(prop)
