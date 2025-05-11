@@ -20,7 +20,7 @@ from threading import Thread
 from subprocess import Popen, PIPE, STDOUT
 from pathlib import Path
 from queue import Queue
-from .utils import WindowLogger
+from .utils import WindowLogger, calc_data_from_blender
 from ..utils import rmtree as rt, logger, _T, PkgInstaller, update_screen
 from ..timer import Timer
 from ..preference import get_pref
@@ -1242,7 +1242,7 @@ class TaskManager:
         tm = TaskManager
         SessionId = TaskManager.SessionId
 
-        def on_message(ws, message):
+        def on_message(ws: WebSocketApp, message):
             if isinstance(message, bytes):
                 if tm.cur_task:
                     tm.cur_task.binary_message = message
@@ -1275,6 +1275,11 @@ class TaskManager:
                 ...
             elif mtype == "execution_error":
                 ...
+            elif mtype == "get_data_from_blender":
+                true_data = calc_data_from_blender(data)
+                ws.send(json.dumps({"type": "blender_data", "data": {"res": "ok"}}))
+                ws.send(json.dumps({"type": "get_data_from_blender_res", "data": true_data}))
+                return
             elif mtype == "status":
                 ...
             elif mtype != "progress":

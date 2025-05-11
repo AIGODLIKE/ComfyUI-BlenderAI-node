@@ -1,8 +1,14 @@
 import bpy
+import requests
+import uuid
+from urllib3.util import Timeout
+from tempfile import gettempdir
 from contextlib import contextmanager
 from pathlib import Path
 from dataclasses import dataclass
 from ..utils import logger, _T
+from ..timer import Timer
+
 SELECTED_COLLECTIONS = []
 
 
@@ -11,6 +17,7 @@ class VLink:
     """
     用于恢复组内外节点的连接
     """
+
     fnode_name: str
     fsock_name: str
     tnode_name: str
@@ -23,6 +30,7 @@ class VLink:
         from .nodes import NodeBase
         from .tree import CFNodeTree
         from .nodegroup import SOCK_TAG
+
         helper = THelper()
         fnode: NodeBase = link.from_node
         tnode: NodeBase = link.to_node
@@ -36,12 +44,14 @@ class VLink:
             isock = inode.get_output(tsock[SOCK_TAG])
             gtsock = helper.find_to_sock(isock)
             # logger.critical(f"FIND INPUT: {gtsock}")
-            return VLink(fnode.name,
-                         fsock.identifier,
-                         gtsock.node.name,
-                         gtsock.identifier,
-                         in_out,
-                         ltype).to_tuple()
+            return VLink(
+                fnode.name,
+                fsock.identifier,
+                gtsock.node.name,
+                gtsock.identifier,
+                in_out,
+                ltype,
+            ).to_tuple()
         if in_out == "OUTPUT" and fnode.is_group():
             tree: CFNodeTree = fnode.node_tree
             # inner(group) -> outer
@@ -50,30 +60,37 @@ class VLink:
             osock = onode.get_input(fsock[SOCK_TAG])
             gfsock = helper.find_from_sock(osock)
             # logger.critical(f"FIND OUTPUT: {gfsock}")
-            return VLink(gfsock.node.name,
-                         gfsock.identifier,
-                         tnode.name,
-                         tsock.identifier,
-                         in_out,
-                         ltype).to_tuple()
-        return VLink(link.from_node.name,
-                     link.from_socket.identifier,
-                     link.to_node.name,
-                     link.to_socket.identifier,
-                     in_out,
-                     ltype).to_tuple()
+            return VLink(
+                gfsock.node.name,
+                gfsock.identifier,
+                tnode.name,
+                tsock.identifier,
+                in_out,
+                ltype,
+            ).to_tuple()
+        return VLink(
+            link.from_node.name,
+            link.from_socket.identifier,
+            link.to_node.name,
+            link.to_socket.identifier,
+            in_out,
+            ltype,
+        ).to_tuple()
 
     def to_tuple(self):
-        return (self.fnode_name,
-                self.fsock_name,
-                self.tnode_name,
-                self.tsock_name,
-                self.in_out,
-                self.ltype)
+        return (
+            self.fnode_name,
+            self.fsock_name,
+            self.tnode_name,
+            self.tsock_name,
+            self.in_out,
+            self.ltype,
+        )
 
     def relink_toggle(self, node: bpy.types.Node, tree: bpy.types.NodeTree):
         from .nodes import NodeBase
         from .tree import CFNodeTree
+
         helper = THelper()
         # fnode: NodeBase = tree.nodes.get(self.fnode_name)
         # tnode: NodeBase = tree.nodes.get(self.tnode_name)
@@ -112,6 +129,7 @@ class VLink:
     def relink_pack(self, node: bpy.types.Node, tree: bpy.types.NodeTree):
         from .nodes import NodeBase
         from .tree import CFNodeTree
+
         helper = THelper()
         inner_tree: CFNodeTree = node.node_tree
         if self.in_out == "INPUT":
@@ -137,6 +155,7 @@ class VLink:
 
     def relink_unpack(self, node: bpy.types.Node, tree: bpy.types.NodeTree):
         from .nodes import NodeBase
+
         helper = THelper()
         fnode: NodeBase = tree.nodes.get(self.fnode_name)
         tnode: NodeBase = tree.nodes.get(self.tnode_name)
@@ -204,8 +223,7 @@ class Interface:
 
 
 class THelper:
-    def __init__(self) -> None:
-        ...
+    def __init__(self) -> None: ...
 
     @staticmethod
     def reroute_sock_idname():
@@ -435,8 +453,12 @@ def set_composite(nt: bpy.types.NodeTree):
 @contextmanager
 def set_setting():
     r = bpy.context.scene.render
-    oldsetting = (r.filepath, r.image_settings.color_mode, r.image_settings.compression,
-                  bpy.context.scene.view_settings.view_transform)
+    oldsetting = (
+        r.filepath,
+        r.image_settings.color_mode,
+        r.image_settings.compression,
+        bpy.context.scene.view_settings.view_transform,
+    )
     yield r
     r.filepath, r.image_settings.color_mode, r.image_settings.compression, bpy.context.scene.view_settings.view_transform = oldsetting
 
@@ -452,7 +474,6 @@ def gen_mask(self):
     bpy.context.scene.use_nodes = True
     nt = bpy.context.scene.node_tree
     with set_setting() as r:
-
         if mode in {"Collection", "Object"}:
             bpy.context.view_layer.use_pass_cryptomatte_object = True
             if mode == "Collection":
@@ -560,3 +581,171 @@ def gen_mask(self):
             for o in bpy.context.scene.objects:
                 o.hide_render = hide_map.get(o.name, o.hide_render)
             gp.hide_render = True
+
+
+def calc_data_from_blender(request_data: dict) -> dict:
+    # {
+    #     "unique_id": 27,
+    #     "message": {"data_name": "active_model"},
+    #     "event": "run",
+    # }
+    message = request_data.get("message")
+    if not message:
+        return {}
+    # ({"name": "camera_viewport", "type": "IMAGE", "links": None},)
+    # ({"name": "render_viewport", "type": "IMAGE", "links": None},)
+    # ({"name": "depth_viewport", "type": "IMAGE", "links": None},)
+    # ({"name": "mist_viewport", "type": "IMAGE", "links": None},)
+    # ({"name": "active_model", "type": "STRING", "links": [18]},)
+    # ({"name": "custom_image", "type": "IMAGE", "links": None},)
+    data_name = message.get("data_name")
+    uid = uuid.uuid4().hex[:8]
+    out_dir = Path(gettempdir()) / f"BlenderAI_Inputs/{data_name}"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    if data_name == "camera_viewport":
+        data_path = out_dir / f"cam_view_{uid}.png"
+
+        def render():
+            logger.warning("%s->%s", _T("Render"), data_path.as_posix())
+            old = bpy.context.scene.render.filepath
+            bpy.context.scene.render.filepath = data_path.as_posix()
+
+            # 场景相机可能为空
+            if not bpy.context.scene.camera:
+                err_info = _T("No Camera in Scene") + " -> " + bpy.context.scene.name
+                raise Exception(err_info)
+            bpy.ops.render.render(write_still=True)
+            bpy.context.scene.render.filepath = old
+
+        Timer.wait_run(render)()
+        # 上传图片
+        upload_status = upload_data(data_name, data_path)
+        return upload_status
+    elif data_name == "render_viewport":
+        data_path = out_dir / f"render_view_{uid}.png"
+
+        def render():
+            logger.warning("%s->%s", _T("Render"), data_path.as_posix())
+            old = bpy.context.scene.render.filepath
+            bpy.context.scene.render.filepath = data_path.as_posix()
+
+            # 场景相机可能为空
+            if not bpy.context.scene.camera:
+                err_info = _T("No Camera in Scene") + " -> " + bpy.context.scene.name
+                raise Exception(err_info)
+            bpy.ops.render.opengl(write_still=True, view_context=True)
+            bpy.context.scene.render.filepath = old
+
+        Timer.wait_run(render)()
+        # 上传图片
+        upload_status = upload_data(data_name, data_path)
+        return upload_status
+    elif data_name == "depth_viewport":
+        # 渲染深度图
+        # 上传图片
+        data_path = out_dir / f"depth_view_{uid}.png"
+
+        def render():
+            logger.warning("%s->%s", _T("Render"), data_path.as_posix())
+            old = bpy.context.scene.render.filepath
+            old_z = bpy.context.view_layer.use_pass_z
+            bpy.context.view_layer.use_pass_z = True
+            bpy.context.scene.render.filepath = data_path.as_posix()
+            bpy.context.scene.use_nodes = True
+
+            nt = bpy.context.scene.node_tree
+            out_layer_name = "Depth"
+            with set_composite(nt) as cmp:
+                render_layer: bpy.types.CompositorNodeRLayers = nt.nodes.new("CompositorNodeRLayers")
+                render_layer.scene = bpy.context.scene
+                render_layer.layer = bpy.context.view_layer.name
+                if out := render_layer.outputs.get(out_layer_name):
+                    nt.links.new(cmp.inputs["Image"], out)
+                bpy.ops.render.render(write_still=True)
+                nt.nodes.remove(render_layer)
+            bpy.context.scene.render.filepath = old
+            bpy.context.view_layer.use_pass_z = old_z
+
+        Timer.wait_run(render)()
+        upload_status = upload_data(data_name, data_path)
+        return upload_status
+    elif data_name == "mist_viewport":
+        data_path = out_dir / f"mist_view_{uid}.png"
+
+        def render():
+            logger.warning("%s->%s", _T("Render"), data_path.as_posix())
+            old = bpy.context.scene.render.filepath
+            old_mist = bpy.context.view_layer.use_pass_mist
+            bpy.context.view_layer.use_pass_mist = True
+            bpy.context.scene.render.filepath = data_path.as_posix()
+            bpy.context.scene.use_nodes = True
+
+            nt = bpy.context.scene.node_tree
+            out_layer_name = "Mist"
+            with set_composite(nt) as cmp:
+                render_layer: bpy.types.CompositorNodeRLayers = nt.nodes.new("CompositorNodeRLayers")
+                render_layer.scene = bpy.context.scene
+                render_layer.layer = bpy.context.view_layer.name
+                if out := render_layer.outputs.get(out_layer_name):
+                    nt.links.new(cmp.inputs["Image"], out)
+                bpy.ops.render.render(write_still=True)
+                nt.nodes.remove(render_layer)
+            bpy.context.scene.render.filepath = old
+            bpy.context.view_layer.use_pass_mist = old_mist
+
+        Timer.wait_run(render)()
+        upload_status = upload_data(data_name, data_path)
+        return upload_status
+    elif data_name == "active_model":
+        # 保存当前激活模型
+        # 上传模型
+        data_path = out_dir / f"active_model_{uid}.glb"
+
+        def run():
+            bpy.ops.export_scene.gltf(
+                filepath=data_path.as_posix(),
+                use_selection=True,
+            )
+
+        Timer.wait_run(run)()
+        upload_status = upload_data(data_name, data_path)
+        return upload_status
+    elif data_name == "custom_image":
+        data_path = out_dir / f"custom_image_{uid}.png"
+        data_path.touch()
+        upload_status = upload_data(data_name, data_path)
+        return upload_status
+    return {}
+
+
+def upload_data(data_name, data_path):
+    from .manager import TaskManager
+
+    url = f"{TaskManager.server.get_url()}/upload/blender_inputs"
+    data_path = Path(data_path)
+    if data_path.is_dir() or not data_path.exists():
+        return {}
+
+    # 准备文件数据
+    try:
+        data = {
+            "overwrite": "true",
+            "subfolder": f"blender_inputs/{data_name}",
+            "type": "output",
+            "data_type": data_name,
+        }
+        data_type = f"input_data/{data_name}"
+        files = {"input_data": (data_path.name, data_path.read_bytes(), data_type)}
+        timeout = Timeout(connect=5, read=5)
+        url = url.replace("0.0.0.0", "127.0.0.1")
+        response = requests.post(url, data=data, files=files, timeout=timeout)
+        # 检查响应
+        if response.status_code == 200:
+            logger.info("Upload Success")
+            # {'name': 'icon.png', 'subfolder': 'SDN', 'type': 'input'}
+            return response.json()
+        else:
+            logger.error(f"{_T('Upload Fail')}: [{response.status_code}] {response.text}")
+    except Exception as e:
+        logger.error(f"{_T('Upload Fail')}: {e}")
+    return {}
