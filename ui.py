@@ -208,9 +208,10 @@ class Panel(bpy.types.Panel):
 def draw_header_button(self: bpy.types.Menu, context):
     if context.space_data.tree_type == TREE_TYPE:
         layout = self.layout
-        col = layout.column()
-        col.alert = True
-        col.operator(Ops.bl_idname, text="", text_ctxt=ctxt, icon="PLAY").action = "Submit"
+        row = layout.row(align=True)
+        row.alert = True
+        row.operator(Ops.bl_idname, text="", text_ctxt=ctxt, icon="PLAY").action = "Submit"
+        row.operator(CleanVRam.bl_idname, text="", icon="MEMORY")
 
 
 def draw_sdn_tofrom(self: bpy.types.Menu, context):
