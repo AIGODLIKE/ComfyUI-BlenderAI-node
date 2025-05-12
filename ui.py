@@ -2,7 +2,7 @@ import bpy
 import platform
 from bl_ui.properties_paint_common import UnifiedPaintPanel
 from bpy.types import Context
-from .ops import Ops, Load_History, Copy_Tree, Load_Batch, Fetch_Node_Status, Clear_Node_Cache, SDNode_To_Image, Image_To_SDNode, Image_Set_Channel_Packed, Open_Log_Window
+from .ops import Ops, Load_History, Copy_Tree, Load_Batch, Fetch_Node_Status, Clear_Node_Cache, SDNode_To_Image, Image_To_SDNode, Image_Set_Channel_Packed, Open_Log_Window, CleanVRam
 from .translations import ctxt
 from .SDNode import TaskManager, FakeServer
 from .SDNode.tree import TREE_TYPE
@@ -94,6 +94,7 @@ class Panel(bpy.types.Panel):
         else:
             row1.operator(Ops.bl_idname, text="Execute Node Tree", icon="PLAY").action = "Submit"
         row1.prop(bpy.context.scene.sdn, "advanced_exe", text="", icon="SETTINGS")
+        row1.operator(CleanVRam.bl_idname, text="", icon="MEMORY")
         if is_looped():
             icon = "PAUSE"
             action = "STOP"

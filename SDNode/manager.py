@@ -1052,6 +1052,13 @@ class TaskManager:
         except URLError:
             ...
 
+    @staticmethod
+    def clear_vram():
+        req = request.Request(f"{TaskManager.server.get_url()}/cup/clear_vram", method="POST")
+        try:
+            request.urlopen(req)
+        except URLError:
+            ...
     # def get_temp_directory():
     #     req = request.Request(f"{TaskManager.server.get_url()}/cup/get_temp_directory", method="POST")
     #     try:

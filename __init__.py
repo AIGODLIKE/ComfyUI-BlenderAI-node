@@ -41,7 +41,7 @@ from .MultiLineText import EnableMLT, PasteClipboardToMLT
 from .utils import Icon, FSWatcher, ScopeTimer, meta_info
 from .timer import timer_reg, timer_unreg
 from .preference import pref_register, pref_unregister
-from .ops import Ops, Ops_Mask, Load_History, Popup_Load, Copy_Tree, Load_Batch, Fetch_Node_Status, Clear_Node_Cache, CopyToClipboard, Sync_Stencil_Image, NodeSearch, SDNode_To_Image, Image_To_SDNode, Image_Set_Channel_Packed, Open_Log_Window
+from .ops import Ops, Ops_Mask, Load_History, Popup_Load, Copy_Tree, Load_Batch, Fetch_Node_Status, Clear_Node_Cache, CopyToClipboard, Sync_Stencil_Image, NodeSearch, SDNode_To_Image, Image_To_SDNode, Image_Set_Channel_Packed, Open_Log_Window, CleanVRam
 from .ui import ui_reg, ui_unreg, Panel, HISTORY_UL_UIList, HistoryItem
 from .SDNode.history import History
 from .SDNode.rt_tracker import reg_tracker, unreg_tracker
@@ -74,6 +74,7 @@ clss = [
     Image_To_SDNode,
     Image_Set_Channel_Packed,
     Open_Log_Window,
+    CleanVRam,
     EnableMLT,
     PasteClipboardToMLT,
 ]

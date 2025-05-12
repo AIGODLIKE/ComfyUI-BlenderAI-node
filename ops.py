@@ -1114,6 +1114,17 @@ class Open_Log_Window(bpy.types.Operator):
         return {'FINISHED'}
 
 
+class CleanVRam(bpy.types.Operator):
+    bl_idname = "sdn.clean_vram"
+    bl_label = "Clean VRAM"
+    bl_translation_context = ctxt
+    bl_description = "Clean VRAM"
+
+    def execute(self, context):
+        TaskManager.clear_vram()
+        return {"FINISHED"}
+
+
 @bpy.app.handlers.persistent
 def clear(_):
     Ops.is_advanced_enable = False
