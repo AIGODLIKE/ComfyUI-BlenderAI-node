@@ -749,3 +749,57 @@ def upload_data(data_name, data_path):
     except Exception as e:
         logger.error(f"{_T('Upload Fail')}: {e}")
     return {}
+
+
+def load_data_from_comfyui(data: dict[str]):
+    from .blueprints import cache_to_local
+
+    {
+        "images": [{"filename": "ComfyUI_temp_ifmhd_00001_.png", "subfolder": "", "type": "temp"}],
+        "models": "blender_inputs/active_model/active_model_b195d6c8.glb",
+        "videos": [{"filename": "ComfyUI_temp_ifmhd_00001_.mp4", "subfolder": "video", "type": "temp"}],
+        "audios": [{"filename": "ComfyUI_temp_ifmhd_00002_.flac", "subfolder": "", "type": "temp"}],
+        "texts": "blender_inputs/active_model/active_model_b195d6c8.glb",
+    }
+    out_dir = Path(gettempdir(), "BlenderAI_Outputs")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    images = data.get("images", [])
+    models = data.get("models", "")
+    videos = data.get("videos", [])
+    audios = data.get("audios", [])
+    texts = data.get("texts", "")
+    if images:
+        out_images_path = out_dir.joinpath("images")
+        out_images_path.mkdir(parents=True, exist_ok=True)
+        for image in images:
+            save_path = out_images_path.joinpath(image["filename"])
+            data_path = cache_to_local(image, save_path=save_path)
+            if data_path.exists():
+                logger.critical(f"Load Image: {data_path}")
+    if models:
+        save_path = out_dir.joinpath(models)
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+        fetch_data = {"filename": Path(models).name, "subfolder": Path(models).parent.as_posix(), "type": "output"}
+        data_path = cache_to_local(fetch_data, save_path=save_path)
+        if data_path.exists() and data_path.suffix in {".gltf", ".glb"}:
+            bpy.ops.import_scene.gltf(filepath=data_path.as_posix())
+    if videos:
+        out_videos_path = out_dir.joinpath("videos")
+        out_videos_path.mkdir(parents=True, exist_ok=True)
+        for video in videos:
+            save_path = out_videos_path.joinpath(video["filename"])
+            data_path = cache_to_local(video, save_path=save_path)
+            if data_path.exists():
+                logger.critical(f"Received Video: {data_path}")
+    if audios:
+        out_audios_path = out_dir.joinpath("audios")
+        out_audios_path.mkdir(parents=True, exist_ok=True)
+        for audio in audios:
+            save_path = out_dir.joinpath(audio["filename"])
+            data_path = cache_to_local(audio, save_path=save_path)
+            if data_path.exists():
+                logger.critical(f"Received Audio: {data_path}")
+    if texts:
+        logger.critical(f"Received Text: {texts}")
+
+    logger.critical(f"Load Data from ComfyUI: {data}")

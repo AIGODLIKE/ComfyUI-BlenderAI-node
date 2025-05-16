@@ -1,10 +1,13 @@
 import os
 import json
 import sys
+import io
 import traceback
 import numpy as np
 import builtins
 import torch
+import torchaudio
+import struct
 import shutil
 import hashlib
 import atexit
@@ -24,7 +27,10 @@ from threading import Thread
 from aiohttp import web
 from pathlib import Path
 from PIL import Image, ImageOps, ImageSequence
-from comfy.comfy_types.node_typing import IO
+from PIL.PngImagePlugin import PngInfo
+from comfy.comfy_types import IO, FileLocator, ComfyNodeABC
+from comfy_api.input import ImageInput, AudioInput, VideoInput
+from comfy_api.util import VideoContainer, VideoCodec, VideoComponents
 from server import PromptServer
 
 __CATEGORY__ = "Blender"
@@ -37,6 +43,61 @@ async def send_socket_catch_exception(function, message):
         await function(message)
     except (aiohttp.ClientError, aiohttp.ClientPayloadError, ConnectionResetError, BrokenPipeError, ConnectionError) as err:
         print("send error: {}".format(err))
+
+
+def create_vorbis_comment_block(comment_dict, last_block):
+    vendor_string = b"ComfyUI"
+    vendor_length = len(vendor_string)
+
+    comments = []
+    for key, value in comment_dict.items():
+        comment = f"{key}={value}".encode("utf-8")
+        comments.append(struct.pack("<I", len(comment)) + comment)
+
+    user_comment_list_length = len(comments)
+    user_comments = b"".join(comments)
+
+    comment_data = struct.pack("<I", vendor_length) + vendor_string + struct.pack("<I", user_comment_list_length) + user_comments
+    if last_block:
+        id = b"\x84"
+    else:
+        id = b"\x04"
+    comment_block = id + struct.pack(">I", len(comment_data))[1:] + comment_data
+
+    return comment_block
+
+
+def insert_or_replace_vorbis_comment(flac_io, comment_dict):
+    if len(comment_dict) == 0:
+        return flac_io
+
+    flac_io.seek(4)
+
+    blocks = []
+    last_block = False
+
+    while not last_block:
+        header = flac_io.read(4)
+        last_block = (header[0] & 0x80) != 0
+        block_type = header[0] & 0x7F
+        block_length = struct.unpack(">I", b"\x00" + header[1:])[0]
+        block_data = flac_io.read(block_length)
+
+        if block_type == 4 or block_type == 1:
+            pass
+        else:
+            header = bytes([(header[0] & (~0x80))]) + header[1:]
+            blocks.append(header + block_data)
+
+    blocks.append(create_vorbis_comment_block(comment_dict, last_block=True))
+
+    new_flac_io = io.BytesIO()
+    new_flac_io.write(b"fLaC")
+    for block in blocks:
+        new_flac_io.write(block)
+
+    new_flac_io.write(flac_io.read())
+    return new_flac_io
 
 
 class CupException(Exception):
@@ -426,6 +487,186 @@ class BlenderInputs:
         return time.time()
 
 
+class BlenderOutputs:
+    timeout = 30
+
+    def __init__(self):
+        self.output_dir = folder_paths.get_temp_directory()
+        self.type = "temp"
+        self.prefix_append = "_temp_" + "".join(random.choice("abcdefghijklmnopqrstupvxyz") for x in range(5))
+        self.compress_level = 4
+
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "optional": {
+                "image": (
+                    IO.IMAGE,
+                    {
+                        "default": None,
+                        "tooltip": "图片.",
+                    },
+                ),
+                "model": (
+                    IO.STRING,
+                    {
+                        "default": None,
+                        "tooltip": "模型.",
+                    },
+                ),
+                "video": (
+                    IO.VIDEO,
+                    {
+                        "default": None,
+                        "tooltip": "视频.",
+                    },
+                ),
+                "audio": (
+                    IO.AUDIO,
+                    {
+                        "default": None,
+                        "tooltip": "音频.",
+                    },
+                ),
+                "text": (
+                    IO.STRING,
+                    {
+                        "default": None,
+                        "tooltip": "文本内容.",
+                    },
+                ),
+            },
+            "hidden": {
+                "prompt": "PROMPT",
+                "extra_pnginfo": "EXTRA_PNGINFO",
+            },
+        }
+
+    RETURN_TYPES = ()
+    CATEGORY = __CATEGORY__
+    OUTPUT_NODE = True
+    FUNCTION = "build_outputs"
+
+    def build_outputs(self, image=None, model=None, video=None, audio=None, text=None, prompt=None, extra_pnginfo=None):
+        # print(f"[Build Outputs]: {image}, {model}, {video}, {audio}, {text}")
+        # Image Type: <class 'torch.Tensor'>
+        # Model Type: <class 'str'>
+        # Video Type: <class 'comfy_api.input_impl.video_types.VideoFromComponents'>
+        # Audio Type: <class 'dict'>  # 示例数据: {'waveform': tensor([[[0., 0., 0.,  ..., 0., 0., 0.]]]), 'sample_rate': 24000}
+        # Text Type: <class 'str'>
+        # print(f"\t Image Type: {type(image)}")
+        # print(f"\t Model Type: {type(model)}")
+        # print(f"\t Video Type: {type(video)}")
+        # print(f"\t Audio Type: {type(audio)}")
+        # print(f"\t  Text Type: {type(text)}")
+        # 发送数据到blender服务器
+        data = {
+            "images": self.save_images(image, prompt=prompt, extra_pnginfo=extra_pnginfo),
+            "models": model,
+            "videos": self.save_video(video, prompt=prompt, extra_pnginfo=extra_pnginfo),
+            "audios": self.save_audio(audio, prompt=prompt, extra_pnginfo=extra_pnginfo),
+            "texts": text,
+        }
+        # asyncio.set_event_loop(asyncio.new_event_loop())
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self.send_data_ws_ex(data))
+        return {"ui": data}
+
+    async def send_data_ws_ex(self, data):
+        ws: web.WebSocketResponse = None
+        # 场景连接blender的ws客户端
+        for sid in PromptServer.instance.sockets:
+            if sid.startswith("ComfyUICUP"):
+                ws = PromptServer.instance.sockets[sid]
+        if ws is None:
+            print("Blender Connection not found")
+            return
+        message = {
+            "type": "send_data_to_blender",
+            "data": data,
+        }
+        try:
+            await ws.send_json(message)
+        except Exception as err:
+            print("Send error: {}".format(err))
+            traceback.print_exc()
+
+    def save_images(self, images, filename_prefix="ComfyUI", prompt=None, extra_pnginfo=None):
+        filename_prefix += self.prefix_append
+        full_output_folder, filename, counter, subfolder, filename_prefix = folder_paths.get_save_image_path(filename_prefix, self.output_dir, images[0].shape[1], images[0].shape[0])
+        results = list()
+        for batch_number, image in enumerate(images):
+            i = 255.0 * image.cpu().numpy()
+            img = Image.fromarray(np.clip(i, 0, 255).astype(np.uint8))
+            metadata = None
+            if not args.disable_metadata:
+                metadata = PngInfo()
+                if prompt is not None:
+                    metadata.add_text("prompt", json.dumps(prompt))
+                if extra_pnginfo is not None:
+                    for x in extra_pnginfo:
+                        metadata.add_text(x, json.dumps(extra_pnginfo[x]))
+
+            filename_with_batch_num = filename.replace("%batch_num%", str(batch_number))
+            file = f"{filename_with_batch_num}_{counter:05}_.png"
+            img.save(os.path.join(full_output_folder, file), pnginfo=metadata, compress_level=self.compress_level)
+            results.append({"filename": file, "subfolder": subfolder, "type": self.type})
+            counter += 1
+        return results
+
+    def save_video(self, video: VideoInput, filename_prefix="video/ComfyUI", format="mp4", codec="h264", prompt=None, extra_pnginfo=None):
+        filename_prefix += self.prefix_append
+        width, height = video.get_dimensions()
+        full_output_folder, filename, counter, subfolder, filename_prefix = folder_paths.get_save_image_path(filename_prefix, self.output_dir, width, height)
+        results: list[FileLocator] = list()
+        saved_metadata = None
+        if not args.disable_metadata:
+            metadata = {}
+            if extra_pnginfo is not None:
+                metadata.update(extra_pnginfo)
+            if prompt is not None:
+                metadata["prompt"] = prompt
+            if len(metadata) > 0:
+                saved_metadata = metadata
+        file = f"{filename}_{counter:05}_.{VideoContainer.get_extension(format)}"
+        video.save_to(os.path.join(full_output_folder, file), format=format, codec=codec, metadata=saved_metadata)
+
+        results.append({"filename": file, "subfolder": subfolder, "type": self.type})
+        counter += 1
+
+        return results
+
+    def save_audio(self, audio, filename_prefix="ComfyUI", prompt=None, extra_pnginfo=None):
+        filename_prefix += self.prefix_append
+        full_output_folder, filename, counter, subfolder, filename_prefix = folder_paths.get_save_image_path(filename_prefix, self.output_dir)
+        results: list[FileLocator] = []
+
+        metadata = {}
+        if not args.disable_metadata:
+            if prompt is not None:
+                metadata["prompt"] = json.dumps(prompt)
+            if extra_pnginfo is not None:
+                for x in extra_pnginfo:
+                    metadata[x] = json.dumps(extra_pnginfo[x])
+
+        for batch_number, waveform in enumerate(audio["waveform"].cpu()):
+            filename_with_batch_num = filename.replace("%batch_num%", str(batch_number))
+            file = f"{filename_with_batch_num}_{counter:05}_.flac"
+
+            buff = io.BytesIO()
+            torchaudio.save(buff, waveform, audio["sample_rate"], format="FLAC")
+
+            buff = insert_or_replace_vorbis_comment(buff, metadata)
+
+            with open(os.path.join(full_output_folder, file), "wb") as f:
+                f.write(buff.getbuffer())
+
+            results.append({"filename": file, "subfolder": subfolder, "type": self.type})
+            counter += 1
+
+        return results
+
+
 @PromptServer.instance.routes.post("/upload/blender_inputs")
 async def upload_inputs(request: web.Request):
     post = await request.post()
@@ -508,10 +749,12 @@ def compare_data_hash(filepath, data):
 
 NODE_CLASS_MAPPINGS = {
     "Blender Inputs": BlenderInputs,
+    "Blender Outputs": BlenderOutputs,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     "Blender Inputs": "Blender Inputs",
+    "Blender Outputs": "Blender Outputs",
 }
 
 WEB_DIRECTORY = "./web"

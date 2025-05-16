@@ -20,7 +20,7 @@ from threading import Thread
 from subprocess import Popen, PIPE, STDOUT
 from pathlib import Path
 from queue import Queue
-from .utils import WindowLogger, calc_data_from_blender
+from .utils import WindowLogger, calc_data_from_blender, load_data_from_comfyui
 from ..utils import rmtree as rt, logger, _T, PkgInstaller, update_screen
 from ..timer import Timer
 from ..preference import get_pref
@@ -53,6 +53,7 @@ class Task:
         self._post = post
         from .tree import CFNodeTree
         from .nodes import NodeBase
+
         self.tree: CFNodeTree = tree
         self.executing_node_id = ""
         self.executing_node: NodeBase = None
@@ -96,6 +97,7 @@ class Task:
             return False
         except Exception:
             import traceback
+
             traceback.print_exc()
             return False
         return True
@@ -110,6 +112,7 @@ class Task:
                 if not n.label.endswith("-EXEC"):
                     continue
                 n.restore_appearance()
+
         Timer.put((f, self))
 
     def set_executing_node_id(self, node_id):
@@ -118,6 +121,7 @@ class Task:
 
         def f(self: Task):
             from .nodes import NodeBase
+
             if not self.is_tree_valid():
                 return
             self.process = {}
@@ -136,6 +140,7 @@ class Task:
             n.use_custom_color = True
             n.color = (0, 0, 0)
             n.label = n.name + "-EXEC"
+
         Timer.put((f, self))
 
     def set_process(self, process, node_id=""):
@@ -151,6 +156,7 @@ class Task:
             if not self.executing_node:
                 return
             self.process = process
+
         Timer.put((f, self))
         # self.tree.display_process()
 
@@ -213,9 +219,7 @@ class TaskErrPaser:
                 "type": "required_input_missing",
                 "message": "Required input is missing",
                 "details": "{x}",
-                "extra_info": {
-                    "input_name": "{x}"
-                }
+                "extra_info": {"input_name": "{x}"},
             }
             return self.__print__(info)
 
@@ -225,11 +229,7 @@ class TaskErrPaser:
                 "type": "bad_linked_input",
                 "message": "Bad linked input, must be a length-2 list of [node_id, slot_index]",
                 "details": "{x}",
-                "extra_info": {
-                    "input_name": "{x}",
-                    "input_config": "{info}",
-                    "received_value": "{val}"
-                }
+                "extra_info": {"input_name": "{x}", "input_config": "{info}", "received_value": "{val}"},
             }
             return self.__print__(info)
 
@@ -239,12 +239,7 @@ class TaskErrPaser:
                 "type": "return_type_mismatch",
                 "message": "Return type mismatch between linked nodes",
                 "details": "{details}",
-                "extra_info": {
-                    "input_name": "{x}",
-                    "input_config": "{info}",
-                    "received_type": "{received_type}",
-                    "linked_node": "{val}"
-                }
+                "extra_info": {"input_name": "{x}", "input_config": "{info}", "received_type": "{received_type}", "linked_node": "{val}"},
             }
             return self.__print__(info)
 
@@ -258,8 +253,8 @@ class TaskErrPaser:
                     "input_name": "{x}",
                     "input_config": "{info}",
                     "received_value": "{val}",
-                    "exception_message": "{str(ex)}"
-                }
+                    "exception_message": "{str(ex)}",
+                },
             }
             # 匹配message
             type_input = re.match(r"Failed to convert an input value to a (.+) value", info["message"]).groups()
@@ -277,7 +272,7 @@ class TaskErrPaser:
                     "input_name": "{x}",
                     "input_config": "{info}",
                     "received_value": "{val}",
-                }
+                },
             }
             self.__print__(info)
             # 匹配message
@@ -295,7 +290,7 @@ class TaskErrPaser:
                     "input_name": "{x}",
                     "input_config": "{info}",
                     "received_value": "{val}",
-                }
+                },
             }
             self.__print__(info)
             val, max = re.match(r"Value (.+) bigger than max of (.+)", info["message"]).groups()
@@ -312,7 +307,7 @@ class TaskErrPaser:
                     "input_name": "{x}",
                     "input_config": "{info}",
                     "received_value": "{val}",
-                }
+                },
             }
             return self.__print__(info)
 
@@ -326,7 +321,7 @@ class TaskErrPaser:
                     "input_name": "{x}",
                     "input_config": "{input_config}",
                     "received_value": "{val}",
-                }
+                },
             }
             return self.__print__(info)
 
@@ -336,7 +331,7 @@ class TaskErrPaser:
                 "type": "prompt_no_outputs",
                 "message": "Prompt has no outputs",
                 "details": "",
-                "extra_info": {}
+                "extra_info": {},
             }
             return self.__print__(info)
 
@@ -346,10 +341,7 @@ class TaskErrPaser:
                 "type": "exception_during_validation",
                 "message": "Exception when validating node",
                 "details": "{str(ex)}",
-                "extra_info": {
-                    "exception_type": "{exception_type}",
-                    "traceback": "{traceback.format_tb(tb)}"
-                }
+                "extra_info": {"exception_type": "{exception_type}", "traceback": "{traceback.format_tb(tb)}"},
             }
             return self.__print__(info)
 
@@ -359,7 +351,7 @@ class TaskErrPaser:
                 "type": "prompt_outputs_failed_validation",
                 "message": "Prompt outputs failed validation",
                 "details": "{errors_list}",
-                "extra_info": {}
+                "extra_info": {},
             }
             return self.__print__(info)
 
@@ -375,8 +367,8 @@ class TaskErrPaser:
                     "exception_message": "{str(ex)}",
                     "exception_type": "{exception_type}",
                     "traceback": "{traceback.format_tb(tb)}",
-                    "linked_node": "{val}"
-                }
+                    "linked_node": "{val}",
+                },
             }
             return self.__print__(info)
 
@@ -424,18 +416,28 @@ class TaskErrPaser:
     def node_error_parse(self):
         if "node_errors" not in self.error_info:
             return
-        template = {"10": {"errors": [{"type": "value_not_in_list",
-                                       "message": "Value not in list",
-                                       "details": "vae_name: '' not in []",
-                                       "extra_info": {"input_name": "vae_name",
-                                                      "input_config": [[]],
-                                                      "received_value": ""}}
-                                      ],
-                           "dependent_outputs": ["9"],
-                           "class_type": "VAELoader"}}
+        template = {
+            "10": {
+                "errors": [
+                    {
+                        "type": "value_not_in_list",
+                        "message": "Value not in list",
+                        "details": "vae_name: '' not in []",
+                        "extra_info": {
+                            "input_name": "vae_name",
+                            "input_config": [[]],
+                            "received_value": "",
+                        },
+                    }
+                ],
+                "dependent_outputs": ["9"],
+                "class_type": "VAELoader",
+            }
+        }
         node_errors = self.error_info["node_errors"]
         import bpy
         from .utils import get_tree
+
         logger.error(_T("Node Error Parse"))
         WindowLogger.push_log(_T("Node Error Parse"))
         for sc in bpy.data.screens:
@@ -490,11 +492,9 @@ class Server:
         self.elapsed_time = time.time() - self.tstart
         return f"{_T('Time Elapsed')}: {self.elapsed_time:.2f}s"
 
-    def close(self):
-        ...
+    def close(self): ...
 
-    def exit_track(self):
-        ...
+    def exit_track(self): ...
 
     def wait_connect(self) -> bool:
         return True
@@ -554,6 +554,7 @@ class RemoteServer(Server):
         self.cs_support = "NO"
         try:
             import requests
+
             url = f"{get_url()}/cs/fetch_config"
             if WITH_PROXY:
                 req = requests.post(url=url, json={}, timeout=5)
@@ -577,16 +578,19 @@ class RemoteServer(Server):
             import requests
             from tempfile import gettempdir
             from urllib3.util import Timeout
+
             timeout = Timeout(connect=0.1, read=2)
             url = f"{get_url()}/cs/fetch_config"
             req_json = {"mtype": mtype, "models": [model]}
             if WITH_PROXY:
                 req = requests.post(url=url, json=req_json, timeout=timeout)
             else:
-                req = requests.post(url=url,
-                                    json=req_json,
-                                    proxies={"http": None, "https": None},
-                                    timeout=timeout)
+                req = requests.post(
+                    url=url,
+                    json=req_json,
+                    proxies={"http": None, "https": None},
+                    timeout=timeout,
+                )
             if req.status_code != 200:
                 return
             data = req.json().get(model, {})
@@ -611,6 +615,7 @@ class RemoteServer(Server):
 
     def wait_connect(self) -> bool:
         import requests
+
         try:
             if requests.get(f"{self.get_url()}/object_info", proxies={"http": None, "https": None}, timeout=10).status_code == 200:
                 self.server_connected = True
@@ -716,7 +721,7 @@ class LocalServer(Server):
         # cmd = " ".join([str(python), arg])
         # 加了 stderr后 无法获取 进度?
         # logger.debug(" ".join(args))
-        if system() == 'Linux':
+        if system() == "Linux":
             args = " ".join(args)
             args = f"source {pref.python_path}/activate; {args}"
             if Path("/opt/intel/oneapi/setvars.sh").exists():
@@ -755,6 +760,7 @@ class LocalServer(Server):
         while True:
             update_screen()
             import requests
+
             try:
                 if requests.get(f"{self.get_url()}/object_info", proxies={"http": None, "https": None}, timeout=5).status_code == 200:
                     get_pref().preview_method = get_pref().preview_method
@@ -782,6 +788,7 @@ class LocalServer(Server):
             logger.error("psutil not installed please disable proxy and try again!")
             return
         import psutil
+
         pid = int(pid)
         if sys.platform == "win32":
             try:
@@ -790,7 +797,7 @@ class LocalServer(Server):
                     return
                 process.kill()
                 # os.system(f'taskkill /F /IM {process.name()}')
-                os.system(f'taskkill /pid {pid} -t -f')
+                os.system(f"taskkill /pid {pid} -t -f")
             except psutil.NoSuchProcess:
                 return
         elif sys.platform == "darwin":
@@ -947,10 +954,12 @@ class TaskManager:
         def refresh_node():
             Timer.clear()  # timer may cause crash
             from .tree import rtnode_rereg
+
             t1 = time.time()
             rtnode_rereg()
             t2 = time.time()
             logger.info(_T("RegNode Time:") + f" {t2 - t1:.2f}s")
+
         if TaskManager.is_launching():
             return
 
@@ -961,7 +970,9 @@ class TaskManager:
             def update_screen_timer():
                 update_screen()
                 return 0.01
+
             import bpy
+
             bpy.app.timers.register(update_screen_timer)
             t1 = time.time()
             TaskManager.is_server_launching = True
@@ -972,6 +983,7 @@ class TaskManager:
             t2 = time.time()
             logger.info(_T("Launch Time:") + f" {t2 - t1:.2f}s")
             bpy.app.timers.unregister(update_screen_timer)
+
         if fake:
             job()
             refresh_node()
@@ -1026,8 +1038,8 @@ class TaskManager:
 
     @staticmethod
     def push_task(task, pre=None, post=None, tree=None):
-        logger.debug(_T('Add Task'))
-        WindowLogger.push_log(_T('Add Task'))
+        logger.debug(_T("Add Task"))
+        WindowLogger.push_log(_T("Add Task"))
         if not TaskManager.is_launched():
             TaskManager.put_error_msg(_T("Server Not Launched, Add Task Failed"))
             WindowLogger.push_log(_T("Server Not Launched, Add Task Failed"))
@@ -1059,6 +1071,7 @@ class TaskManager:
             request.urlopen(req)
         except URLError:
             ...
+
     # def get_temp_directory():
     #     req = request.Request(f"{TaskManager.server.get_url()}/cup/get_temp_directory", method="POST")
     #     try:
@@ -1072,6 +1085,7 @@ class TaskManager:
     def interrupt():
         from http.client import RemoteDisconnected
         import traceback
+
         req = request.Request(f"{TaskManager.server.get_url()}/interrupt", method="POST")
         try:
             request.urlopen(req)
@@ -1099,7 +1113,7 @@ class TaskManager:
             if TaskManager.task_queue.empty():
                 continue
             task = TaskManager.task_queue.get()
-            TaskManager.progress = {'value': 0, 'max': 1}
+            TaskManager.progress = {"value": 0, "max": 1}
             logger.debug(_T("Submit Task"))
             WindowLogger.push_log(_T("Submit Task"))
             TaskManager.cur_task = task
@@ -1143,11 +1157,15 @@ class TaskManager:
                 prompt = {node: task.get("prompt")[node][0] for node in task.get("prompt")}
 
                 cid = TaskManager.SessionId["SessionId"]
-                content = {"client_id": cid,
-                           "prompt": prompt,
-                           "extra_data": {
-                               "extra_pnginfo": {"workflow": task.get("workflow")}
-                           }}
+                content = {
+                    "client_id": cid,
+                    "prompt": prompt,
+                    "extra_data": {
+                        "extra_pnginfo": {
+                            "workflow": task.get("workflow"),
+                        }
+                    },
+                }
                 data = json.dumps(content).encode()
                 req = request.Request(f"{TaskManager.server.get_url()}/{api}", data=data)
                 History.put_history(task.get("workflow"))
@@ -1173,6 +1191,7 @@ class TaskManager:
                     TaskManager.mark_finished(with_noexe=False)
             else:
                 ...
+
         TaskManager.executer.submit(queue_task, task)
         # Thread(target=queue_task, args=(task, )).start()
 
@@ -1231,7 +1250,7 @@ class TaskManager:
     def try_play_finished_sound(msg_data):
         if not get_pref().play_finish_sound:
             return
-        is_queue_finished = msg_data.get('status', {}).get('exec_info', {}).get('queue_remaining', 1) == 0
+        is_queue_finished = msg_data.get("status", {}).get("exec_info", {}).get("queue_remaining", 1) == 0
         if not is_queue_finished:
             return
         # 尝试播放任务完成时音效
@@ -1258,6 +1277,7 @@ class TaskManager:
             msg = json.loads(message)
             try:
                 from .custom_support import crystools_monitor, cup_monitor
+
                 if crystools_monitor.process_msg(msg):
                     return
                 if cup_monitor.process_msg(msg):
@@ -1287,6 +1307,20 @@ class TaskManager:
                 ws.send(json.dumps({"type": "blender_data", "data": {"res": "ok"}}))
                 ws.send(json.dumps({"type": "get_data_from_blender_res", "data": true_data}))
                 return
+            elif mtype == "send_data_to_blender":
+                {
+                    "type": "send_data_to_blender",
+                    "data": {
+                        "images": [{"filename": "ComfyUI_temp_yfphg_00001_.png", "subfolder": "", "type": "temp"}],
+                        "models": "blender_inputs/active_model/active_model_7ed77187.glb",
+                        "videos": [{"filename": "ComfyUI_temp_yfphg_00001_.mp4", "subfolder": "video", "type": "temp"}],
+                        "audios": [{"filename": "ComfyUI_temp_yfphg_00002_.flac", "subfolder": "", "type": "temp"}],
+                        "texts": "blender_inputs/active_model/active_model_7ed77187.glb",
+                    },
+                }
+                logger.critical(f"Receive data from Blender: {data}")
+                Timer.put((load_data_from_comfyui, data))
+                return
             elif mtype == "status":
                 ...
             elif mtype != "progress":
@@ -1299,7 +1333,7 @@ class TaskManager:
                 setattr(tm, mtype, data)
 
             if mtype == "status":
-                {'status': {'exec_info': {'queue_remaining': 1}}, 'sid': 'ComfyUICUP'}
+                {"status": {"exec_info": {"queue_remaining": 1}}, "sid": "ComfyUICUP"}
                 SessionId["SessionId"] = data.get("sid", SessionId["SessionId"])
                 TaskManager.try_play_finished_sound(data)
             elif mtype == "executing":
@@ -1342,7 +1376,7 @@ class TaskManager:
                     _msg = data.get("exception_message", None)
                     node_id = data.get("node_id", None)
                     etype = data.get("exception_type", None)
-                    ['prompt_id', 'node_id', 'node_type', 'executed', 'exception_message', 'exception_type', 'traceback', 'current_inputs', 'current_outputs']
+                    ["prompt_id", "node_id", "node_type", "executed", "exception_message", "exception_type", "traceback", "current_inputs", "current_outputs"]
                     # _msg = msg.get("data", None)
                     # print(_msg.keys())
                     trace = data.get("traceback", None)
@@ -1350,9 +1384,9 @@ class TaskManager:
                         trace = "\n" + "".join([str(t) for t in trace])
                         logger.error(trace)
                     err_parser = TaskErrPaser()
-                    node_error = {"errors": [{"type": etype,
-                                              "message": _msg}],
-                                  }
+                    node_error = {
+                        "errors": [{"type": etype, "message": _msg}],
+                    }
                     err_parser.error_info = {"node_errors": {node_id: node_error}}
                     Timer.put(err_parser.node_error_parse)
                 logger.error(_msg)
@@ -1363,12 +1397,15 @@ class TaskManager:
                 logger.warning("%s: %s", _T("Execute Node Success"), data["node"])
                 WindowLogger.push_log("%s: %s", _T("Execute Node Success"), data["node"])
             elif mtype == "execution_interrupted":
-                {"type": "execution_interrupted",
-                 "data": {"prompt_id": "e1f3cbf9-4b83-47cf-95c3-9f9a76ab5508",
-                          "node_id": "3",
-                          "node_type": "KSampler",
-                          "executed": ["4", "7", "6", "5"]}
-                 }
+                {
+                    "type": "execution_interrupted",
+                    "data": {
+                        "prompt_id": "e1f3cbf9-4b83-47cf-95c3-9f9a76ab5508",
+                        "node_id": "3",
+                        "node_type": "KSampler",
+                        "executed": ["4", "7", "6", "5"],
+                    },
+                }
                 TaskManager.put_error_msg(_T("Execute Node Cancelled!"))
                 # tm.mark_finished(with_noexe=False)
             elif mtype == "execution_cached":
@@ -1377,6 +1414,7 @@ class TaskManager:
                 ...  # pass
             else:
                 logger.error(message)
+
         listen_addr = f"ws://{get_ip()}:{get_port()}/ws?clientId={SessionId['SessionId']}"
         ws = WebSocketApp(listen_addr, on_message=on_message)
         TaskManager.ws = ws
@@ -1387,6 +1425,7 @@ class TaskManager:
             # 备选方案
             from ..External.websockets.sync.client import connect
             from ..External.websockets import ConnectionClosedError
+
             ws = connect(listen_addr)
             TaskManager.ws = ws
             try:
