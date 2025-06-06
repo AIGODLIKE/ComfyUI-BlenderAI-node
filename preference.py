@@ -6,7 +6,7 @@ import re
 from pathlib import Path
 from platform import system
 
-from .utils import Icon, _T, FSWatcher
+from .utils import Icon, _T, FSWatcher, is_ipv4, is_ipv6
 from .External.lupawrapper import toggle_debug
 from .translations import ctxt
 from .kclogger import logger
@@ -485,8 +485,14 @@ class AddonPreference(bpy.types.AddonPreferences):
             ip[i] = str(min(255, max(0, v)))
         self["ip"] = ".".join(ip)
 
-    ip: bpy.props.StringProperty(default="127.0.0.1", name="IP", description="Service IP Address",
-                                 update=ip_check)
+    ip: bpy.props.StringProperty(default="127.0.0.1", name="IP", description="Service IP Address")
+    
+    def get_ip(self):
+        ip = self.ip
+        if is_ipv6(ip):
+            return f"[{ip}]"
+        return ip
+        
     port: bpy.props.IntProperty(default=8189, min=1000, max=65535, name="Port", description="Service Port")
 
     pref_dirs: bpy.props.CollectionProperty(type=PresetsDirDesc, name="Custom Presets", description="Custom Presets")
@@ -555,8 +561,21 @@ class AddonPreference(bpy.types.AddonPreferences):
         row.prop(self, "popup_scale", text_ctxt=ctxt)
         row.prop(self, "enable_hq_preview", text="", icon="IMAGE_BACKGROUND", text_ctxt=ctxt)
         row = layout.row(align=True)
+        text = "ERROR IP"
+        icon = "INTERNET"
+        if is_ipv6(self.ip):
+            text="IPV6"
+        elif is_ipv4(self.ip):
+            text="IPV4"
+        else:
+            row.alert = True
+            text = "ERROR IP"
+            icon = "INTERNET_OFFLINE"
         row.prop(self, "ip")
         row.prop(self, "port")
+        col = row.column()
+        col.alignment = "RIGHT"
+        col.label(text=text, icon=icon)
         row = layout.row(align=True, heading="Preview Image Size")
         row.prop(self, "preview_image_size_type", text="", text_ctxt=ctxt)
         col = row.column()

@@ -194,6 +194,25 @@ def hex2rgb(hex_val):
     return [int(hex_val[i:i + 2], 16) / 256 for i in (0, 2, 4)]
 
 
+@lru_cache(maxsize=16)
+def is_ipv6(ip):
+    import ipaddress
+    try:
+        ipaddress.IPv6Address(ip)
+        return True
+    except ValueError:
+        return False
+
+
+@lru_cache(maxsize=16)
+def is_ipv4(ip):
+    import ipaddress
+    try:
+        ipaddress.IPv4Address(ip)
+        return True
+    except ValueError:
+        return False
+
 class PrevMgr:
     __PREV__ = {}
 

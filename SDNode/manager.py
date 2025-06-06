@@ -505,7 +505,7 @@ class Server:
     def get_ip(self):
         if self.is_launched():
             return self.launch_ip
-        ip = get_pref().ip
+        ip = get_pref().get_ip()
         return ip
 
     def get_port(self):
