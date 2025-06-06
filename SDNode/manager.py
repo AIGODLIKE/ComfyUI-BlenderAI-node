@@ -1072,6 +1072,18 @@ class TaskManager:
         except URLError:
             ...
 
+    @staticmethod
+    def fetch_comfyui_queue():
+        if not TaskManager.is_launched():
+            return {}
+        req = request.Request(f"{TaskManager.server.get_url()}/bio/fetch/comfyui_queue", method="POST")
+        try:
+            res = request.urlopen(req)
+            res = json.loads(res.read().decode())
+            return res
+        except URLError:
+            ...
+        return {}
     # def get_temp_directory():
     #     req = request.Request(f"{TaskManager.server.get_url()}/cup/get_temp_directory", method="POST")
     #     try:
@@ -1319,7 +1331,7 @@ class TaskManager:
                     },
                 }
                 logger.critical(f"Receive data from Blender: {data}")
-                Timer.put((load_data_from_comfyui, data))
+                # Timer.put((load_data_from_comfyui, data))
                 return
             elif mtype == "status":
                 ...

@@ -4,7 +4,18 @@ import { api } from "../../scripts/api.js";
 const ext = {
   name: "AIGODLIKE.Blender-IO",
   init(app) {
-    return
+    const f = app.graph.onNodeAdded;
+    function onNodeAdded(node) {
+      let res = f?.call(this, node);
+      let blender_output_count = app.graph.nodes.filter(node => node.comfyClass == "BlenderOutputs").length;
+      if (blender_output_count > 1) {
+        alert("You can only have one BlenderOutputs node in your graph.");
+        app.graph.remove(node);
+      }
+      return res;
+    }
+    app.graph.onNodeAdded = onNodeAdded;
+    return;
     const serialize = LGraph.prototype.serialize;
     LGraph.prototype.serialize = function (...args) {
       const workflow = serialize.apply(this, args);
@@ -51,7 +62,7 @@ const ext = {
   },
   setup(app) {},
   beforeRegisterNodeDef(nodeType, nodeData, app) {
-    return
+    return;
     if (nodeType.comfyClass == "CombineInput") {
       const f = nodeType.prototype.serialize;
       nodeType.prototype.serialize = function () {
@@ -61,8 +72,14 @@ const ext = {
       };
     }
   },
+  registerCustomNodes(app) {
+    return;
+  },
+  loadedGraphNode(node, app) {
+    return;
+  },
   nodeCreated(node, app) {
-    return
+    return;
     if (node.comfyClass != "CombineInput") return;
     // console.log(node);
     // const gwp = Object.getOwnPropertyDescriptor;
@@ -99,6 +116,12 @@ const ext = {
     //   }
     // }
     // node.onSerialize = onSerialize;
+  },
+  beforeConfigureGraph(graph, missingNodeTypes) {
+    return;
+  },
+  afterConfigureGraph(missingNodeTypes) {
+    return;
   },
 };
 

@@ -32,6 +32,7 @@ from comfy.comfy_types import IO, FileLocator, ComfyNodeABC
 from comfy_api.input import ImageInput, AudioInput, VideoInput
 from comfy_api.util import VideoContainer, VideoCodec, VideoComponents
 from server import PromptServer
+from queue import Queue
 
 __CATEGORY__ = "Blender"
 
@@ -102,6 +103,30 @@ def insert_or_replace_vorbis_comment(flac_io, comment_dict):
 
 class CupException(Exception):
     pass
+
+
+class DataChain:
+    chain: Queue[dict] = Queue()
+    last_data: dict = None
+
+    @classmethod
+    def put(cls, data):
+        while not cls.chain.empty():
+            cls.chain.get()
+        cls.chain.put(data)
+
+    @classmethod
+    def get(cls, default=None) -> dict:
+        if cls.chain.empty():
+            return cls.last_data or default
+        cls.last_data = cls.chain.get()
+        return cls.last_data
+
+    @classmethod
+    def peek(cls, default=None):
+        if cls.chain.empty():
+            return cls.last_data or default
+        return cls.chain.queue[0]
 
 
 class BlenderInputs:
@@ -566,10 +591,24 @@ class BlenderOutputs:
             "videos": self.save_video(video, prompt=prompt, extra_pnginfo=extra_pnginfo),
             "audios": self.save_audio(audio, prompt=prompt, extra_pnginfo=extra_pnginfo),
             "texts": text,
+            "timestamp": [time.time_ns()],
         }
         # asyncio.set_event_loop(asyncio.new_event_loop())
         loop = asyncio.get_event_loop()
         loop.run_until_complete(self.send_data_ws_ex(data))
+        data["apngs"] = self.save_webp(video)
+        DataChain.put(
+            {
+                "origin": {
+                    "image": image,
+                    "model": model,
+                    "video": video,
+                    "audio": audio,
+                    "text": text,
+                },
+                "ui": data,
+            }
+        )
         return {"ui": data}
 
     async def send_data_ws_ex(self, data):
@@ -592,6 +631,8 @@ class BlenderOutputs:
             traceback.print_exc()
 
     def save_images(self, images, filename_prefix="ComfyUI", prompt=None, extra_pnginfo=None):
+        if images is None or len(images) == 0:
+            return []
         filename_prefix += self.prefix_append
         full_output_folder, filename, counter, subfolder, filename_prefix = folder_paths.get_save_image_path(filename_prefix, self.output_dir, images[0].shape[1], images[0].shape[0])
         results = list()
@@ -615,6 +656,8 @@ class BlenderOutputs:
         return results
 
     def save_video(self, video: VideoInput, filename_prefix="video/ComfyUI", format="mp4", codec="h264", prompt=None, extra_pnginfo=None):
+        if not video:
+            return []
         filename_prefix += self.prefix_append
         width, height = video.get_dimensions()
         full_output_folder, filename, counter, subfolder, filename_prefix = folder_paths.get_save_image_path(filename_prefix, self.output_dir, width, height)
@@ -637,6 +680,8 @@ class BlenderOutputs:
         return results
 
     def save_audio(self, audio, filename_prefix="ComfyUI", prompt=None, extra_pnginfo=None):
+        if not audio:
+            return []
         filename_prefix += self.prefix_append
         full_output_folder, filename, counter, subfolder, filename_prefix = folder_paths.get_save_image_path(filename_prefix, self.output_dir)
         results: list[FileLocator] = []
@@ -665,6 +710,133 @@ class BlenderOutputs:
             counter += 1
 
         return results
+
+    def save_apng(self, video: VideoInput, filename_prefix="ComfyUI"):
+        if not video:
+            return []
+        # components.images, components.audio, float(components.frame_rate)
+        components = video.get_components()
+        images = components.images
+        fps = components.frame_rate
+        filename_prefix += self.prefix_append
+        full_output_folder, filename, counter, subfolder, filename_prefix = folder_paths.get_save_image_path(filename_prefix, self.output_dir, images[0].shape[1], images[0].shape[0])
+        results = list()
+        pil_images = []
+        for image in images:
+            i = 255.0 * image.cpu().numpy()
+            img = Image.fromarray(np.clip(i, 0, 255).astype(np.uint8))
+            pil_images.append(img)
+
+        file = f"{filename}_{counter:05}_.png"
+        pil_images[0].save(os.path.join(full_output_folder, file), save_all=True, duration=int(1000.0 / fps), append_images=pil_images[1:])
+        results.append({"filename": file, "subfolder": subfolder, "type": self.type})
+
+        return results
+
+
+    def save_webp(self, video: VideoInput, filename_prefix="ComfyUI"):
+        if not video:
+            return []
+        # components.images, components.audio, float(components.frame_rate)
+        components = video.get_components()
+        images = components.images
+        fps = components.frame_rate
+        method = {"default": 4, "fastest": 0, "slowest": 6}.get("fastest", 4)
+        filename_prefix += self.prefix_append
+        full_output_folder, filename, counter, subfolder, filename_prefix = folder_paths.get_save_image_path(filename_prefix, self.output_dir, images[0].shape[1], images[0].shape[0])
+        results = []
+        pil_images = []
+        for image in images:
+            i = 255. * image.cpu().numpy()
+            img = Image.fromarray(np.clip(i, 0, 255).astype(np.uint8))
+            pil_images.append(img)
+
+        metadata = pil_images[0].getexif()
+
+        num_frames = len(pil_images)
+
+        c = len(pil_images)
+        for i in range(0, c, num_frames):
+            file = f"{filename}_{counter:05}_.webp"
+            pil_images[i].save(os.path.join(full_output_folder, file), save_all=True, duration=int(1000.0/fps), append_images=pil_images[i + 1:i + num_frames], exif=metadata, lossless=True, quality=80, method=method)
+            results.append({
+                "filename": file,
+                "subfolder": subfolder,
+                "type": self.type
+            })
+            counter += 1
+
+        return results
+
+class ComfyUIInputs:
+    timeout = 30
+
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "hidden": {
+                "unique_id": "UNIQUE_ID",
+                "prompt": "PROMPT",
+                "extra_pnginfo": "EXTRA_PNGINFO",
+            }
+        }
+
+    CATEGORY = __CATEGORY__
+
+    RETURN_TYPES = (
+        IO.IMAGE,
+        IO.STRING,
+        IO.VIDEO,
+        IO.AUDIO,
+        IO.STRING,
+    )
+
+    RETURN_NAMES = (
+        "image",
+        "model",
+        "video",
+        "audio",
+        "text",
+    )
+
+    FUNCTION = "build_inputs"
+    unique_id = -1
+
+    def build_inputs(self, prompt=None, unique_id=None, extra_pnginfo=None):
+        ori_default = {
+            "image": None,
+            "model": "",
+            "video": None,
+            "audio": None,
+            "text": "",
+        }
+        default = {
+            "origin": ori_default,
+            "ui": {},
+        }
+        res = DataChain.get(default=default).get("origin", ori_default)
+        return list(res.values())
+
+    @classmethod
+    def IS_CHANGED(s, prompt=None, unique_id=None, extra_pnginfo=None):
+        return time.time()
+
+
+@PromptServer.instance.routes.post("/bio/fetch/comfyui_queue")
+async def fetch_comfyui_queue(request: web.Request):
+    ori_default = {
+        "image": None,
+        "model": "",
+        "video": None,
+        "audio": None,
+        "text": "",
+    }
+    default = {
+        "origin": ori_default,
+        "ui": {},
+    }
+    res = DataChain.peek(default).get("ui", {})
+    return web.json_response(res)
 
 
 @PromptServer.instance.routes.post("/upload/blender_inputs")
@@ -748,13 +920,15 @@ def compare_data_hash(filepath, data):
 
 
 NODE_CLASS_MAPPINGS = {
-    "Blender Inputs": BlenderInputs,
-    "Blender Outputs": BlenderOutputs,
+    "BlenderInputs": BlenderInputs,
+    "BlenderOutputs": BlenderOutputs,
+    "ComfyUIInputs": ComfyUIInputs,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "Blender Inputs": "Blender Inputs",
-    "Blender Outputs": "Blender Outputs",
+    "BlenderInputs": "Blender Inputs",
+    "BlenderOutputs": "Blender Outputs",
+    "ComfyUIInputs": "ComfyUI Inputs",
 }
 
 WEB_DIRECTORY = "./web"
