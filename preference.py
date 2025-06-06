@@ -6,7 +6,7 @@ import re
 from pathlib import Path
 from platform import system
 
-from .utils import Icon, _T, FSWatcher, is_ipv4, is_ipv6
+from .utils import Icon, _T, FSWatcher, is_ipv4, is_ipv6, is_domain
 from .External.lupawrapper import toggle_debug
 from .translations import ctxt
 from .kclogger import logger
@@ -567,6 +567,8 @@ class AddonPreference(bpy.types.AddonPreferences):
             text="IPV6"
         elif is_ipv4(self.ip):
             text="IPV4"
+        elif is_domain(self.ip):
+            text="DOMAIN"
         else:
             row.alert = True
             text = "ERROR IP"

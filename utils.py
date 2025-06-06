@@ -213,6 +213,14 @@ def is_ipv4(ip):
     except ValueError:
         return False
 
+
+@lru_cache(maxsize=16)
+def is_domain(ip):
+    import re
+    return re.match(r"^(?!-)[A-Za-z0-9-]{1,63}(?<!-)(\.[A-Za-z0-9-]{1,63}(?<!-))*\.[A-Za-z]{2,}$", ip)
+    return re.match(r"^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9][a-z0-9-]{0,61}[a-z0-9]$", ip)
+
+
 class PrevMgr:
     __PREV__ = {}
 
