@@ -138,6 +138,11 @@ def find_area_by_type(screen: bpy.types.Screen, area_type, index) -> bpy.types.A
         return areas[index]
     return None
 
+def find_region_by_type(area: bpy.types.Area, region_type) -> bpy.types.Region:
+    for region in area.regions:
+        if region.type == region_type:
+            return region
+    return None
 
 def update_screen():
     try:

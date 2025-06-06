@@ -9,7 +9,7 @@ from mathutils import Vector
 from bpy.types import Context, Event
 from .tree import CFNodeTree, TREE_TYPE
 from ..translations import ctxt
-from ..utils import Timer, _T, get_ai_mat_tree, set_ai_mat_tree, find_area_by_type, find_areas_of_type
+from ..utils import Timer, _T, get_ai_mat_tree, set_ai_mat_tree, find_area_by_type, find_areas_of_type, find_region_by_type
 
 
 class AIMatSolutionLoad(bpy.types.Operator):
@@ -873,11 +873,15 @@ class ImageProjectOnObject(bpy.types.Operator):
             proj_mtl = self.create_mtl_pbr(f"Material_Name_From_Project_Image_{hash(act_obj)}", proj_img)
             act_obj.data.materials.append(material=proj_mtl, )
             area = find_area_by_type(bpy.context.screen, 'VIEW_3D', 0)
+            if not area:
+                self.report({"ERROR"}, "No View3D Window Found!")
+                return {"CANCELLED"}
             with bpy.context.temp_override(area=area, region=area.regions[0], ):
                 bpy.ops.view3d.view_camera()
             bpy.ops.object.mode_set("INVOKE_DEFAULT", mode='EDIT')
             bpy.ops.mesh.select_all("INVOKE_DEFAULT", action='SELECT')
-            with bpy.context.temp_override(area=area, region=area.regions[7], ):
+            window_region = find_region_by_type(area, "WINDOW")
+            with bpy.context.temp_override(area=area, region=window_region, ):
                 bpy.ops.uv.project_from_view("INVOKE_DEFAULT", )
             context.object.active_material_index = len(act_obj.material_slots)
             bpy.ops.object.material_slot_assign("INVOKE_DEFAULT", )
