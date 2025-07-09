@@ -651,8 +651,9 @@ def get_pref() -> AddonPreference:
 
 @bpy.app.handlers.persistent
 def pref_dirs_init(_):
-    # 将pref_dirs 添加到 FSWatcher
     pref = get_pref()
+    if pref is not None:
+        toggle_debug(pref.debug)
 
     for item in pref.pref_dirs:
         logger.info("FS Register -> %s", item.path)
@@ -673,7 +674,29 @@ def pref_register():
     bpy.app.handlers.load_post.append(pref_dirs_init)
     reg()
     toggle_debug(get_pref().debug)
-
+    comfyui_base = os.environ.get('COMFYUI_BASE')
+    logger.info(f"comfyui_base: {comfyui_base}")
+    if comfyui_base:
+        pref = get_pref()
+        default_model_path = Path(__file__).parent / "ComfyUI"
+        current_model_path = Path(pref.model_path)
+        logger.info(f"default_model_path: {default_model_path}")
+        logger.info(f"Current pref.model_path: {current_model_path}")
+        logger.info(f"Current pref.python_path: {pref.python_path}")
+        logger.info(f"Resolved default_model_path: {default_model_path.resolve()}")
+        logger.info(f"Resolved current_model_path: {current_model_path.resolve()}")
+        if current_model_path.resolve() == default_model_path.resolve():
+            new_model_path = Path(comfyui_base) / 'comfyui'
+            pref.model_path = str(new_model_path)
+            logger.info(f"Set pref.model_path to: {new_model_path}")
+        else:
+            logger.info("pref.model_path not updated: not equal to default")
+        if not pref.python_path:
+            new_python_path = Path(comfyui_base) / 'python_embedded'
+            pref.python_path = str(new_python_path)
+            logger.info(f"Set pref.python_path to: {new_python_path}")
+        else:
+            logger.info("pref.python_path not updated: already set")
 
 def pref_unregister():
     unreg()
