@@ -594,7 +594,11 @@ class BlenderOutputs:
             "timestamp": [time.time_ns()],
         }
         # asyncio.set_event_loop(asyncio.new_event_loop())
-        loop = asyncio.get_event_loop()
+        try:
+            loop = asyncio.get_event_loop()
+        except Exception:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
         loop.run_until_complete(self.send_data_ws_ex(data))
         data["apngs"] = self.save_webp(video)
         DataChain.put(
