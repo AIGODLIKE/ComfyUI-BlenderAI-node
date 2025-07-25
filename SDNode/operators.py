@@ -325,6 +325,7 @@ class AIMatSolutionLoad(bpy.types.Operator):
         sce.view_settings.view_transform = "Standard"
         sce.cycles.samples = 16
         sce.render.filepath = final_path.as_posix()
+        sce.render.image_settings.file_format = "PNG"
         sce.world = None
         bpy.ops.render.render(scene=sce.name, layer=view_layer.name, write_still=True)
         sce.view_layers.remove(view_layer)
@@ -362,6 +363,7 @@ class AIMatSolutionLoad(bpy.types.Operator):
         sce.view_settings.view_transform = 'Standard'
         sce.cycles.samples = 16
         sce.render.filepath = final_path.as_posix()
+        sce.render.image_settings.file_format = "PNG"
         world = bpy.data.worlds.new("._")
         sce.world = world
         world.use_nodes = True
@@ -401,6 +403,7 @@ class AIMatSolutionLoad(bpy.types.Operator):
         sce.view_settings.view_transform = "Standard"
         sce.cycles.samples = 16
         sce.render.filepath = final_path.as_posix()
+        sce.render.image_settings.file_format = "PNG"
         bpy.ops.render.render(scene=sce.name, write_still=True)
         bpy.data.scenes.remove(sce)
 

@@ -135,6 +135,17 @@ class BlenderInputs:
     @classmethod
     def INPUT_TYPES(s):
         return {
+            "optional": {
+                "frame": (
+                    IO.INT,
+                    {
+                        "default": 1,
+                        "min": 0,
+                        "max": 1048574,
+                        "tooltip": "帧.",
+                    },
+                ),
+            },
             "hidden": {
                 "unique_id": "UNIQUE_ID",
                 "prompt": "PROMPT",
@@ -190,13 +201,6 @@ class BlenderInputs:
     #                     "tooltip": "当前活动模型路径.",
     #                 },
     #             ),
-    #             "custom_image": (
-    #                 IO.IMAGE,
-    #                 {
-    #                     "default": None,
-    #                     "tooltip": "自定义图像.",
-    #                 },
-    #             ),
     #         },
     #     }
 
@@ -208,7 +212,7 @@ class BlenderInputs:
         IO.IMAGE,
         IO.IMAGE,
         IO.STRING,
-        IO.IMAGE,
+        IO.INT,
     )
 
     RETURN_NAMES = (
@@ -217,13 +221,13 @@ class BlenderInputs:
         "depth_viewport",
         "mist_viewport",
         "active_model",
-        "custom_image",
+        "frame",
     )
 
     FUNCTION = "build_inputs"
     unique_id = -1
 
-    def build_inputs(self, prompt=None, unique_id=None, extra_pnginfo=None):
+    def build_inputs(self, frame=0, prompt=None, unique_id=None, extra_pnginfo=None):
         # print("Combined Outputs: ", prompt, unique_id, extra_pnginfo)
         _prompt = {
             "20": {
@@ -306,7 +310,6 @@ class BlenderInputs:
                             {"name": "depth_viewport", "type": "IMAGE", "links": None},
                             {"name": "mist_viewport", "type": "IMAGE", "links": None},
                             {"name": "active_model", "type": "STRING", "links": [18]},
-                            {"name": "custom_image", "type": "IMAGE", "links": None},
                         ],
                         "properties": {"Node name for S&R": "CombineInput"},
                         "widgets_values": [["active_model"]],
@@ -360,10 +363,10 @@ class BlenderInputs:
                 node_outputs[output["name"]] = output
         res = []
         for data_name in self.RETURN_NAMES:
-            res.append(self.get_data_from_blender(data_name, node_outputs))
+            res.append(self.get_data_from_blender(data_name, frame, node_outputs))
         return res
 
-    def get_data_from_blender(self, data_name, node_outputs: dict[str, str]):
+    def get_data_from_blender(self, data_name, frame, node_outputs: dict[str, str]):
         """
         通过网络向Blender发送请求并获取数据
         """
@@ -374,10 +377,14 @@ class BlenderInputs:
         print("Called get_data_from_blender: ", data_name)
         asyncio.set_event_loop(asyncio.new_event_loop())
         loop = asyncio.get_event_loop()
-        return loop.run_until_complete(self.get_data_ws_ex(data_name))
-        return self.get_data_ws_ex(data_name)
+        data_req = {
+            "data_name": data_name,
+            "frame": frame,
+        }
+        return loop.run_until_complete(self.get_data_ws_ex(data_req))
+        return self.get_data_ws_ex(data_req)
 
-    async def get_data_ws_ex(self, data_name):
+    async def get_data_ws_ex(self, data_req: dict):
         ws: web.WebSocketResponse = None
         # 场景连接blender的ws客户端
         for sid in PromptServer.instance.sockets:
@@ -388,9 +395,7 @@ class BlenderInputs:
             return None
         request_data = {
             "unique_id": self.unique_id,
-            "message": {
-                "data_name": data_name,
-            },
+            "message": data_req,
             "event": "run",
         }
         message = {
@@ -453,7 +458,7 @@ class BlenderInputs:
         full_data_path = Path(upload_dir, data_path)
         if full_data_path.is_dir() or not full_data_path.exists():
             return None
-        if data_name == "active_model":
+        if data_req.get("data_name") == "active_model":
             return data_path.as_posix()
         else:
             img = Image.open(full_data_path.as_posix())
@@ -508,7 +513,7 @@ class BlenderInputs:
         return resp_json.get("message", {}).get("data_result", None)
 
     @classmethod
-    def IS_CHANGED(s, prompt=None, unique_id=None, extra_pnginfo=None):
+    def IS_CHANGED(s, frame=0, prompt=None, unique_id=None, extra_pnginfo=None):
         return time.time()
 
 
@@ -583,7 +588,7 @@ class BlenderOutputs:
         # print(f"\t Model Type: {type(model)}")
         # print(f"\t Video Type: {type(video)}")
         # print(f"\t Audio Type: {type(audio)}")
-        # print(f"\t  Text Type: {type(text)}")
+        # print(f"\t  Text Type: {type(text)} ")
         # 发送数据到blender服务器
         data = {
             "images": self.save_images(image, prompt=prompt, extra_pnginfo=extra_pnginfo),
@@ -613,6 +618,7 @@ class BlenderOutputs:
                 "ui": data,
             }
         )
+        print(f"FFFF: {data}")
         return {"ui": data}
 
     async def send_data_ws_ex(self, data):
@@ -737,7 +743,6 @@ class BlenderOutputs:
 
         return results
 
-
     def save_webp(self, video: VideoInput, filename_prefix="ComfyUI"):
         if not video:
             return []
@@ -751,7 +756,7 @@ class BlenderOutputs:
         results = []
         pil_images = []
         for image in images:
-            i = 255. * image.cpu().numpy()
+            i = 255.0 * image.cpu().numpy()
             img = Image.fromarray(np.clip(i, 0, 255).astype(np.uint8))
             pil_images.append(img)
 
@@ -762,15 +767,12 @@ class BlenderOutputs:
         c = len(pil_images)
         for i in range(0, c, num_frames):
             file = f"{filename}_{counter:05}_.webp"
-            pil_images[i].save(os.path.join(full_output_folder, file), save_all=True, duration=int(1000.0/fps), append_images=pil_images[i + 1:i + num_frames], exif=metadata, lossless=True, quality=80, method=method)
-            results.append({
-                "filename": file,
-                "subfolder": subfolder,
-                "type": self.type
-            })
+            pil_images[i].save(os.path.join(full_output_folder, file), save_all=True, duration=int(1000.0 / fps), append_images=pil_images[i + 1 : i + num_frames], exif=metadata, lossless=True, quality=80, method=method)
+            results.append({"filename": file, "subfolder": subfolder, "type": self.type})
             counter += 1
 
         return results
+
 
 class ComfyUIInputs:
     timeout = 30

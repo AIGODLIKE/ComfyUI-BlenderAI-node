@@ -458,9 +458,10 @@ def set_setting():
         r.image_settings.color_mode,
         r.image_settings.compression,
         bpy.context.scene.view_settings.view_transform,
+        r.image_settings.file_format,
     )
     yield r
-    r.filepath, r.image_settings.color_mode, r.image_settings.compression, bpy.context.scene.view_settings.view_transform = oldsetting
+    r.filepath, r.image_settings.color_mode, r.image_settings.compression, bpy.context.scene.view_settings.view_transform, r.image_settings.file_format = oldsetting
 
 
 def gen_mask(self):
@@ -474,6 +475,7 @@ def gen_mask(self):
     bpy.context.scene.use_nodes = True
     nt = bpy.context.scene.node_tree
     with set_setting() as r:
+        bpy.context.scene.render.image_settings.file_format = "PNG"
         if mode in {"Collection", "Object"}:
             bpy.context.view_layer.use_pass_cryptomatte_object = True
             if mode == "Collection":
@@ -602,32 +604,29 @@ def calc_data_from_blender(request_data: dict) -> dict:
     uid = uuid.uuid4().hex[:8]
     out_dir = Path(gettempdir()) / f"BlenderAI_Inputs/{data_name}"
     out_dir.mkdir(parents=True, exist_ok=True)
+
+    def set_frame(f):
+        bpy.context.scene.frame_set(f)
+    
+    frame = message.get("frame", -999)
+    old_frame = bpy.context.scene.frame_current
+    if frame != -999:
+        Timer.wait_run(set_frame)(frame)
+    res = calc_data_from_blender_do(data_name, out_dir, uid)
+    if frame != -999:
+        Timer.wait_run(set_frame)(old_frame)
+    return res
+
+def calc_data_from_blender_do(data_name, out_dir, uid) -> dict:
     if data_name == "camera_viewport":
-        data_path = out_dir / f"cam_view_{uid}.png"
-
-        def render():
-            logger.warning("%s->%s", _T("Render"), data_path.as_posix())
-            old = bpy.context.scene.render.filepath
-            bpy.context.scene.render.filepath = data_path.as_posix()
-
-            # 场景相机可能为空
-            if not bpy.context.scene.camera:
-                err_info = _T("No Camera in Scene") + " -> " + bpy.context.scene.name
-                raise Exception(err_info)
-            bpy.ops.render.render(write_still=True)
-            bpy.context.scene.render.filepath = old
-
-        Timer.wait_run(render)()
-        # 上传图片
-        upload_status = upload_data(data_name, data_path)
-        return upload_status
-    elif data_name == "render_viewport":
         data_path = out_dir / f"render_view_{uid}.png"
 
         def render():
             logger.warning("%s->%s", _T("Render"), data_path.as_posix())
             old = bpy.context.scene.render.filepath
+            old_fmt = bpy.context.scene.render.image_settings.file_format
             bpy.context.scene.render.filepath = data_path.as_posix()
+            bpy.context.scene.render.image_settings.file_format = "PNG"
 
             # 场景相机可能为空
             if not bpy.context.scene.camera:
@@ -635,6 +634,29 @@ def calc_data_from_blender(request_data: dict) -> dict:
                 raise Exception(err_info)
             bpy.ops.render.opengl(write_still=True, view_context=True)
             bpy.context.scene.render.filepath = old
+            bpy.context.scene.render.image_settings.file_format = old_fmt
+
+        Timer.wait_run(render)()
+        # 上传图片
+        upload_status = upload_data(data_name, data_path)
+        return upload_status
+    elif data_name == "render_viewport":
+        data_path = out_dir / f"cam_view_{uid}.png"
+
+        def render():
+            logger.warning("%s->%s", _T("Render"), data_path.as_posix())
+            old = bpy.context.scene.render.filepath
+            old_fmt = bpy.context.scene.render.image_settings.file_format
+            bpy.context.scene.render.filepath = data_path.as_posix()
+            bpy.context.scene.render.image_settings.file_format = "PNG"
+
+            # 场景相机可能为空
+            if not bpy.context.scene.camera:
+                err_info = _T("No Camera in Scene") + " -> " + bpy.context.scene.name
+                raise Exception(err_info)
+            bpy.ops.render.render(write_still=True)
+            bpy.context.scene.render.filepath = old
+            bpy.context.scene.render.image_settings.file_format = old_fmt
 
         Timer.wait_run(render)()
         # 上传图片
@@ -649,8 +671,10 @@ def calc_data_from_blender(request_data: dict) -> dict:
             logger.warning("%s->%s", _T("Render"), data_path.as_posix())
             old = bpy.context.scene.render.filepath
             old_z = bpy.context.view_layer.use_pass_z
+            old_fmt = bpy.context.scene.render.image_settings.file_format
             bpy.context.view_layer.use_pass_z = True
             bpy.context.scene.render.filepath = data_path.as_posix()
+            bpy.context.scene.render.image_settings.file_format = "PNG"
             bpy.context.scene.use_nodes = True
 
             nt = bpy.context.scene.node_tree
@@ -665,6 +689,7 @@ def calc_data_from_blender(request_data: dict) -> dict:
                 nt.nodes.remove(render_layer)
             bpy.context.scene.render.filepath = old
             bpy.context.view_layer.use_pass_z = old_z
+            bpy.context.scene.render.image_settings.file_format = old_fmt
 
         Timer.wait_run(render)()
         upload_status = upload_data(data_name, data_path)
@@ -676,8 +701,10 @@ def calc_data_from_blender(request_data: dict) -> dict:
             logger.warning("%s->%s", _T("Render"), data_path.as_posix())
             old = bpy.context.scene.render.filepath
             old_mist = bpy.context.view_layer.use_pass_mist
+            old_fmt = bpy.context.scene.render.image_settings.file_format
             bpy.context.view_layer.use_pass_mist = True
             bpy.context.scene.render.filepath = data_path.as_posix()
+            bpy.context.scene.render.image_settings.file_format = "PNG"
             bpy.context.scene.use_nodes = True
 
             nt = bpy.context.scene.node_tree
@@ -692,6 +719,7 @@ def calc_data_from_blender(request_data: dict) -> dict:
                 nt.nodes.remove(render_layer)
             bpy.context.scene.render.filepath = old
             bpy.context.view_layer.use_pass_mist = old_mist
+            bpy.context.scene.render.image_settings.file_format = old_fmt
 
         Timer.wait_run(render)()
         upload_status = upload_data(data_name, data_path)

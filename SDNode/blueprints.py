@@ -1425,15 +1425,19 @@ class Preview3D(BluePrintBase):
         def f(self, model_paths):
             from tempfile import gettempdir
             save_dir = Path(gettempdir()).joinpath("ComfyUI_Temp_Models")
-            save_dir.mkdir(exist_ok=True)
+            save_dir.mkdir(parents=True, exist_ok=True)
             for file_name in model_paths:
                 if not file_name:
                     continue
                 save_path = save_dir.joinpath(file_name)
-                save_path.parent.mkdir(exist_ok=True)
+                save_path.parent.mkdir(parents=True, exist_ok=True)
                 suffix = save_path.suffix
                 # view?filename=meshsave_00001_.glb&type=output&subfolder=3d
-                data = {"filename": file_name, "subfolder": "3d", "type": "output"}
+                if "/" in file_name:
+                    folder, name = file_name.rsplit("/", 1)
+                else:
+                    folder, name = "", file_name
+                data = {"filename": name, "subfolder": folder, "type": "output"}
                 obj = cache_to_local(data, suffix=suffix, save_path=save_path).as_posix()
                 # active_object = bpy.context.object
                 if suffix == ".obj":
@@ -2052,7 +2056,9 @@ class 输入图像(BluePrintBase):
             s.ensure_img_path(self)
             logger.warning("%s->%s", _T('Render'), self.image)
             old = bpy.context.scene.render.filepath
+            old_fmt = bpy.context.scene.render.image_settings.file_format
             bpy.context.scene.render.filepath = self.image
+            bpy.context.scene.render.image_settings.file_format = "PNG"
 
             if self.mode == "视口":
                 # 场景相机可能为空
@@ -2061,6 +2067,7 @@ class 输入图像(BluePrintBase):
                     raise Exception(err_info)
                 bpy.ops.render.opengl(write_still=True, view_context=get_pref().view_context)
                 bpy.context.scene.render.filepath = old
+                bpy.context.scene.render.image_settings.file_format = old_fmt
                 return
             if (cam := bpy.context.scene.camera) and (gpos := cam.get("SD_Mask", [])):
                 try:
@@ -2089,6 +2096,7 @@ class 输入图像(BluePrintBase):
             if self.mode == "渲染":
                 bpy.context.scene.frame_set(current_frame)
             bpy.context.scene.render.filepath = old
+            bpy.context.scene.render.image_settings.file_format = old_fmt
 
         @Timer.wait_run
         def r():
@@ -2106,7 +2114,7 @@ class 输入图像(BluePrintBase):
         if p.suffix.lower() not in [".png"]:
             p = p.with_suffix(".png")
         try:
-            p.parent.mkdir(exist_ok=True)
+            p.parent.mkdir(parents=True, exist_ok=True)
         except BaseException:
             ...
         self.image = p.as_posix()
@@ -3068,7 +3076,7 @@ class SaveModel(BluePrintBase):
         def f(self, model_paths):
             from tempfile import gettempdir
             save_dir = Path(gettempdir()).joinpath("ComfyUI_Temp_Models")
-            save_dir.mkdir(exist_ok=True)
+            save_dir.mkdir(parents=True, exist_ok=True)
             for filename in model_paths:
                 if not filename:
                     continue
@@ -3077,16 +3085,21 @@ class SaveModel(BluePrintBase):
                     WindowLogger.push_log(f"Not process {filename}")
                     continue
                 
-                data = {"filename": filename, "subfolder": "3d", "type": "output"}
+                if "/" in filename:
+                    folder, name = filename.rsplit("/", 1)
+                else:
+                    folder, name = "", filename
+                data = {"filename": name, "subfolder": folder, "type": "output"}
+                # data = {"filename": filename, "subfolder": "3d", "type": "output"}
 
                 if self.mode == "Save":
-                    save_path = Path(self.output_dir).joinpath(self.filename).with_suffix(".glb")
+                    save_path = Path(self.output_dir).joinpath(self.filename_prefix).with_suffix(".glb")
                     save_path = get_next_filename(save_path)
                     cache_to_local(data, suffix=".glb", save_path=save_path)
                     continue
 
                 save_path = save_dir.joinpath(filename)
-                save_path.parent.mkdir(exist_ok=True)
+                save_path.parent.mkdir(parents=True, exist_ok=True)
                 suffix = save_path.suffix
                 # view?filename=meshsave_00001_.glb&type=output&subfolder=3d
                 model_path = cache_to_local(data, suffix=suffix, save_path=save_path).as_posix()
