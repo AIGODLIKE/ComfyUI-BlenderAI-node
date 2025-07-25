@@ -13,6 +13,7 @@ from pathlib import Path
 from platform import system
 from copy import deepcopy
 from bpy.types import Context, UILayout
+from threading import Thread
 
 from .nodegroup import LABEL_TAG, SOCK_TAG, SDNGroup
 from .utils import gen_mask, THelper, WindowLogger
@@ -20,12 +21,12 @@ from .plugins.animatedimageplayer import AnimatedImagePlayer as AIP
 from .nodes import NodeBase, Ops_Add_SaveImage, Ops_Link_Mask, Ops_Active_Tex, Set_Render_Res, Ops_Switch_Socket_Widget
 from .nodes import name2path, get_icon_path, Images
 from .operators import PreviewImageInPlane, ImageAsPBRMat, ImageProjectOnObject
-from ..SDNode.manager import Task
+from ..SDNode.manager import Task, TaskManager
 from ..timer import Timer
 from ..preference import get_pref
 from ..kclogger import logger
 from ..utils import _T, Icon, update_screen, PrevMgr, rgb2hex, hex2rgb
-from ..translations import get_reg_name, get_ori_name
+from ..translations import ComfyPropNameTranslate
 
 
 def get_next_filename(save_path, max_len=4):
@@ -159,6 +160,12 @@ def link_get(d: dict, path: str):
 class BluePrintBase:
     comfyClass = ""
 
+    def get_prop_reg_name(self, inp_name):
+        return ComfyPropNameTranslate.get_prop_reg_name(self.comfyClass, inp_name)
+    
+    def get_prop_ori_name(self, inp_name):
+        return ComfyPropNameTranslate.get_prop_ori_name(self.comfyClass, inp_name)
+
     def getattr(s, self, prop_name):
         meta = self.get_meta(prop_name)
         v = getattr(self, prop_name)
@@ -202,6 +209,7 @@ class BluePrintBase:
                 layout.label(text=line, text_ctxt=self.get_ctxt())
             row = draw_prop_with_link(layout, self, prop, swsock, swdisp)
             row.operator("sdn.enable_mlt", text="", icon="TEXT")
+            op = row.operator("sdn.paste_clipboard_to_mlt", text="", icon="PASTEDOWN").socket_name = prop
             if not swdisp:
                 return True
             stat = self.mlt_stats.get(prop)
@@ -363,7 +371,7 @@ class BluePrintBase:
                 continue
             if not (default := inp.get("widget", {}).get("config", {}).get("default")):
                 continue
-            # reg_name = get_reg_name(name)
+            # reg_name = s.get_prop_reg_name(name)
             # s.setattr(self, reg_name, default)
             s.try_set_widget(self, name, default)
 
@@ -371,7 +379,7 @@ class BluePrintBase:
         for inp_name in self.inp_types:
             if not self.is_base_type(inp_name):
                 continue
-            reg_name = get_reg_name(inp_name)
+            reg_name = s.get_prop_reg_name(inp_name)
             try:
                 v = data["widgets_values"].pop(0)
             except KeyError:
@@ -384,7 +392,7 @@ class BluePrintBase:
     def try_set_widget(s, self: NodeBase, inp_name, v):
         if not self.is_base_type(inp_name):
             return
-        reg_name = get_reg_name(inp_name)
+        reg_name = s.get_prop_reg_name(inp_name)
         try:
             s.setattr(self, reg_name, v)
             return True
@@ -431,10 +439,10 @@ class BluePrintBase:
         for inp_name in self.inp_types:
             if not self.is_base_type(inp_name):
                 continue
-            widgets_values.append(s.getattr(self, get_reg_name(inp_name)))
+            widgets_values.append(s.getattr(self, s.get_prop_reg_name(inp_name)))
         for inp in self.inputs:
             inp_name = inp.name
-            ori_name = get_ori_name(inp_name)
+            ori_name = s.get_prop_ori_name(inp_name)
             md = self.get_meta(ori_name)
             inp_info = {"name": ori_name,
                         "type": inp.bl_idname,
@@ -519,7 +527,7 @@ class BluePrintBase:
         1. 当为接口时返回连接情况
         2. 当为widget时返回widget值
         """
-        reg_name = get_reg_name(inp_name)
+        reg_name = s.get_prop_reg_name(inp_name)
         inp = self.get_input(inp_name)
         # ---------------- widget ----------------
         # 1. 未在输入接口中
@@ -592,7 +600,7 @@ class BluePrintBase:
             # inp = self.inp_types[inp_name]
             s._serialize_input(self, inp_name, inputs, parent)
             continue
-            reg_name = get_reg_name(inp_name)
+            reg_name = s.get_prop_reg_name(inp_name)
             if inp := self.inputs.get(reg_name):
                 link = self.get_from_link(inp)
                 if link:
@@ -1090,7 +1098,7 @@ class PrimitiveNode(BluePrintBase):
                 return True
             if self.get_blueprints().draw_button(node, context, layout, self.prop, swsock=False, swdisp=swdisp):
                 return True
-            layout.prop(node, get_reg_name(self.prop))
+            layout.prop(node, s.get_prop_reg_name(self.prop))
         return True
 
     def dump_specific(s, self: NodeBase = None, cfg=None, selected_only=False, **kwargs):
@@ -1115,9 +1123,9 @@ class PrimitiveNode(BluePrintBase):
     def serialize_pre_specific(s, self: NodeBase):
         if not self.outputs[0].is_linked:
             return
-        prop = s.getattr(self.outputs[0].links[0].to_node, get_reg_name(self.prop))
+        prop = s.getattr(self.outputs[0].links[0].to_node, s.get_prop_reg_name(self.prop))
         for link in self.outputs[0].links[1:]:
-            setattr(link.to_node, get_reg_name(link.to_socket.name), prop)
+            setattr(link.to_node, s.get_prop_reg_name(link.to_socket.name), prop)
 
 
 class ConditioningMultiCombine(BluePrintBase):
@@ -1127,11 +1135,11 @@ class ConditioningMultiCombine(BluePrintBase):
         inputcount_config = ndesc.get("input", {}).get("required", {}).get("inputcount", {})
         if not inputcount_config:
             return
-        reg_name = get_reg_name("inputcount")
+        reg_name = s.get_prop_reg_name("inputcount")
         config_params = s.get_inputcount_params(inputcount_config)
 
         def update(self: NodeBase, context):
-            reg_name = get_reg_name("inputcount")
+            reg_name = s.get_prop_reg_name("inputcount")
             input_count = getattr(self, reg_name, -1)
             if input_count == -1:
                 return
@@ -1397,6 +1405,245 @@ class PreviewImage(BluePrintBase):
                 except TypeError:
                     ...
         Timer.put((f, self, img_paths))
+
+
+class Preview3D(BluePrintBase):
+    comfyClass = "Preview3D"
+
+    def post_fn(s, self: NodeBase, t: Task, result):
+        logger.debug("%s%s->%s", self.class_type, _T('Post Function'), result)
+        WindowLogger.push_log("%s%s->%s", self.class_type, _T('Post Function'), result)
+        # {'result': ['3d/未命名.glb', None]}
+        model_paths = result.get("output", {}).get("result", [])
+        if not model_paths:
+            logger.error('response is %s, cannot find models in it', result)
+            WindowLogger.push_log('response is %s, cannot find models in it', result)
+            return
+        logger.warning("%s: %s", _T('Load Preview Model'), model_paths)
+        WindowLogger.push_log("%s: %s", _T('Load Preview Model'), model_paths)
+
+        def f(self, model_paths):
+            from tempfile import gettempdir
+            save_dir = Path(gettempdir()).joinpath("ComfyUI_Temp_Models")
+            save_dir.mkdir(parents=True, exist_ok=True)
+            for file_name in model_paths:
+                if not file_name:
+                    continue
+                save_path = save_dir.joinpath(file_name)
+                save_path.parent.mkdir(parents=True, exist_ok=True)
+                suffix = save_path.suffix
+                # view?filename=meshsave_00001_.glb&type=output&subfolder=3d
+                if "/" in file_name:
+                    folder, name = file_name.rsplit("/", 1)
+                else:
+                    folder, name = "", file_name
+                data = {"filename": name, "subfolder": folder, "type": "output"}
+                obj = cache_to_local(data, suffix=suffix, save_path=save_path).as_posix()
+                # active_object = bpy.context.object
+                if suffix == ".obj":
+                    bpy.ops.wm.obj_import(filepath=obj)
+                elif suffix in {".gltf", ".glb"}:
+                    bpy.ops.import_scene.gltf(filepath=obj, merge_vertices=True, import_shading="FLAT")
+                elif suffix == ".fbx":
+                    bpy.ops.import_scene.fbx(filepath=obj)
+                elif suffix == ".stl":
+                    bpy.ops.wm.stl_import(filepath=obj)
+                elif suffix == ".usdz":
+                    texture_dir = Path(obj).with_suffix("").as_posix()
+                    bpy.ops.wm.usd_import(
+                        filepath=obj.as_posix(),
+                        import_textures_mode="IMPORT_COPY",
+                        import_textures_dir=texture_dir,
+                    )
+        Timer.put((f, self, model_paths))
+
+
+class ComfyUIInputs(BluePrintBase):
+    comfyClass = "ComfyUIInputs"
+    _datachain_cache = {
+        "result": {},
+        "img_path": [],
+        "img_path_timestamp": "0",
+        "video_path": "",
+        "apng_path": "",
+        "text": "",
+    }
+    PREV = PrevMgr.new()
+    PLAYERS: dict[str, AIP] = {}
+
+    @staticmethod
+    def fetch_data_timer():
+        job = Thread(target=ComfyUIInputs.fetch_datachain, daemon=True)
+        job.start()
+        return 1
+
+    @classmethod
+    def fetch_datachain(cls):
+        result = TaskManager.fetch_comfyui_queue()
+        if cls._datachain_cache["result"] == result:
+            return
+        cls._datachain_cache["result"] = result
+        imgs = result.get("images", [])
+        apngs = result.get("apngs", [])
+        {
+            "images": [{"filename": "ComfyUI_temp_ujzkx_00001_.png", "subfolder": "", "type": "temp"}],
+            "models": "3d/未命名.glb",
+            "videos": [{"filename": "ComfyUI_temp_ujzkx_00001_.mp4", "subfolder": "video", "type": "temp"}],
+            "audios": [{"filename": "ComfyUI_temp_ujzkx_00002_.flac", "subfolder": "", "type": "temp"}],
+            "texts": "",
+        }
+        {
+            "images": [{"filename": "ComfyUI_temp_kpppu_00001_.png", "subfolder": "", "type": "temp"}],
+            "models": "3d/未命名.glb",
+            "videos": [{"filename": "ComfyUI_temp_kpppu_00001_.mp4", "subfolder": "video", "type": "temp"}],
+            "audios": [{"filename": "ComfyUI_temp_kpppu_00002_.flac", "subfolder": "", "type": "temp"}],
+            "apngs": [{"filename": "ComfyUI_temp_kpppu_00003_.png", "subfolder": "", "type": "temp"}],
+            "texts": "",
+        }
+        import time
+        cls._datachain_cache["img_path"].clear()
+        cls._datachain_cache["img_path_timestamp"] = str(time.time_ns())
+        for img in imgs:
+            img_path = cache_to_local(img)
+            if not img_path:
+                continue
+            cls._datachain_cache["img_path"].append(img_path.as_posix())
+        for apng in apngs:
+            apng_path = cache_to_local(apng)
+            if not apng_path:
+                continue
+            cls._datachain_cache["apng_path"] = apng_path.as_posix()
+            break
+        # for video in videos:
+        #     video_path = cache_to_local(video)
+        #     if not video_path:
+        #         continue
+        #     cls._datachain_cache["video_path"] = video_path.as_posix()
+        #     break
+        cls._datachain_cache["text"] = result.get("texts", "")
+
+    def try_fetch_datachain(self):
+        if bpy.app.timers.is_registered(self.fetch_data_timer):
+            return
+        bpy.app.timers.register(self.fetch_data_timer, persistent=True)
+
+    def set_width(s, self: NodeBase):
+        if not self.prev_image:
+            return self.width
+        pnum = len(self.prev_image)
+        p0 = self.prev_image[0].image
+        w = max(p0.size[0], p0.size[1])
+        if w == 0:
+            return self.width
+        w = setwidth(self, w, count=min(self.lnum, pnum))
+        return w
+
+    def spec_extra_properties(s, properties, nname, ndesc):
+        prop = bpy.props.CollectionProperty(type=Images)
+        properties["prev_image"] = prop
+
+        properties["lnum"] = bpy.props.IntProperty(default=3, min=1, max=10, name="Image num per line")
+        properties["img_path_timestamp"] = bpy.props.StringProperty(name="Image Path Timestamp", default="")
+        properties["video_path"] = bpy.props.StringProperty(name="Video Path", default="")
+        properties["apng_path"] = bpy.props.StringProperty(name="APNG Path", default="")
+        properties["text"] = bpy.props.StringProperty(name="Text", default="")
+
+
+    def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swsock=True, swdisp=False) -> bool:
+        if prop in ("lnum", "img_path_timestamp"):
+            return True
+        s.try_fetch_datachain()
+        if self.img_path_timestamp != s._datachain_cache["img_path_timestamp"]:
+            # 加载新图片
+            def run(s: BluePrintBase, self: NodeBase):
+                if self.img_path_timestamp == s._datachain_cache["img_path_timestamp"]:
+                    return
+                self.img_path_timestamp = s._datachain_cache["img_path_timestamp"]
+                self.prev_image.clear()
+                for img_path in s._datachain_cache["img_path"]:
+                    if not img_path:
+                        return
+                    self.prev_image.add().image = bpy.data.images.load(img_path)
+            Timer.put((run, s, self))
+        if prop == "video_path":
+            return True
+            if self.video_path != s._datachain_cache["video_path"]:
+                # 加载新视频
+                def run(s: BluePrintBase, self: NodeBase):
+                    video_path = s._datachain_cache["video_path"]
+                    # 清理旧视频
+                    if video_path in s.PLAYERS:
+                        player = s.PLAYERS.pop(video_path)
+                        player.free()
+                        del player
+                        prev = s.PREV[video_path]
+                    else:
+                        prev = s.PREV.new(video_path)
+
+                    self.video_path = video_path
+                    player = AIP(prev, video_path)
+                    s.PLAYERS[video_path] = player
+                    player.auto_play()
+                Timer.put((run, s, self))
+            # 显示视频
+            prev = s.PREV.get(self.video_path, None)
+            if prev:
+                scale = min(max(prev.image_size), self.width) // 20
+                scale = min(scale, 100)
+                layout.template_icon(icon_value=prev.icon_id, scale=scale)
+            return True
+        if prop == "apng_path":
+            if self.apng_path != s._datachain_cache["apng_path"]:
+                # 加载新视频
+                def run(s: BluePrintBase, self: NodeBase):
+                    apng_path = s._datachain_cache["apng_path"]
+                    # 清理旧视频
+                    if apng_path in s.PLAYERS:
+                        player = s.PLAYERS.pop(apng_path)
+                        player.free()
+                        del player
+                        prev = s.PREV[apng_path]
+                    else:
+                        prev = s.PREV.new(apng_path)
+
+                    self.apng_path = apng_path
+                    player = AIP(prev, apng_path)
+                    s.PLAYERS[apng_path] = player
+                    player.auto_play()
+                Timer.put((run, s, self))
+            # 显示视频
+            prev = s.PREV.get(self.apng_path, None)
+            if prev:
+                scale = min(max(prev.image_size), self.width) // 20
+                scale = min(scale, 100)
+                layout.template_icon(icon_value=prev.icon_id, scale=scale)
+            return True
+        if prop == "prev_image":
+            layout.prop(self, "lnum")
+            pnum = len(self.prev_image)
+            if pnum == 0:
+                return True
+            p0 = self.prev_image[0].image
+            layout.label(text=f"{p0.file_format} : [{p0.size[0]} x {p0.size[1]}]")
+            col = layout.column(align=True)
+            w = self.width / max(1, min(self.lnum, pnum)) // 20
+            for i, p in enumerate(self.prev_image):
+                if i % self.lnum == 0:
+                    fcol = col.column_flow(columns=min(self.lnum, pnum))
+                prev = p.image
+                if prev.name not in Icon:
+                    Icon.reg_icon_by_pixel(prev, prev.name)
+                icon_id = Icon[prev.name]
+                cfcol = fcol.column(align=True)
+                cfcol.template_icon(icon_id, scale=w)
+                cfrow = cfcol.row(align=True)
+                cfrow.prop(prev, "name", text="")
+                from ..ops import CopyToClipboard
+                cfrow.operator(CopyToClipboard.bl_idname, text="", icon="COPYDOWN").info = prev.name
+                cfrow.operator(PreviewImageInPlane.bl_idname, text="", icon="HIDE_OFF").img_name = prev.name
+                cfrow.operator(ImageAsPBRMat.bl_idname, text="", icon="MATERIAL").img_name = prev.name
+                cfrow.operator(ImageProjectOnObject.bl_idname, text="", icon="SCENE").img_name = prev.name
+            return True
 
 
 class 存储(BluePrintBase):
@@ -1806,12 +2053,12 @@ class 输入图像(BluePrintBase):
                 return
             if self.disable_render or bpy.context.scene.sdn.disable_render_all:
                 return
-            if self.mode == "视口":
-                # 使用临时文件
-                self.image = Path(tempfile.gettempdir()).joinpath("viewport.png").as_posix()
+            s.ensure_img_path(self)
             logger.warning("%s->%s", _T('Render'), self.image)
             old = bpy.context.scene.render.filepath
+            old_fmt = bpy.context.scene.render.image_settings.file_format
             bpy.context.scene.render.filepath = self.image
+            bpy.context.scene.render.image_settings.file_format = "PNG"
 
             if self.mode == "视口":
                 # 场景相机可能为空
@@ -1820,6 +2067,7 @@ class 输入图像(BluePrintBase):
                     raise Exception(err_info)
                 bpy.ops.render.opengl(write_still=True, view_context=get_pref().view_context)
                 bpy.context.scene.render.filepath = old
+                bpy.context.scene.render.image_settings.file_format = old_fmt
                 return
             if (cam := bpy.context.scene.camera) and (gpos := cam.get("SD_Mask", [])):
                 try:
@@ -1848,6 +2096,7 @@ class 输入图像(BluePrintBase):
             if self.mode == "渲染":
                 bpy.context.scene.frame_set(current_frame)
             bpy.context.scene.render.filepath = old
+            bpy.context.scene.render.image_settings.file_format = old_fmt
 
         @Timer.wait_run
         def r():
@@ -1856,14 +2105,23 @@ class 输入图像(BluePrintBase):
             upload_image(self.image)
         r()
 
+    def ensure_img_path(s, self: NodeBase):
+        if not self.image:
+            self.image = Path(tempfile.gettempdir()).joinpath("_render.png").as_posix()
+        p = Path(self.image)
+        if p.is_dir():
+            p = p.joinpath("_render.png")
+        if p.suffix.lower() not in [".png"]:
+            p = p.with_suffix(".png")
+        try:
+            p.parent.mkdir(parents=True, exist_ok=True)
+        except BaseException:
+            ...
+        self.image = p.as_posix()
+
     def serialize_pre(s, self: NodeBase):
-        if self.mode == "视口" and self.reaches_output():
-            if not self.image:
-                self.image = Path(tempfile.gettempdir()).joinpath("viewport.png").as_posix()
-            if Path(self.image).is_dir():
-                self.image = Path(self.image).joinpath("viewport.png").as_posix()
-            if Path(self.image).suffix not in {".png", ".jpg", ".jpeg"}:
-                self.image = Path(self.image).with_suffix(".png").as_posix()
+        if self.mode in {"渲染", "视口"} and self.reaches_output():
+            s.ensure_img_path(self)
         super().serialize_pre(self)
 
     def serialize_specific(s, self: NodeBase, cfg, execute):
@@ -2695,6 +2953,178 @@ class SaveAudioBL(BluePrintBase):
         post_fn = partial(__post_fn__, self, mode=self.mode)
         return {self.id: (self.serialize(parent=parent), self.pre_fn, post_fn)}
 
+class SaveModel(BluePrintBase):
+    comfyClass = "SaveModel"
+    
+
+    def spec_extra_properties(s, properties, nname, ndesc):
+        prop = bpy.props.StringProperty()
+        properties["filename_prefix"] = prop
+
+        def update(self, context):
+            absp = bpy.path.abspath(self.output_dir)
+            if bpy.path.abspath(self.output_dir) == self.output_dir:
+                return
+            self.output_dir = absp
+
+        prop = bpy.props.StringProperty(subtype="DIR_PATH", update=update)
+        properties["output_dir"] = prop
+        items = [
+            ("Save", "Save", "", "", 0),
+            ("Import", "Import", "", "", 1),
+        ]
+        prop = bpy.props.EnumProperty(items=items)
+        properties["mode"] = prop
+        # 重心对齐到模型z轴最低点
+        properties["align_to_bottom"] = bpy.props.BoolProperty(name="Align to Bottom", default=False)
+        # 模型导入到世界坐标原点
+        properties["import_to_origin"] = bpy.props.BoolProperty(name="Import to Origin", default=False)
+        # 保存到资产库
+        properties["save_to_asset_lib"] = bpy.props.BoolProperty(name="Save to Asset Library", default=False)
+        # 导入位置
+        properties["import_location"] = bpy.props.FloatVectorProperty(name="Location", size=3, subtype="TRANSLATION")
+        # 导入朝向
+        properties["import_rotation"] = bpy.props.FloatVectorProperty(name="Rotation", size=3, default=(0, 0, 0), subtype="EULER")
+
+    def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swsock=True, swdisp=False) -> bool:
+        if prop in {
+            "filename_prefix",
+            "output_dir",
+            "align_to_bottom",
+            "import_to_origin",
+            "save_to_asset_lib",
+            "import_location",
+            "import_rotation",
+        }:
+            return True
+        if prop == "mode":
+            layout.prop(self, prop, expand=True, text_ctxt=self.get_ctxt())
+            if self.mode == "Save":
+                layout.prop(self, "filename_prefix", text_ctxt=self.get_ctxt())
+                layout.prop(self, "output_dir", text_ctxt=self.get_ctxt())
+                return True
+            elif self.mode == "Import":
+                layout.prop(self, "align_to_bottom", text_ctxt=self.get_ctxt())
+                layout.prop(self, "import_to_origin", text_ctxt=self.get_ctxt())
+                layout.prop(self, "save_to_asset_lib", text_ctxt=self.get_ctxt())
+                layout.prop(self, "import_location", text_ctxt=self.get_ctxt())
+                layout.prop(self, "import_rotation", text_ctxt=self.get_ctxt())
+                return True
+        return False
+
+    def set_origin(s, obj: bpy.types.Object):
+        import numpy as np
+        from mathutils import Vector
+        # obj = bpy.context.active_object
+        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+        mesh: bpy.types.Mesh = obj.data
+        # 使用numpy加速获取所有顶点的Z坐标
+        verts = np.zeros(len(mesh.vertices) * 3)
+        mesh.vertices.foreach_get("co", verts)
+        verts = verts.reshape((-1, 3))
+        # 计算中心点
+        center = verts.sum(axis=0) / len(mesh.vertices)
+        center[2] = verts[:, 2].min()
+        lowest_point = Vector(center)
+        # 将原点设置到底部中心点
+        # 首先，将3D光标移动到底部中心点位置
+        cursor_loc = bpy.context.scene.cursor.location
+        bpy.context.scene.cursor.location = lowest_point
+        # 然后，将原点设置到3D光标的位置
+        bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
+        bpy.context.scene.cursor.location = cursor_loc
+
+    def import_model(s, filepath) -> list[bpy.types.Object]:
+        old_objs = set(bpy.context.scene.objects)
+        suffix = Path(filepath).suffix.lower()
+        if suffix == ".obj":
+            bpy.ops.wm.obj_import(filepath=filepath)
+        elif suffix in {".gltf", ".glb"}:
+            bpy.ops.import_scene.gltf(filepath=filepath, merge_vertices=True, import_shading="FLAT")
+        elif suffix == ".fbx":
+            bpy.ops.import_scene.fbx(filepath=filepath)
+        elif suffix == ".stl":
+            bpy.ops.wm.stl_import(filepath=filepath)
+        elif suffix == ".usdz":
+            texture_dir = Path(filepath).with_suffix("").as_posix()
+            bpy.ops.wm.usd_import(
+                filepath=filepath,
+                import_textures_mode="IMPORT_COPY",
+                import_textures_dir=texture_dir,
+            )
+
+        new_objs = set(bpy.context.scene.objects) - old_objs
+        return list(new_objs)
+
+    def post_fn(s, self: NodeBase, t: Task, result):
+        logger.debug("%s%s->%s", self.class_type, _T('Post Function'), result)
+        WindowLogger.push_log("%s%s->%s", self.class_type, _T('Post Function'), result)
+        # result = {'node': '4', 'output': {'mesh': [{'filename': 'meshsave_00002_.obj', 'type': 'output', 'subfolder': ''}]}}
+        # result = {'node': '3', 'output': {'result': ['3d/未命名.glb']}, 'prompt_id': ''}
+        output = result.get("output", {})
+        models = output.get("result", [])
+        if not models:
+            return
+        model_paths = result.get("output", {}).get("result", [])
+        if not model_paths:
+            logger.error('response is %s, cannot find models in it', result)
+            WindowLogger.push_log('response is %s, cannot find models in it', result)
+            return
+        logger.warning("%s: %s", _T('Load Preview Model'), model_paths)
+        WindowLogger.push_log("%s: %s", _T('Load Preview Model'), model_paths)
+
+        def f(self, model_paths):
+            from tempfile import gettempdir
+            save_dir = Path(gettempdir()).joinpath("ComfyUI_Temp_Models")
+            save_dir.mkdir(parents=True, exist_ok=True)
+            for filename in model_paths:
+                if not filename:
+                    continue
+                if not filename.lower().endswith(".glb"):
+                    logger.warning(f"Not process {filename}")
+                    WindowLogger.push_log(f"Not process {filename}")
+                    continue
+                
+                if "/" in filename:
+                    folder, name = filename.rsplit("/", 1)
+                else:
+                    folder, name = "", filename
+                data = {"filename": name, "subfolder": folder, "type": "output"}
+                # data = {"filename": filename, "subfolder": "3d", "type": "output"}
+
+                if self.mode == "Save":
+                    save_path = Path(self.output_dir).joinpath(self.filename_prefix).with_suffix(".glb")
+                    save_path = get_next_filename(save_path)
+                    cache_to_local(data, suffix=".glb", save_path=save_path)
+                    continue
+
+                save_path = save_dir.joinpath(filename)
+                save_path.parent.mkdir(parents=True, exist_ok=True)
+                suffix = save_path.suffix
+                # view?filename=meshsave_00001_.glb&type=output&subfolder=3d
+                model_path = cache_to_local(data, suffix=suffix, save_path=save_path).as_posix()
+
+                active_object = bpy.context.object
+                imp_objs = s.import_model(model_path)
+                for obj in imp_objs:
+                    if self.align_to_bottom:
+                        s.set_origin(obj)
+                    if self.import_to_origin:
+                        obj.location = self.import_location
+                        obj.rotation_mode = "XYZ"
+                        obj.rotation_euler = self.import_rotation
+                    if self.save_to_asset_lib:
+                        obj.asset_mark()
+                        obj.asset_generate_preview()
+                    
+                if self.mode == "Replace" and active_object and imp_objs:
+                    active_object.data, imp_objs[0].data = imp_objs[0].data, active_object.data
+                    bpy.data.objects.remove(imp_objs[0])
+                    bpy.context.view_layer.objects.active = active_object
+                    active_object.select_set(True)
+
+        Timer.put((f, self, models))
+
 
 class PreviewAudio(BluePrintBase):
     comfyClass = "PreviewAudio"
@@ -2888,7 +3318,7 @@ class SDNGroupBP(BluePrintBase):
             #     if sn.bl_idname == "NodeGroupOutput":
             #         continue
             #     if sn.is_base_type(tsock.name):
-            #         widgets_values.append(s.getattr(sn, get_reg_name(tsock.name)))
+            #         widgets_values.append(s.getattr(sn, s.get_prop_reg_name(tsock.name)))
             #         continue
 
             if sn.bl_idname in {"NodeGroupInput", "NodeGroupOutput", "NodeUndefined"}:
@@ -2899,7 +3329,7 @@ class SDNGroupBP(BluePrintBase):
             # for inp_name in self.inp_types:
             #     if not self.is_base_type(inp_name):
             #         continue
-            #     widgets_values.append(s.getattr(self, get_reg_name(inp_name)))
+            #     widgets_values.append(s.getattr(self, s.get_prop_reg_name(inp_name)))
             # 需要将已经转为socket的widgets移除
             rm_index = []
             for i, inp_name in enumerate([it for it in sn.inp_types if sn.is_base_type(it)]):
@@ -2926,13 +3356,13 @@ class SDNGroupBP(BluePrintBase):
             inp = slink.to_socket
             snode: NodeBase = slink.to_node
             inp_name = inp.name
-            ori_name = get_ori_name(inp_name)
+            ori_name = s.get_prop_ori_name(inp_name)
             if not snode.is_base_type(inp_name):
                 continue
             md = snode.get_meta(ori_name)
             if not snode.query_stat(inp_name) or not md:
                 continue
-            out_inp_widget = s.getattr(snode, get_reg_name(inp_name))
+            out_inp_widget = s.getattr(snode, s.get_prop_reg_name(inp_name))
             widgets_values.append(out_inp_widget)
             if inp_name in {"seed", "noise_seed"}:
                 widgets_values.append("fixed")
@@ -2944,7 +3374,7 @@ class SDNGroupBP(BluePrintBase):
             inp = slink.to_socket
             snode: NodeBase = slink.to_node
             inp_name = inp.name
-            ori_name = get_ori_name(inp_name)
+            ori_name = s.get_prop_ori_name(inp_name)
             inp_info = {"name": ori_name,
                         "type": inp.bl_idname,
                         "link": None}
@@ -3082,9 +3512,10 @@ class SDParameterGenerator(BluePrintBase):
 
 
 @lru_cache(maxsize=1024)
-def get_blueprints(comfyClass, default=BluePrintBase) -> BluePrintBase:
+def get_blueprints(comfyClass="", default=BluePrintBase) -> BluePrintBase:
     for cls in BluePrintBase.__subclasses__():
         if cls.comfyClass != comfyClass:
             continue
         return cls()
-    return default()
+    new_comfy_bp = type(comfyClass, (default,), {"comfyClass": comfyClass})
+    return new_comfy_bp()

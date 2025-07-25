@@ -21,7 +21,7 @@ from .nodes import nodes_reg, nodes_unreg, NodeParser, NodeRegister, NodeBase, c
 from ..utils import logger, Icon, rgb2hex, hex2rgb, _T, FSWatcher
 from ..datas import EnumCache
 from ..timer import Timer
-from ..translations import ctxt, get_ori_name
+from ..translations import ctxt
 from .utils import THelper
 from contextlib import contextmanager
 
@@ -209,7 +209,7 @@ class CFNodeTree(NodeTree):
                         fsock = None
                         if sock.is_linked and not sock.links:
                             fsock = sock.links[0].from_socket
-                        socket_name = get_ori_name(sock.name)
+                        socket_name = node.get_blueprints().get_prop_ori_name(sock.name)
                         node.switch_socket_widget(socket_name, False)
                         inp = node.switch_socket_widget(socket_name, True)
                         if fsock:
@@ -720,19 +720,19 @@ class CFNodeTree(NodeTree):
         bp.set_width(node)
 
     def primitive_node_update(self, node: NodeBase):
-        from .nodes import get_reg_name
         if node.bl_idname != "PrimitiveNode":
             return
         # 未连接或link为空则不需要后续操作
         if not node.outputs[0].is_linked or not node.outputs[0].links:
             return
-        prop = getattr(node.outputs[0].links[0].to_node, get_reg_name(node.prop), None)
+        bp = node.get_blueprints()
+        prop = getattr(node.outputs[0].links[0].to_node, bp.get_prop_reg_name(node.prop), None)
         if prop is None:
             return
         for link in node.outputs[0].links[1:]:
             if not link.to_node.is_registered_node_type():
                 continue
-            n = get_reg_name(link.to_socket.name)
+            n = bp.get_prop_reg_name(link.to_socket.name)
             old_prop = getattr(link.to_node, n)
             setattr(link.to_node, n, type(old_prop)(prop))
 

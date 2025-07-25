@@ -385,9 +385,9 @@ class Ops(bpy.types.Operator):
     def Connect(self):
         TaskManager.connect_existing = not TaskManager.connect_existing
         if TaskManager.connect_existing:
-            TaskManager.launch_ip = get_pref().ip
+            TaskManager.launch_ip = get_pref().get_ip()
             TaskManager.launch_port = get_pref().port
-            TaskManager.launch_url = f"http://{get_pref().ip}:{get_pref().port}"
+            TaskManager.launch_url = f"http://{get_pref().get_ip()}:{get_pref().port}"
             rtnode_rereg()
             CFNodeTree.refresh_current_tree()
             TaskManager.start_polling()
@@ -1112,6 +1112,17 @@ class Open_Log_Window(bpy.types.Operator):
     def execute(self, context: bpy.types.Context):
         WindowLogger.open_window()
         return {'FINISHED'}
+
+
+class CleanVRam(bpy.types.Operator):
+    bl_idname = "sdn.clean_vram"
+    bl_label = "Clean VRAM"
+    bl_translation_context = ctxt
+    bl_description = "Clean VRAM"
+
+    def execute(self, context):
+        TaskManager.clear_vram()
+        return {"FINISHED"}
 
 
 @bpy.app.handlers.persistent

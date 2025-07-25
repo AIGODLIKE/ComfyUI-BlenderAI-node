@@ -138,6 +138,11 @@ def find_area_by_type(screen: bpy.types.Screen, area_type, index) -> bpy.types.A
         return areas[index]
     return None
 
+def find_region_by_type(area: bpy.types.Area, region_type) -> bpy.types.Region:
+    for region in area.regions:
+        if region.type == region_type:
+            return region
+    return None
 
 def update_screen():
     try:
@@ -187,6 +192,33 @@ def hex2rgb(hex_val):
     if len(hex_val) == 3:
         return [int(h, 16) / 16 for h in hex_val]
     return [int(hex_val[i:i + 2], 16) / 256 for i in (0, 2, 4)]
+
+
+@lru_cache(maxsize=16)
+def is_ipv6(ip):
+    import ipaddress
+    try:
+        ipaddress.IPv6Address(ip)
+        return True
+    except ValueError:
+        return False
+
+
+@lru_cache(maxsize=16)
+def is_ipv4(ip):
+    import ipaddress
+    try:
+        ipaddress.IPv4Address(ip)
+        return True
+    except ValueError:
+        return False
+
+
+@lru_cache(maxsize=16)
+def is_domain(ip):
+    import re
+    return re.match(r"^(?!-)[A-Za-z0-9-]{1,63}(?<!-)(\.[A-Za-z0-9-]{1,63}(?<!-))*\.[A-Za-z]{2,}$", ip)
+    return re.match(r"^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9][a-z0-9-]{0,61}[a-z0-9]$", ip)
 
 
 class PrevMgr:

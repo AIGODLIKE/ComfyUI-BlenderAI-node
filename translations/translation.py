@@ -98,6 +98,32 @@ INTERNAL_NAMES = {
     "width_hidden"
 }
 
+class ComfyPropNameTranslate:
+    PROP_REG_NAME_MAPS = {}
+    PROP_ORI_NAME_MAPS = {}
+
+    @classmethod
+    def get_prop_reg_name(self, comfyClass, inp_name):
+        reg_names = self.PROP_REG_NAME_MAPS.setdefault(comfyClass, {})
+        if inp_name in reg_names:
+            return reg_names[inp_name]
+        reg_name = get_reg_name(inp_name)
+        reg_name = bpy.path.clean_name(reg_name)
+        if len(reg_name) > 63:
+            from hashlib import md5
+            reg_name = reg_name[:50] + md5(reg_name.encode("utf-8")).hexdigest()[:5]
+        reg_names[inp_name] = reg_name
+        self.PROP_ORI_NAME_MAPS.setdefault(comfyClass, {})[reg_name] = inp_name
+        return reg_name
+    
+    @classmethod
+    def get_prop_ori_name(self, comfyClass, inp_name):
+        ori_names = self.PROP_ORI_NAME_MAPS.setdefault(comfyClass, {})
+        if inp_name in ori_names:
+            return ori_names[inp_name]
+        ori_name = get_ori_name(inp_name)
+        ori_names[inp_name] = ori_name
+        return ori_name
 
 def get_reg_name(inp_name):
     if inp_name.startswith("_"):
@@ -263,6 +289,9 @@ other = {
     "Total Time": "总时长",
     "Not reaches output node, skip render proc": "未连接至输出类节点, 跳过渲染",
     "Frame Tween": "渐变帧",
+    "Align to Bottom": "底部对齐",
+    "Import to Origin": "导入到原点",
+    "Save to Asset Library": "保存到资产库",
     # SDNode/tree.py
     "Invalid Node Type: {}": "检查到无效的节点: {}",
     "ParseNode Time:": "解析节点耗时:",
@@ -381,6 +410,7 @@ other = {
     "If creating a new node, put it in the centre of the editor": "如果创建一个新节点，请将其放在编辑器的中心位置",
     "Set Image Alpha to Channel Packed": "将图像 Alpha 设置为通道打包",
     "Set the current image's alpha to channel packed, even if the option is not displayed in the UI.\nThis allows masks with color to be properly painted onto the image": "将当前图像的 alpha 设置为通道打包，即使用户界面中未显示该选项。\n这样就可以在图像上正确绘制带颜色的遮罩",
+    "Clean VRAM": "清理显存",
     "Copy Image Name to Clipboard": "复制图像名称到剪贴板",
     # ui.py
     "ComfyUI": "圣杯节点",
@@ -511,6 +541,8 @@ other = {
     "MLT": "多行文本",
     "Enable MLT": "开启多行文本",
     "Enable multiline text for this textbox": "开启多行文本",
+    "Paste Clipboard": "粘贴剪切板",
+    "Paste clipboard to multiline text": "粘贴剪切板到文本",
     # oooo
     "enable": "开",
     "disable": "关",
@@ -645,7 +677,7 @@ def reg_node_ctxt(tdict: dict, replace_dict: dict, in_locale: str):
             if not isinstance(part, dict):
                 continue
             for wn, wv in part.items():
-                wn = get_reg_name(wn)
+                wn = ComfyPropNameTranslate.get_prop_reg_name(node_name, wn)
                 td[(t_ctxt, wn)] = wv
                 td[(None, wn)] = wv
                 rd[wn] = wv

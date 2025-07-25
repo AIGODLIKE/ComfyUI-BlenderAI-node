@@ -17,7 +17,7 @@ from .utils import SELECTED_COLLECTIONS, get_default_tree
 from ..utils import logger, Icon, _T, read_json, hex2rgb
 from ..datas import ENUM_ITEMS_CACHE, IMG_SUFFIX
 from ..timer import Timer
-from ..translations import ctxt, get_reg_name, get_ori_name
+from ..translations import ctxt
 from .manager import get_url, WITH_PROXY
 
 try:
@@ -34,7 +34,8 @@ SOCKET_HASH_MAP = {  # {HASH: METATYPE}
     "INT": "INT",
     "FLOAT": "FLOAT",
     "STRING": "STRING",
-    "BOOLEAN": "BOOLEAN"
+    "BOOLEAN": "BOOLEAN",
+    "COMBO": "COMBO",
 }
 
 NODE_SLOTS = {
@@ -130,7 +131,7 @@ def try_get_path_cfg():
 
 
 def get_icon_path(nname):
-
+    from .blueprints import get_blueprints
     {'controlnet': [['D:\\BaiduNetdiskDownload\\AI\\ComfyUI\\models\\controlnet',
                     'D:\\BaiduNetdiskDownload\\AI\\ComfyUI\\models\\t2i_adapter'], ['.bin', '.safetensors', '.pth', '.pt', '.ckpt']],
         'upscale_models': [['D:\\BaiduNetdiskDownload\\AI\\ComfyUI\\models\\upscale_models'], ['.bin', '.safetensors', '.pth', '.pt', '.ckpt']]}
@@ -146,7 +147,7 @@ def get_icon_path(nname):
             path_list = {}
             PREVICONPATH[class_type] = path_list
             for name, mpath in pathmap.items():
-                reg_name = get_reg_name(name)
+                reg_name = get_blueprints().get_prop_reg_name(name)
                 if mpath not in d:
                     continue
                 path_list[reg_name] = d[mpath][0]
@@ -228,7 +229,8 @@ class PropGen:
 
     @staticmethod
     def Gen(proptype, nname, inp_name, inp):
-        reg_name = get_reg_name(inp_name)
+        from .blueprints import get_blueprints
+        reg_name = get_blueprints(nname).get_prop_reg_name(inp_name)
         prop = getattr(PropGen, proptype)(nname, inp_name, reg_name, inp)
         prop = PropGen._spec_gen_properties(nname, inp_name, prop)
         return prop
@@ -243,10 +245,12 @@ class PropGen:
                     return ENUM_ITEMS_CACHE[nname][inp_name]
                 items = []
                 # 专门用于 老版本的 翻译
-                spec_trans = {"输入": "Input",
-                              "渲染": "Render",
-                              "序列图": "Sequence",
-                              "视口": "Viewport"}
+                spec_trans = {
+                    "输入": "Input",
+                    "渲染": "Render",
+                    "序列图": "Sequence",
+                    "视口": "Viewport",
+                }
                 for item in inp[0]:
                     icon_id = PropGen._find_icon(nname, inp_name, item)
                     if icon_id:
@@ -257,13 +261,62 @@ class PropGen:
                         continue
                     items.append((si, spec_trans.get(si, si), "", icon_id, len(items)))
                 return items
-            return wrap
-        prop = bpy.props.EnumProperty(items=get_items(nname, reg_name, inp))
-        # 判断可哈希
 
+            return wrap
+
+        prop = bpy.props.EnumProperty(items=get_items(nname, reg_name, inp))
+
+        # 判断可哈希
         def is_all_hashable(some_list):
             return all(hasattr(item, "__hash__") for item in some_list)
+
         if is_all_hashable(inp[0]) and set(inp[0]) == {True, False}:
+            prop = bpy.props.BoolProperty()
+        return prop
+
+    @staticmethod
+    def COMBO(nname, inp_name, reg_name, inp):
+        def get_items(nname, inp_name, inp_params):
+            def wrap(self, context):
+                if nname not in ENUM_ITEMS_CACHE:
+                    ENUM_ITEMS_CACHE[nname] = {}
+                if inp_name in ENUM_ITEMS_CACHE[nname]:
+                    return ENUM_ITEMS_CACHE[nname][inp_name]
+                items = []
+                # 专门用于 老版本的 翻译
+                spec_trans = {
+                    "输入": "Input",
+                    "渲染": "Render",
+                    "序列图": "Sequence",
+                    "视口": "Viewport",
+                }
+                for item in inp_params.get("options", []):
+                    icon_id = PropGen._find_icon(nname, inp_name, item)
+                    if icon_id:
+                        ENUM_ITEMS_CACHE[nname][inp_name] = items
+                    si = str(item)
+                    if si in spec_trans:
+                        items.append((si, spec_trans.get(si, si), ""))
+                        continue
+                    items.append((si, spec_trans.get(si, si), "", icon_id, len(items)))
+                return items
+
+            return wrap
+
+        inp_params: dict = inp[1] if len(inp) > 1 else {}
+        items_ori: list = inp_params.get("options", [])
+        kwargs = {}
+        if default := inp_params.get("default"):
+            kwargs["default"] = items_ori.index(default)
+        if tooltip := inp_params.get("tooltip"):
+            kwargs["description"] = tooltip
+        prop = bpy.props.EnumProperty(items=get_items(nname, reg_name, inp_params), **kwargs)
+
+        # 判断可哈希
+        def is_all_hashable(some_list):
+            return all(hasattr(item, "__hash__") for item in some_list)
+
+        if is_all_hashable(items_ori) and set(items_ori) == {True, False}:
             prop = bpy.props.BoolProperty()
         return prop
 
@@ -326,6 +379,15 @@ class PropGen:
             if k not in inp[1]:
                 continue
             params[k] = inp[1][k]
+        if "default" in params:
+            default_value = params["default"]
+            if isinstance(default_value, str):
+                try:
+                    from ast import literal_eval
+                    default_value = literal_eval(default_value)
+                except Exception:
+                    pass
+            params["default"] = bool(default_value)
         return bpy.props.BoolProperty(**params)
 
     @staticmethod
@@ -428,7 +490,7 @@ class PropGen:
 
             def getter(self):
                 if "seed" not in self:
-                    self["seed"] = "0"
+                    return "0"
                 return str(self["seed"])
             prop = bpy.props.StringProperty(default="0", set=setter, get=getter)
         return prop
@@ -582,14 +644,14 @@ class NodeBase(bpy.types.Node):
 
     def set_sock_visible(self, name, in_out="INPUT", value=True):
         cfg: dict[str, SDNConfig] = self.get_visible_cfg(in_out)
-        name = get_ori_name(name)
+        name = self.get_blueprints().get_prop_ori_name(name)
         if name not in cfg:
             cfg.add().name = name
         cfg[name].visible = bool(value)
 
     def get_sock_visible(self, name, in_out="INPUT"):
         cfg: dict[str, SDNConfig] = self.get_visible_cfg(in_out)
-        name = get_ori_name(name)
+        name = self.get_blueprints().get_prop_ori_name(name)
         if name not in cfg:
             return True
         return cfg[name].visible
@@ -683,7 +745,7 @@ class NodeBase(bpy.types.Node):
 
     def query_stat(self, name):
         stat = self.query_stats()
-        name = get_ori_name(name)
+        name = self.get_blueprints().get_prop_ori_name(name)
         return stat.get(name, None)
 
     def set_stat(self, name, value):
@@ -730,7 +792,7 @@ class NodeBase(bpy.types.Node):
         是基本类型?
         目前通过 拥有注册属性名判断
         """
-        reg_name = get_reg_name(name)
+        reg_name = self.get_blueprints().get_prop_reg_name(name)
         return hasattr(self, reg_name)
 
     @property
@@ -741,7 +803,7 @@ class NodeBase(bpy.types.Node):
         """
         是原始socket?
         """
-        reg_name = get_reg_name(name)
+        reg_name = self.get_blueprints().get_prop_reg_name(name)
         if in_out == "INPUT":
             return not hasattr(self, reg_name) and self.inputs.get(name)
         return not hasattr(self, reg_name) and self.outputs.get(name)
@@ -829,7 +891,7 @@ class NodeBase(bpy.types.Node):
             # 返回True 则不绘制
             if self.get_blueprints().draw_button(self, context, l, prop, swdisp=ext):
                 continue
-            if self.is_base_type(prop) and get_ori_name(prop) in self.inp_types:
+            if self.is_base_type(prop) and self.get_blueprints().get_prop_ori_name(prop) in self.inp_types:
                 l = Ops_Switch_Socket_Widget.draw_prop(l, self, prop, swdisp=ext)
             l.prop(self, prop, text=prop, text_ctxt=self.get_ctxt())
 
@@ -885,7 +947,7 @@ class NodeBase(bpy.types.Node):
                 ts = l.to_socket
                 if ts.bl_idname == "*" or fs.bl_idname == "*":
                     continue
-                if fs.bl_idname == "*" and SOCKET_HASH_MAP.get(ts.bl_idname) in {"ENUM", "INT", "FLOAT", "STRING", "BOOLEAN"}:
+                if fs.bl_idname == "*" and SOCKET_HASH_MAP.get(ts.bl_idname) in {"ENUM", "INT", "FLOAT", "STRING", "BOOLEAN", "COMBO"}:
                     continue
                 if fs.bl_idname == ts.bl_idname:
                     continue
@@ -1048,7 +1110,7 @@ class NodeBase(bpy.types.Node):
             rinfo = f" [{_T(node.name)}]"
         if text == "SDN_OUTER_OUTPUT":
             linfo = f"[{_T(node.name)}] "
-        prop = get_reg_name(self.name)
+        prop = _self.get_blueprints().get_prop_reg_name(self.name)
         if self.is_output or not hasattr(node, prop):
             layout.label(text=linfo + _T(self.name) + rinfo, text_ctxt=node.get_ctxt())
             return
@@ -1157,9 +1219,9 @@ class Ops_Switch_Socket_Widget(bpy.types.Operator):
             self.set_active_node(otree)
             otree.store_toggle_links()
             tree = get_ctx_node().node_tree
-        socket_name = get_ori_name(self.socket_name)
         if not (node := tree.nodes.get(self.node_name)):
             return {"FINISHED"}
+        socket_name = node.get_blueprints().get_prop_ori_name(self.socket_name)
         match self.action:
             case "ToSocket":
                 node.switch_socket_widget(socket_name, True)
@@ -1805,28 +1867,12 @@ class NodeParser:
                         _desc.add(inp_desc[0])
                         self.SOCKET_TYPE[name][inp] = inp_desc[0]
             for index, out_type in enumerate(desc["output"]):
-                # _desc.add(out_type[0])
                 if isinstance(out_type, list) and desc.get("output_name", []):
                     out_type = desc["output_name"][index]
                 if isinstance(out_type, str):
                     _desc.add(out_type)
                 else:
                     _desc.add(out_type[0])
-                continue
-                # _desc.add(out_type[0])
-                stype = out_type[0]
-                if isinstance(stype, list):
-                    _desc.add("ENUM")
-                    # 太长 不能注册为 socket type(<64)
-                    hash_type = calc_hash_type(stype)
-                    _desc.add(hash_type)
-                    SOCKET_HASH_MAP[hash_type] = "ENUM"
-                    # self.SOCKET_TYPE[name][inp] = hash_type
-                elif isinstance(out_type, str):
-                    _desc.add(out_type)
-                else:
-                    _desc.add(out_type[0])
-                    # self.SOCKET_TYPE[name][inp] = inp_desc[0]
         for name in list(self.object_info.keys()):
             desc = self.object_info[name]
             self.SOCKET_TYPE[name] = {}
@@ -1923,10 +1969,10 @@ class NodeParser:
                         # socket = "ENUM"
                         socket = calc_hash_type(inp[0])
                         continue
-                    if socket in {"ENUM", "INT", "FLOAT", "STRING", "BOOLEAN"}:
+                    if socket in {"ENUM", "INT", "FLOAT", "STRING", "BOOLEAN", "COMBO"}:
                         continue
                     # logger.warning(inp)
-                    in1 = self.inputs.new(socket, get_reg_name(inp_name))
+                    in1 = self.inputs.new(socket, self.get_blueprints().get_prop_reg_name(inp_name))
                     in1.display_shape = "CIRCLE" if self.is_required(inp_name) else "CIRCLE_DOT"
                     # in1.link_limit = 0
                     in1.index = index
@@ -1954,6 +2000,8 @@ class NodeParser:
                     inp[1].pop(key)
             properties = {}
             skip = False
+            from .blueprints import get_blueprints
+            bp = get_blueprints(nname)
             for inp_name, inp in inp_types.items():
                 if not inp:
                     logger.error("None Input: %s", inp)
@@ -1962,11 +2010,11 @@ class NodeParser:
                 if isinstance(inp[0], list):
                     proptype = "ENUM"
                 validate_inp(inp)
-                if proptype not in {"ENUM", "INT", "FLOAT", "STRING", "BOOLEAN"}:
+                if proptype not in {"ENUM", "INT", "FLOAT", "STRING", "BOOLEAN", "COMBO"}:
                     continue
                 try:
                     prop = PropGen.Gen(proptype, nname, inp_name, inp)
-                    reg_name = get_reg_name(inp_name)
+                    reg_name = bp.get_prop_reg_name(inp_name)
                     properties[reg_name] = prop
                 except Exception as e:
                     # 打印头部虚线
@@ -1985,8 +2033,6 @@ class NodeParser:
                     skip = True
                     continue
 
-            from .blueprints import get_blueprints
-            bp = get_blueprints(nname)
             bp.extra_properties(properties, nname, ndesc)
             # spec_extra_properties(properties, nname, ndesc)
             fields = {
