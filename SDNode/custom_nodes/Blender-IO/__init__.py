@@ -39,6 +39,17 @@ __CATEGORY__ = "Blender"
 BLENDER_IO_PORT_RANGE = (53819, 53824)
 
 
+def get_comfyui_version() -> tuple[int, int, int]:
+    try:
+        import comfyui_version
+        v = comfyui_version.__version__.split(".")
+        assert len(v) == 3
+        return int(v[0]), int(v[1]), int(v[2])
+    except Exception:
+        pass
+
+    return 0, 0, 0
+
 async def send_socket_catch_exception(function, message):
     try:
         await function(message)
@@ -212,7 +223,6 @@ class BlenderInputs:
         IO.IMAGE,
         IO.IMAGE,
         IO.STRING,
-        IO.INT,
     )
 
     RETURN_NAMES = (
@@ -221,13 +231,20 @@ class BlenderInputs:
         "depth_viewport",
         "mist_viewport",
         "active_model",
-        "frame",
     )
 
-    FUNCTION = "build_inputs"
+    FUNCTION = "build_inputs" if get_comfyui_version() <= (0, 3, 43) else "async_build_inputs"
     unique_id = -1
 
     def build_inputs(self, frame=0, prompt=None, unique_id=None, extra_pnginfo=None):
+        try:
+            loop = asyncio.get_event_loop()
+        except Exception:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+        return loop.run_until_complete(self.async_build_inputs(frame, prompt, unique_id, extra_pnginfo))
+
+    async def async_build_inputs(self, frame=0, prompt=None, unique_id=None, extra_pnginfo=None):
         # print("Combined Outputs: ", prompt, unique_id, extra_pnginfo)
         _prompt = {
             "20": {
@@ -363,10 +380,11 @@ class BlenderInputs:
                 node_outputs[output["name"]] = output
         res = []
         for data_name in self.RETURN_NAMES:
-            res.append(self.get_data_from_blender(data_name, frame, node_outputs))
+            bldata = await self.get_data_from_blender(data_name, frame, node_outputs)
+            res.append(bldata)
         return res
 
-    def get_data_from_blender(self, data_name, frame, node_outputs: dict[str, str]):
+    async def get_data_from_blender(self, data_name, frame, node_outputs: dict[str, str]):
         """
         通过网络向Blender发送请求并获取数据
         """
@@ -375,13 +393,11 @@ class BlenderInputs:
             print("No link found for data_name: ", data_name)
             return None
         print("Called get_data_from_blender: ", data_name)
-        asyncio.set_event_loop(asyncio.new_event_loop())
-        loop = asyncio.get_event_loop()
         data_req = {
             "data_name": data_name,
             "frame": frame,
         }
-        return loop.run_until_complete(self.get_data_ws_ex(data_req))
+        return await self.get_data_ws_ex(data_req)
         return self.get_data_ws_ex(data_req)
 
     async def get_data_ws_ex(self, data_req: dict):
@@ -391,8 +407,7 @@ class BlenderInputs:
             if sid.startswith("ComfyUICUP"):
                 ws = PromptServer.instance.sockets[sid]
         if ws is None:
-            print("Blender Connection not found")
-            return None
+            raise Exception("Blender not connected")
         request_data = {
             "unique_id": self.unique_id,
             "message": data_req,
@@ -576,8 +591,17 @@ class BlenderOutputs:
     CATEGORY = __CATEGORY__
     OUTPUT_NODE = True
     FUNCTION = "build_outputs"
+    FUNCTION = "build_outputs" if get_comfyui_version() <= (0, 3, 43) else "async_build_outputs"    
 
     def build_outputs(self, image=None, model=None, video=None, audio=None, text=None, prompt=None, extra_pnginfo=None):
+        try:
+            loop = asyncio.get_event_loop()
+        except Exception:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+        return loop.run_until_complete(self.async_build_outputs(image, model, video, audio, text, prompt, extra_pnginfo))
+        
+    async def async_build_outputs(self, image=None, model=None, video=None, audio=None, text=None, prompt=None, extra_pnginfo=None):
         # print(f"[Build Outputs]: {image}, {model}, {video}, {audio}, {text}")
         # Image Type: <class 'torch.Tensor'>
         # Model Type: <class 'str'>
@@ -599,12 +623,7 @@ class BlenderOutputs:
             "timestamp": [time.time_ns()],
         }
         # asyncio.set_event_loop(asyncio.new_event_loop())
-        try:
-            loop = asyncio.get_event_loop()
-        except Exception:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-        loop.run_until_complete(self.send_data_ws_ex(data))
+        await self.send_data_ws_ex(data)
         data["apngs"] = self.save_webp(video)
         DataChain.put(
             {
@@ -628,8 +647,7 @@ class BlenderOutputs:
             if sid.startswith("ComfyUICUP"):
                 ws = PromptServer.instance.sockets[sid]
         if ws is None:
-            print("Blender Connection not found")
-            return
+            raise Exception("Blender not connected")
         message = {
             "type": "send_data_to_blender",
             "data": data,
