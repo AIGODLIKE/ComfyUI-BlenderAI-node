@@ -1,0 +1,50 @@
+{
+  "BlenderInputs": {
+    "display_name": "Blender数据输入",
+    "inputs": {
+      "frame": {
+        "name": "采样帧"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "相机"
+      },
+      "1": {
+        "name": "视口"
+      },
+      "2": {
+        "name": "深度图"
+      },
+      "3": {
+        "name": "雾场"
+      },
+      "4": {
+        "name": "活动模型"
+      }
+    }
+  },
+  "BlenderOutputs": {
+    "display_name": "输出到Blender",
+    "inputs": {
+      "image": {
+        "name": "图像"
+      },
+      "mesh": {
+        "name": "网格"
+      },
+      "model": {
+        "name": "模型"
+      }, 
+      "video": {
+        "name": "视频"
+      },
+      "audio": {
+        "name": "音频"
+      },
+      "text": {
+        "name": "文本"
+      }
+    }
+  }
+}

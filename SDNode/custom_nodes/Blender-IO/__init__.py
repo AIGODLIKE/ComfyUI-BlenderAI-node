@@ -552,6 +552,7 @@ class BlenderOutputs:
                         "tooltip": "图片.",
                     },
                 ),
+                "mesh": ("MESH", ),
                 "model": (
                     IO.STRING,
                     {
@@ -593,15 +594,15 @@ class BlenderOutputs:
     FUNCTION = "build_outputs"
     FUNCTION = "build_outputs" if get_comfyui_version() <= (0, 3, 43) else "async_build_outputs"    
 
-    def build_outputs(self, image=None, model=None, video=None, audio=None, text=None, prompt=None, extra_pnginfo=None):
+    def build_outputs(self, image=None, mesh=None, model=None, video=None, audio=None, text=None, prompt=None, extra_pnginfo=None):
         try:
             loop = asyncio.get_event_loop()
         except Exception:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
-        return loop.run_until_complete(self.async_build_outputs(image, model, video, audio, text, prompt, extra_pnginfo))
+        return loop.run_until_complete(self.async_build_outputs(image, mesh, model, video, audio, text, prompt, extra_pnginfo))
         
-    async def async_build_outputs(self, image=None, model=None, video=None, audio=None, text=None, prompt=None, extra_pnginfo=None):
+    async def async_build_outputs(self, image=None, mesh=None, model=None, video=None, audio=None, text=None, prompt=None, extra_pnginfo=None):
         # print(f"[Build Outputs]: {image}, {model}, {video}, {audio}, {text}")
         # Image Type: <class 'torch.Tensor'>
         # Model Type: <class 'str'>
@@ -616,6 +617,7 @@ class BlenderOutputs:
         # 发送数据到blender服务器
         data = {
             "images": self.save_images(image, prompt=prompt, extra_pnginfo=extra_pnginfo),
+            "mesh": self.save_mesh(mesh, prompt=prompt, extra_pnginfo=extra_pnginfo),
             "models": model,
             "videos": self.save_video(video, prompt=prompt, extra_pnginfo=extra_pnginfo),
             "audios": self.save_audio(audio, prompt=prompt, extra_pnginfo=extra_pnginfo),
@@ -682,6 +684,30 @@ class BlenderOutputs:
             results.append({"filename": file, "subfolder": subfolder, "type": self.type})
             counter += 1
         return results
+
+    def save_mesh(self, mesh, filename_prefix="ComfyUI", prompt=None, extra_pnginfo=None):
+        try:
+            from comfy_extras.nodes_hunyuan3d import save_glb
+            full_output_folder, filename, counter, subfolder, filename_prefix = folder_paths.get_save_image_path(filename_prefix, folder_paths.get_output_directory())
+            results = []
+
+            metadata = {}
+            if not args.disable_metadata:
+                if prompt is not None:
+                    metadata["prompt"] = json.dumps(prompt)
+                if extra_pnginfo is not None:
+                    for x in extra_pnginfo:
+                        metadata[x] = json.dumps(extra_pnginfo[x])
+
+            for i in range(mesh.vertices.shape[0]):
+                f = f"{filename}_{counter:05}_.glb"
+                save_glb(mesh.vertices[i], mesh.faces[i], os.path.join(full_output_folder, f), metadata)
+                results.append({"filename": f, "subfolder": subfolder, "type": "output"})
+                counter += 1
+            return results
+        except Exception:
+            pass
+        return {}
 
     def save_video(self, video: VideoInput, filename_prefix="video/ComfyUI", format="mp4", codec="h264", prompt=None, extra_pnginfo=None):
         if not video:
@@ -810,6 +836,7 @@ class ComfyUIInputs:
     RETURN_TYPES = (
         IO.IMAGE,
         IO.STRING,
+        IO.STRING,
         IO.VIDEO,
         IO.AUDIO,
         IO.STRING,
@@ -817,6 +844,7 @@ class ComfyUIInputs:
 
     RETURN_NAMES = (
         "image",
+        "mesh",
         "model",
         "video",
         "audio",
@@ -829,6 +857,7 @@ class ComfyUIInputs:
     def build_inputs(self, prompt=None, unique_id=None, extra_pnginfo=None):
         ori_default = {
             "image": None,
+            "mesh": "",
             "model": "",
             "video": None,
             "audio": None,
@@ -850,6 +879,7 @@ class ComfyUIInputs:
 async def fetch_comfyui_queue(request: web.Request):
     ori_default = {
         "image": None,
+        "mesh": "",
         "model": "",
         "video": None,
         "audio": None,

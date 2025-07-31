@@ -1,0 +1,27 @@
+{
+  "BlenderInputs": {
+    "display_name": "BlenderInputs",
+    "inputs": {
+      "frame": {
+        "name": "采样帧"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "camera"
+      },
+      "1": {
+        "name": "viewport"
+      },
+      "2": {
+        "name": "depth"
+      },
+      "3": {
+        "name": "mist"
+      },
+      "4": {
+        "name": "active model"
+      }
+    }
+  }
+}
