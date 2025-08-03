@@ -592,7 +592,7 @@ class BlenderOutputs:
     CATEGORY = __CATEGORY__
     OUTPUT_NODE = True
     FUNCTION = "build_outputs"
-    FUNCTION = "build_outputs" if get_comfyui_version() <= (0, 3, 43) else "async_build_outputs"    
+    FUNCTION = "build_outputs" if get_comfyui_version() <= (0, 3, 43) else "async_build_outputs"
 
     def build_outputs(self, image=None, mesh=None, model=None, video=None, audio=None, text=None, prompt=None, extra_pnginfo=None):
         try:
@@ -601,7 +601,7 @@ class BlenderOutputs:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
         return loop.run_until_complete(self.async_build_outputs(image, mesh, model, video, audio, text, prompt, extra_pnginfo))
-        
+
     async def async_build_outputs(self, image=None, mesh=None, model=None, video=None, audio=None, text=None, prompt=None, extra_pnginfo=None):
         # print(f"[Build Outputs]: {image}, {model}, {video}, {audio}, {text}")
         # Image Type: <class 'torch.Tensor'>
@@ -615,7 +615,7 @@ class BlenderOutputs:
         # print(f"\t Audio Type: {type(audio)}")
         # print(f"\t  Text Type: {type(text)} ")
         # 发送数据到blender服务器
-        data = {
+        data: dict[str, list[dict]] = {
             "images": self.save_images(image, prompt=prompt, extra_pnginfo=extra_pnginfo),
             "mesh": self.save_mesh(mesh, prompt=prompt, extra_pnginfo=extra_pnginfo),
             "models": model,
@@ -627,19 +627,20 @@ class BlenderOutputs:
         # asyncio.set_event_loop(asyncio.new_event_loop())
         await self.send_data_ws_ex(data)
         data["apngs"] = self.save_webp(video)
+        origin = (
+            [p.get("filename") for p in data["images"]],
+            [p.get("filename") for p in data["mesh"]],
+            model,
+            [p.get("filename") for p in data["videos"]],
+            [p.get("filename") for p in data["audios"]],
+            text,
+        )
         DataChain.put(
             {
-                "origin": {
-                    "image": image,
-                    "model": model,
-                    "video": video,
-                    "audio": audio,
-                    "text": text,
-                },
+                "origin": origin,
                 "ui": data,
             }
         )
-        print(f"FFFF: {data}")
         return {"ui": data}
 
     async def send_data_ws_ex(self, data):
@@ -842,6 +843,15 @@ class ComfyUIInputs:
         IO.STRING,
     )
 
+    OUTPUT_IS_LIST = (
+        True,
+        True,
+        False,
+        True,
+        True,
+        False,
+    )
+
     RETURN_NAMES = (
         "image",
         "mesh",
@@ -856,19 +866,19 @@ class ComfyUIInputs:
 
     def build_inputs(self, prompt=None, unique_id=None, extra_pnginfo=None):
         ori_default = {
-            "image": None,
-            "mesh": "",
+            "image": [],
+            "mesh": [],
             "model": "",
-            "video": None,
-            "audio": None,
+            "video": [],
+            "audio": [],
             "text": "",
         }
         default = {
-            "origin": ori_default,
+            "origin": tuple(ori_default),
             "ui": {},
         }
-        res = DataChain.get(default=default).get("origin", ori_default)
-        return list(res.values())
+        res = DataChain.get(default=default).get("origin", tuple(ori_default))
+        return res
 
     @classmethod
     def IS_CHANGED(s, prompt=None, unique_id=None, extra_pnginfo=None):
@@ -878,15 +888,15 @@ class ComfyUIInputs:
 @PromptServer.instance.routes.post("/bio/fetch/comfyui_queue")
 async def fetch_comfyui_queue(request: web.Request):
     ori_default = {
-        "image": None,
-        "mesh": "",
+        "image": [],
+        "mesh": [],
         "model": "",
-        "video": None,
-        "audio": None,
+        "video": [],
+        "audio": [],
         "text": "",
     }
     default = {
-        "origin": ori_default,
+        "origin": tuple(ori_default),
         "ui": {},
     }
     res = DataChain.peek(default).get("ui", {})
