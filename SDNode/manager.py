@@ -1319,6 +1319,8 @@ class TaskManager:
                 ws.send(json.dumps({"type": "blender_data", "data": {"res": "ok"}}))
                 ws.send(json.dumps({"type": "get_data_from_blender_res", "data": true_data}))
                 return
+            elif mtype == "progress_state":
+                ...
             elif mtype == "send_data_to_blender":
                 {
                     "type": "send_data_to_blender",
@@ -1372,7 +1374,8 @@ class TaskManager:
                 # sys.stdout.flush()
                 if tm.cur_task:
                     tm.cur_task.set_process(data)
-
+            elif mtype == "progress_state":
+                pass
             elif mtype == "executed":
                 {"node": "9", "output": {"images": ["ComfyUI_00028_.png"]}}
                 if TaskManager.progress_bar != 0:
