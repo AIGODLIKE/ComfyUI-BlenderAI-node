@@ -628,7 +628,7 @@ class BlenderOutputs:
         await self.send_data_ws_ex(data)
         data["apngs"] = self.save_webp(video)
         origin = (
-            [p.get("filename") for p in data["images"]],
+            image,
             [p.get("filename") for p in data["mesh"]],
             model,
             [p.get("filename") for p in data["videos"]],
@@ -844,7 +844,7 @@ class ComfyUIInputs:
     )
 
     OUTPUT_IS_LIST = (
-        True,
+        False,
         True,
         False,
         True,
@@ -866,7 +866,7 @@ class ComfyUIInputs:
 
     def build_inputs(self, prompt=None, unique_id=None, extra_pnginfo=None):
         ori_default = {
-            "image": [],
+            "image": torch.zeros((1, 64, 64), dtype=torch.float32, device="cpu"),
             "mesh": [],
             "model": "",
             "video": [],
@@ -874,10 +874,10 @@ class ComfyUIInputs:
             "text": "",
         }
         default = {
-            "origin": tuple(ori_default),
+            "origin": tuple(ori_default.values()),
             "ui": {},
         }
-        res = DataChain.get(default=default).get("origin", tuple(ori_default))
+        res = DataChain.get(default=default).get("origin", tuple(ori_default.values()))
         return res
 
     @classmethod
@@ -888,7 +888,7 @@ class ComfyUIInputs:
 @PromptServer.instance.routes.post("/bio/fetch/comfyui_queue")
 async def fetch_comfyui_queue(request: web.Request):
     ori_default = {
-        "image": [],
+        "image": torch.zeros((1, 64, 64), dtype=torch.float32, device="cpu"),
         "mesh": [],
         "model": "",
         "video": [],
@@ -896,7 +896,7 @@ async def fetch_comfyui_queue(request: web.Request):
         "text": "",
     }
     default = {
-        "origin": tuple(ori_default),
+        "origin": tuple(ori_default.values()),
         "ui": {},
     }
     res = DataChain.peek(default).get("ui", {})
