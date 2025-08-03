@@ -1672,6 +1672,15 @@ class AdvTextEdit(bpy.types.Operator):
 class NodeParser:
     CACHED_OBJECT_INFO = {}
     SOCKET_TYPE = {}  # NodeType: {PropName: SocketType}
+    DIFF_IGNORE = {
+        "Note",
+        "PrimitiveNode",
+        "Cache Node",
+        "LayerUtility: TextImage",
+        "MoonvalleyImg2VideoNode",
+        "MoonvalleyTxt2VideoNode",
+        "MoonvalleyVideo2VideoNode",
+    }
     OBJECT_INFO_REQ = None
     DIFF_PATH = Path(__file__).parent / "diff_object_info.json"
     PATH = Path(__file__).parent / "object_info.json"
@@ -1753,7 +1762,7 @@ class NodeParser:
         # 获取差异object_info
         if self.DIFF_PATH.exists():
             self.diff_object_info = read_json(self.DIFF_PATH)
-        for name in ["Note", "PrimitiveNode", "Cache Node", "LayerUtility: TextImage"]:
+        for name in self.DIFF_IGNORE:
             self.diff_object_info.pop(name, None)
         return self.diff_object_info
 
