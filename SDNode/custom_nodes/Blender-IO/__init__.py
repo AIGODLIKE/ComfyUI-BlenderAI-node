@@ -631,8 +631,8 @@ class BlenderOutputs:
             image,
             [p.get("filename") for p in data["mesh"]],
             model,
-            [p.get("filename") for p in data["videos"]],
-            [p.get("filename") for p in data["audios"]],
+            video,
+            audio,
             text,
         )
         DataChain.put(
@@ -847,8 +847,8 @@ class ComfyUIInputs:
         False,
         True,
         False,
-        True,
-        True,
+        False,
+        False,
         False,
     )
 
@@ -869,8 +869,8 @@ class ComfyUIInputs:
             "image": torch.zeros((1, 64, 64), dtype=torch.float32, device="cpu"),
             "mesh": [],
             "model": "",
-            "video": [],
-            "audio": [],
+            "video": None,
+            "audio": None,
             "text": "",
         }
         default = {
