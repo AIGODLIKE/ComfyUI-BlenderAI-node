@@ -9,7 +9,7 @@ from pathlib import Path
 from bpy.types import Context, Event
 from mathutils import Vector
 from functools import partial
-from .translations import ctxt
+from .translations.translation import ctxt
 from .prop import Prop
 from .utils import _T, logger, FSWatcher, read_json
 from .timer import Timer, Worker, WorkerFunc

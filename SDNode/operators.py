@@ -8,7 +8,7 @@ from pathlib import Path
 from mathutils import Vector
 from bpy.types import Context, Event
 from .tree import CFNodeTree, TREE_TYPE
-from ..translations import ctxt
+from ..translations.translation import ctxt
 from ..utils import Timer, _T, get_ai_mat_tree, set_ai_mat_tree, find_area_by_type, find_areas_of_type, find_region_by_type
 
 

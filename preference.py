@@ -8,7 +8,7 @@ from platform import system
 
 from .utils import Icon, _T, FSWatcher, is_ipv4, is_ipv6, is_domain
 from .External.lupawrapper import toggle_debug
-from .translations import ctxt
+from .translations.translation import ctxt
 from .kclogger import logger
 
 

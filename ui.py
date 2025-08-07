@@ -3,7 +3,7 @@ import platform
 from bl_ui.properties_paint_common import UnifiedPaintPanel
 from bpy.types import Context
 from .ops import Ops, Load_History, Copy_Tree, Load_Batch, Fetch_Node_Status, Clear_Node_Cache, SDNode_To_Image, Image_To_SDNode, Image_Set_Channel_Packed, Open_Log_Window, CleanVRam
-from .translations import ctxt
+from .translations.translation import ctxt
 from .SDNode import TaskManager, FakeServer
 from .SDNode.tree import TREE_TYPE
 from .SDNode.nodes import NodeBase

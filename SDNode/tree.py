@@ -21,7 +21,7 @@ from .nodes import nodes_reg, nodes_unreg, NodeParser, NodeRegister, NodeBase, c
 from ..utils import logger, Icon, rgb2hex, hex2rgb, _T, FSWatcher
 from ..datas import EnumCache
 from ..timer import Timer
-from ..translations import ctxt
+from ..translations.translation import ctxt
 from .utils import THelper
 from contextlib import contextmanager
 

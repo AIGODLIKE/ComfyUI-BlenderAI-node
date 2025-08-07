@@ -11,7 +11,7 @@ from functools import lru_cache
 from urllib.parse import urlparse
 from ast import literal_eval
 from .kclogger import logger
-from .translations import LANG_TEXT
+from .translations.translation import LANG_TEXT
 from .timer import Timer
 from .datas import IMG_SUFFIX, get_bl_version
 translation = {}

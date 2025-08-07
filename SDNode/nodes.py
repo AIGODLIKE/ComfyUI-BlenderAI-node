@@ -17,7 +17,7 @@ from .utils import SELECTED_COLLECTIONS, get_default_tree
 from ..utils import logger, Icon, _T, read_json, hex2rgb
 from ..datas import ENUM_ITEMS_CACHE, IMG_SUFFIX
 from ..timer import Timer
-from ..translations import ctxt
+from ..translations.translation import ctxt
 from .manager import get_url, WITH_PROXY
 
 try:

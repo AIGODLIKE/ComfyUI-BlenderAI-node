@@ -1,7 +1,7 @@
 import bpy
 from .words_collection import words
 from ..utils import PkgInstaller
-from ..translations import ctxt
+from ..translations.translation import ctxt
 REGISTERED = [False]
 
 REQUIREMENTS = ["imgui"]

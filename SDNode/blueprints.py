@@ -26,7 +26,7 @@ from ..timer import Timer
 from ..preference import get_pref
 from ..kclogger import logger
 from ..utils import _T, Icon, update_screen, PrevMgr, rgb2hex, hex2rgb
-from ..translations import ComfyPropNameTranslate
+from ..translations.translation import ComfyPropNameTranslate
 
 
 def get_next_filename(save_path, max_len=4):

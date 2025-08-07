@@ -51,6 +51,7 @@ from .SDNode.custom_support import custom_support_reg, custom_support_unreg
 from .prop import RenderLayerString, MLTWord, Prop, prop_reg, prop_unreg
 from .Linker import linker_register, linker_unregister
 from .hook import use_hook
+from .translations import i18n_register, i18n_unregister
 
 clss = [
     Panel,
@@ -90,12 +91,13 @@ def dump_info():
     import json
     import os
     from .preference import get_pref
-    if "--get-blender-ai-node-info" in sys.argv:
-        model_path = getattr(get_pref(), 'model_path')
-        info = {"Version": ".".join([str(i) for i in bl_info["version"]]), "ComfyUIPath": model_path}
-        sys.stderr.write(f"BlenderComfyUIInfo: {json.dumps(info)} BlenderComfyUIend")
-        sys.stderr.flush()
-        print(f'Blender {os.getpid()} PID', file=sys.stderr)
+    if "--get-blender-ai-node-info" not in sys.argv:
+        return
+    model_path = getattr(get_pref(), 'model_path')
+    info = {"Version": ".".join([str(i) for i in bl_info["version"]]), "ComfyUIPath": model_path}
+    sys.stderr.write(f"BlenderComfyUIInfo: {json.dumps(info)} BlenderComfyUIend")
+    sys.stderr.flush()
+    print(f'Blender {os.getpid()} PID', file=sys.stderr)
 
 
 def track_ae():
@@ -154,8 +156,7 @@ def register():
         dump_info()
         return
 
-    from .translations import translations_dict
-    bpy.app.translations.register(__name__, translations_dict)
+    i18n_register()
     reg()
     ui_reg()
     prop_reg()
@@ -188,7 +189,7 @@ def unregister():
     pref_unregister()
     if bpy.app.background:
         return
-    bpy.app.translations.unregister(__name__)
+    i18n_unregister()
     unreg()
     prop_unreg()
     ui_unreg()
