@@ -16,3 +16,4 @@ groups/00测试
 SDNode/pid
 .idea
 TestLib
+translations/*/Nodes/__cache__.json
