@@ -26,6 +26,7 @@ from ..timer import Timer
 from ..preference import get_pref
 from .history import History
 from ..External.websocket import WebSocketApp
+from ..translations.translation import ComfyTranslator
 
 
 def get_ip():
@@ -960,10 +961,15 @@ class TaskManager:
             t2 = time.time()
             logger.info(_T("RegNode Time:") + f" {t2 - t1:.2f}s")
 
+        def refresh_translation():
+            t = TaskManager.fetch_comfyui_translation()
+            ComfyTranslator.try_refresh_translation(t)
+
         if TaskManager.is_launching():
             return
 
         def callback():
+            Timer.put(refresh_translation)
             Timer.put(refresh_node)
 
         def job():
@@ -1084,6 +1090,20 @@ class TaskManager:
         except URLError:
             ...
         return {}
+    
+    @staticmethod
+    def fetch_comfyui_translation():
+        if not TaskManager.is_launched():
+            return {}
+        req = request.Request(f"{TaskManager.server.get_url()}/i18n", method="GET")
+        try:
+            res = request.urlopen(req)
+            res = json.loads(res.read().decode())
+            return res
+        except URLError:
+            ...
+        return {}
+    
     # def get_temp_directory():
     #     req = request.Request(f"{TaskManager.server.get_url()}/cup/get_temp_directory", method="POST")
     #     try:

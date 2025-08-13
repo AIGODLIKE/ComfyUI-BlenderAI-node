@@ -26,7 +26,7 @@ from ..timer import Timer
 from ..preference import get_pref
 from ..kclogger import logger
 from ..utils import _T, Icon, update_screen, PrevMgr, rgb2hex, hex2rgb
-from ..translations.translation import ComfyPropNameTranslate
+from ..translations.translation import ComfyTranslator
 
 
 def get_next_filename(save_path, max_len=4):
@@ -161,10 +161,10 @@ class BluePrintBase:
     comfyClass = ""
 
     def get_prop_reg_name(self, inp_name):
-        return ComfyPropNameTranslate.get_prop_reg_name(self.comfyClass, inp_name)
+        return ComfyTranslator.get_prop_reg_name(self.comfyClass, inp_name)
     
     def get_prop_ori_name(self, inp_name):
-        return ComfyPropNameTranslate.get_prop_ori_name(self.comfyClass, inp_name)
+        return ComfyTranslator.get_prop_ori_name(self.comfyClass, inp_name)
 
     def getattr(s, self, prop_name):
         meta = self.get_meta(prop_name)

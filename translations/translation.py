@@ -98,9 +98,10 @@ INTERNAL_NAMES = {
     "width_hidden"
 }
 
-class ComfyPropNameTranslate:
+class ComfyTranslator:
     PROP_REG_NAME_MAPS = {}
     PROP_ORI_NAME_MAPS = {}
+    TRANSLATION_CACHE: dict = None
 
     @classmethod
     def get_prop_reg_name(self, comfyClass, inp_name):
@@ -124,6 +125,70 @@ class ComfyPropNameTranslate:
         ori_name = get_ori_name(inp_name)
         ori_names[inp_name] = ori_name
         return ori_name
+
+    @classmethod
+    def try_refresh_translation(cls, newer: dict = {}) -> None:
+        if newer == cls.TRANSLATION_CACHE:
+            return False
+        cls.refresh_translation(newer)
+        cls.TRANSLATION_CACHE = newer
+
+    @classmethod
+    def refresh_translation(cls, newer: dict) -> None:
+        cls.unregister_translation()
+        d = {
+            "zh": {
+                "nodeDefs": {
+                    "BlenderInputs": {
+                        "display_name": "Blender数据输入",
+                        "inputs": {
+                            "image": {"name": "图像"},
+                            "mesh": {"name": "网格"},
+                        },
+                        "outputs": {
+                            "0": {"name": "相机"},
+                            "1": {"name": "视口"},
+                        },
+                    },
+                }
+            },
+        }
+        locale_map = { "zh": "zh_CN", "en": "en_US" }
+        for locale, translations in newer.items():
+            nodeDefs = translations.get("nodeDefs", {})
+            if not nodeDefs:
+                continue
+            node_translations = {}
+            for nodeName, nodeDef in nodeDefs.items():
+                display_name = nodeDef.get("display_name", nodeName)
+                inputs = {}
+                for inputName, inputInfo in nodeDef.get("inputs", {}).items():
+                    inputs[inputName] = inputInfo.get("name", inputName)
+                outputs = {}
+                for outputName, outputInfo in nodeDef.get("outputs", {}).items():
+                    outputs[outputName] = outputInfo.get("name", outputName)
+                node_translation = {
+                    "display_name": display_name,
+                    "inputs": inputs,
+                    "outputs": outputs
+                }
+                node_translations[nodeName] = node_translation
+            # 写入到临时文件
+            locale = locale_map.get(locale, locale).replace("_", "-")
+            translation_temp_file = Path(__file__).parent.joinpath(locale, "Nodes/__cache__.json")
+            translation_temp_file.parent.mkdir(parents=True, exist_ok=True)
+            translation_temp_file.write_text(json.dumps(node_translations, indent=4, ensure_ascii=False))
+        # 存储新的翻译
+        # 1. 格式转换
+        # 2. 保存
+        translations_dict = compile()
+        bpy.app.translations.register(__name__, translations_dict)
+        cls.TRANSLATION_CACHE = newer
+
+    @classmethod
+    def unregister_translation(cls) -> None:
+        bpy.app.translations.unregister(__name__)
+
 
 def get_reg_name(inp_name):
     if inp_name.startswith("_"):
@@ -677,7 +742,7 @@ def reg_node_ctxt(tdict: dict, replace_dict: dict, in_locale: str):
             if not isinstance(part, dict):
                 continue
             for wn, wv in part.items():
-                wn = ComfyPropNameTranslate.get_prop_reg_name(node_name, wn)
+                wn = ComfyTranslator.get_prop_reg_name(node_name, wn)
                 td[(t_ctxt, wn)] = wv
                 td[(None, wn)] = wv
                 rd[wn] = wv
@@ -688,11 +753,13 @@ for locale, TEXT in LANG_TEXT.items():
     TEXT.update(read_locale(locale))
 
 translations_dict = {}
-for locale in LANG_TEXT:
-    translations_dict[locale] = {}
-    REPLACE_DICT[locale] = {}
-    reg_node_ctxt(translations_dict, REPLACE_DICT, locale)
-    reg_other_translations(translations_dict, REPLACE_DICT, locale)
+def compile() -> dict:
+    for locale in LANG_TEXT:
+        translations_dict[locale] = {}
+        REPLACE_DICT[locale] = {}
+        reg_node_ctxt(translations_dict, REPLACE_DICT, locale)
+        reg_other_translations(translations_dict, REPLACE_DICT, locale)
+    return translations_dict
 
 
 def get_ctxt(msgctxt):
@@ -749,3 +816,10 @@ cat = {'default_real': None,
        'id_windowmanager': 'WindowManager',
        'editor_view3d': 'View3D'
        }
+
+def register():
+    ComfyTranslator.try_refresh_translation()
+
+
+def unregister():
+    ComfyTranslator.unregister_translation()
