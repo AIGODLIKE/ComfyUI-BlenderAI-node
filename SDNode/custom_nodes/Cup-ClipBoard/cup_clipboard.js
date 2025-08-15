@@ -2060,6 +2060,19 @@ classic, medieval, noble`.trim(),
     }
 }
 
+function isVersionGreater(version1, version2) {
+  const v1 = version1.split(".").map(Number);
+  const v2 = version2.split(".").map(Number);
+  const maxLength = Math.max(v1.length, v2.length);
+  for (let i = 0; i < maxLength; i++) {
+    const num1 = v1[i] || 0;
+    const num2 = v2[i] || 0;
+    if (num1 > num2) return true;
+    if (num1 < num2) return false;
+  }
+  return false;
+}
+
 const ext = {
     name: "AIGODLIKE.CUP-CLIPBOARD",
     async init(app) {
@@ -2090,7 +2103,7 @@ const ext = {
         app.ui.menuContainer.appendChild(
             $el("div.comfy-menu-btns", [btnCopy, btnPaste])
         );
-        if(window.__COMFYUI_FRONTEND_VERSION__ > "1.2")
+        if(isVersionGreater(window.__COMFYUI_FRONTEND_VERSION__, "1.2"))
         {
           var ComfyButtonGroup = window.comfyAPI.buttonGroup.ComfyButtonGroup;
           var ComfyButton = window.comfyAPI.button.ComfyButton;
