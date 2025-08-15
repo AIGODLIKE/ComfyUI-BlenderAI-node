@@ -1125,6 +1125,8 @@ class TaskManager:
             ...
         except RemoteDisconnected:
             ...
+        except ConnectionResetError:
+            pass
         except Exception:
             traceback.print_exc()
 
@@ -1193,6 +1195,7 @@ class TaskManager:
                     "client_id": cid,
                     "prompt": prompt,
                     "extra_data": {
+                        "api_key_comfy_org": task.get("api_key_comfy_org"),
                         "extra_pnginfo": {
                             "workflow": task.get("workflow"),
                         }

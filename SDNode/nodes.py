@@ -1742,7 +1742,7 @@ class NodeParser:
         try:
             import requests
             from urllib3.util import Timeout
-            timeout = Timeout(connect=0.1, read=2)
+            timeout = Timeout(connect=2, read=2)
             if WITH_PROXY:
                 req = requests.get(f"{get_url()}/object_info", timeout=timeout)
             else:

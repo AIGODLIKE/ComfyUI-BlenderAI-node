@@ -227,6 +227,7 @@ class AddonPreference(bpy.types.AddonPreferences):
         description="Windows standalone build: Enable convenient things that most people using the standalone windows build will probably enjoy (like auto opening the page on startup).")  # --windows-standalone-build
     with_webui_model: bpy.props.StringProperty(default="", name="With WEBUI Model", subtype="DIR_PATH")
     with_comfyui_model: bpy.props.StringProperty(default="", name="With ComfyUI Model", subtype="DIR_PATH")
+    api_key_comfy_org: bpy.props.StringProperty(default="", name="ComfyUI Org API Key", description="ComfyUI Org API Key")
 
     def update_copy_args(self, context):
         if self.copy_args:
@@ -554,6 +555,7 @@ class AddonPreference(bpy.types.AddonPreferences):
             layout.prop(self, "python_path", text_ctxt=ctxt)
             layout.prop(self, "with_webui_model")
             layout.prop(self, "with_comfyui_model")
+            layout.prop(self, "api_key_comfy_org")
             layout.prop(self, "cuda")
             layout.prop(self, "vram", text_ctxt=ctxt)
         row = layout.row(align=True)

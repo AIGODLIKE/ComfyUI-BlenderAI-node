@@ -22,6 +22,7 @@ from ..utils import logger, Icon, rgb2hex, hex2rgb, _T, FSWatcher
 from ..datas import EnumCache
 from ..timer import Timer
 from ..translations.translation import ctxt
+from ..preference import get_pref
 from .utils import THelper
 from contextlib import contextmanager
 
@@ -182,7 +183,12 @@ class CFNodeTree(NodeTree):
     def get_task(self):
         prompt = self.serialize()
         workflow = self.save_json()
-        return {"prompt": prompt, "workflow": workflow, "api": "prompt"}
+        return {
+            "prompt": prompt,
+            "workflow": workflow,
+            "api": "prompt",
+            "api_key_comfy_org": get_pref().api_key_comfy_org,
+        }
 
     def execute(self):
         self.reset_error_mark()
