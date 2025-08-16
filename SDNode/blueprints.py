@@ -8,6 +8,7 @@ import urllib.request
 import urllib.parse
 import tempfile
 import aud
+import uuid
 from functools import partial, lru_cache
 from pathlib import Path
 from platform import system
@@ -1958,6 +1959,10 @@ class 输入图像(BluePrintBase):
         return setwidth(self, max(self.prev.size[0], self.prev.size[1]))
 
     def spec_extra_properties(s, properties, nname, ndesc):
+        prop = bpy.props.EnumProperty(items=[("FILE", "File", "", "FILEBROWSER", 0), ("IMAGE", "Image", "", "IMAGE_DATA", 1)], default="FILE", name="Input Type")
+        properties["input_type"] = prop
+        prop = bpy.props.PointerProperty(type=bpy.types.Image)
+        properties["inner_image"] = prop
         prop = bpy.props.PointerProperty(type=bpy.types.Image)
         properties["prev"] = prop
         prop = bpy.props.StringProperty(default="", name="Render Layer")
@@ -1995,7 +2000,13 @@ class 输入图像(BluePrintBase):
             if self.mode == "序列图":
                 layout.prop(self, "frames_dir", text="")
             else:
-                layout.prop(self, "image", text="", text_ctxt=self.get_ctxt())
+                if self.mode == "输入":
+                    if self.input_type == "IMAGE":
+                        layout.template_ID(self, "inner_image", new="image.new", open="image.open")
+                    else:
+                        layout.prop(self, "image", text="", text_ctxt=self.get_ctxt())
+                if self.mode != "输入":
+                    layout.prop(self, "image", text="", text_ctxt=self.get_ctxt())
             layout.row().prop(self, prop, expand=True, text_ctxt=self.get_ctxt())
             if self.mode == "序列图":
                 layout.label(text="Frames Directory", text_ctxt=self.get_ctxt())
@@ -2012,6 +2023,10 @@ class 输入图像(BluePrintBase):
                 layout.prop(self, "use_current_frame", toggle=True)
                 if not self.use_current_frame:
                     layout.prop(self, "input_frame")
+            return True
+        elif prop == "input_type":
+            if self.mode == "输入":
+                layout.prop(self, "input_type", expand=True)
             return True
         elif prop == "image":
             if os.path.exists(self.image):
@@ -2032,21 +2047,44 @@ class 输入图像(BluePrintBase):
                 Timer.put((f, self))
             return True
         elif prop == "prev":
-            if self.prev:
-                Icon.reg_icon_by_pixel(self.prev, self.prev.filepath)
-                icon_id = Icon[self.prev.filepath]
+            prev = self.prev
+            if self.mode == "输入" and self.input_type == "IMAGE":
+                prev = self.inner_image
+            if prev:
+                Icon.reg_icon_by_pixel(prev, prev.filepath)
+                icon_id = Icon[prev.filepath]
                 row = layout.row(align=True)
-                row.label(text=f"{self.prev.file_format} : [{self.prev.size[0]} x {self.prev.size[1]}]")
+                row.label(text=f"{prev.file_format} : [{prev.size[0]} x {prev.size[1]}]")
                 row.operator(Set_Render_Res.bl_idname, text="", icon="LOOP_FORWARDS").node_name = self.name
                 layout.template_icon(icon_id, scale=self.width // 20)
             return True
-        elif prop in {"render_layer", "out_layers", "frames_dir", "disable_render", "use_current_frame", "input_frame"}:
+        elif prop in {
+            "render_layer",
+            "out_layers",
+            "frames_dir",
+            "disable_render",
+            "use_current_frame",
+            "input_frame",
+            "inner_image",
+        }:
             return True
 
     def pre_fn(s, self: NodeBase):
         if not self.reaches_output():
             logger.warning("Not reaches output node, skip render proc")
             return
+
+        @Timer.wait_run
+        def save_image():
+            if self.mode != "输入" or self.input_type != "IMAGE":
+                return
+            if not self.inner_image:
+                return
+            # 保存图片
+            image: bpy.types.Image = self.inner_image
+            image.save(filepath = self.image)
+
+        save_image()
 
         def render():
             if self.mode not in {"渲染", "视口"}:
@@ -2122,6 +2160,8 @@ class 输入图像(BluePrintBase):
     def serialize_pre(s, self: NodeBase):
         if self.mode in {"渲染", "视口"} and self.reaches_output():
             s.ensure_img_path(self)
+        if self.mode == "输入" and self.input_type == "IMAGE":
+            self.image = Path(tempfile.gettempdir()).joinpath(f"{uuid.uuid4().hex}_render.png").as_posix()
         super().serialize_pre(self)
 
     def serialize_specific(s, self: NodeBase, cfg, execute):
