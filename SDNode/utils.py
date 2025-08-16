@@ -743,6 +743,51 @@ def calc_data_from_blender_do(data_name, out_dir, uid) -> dict:
         data_path.touch()
         upload_status = upload_data(data_name, data_path)
         return upload_status
+    elif data_name.startswith("blender_image:"):
+        # Extract image name from data_name (format: "blender_image:ImageName")
+        image_name = data_name[14:]  # Remove "blender_image:" prefix
+        data_path = out_dir / f"blender_image_{uid}.png"
+        
+        def save_blender_image():
+            import bpy
+            if image_name in bpy.data.images:
+                blender_img = bpy.data.images[image_name]
+                if blender_img.size[0] > 0 and blender_img.size[1] > 0:
+                    # Save the image temporarily
+                    old_filepath = blender_img.filepath_raw
+                    blender_img.filepath_raw = data_path.as_posix()
+                    blender_img.save()
+                    blender_img.filepath_raw = old_filepath
+                    logger.info("Saved Blender image '%s' to %s", image_name, data_path.as_posix())
+                else:
+                    # Image has no data, create a small placeholder
+                    from PIL import Image as PILImage
+                    placeholder = PILImage.new('RGB', (64, 64), color='red')
+                    placeholder.save(data_path.as_posix())
+                    logger.warning("Blender image '%s' has no data, created placeholder", image_name)
+            else:
+                # Image not found, create error placeholder with available images info
+                from PIL import Image as PILImage, ImageDraw, ImageFont
+                placeholder = PILImage.new('RGB', (512, 256), color='darkred')
+                draw = ImageDraw.Draw(placeholder)
+                
+                available_images = [img.name for img in bpy.data.images if img.size[0] > 0]
+                error_text = f"Image '{image_name}' not found in Blender"
+                available_text = f"Available: {', '.join(available_images[:5])}" if available_images else "No images available"
+                
+                try:
+                    # Use default font
+                    draw.text((10, 50), error_text, fill='white')
+                    draw.text((10, 100), available_text, fill='yellow')
+                except:
+                    pass  # Fallback if text drawing fails
+                    
+                placeholder.save(data_path.as_posix())
+                logger.error("Blender image '%s' not found. Available: %s", image_name, available_images)
+        
+        Timer.wait_run(save_blender_image)()
+        upload_status = upload_data(data_name, data_path)
+        return upload_status
     return {}
 
 
