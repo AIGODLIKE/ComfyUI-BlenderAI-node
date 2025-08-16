@@ -2082,7 +2082,13 @@ class 输入图像(BluePrintBase):
                 return
             # 保存图片
             image: bpy.types.Image = self.inner_image
-            image.save(filepath = self.image)
+            old_format = bpy.context.scene.render.image_settings.file_format
+            old_color_mode = bpy.context.scene.render.image_settings.color_mode
+            bpy.context.scene.render.image_settings.file_format = "PNG"
+            bpy.context.scene.render.image_settings.color_mode = "RGBA"
+            image.save_render(filepath = self.image)
+            bpy.context.scene.render.image_settings.file_format = old_format
+            bpy.context.scene.render.image_settings.color_mode = old_color_mode
 
         save_image()
 
