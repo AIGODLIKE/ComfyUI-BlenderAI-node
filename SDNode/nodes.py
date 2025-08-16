@@ -246,7 +246,7 @@ class PropGen:
                 items = []
                 # 专门用于 老版本的 翻译
                 spec_trans = {
-                    "输入": "Input",
+                    "输入": "Image Path/Name",
                     "渲染": "Render",
                     "序列图": "Sequence",
                     "视口": "Viewport",
@@ -285,7 +285,7 @@ class PropGen:
                 items = []
                 # 专门用于 老版本的 翻译
                 spec_trans = {
-                    "输入": "Input",
+                    "输入": "Image Path/Name",
                     "渲染": "Render",
                     "序列图": "Sequence",
                     "视口": "Viewport",

@@ -1990,6 +1990,38 @@ class 输入图像(BluePrintBase):
         prop = bpy.props.IntProperty(default=1, name="Input Frame")
         properties["input_frame"] = prop
 
+    def _get_preview_image_path(s, image_input):
+        """Get the path for preview image, checking common temp directories for copied images"""
+        # Check if it's a full path first
+        if os.path.exists(image_input):
+            return image_input
+            
+        # If it's just a name, check common temp directories
+        if "/" not in image_input and "\\" not in image_input:
+            # Common temp directories where ComfyUI might store files
+            temp_dirs = [
+                "/tmp",
+                os.path.expanduser("~/tmp"),
+                tempfile.gettempdir(),
+                "/var/tmp"
+            ]
+            
+            for temp_dir in temp_dirs:
+                if not os.path.exists(temp_dir):
+                    continue
+                    
+                # Check for SDN prefixed version (what our LoadImage creates)
+                temp_image_path = os.path.join(temp_dir, f"SDN_{image_input}")
+                if os.path.exists(temp_image_path):
+                    return temp_image_path
+                    
+                # Also check for the original filename
+                original_path = os.path.join(temp_dir, image_input)
+                if os.path.exists(original_path):
+                    return original_path
+        
+        return None
+
     def spec_draw(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swsock=True, swdisp=False) -> bool:
         if prop == "mode":
             if self.mode == "序列图":
@@ -2014,17 +2046,20 @@ class 输入图像(BluePrintBase):
                     layout.prop(self, "input_frame")
             return True
         elif prop == "image":
-            if os.path.exists(self.image):
-                def f(self):
-                    Icon.load_icon(self.image)
-                    if not (img := Icon.find_image(self.image)):
+            # Use helper method to find the correct image path (including temp directory)
+            image_path = s._get_preview_image_path(self.image)
+            
+            if image_path:
+                def f(self, img_path):
+                    Icon.load_icon(img_path)
+                    if not (img := Icon.find_image(img_path)):
                         return
                     self.prev = img
                     update_screen()
-                if Icon.try_mark_image(self.image) or not self.prev:
-                    Timer.put((f, self))
-                elif Icon.find_image(self.image) != self.prev:  # 修复加载A 后加载B图, 再加载A时 不更新
-                    Timer.put((f, self))
+                if Icon.try_mark_image(image_path) or not self.prev:
+                    Timer.put((f, self, image_path))
+                elif Icon.find_image(image_path) != self.prev:  # 修复加载A 后加载B图, 再加载A时 不更新
+                    Timer.put((f, self, image_path))
             elif self.prev:
                 def f(self):
                     self.prev = None
