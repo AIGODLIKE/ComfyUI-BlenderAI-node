@@ -127,6 +127,7 @@ class AddonPreference(bpy.types.AddonPreferences):
     debug: bpy.props.BoolProperty(default=False, name="Debug", update=update_debug)
     popup_scale: bpy.props.IntProperty(default=5, min=1, max=100, name="Preview Image Size")
     enable_hq_preview: bpy.props.BoolProperty(default=True, name="Enable High Quality Preview Image")
+    keep_preview_of_prev_node: bpy.props.BoolProperty(default=False, name="Keep Preview Image of Preview Node")
     server_type: bpy.props.EnumProperty(items=[("Local", "LocalServer", "", "LOCKVIEW_ON", 0),
                                                ("Remote", "RemoteServer", "", "WORLD_DATA", 1)
                                                ],
@@ -562,6 +563,7 @@ class AddonPreference(bpy.types.AddonPreferences):
         row.prop(self, "stencil_offset_size_xy", text_ctxt=ctxt)
         row.prop(self, "popup_scale", text_ctxt=ctxt)
         row.prop(self, "enable_hq_preview", text="", icon="IMAGE_BACKGROUND", text_ctxt=ctxt)
+        row.prop(self, "keep_preview_of_prev_node", text="", icon="IMAGE_PLANE", text_ctxt=ctxt)
         row = layout.row(align=True)
         text = "ERROR IP"
         icon = "INTERNET"

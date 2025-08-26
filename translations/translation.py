@@ -508,6 +508,7 @@ other = {
     "Sound Volume": "声音音量",
     "Volume of the sound played wwhen the ComfyUI queue is empty": "当 ComfyUI 任务队列全部完成时播放的声音音量",
     "Enable High Quality Preview Image": "启用高清预览图",
+    "Keep Preview Image of Preview Node": "保留预览节点的预览图",
     "ComfyUI Path": "ComfyUI路径",
     "Python Path": "Python解释器路径",
     "Select python dir or python.exe.\nOn Linux select your venv /bin/ folder": "选择python所在文件夹或python.exe.\n在Linux上选择您的venv /bin/ 文件夹",

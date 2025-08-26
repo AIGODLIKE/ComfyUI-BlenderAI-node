@@ -1279,6 +1279,8 @@ class 预览(BluePrintBase):
     def serialize_pre_specific(s, self: NodeBase):
         if self.inputs[0].is_linked:
             return
+        if get_pref().keep_preview_of_prev_node:
+            return
         self.prev.clear()
 
     def post_fn(s, self: NodeBase, t: Task, result):
@@ -1371,6 +1373,8 @@ class PreviewImage(BluePrintBase):
 
     def serialize_pre_specific(s, self: NodeBase):
         if self.inputs[0].is_linked:
+            return
+        if get_pref().keep_preview_of_prev_node:
             return
         self.prev.clear()
 
