@@ -112,7 +112,7 @@ def insert_or_replace_vorbis_comment(flac_io, comment_dict):
     return new_flac_io
 
 
-class CupException(Exception):
+class BlenderIOException(Exception):
     pass
 
 
@@ -141,8 +141,6 @@ class DataChain:
 
 
 class BlenderInputs:
-    timeout = 30
-
     @classmethod
     def INPUT_TYPES(s):
         return {
@@ -154,6 +152,15 @@ class BlenderInputs:
                         "min": 0,
                         "max": 1048574,
                         "tooltip": "帧.",
+                    },
+                ),
+                "timeout": (
+                    IO.INT,
+                    {
+                        "default": 30,
+                        "min": 1,
+                        "max": 1024,
+                        "tooltip": "Waiting Timeout.",
                     },
                 ),
             },
@@ -236,15 +243,15 @@ class BlenderInputs:
     FUNCTION = "build_inputs" if get_comfyui_version() <= (0, 3, 43) else "async_build_inputs"
     unique_id = -1
 
-    def build_inputs(self, frame=0, prompt=None, unique_id=None, extra_pnginfo=None):
+    def build_inputs(self, frame=0, timeout=30, prompt=None, unique_id=None, extra_pnginfo=None):
         try:
             loop = asyncio.get_event_loop()
         except Exception:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
-        return loop.run_until_complete(self.async_build_inputs(frame, prompt, unique_id, extra_pnginfo))
+        return loop.run_until_complete(self.async_build_inputs(frame, prompt, timeout, unique_id, extra_pnginfo))
 
-    async def async_build_inputs(self, frame=0, prompt=None, unique_id=None, extra_pnginfo=None):
+    async def async_build_inputs(self, frame=0, timeout=30, prompt=None, unique_id=None, extra_pnginfo=None):
         # print("Combined Outputs: ", prompt, unique_id, extra_pnginfo)
         _prompt = {
             "20": {
@@ -380,11 +387,11 @@ class BlenderInputs:
                 node_outputs[output["name"]] = output
         res = []
         for data_name in self.RETURN_NAMES:
-            bldata = await self.get_data_from_blender(data_name, frame, node_outputs)
+            bldata = await self.get_data_from_blender(data_name, frame, timeout, node_outputs)
             res.append(bldata)
         return res
 
-    async def get_data_from_blender(self, data_name, frame, node_outputs: dict[str, str]):
+    async def get_data_from_blender(self, data_name, frame, timeout, node_outputs: dict[str, str]):
         """
         通过网络向Blender发送请求并获取数据
         """
@@ -397,10 +404,10 @@ class BlenderInputs:
             "data_name": data_name,
             "frame": frame,
         }
-        return await self.get_data_ws_ex(data_req)
+        return await self.get_data_ws_ex(data_req, timeout)
         return self.get_data_ws_ex(data_req)
 
-    async def get_data_ws_ex(self, data_req: dict):
+    async def get_data_ws_ex(self, data_req: dict, timeout: int = 30):
         ws: web.WebSocketResponse = None
         # 场景连接blender的ws客户端
         for sid in PromptServer.instance.sockets:
@@ -419,7 +426,6 @@ class BlenderInputs:
         }
         result_data: dict = None
         try:
-            timeout = self.timeout
             await ws.send_json(message)
             queue = asyncio.Queue()
             old_receive = ws.receive
@@ -458,7 +464,11 @@ class BlenderInputs:
                     traceback.print_exc()
                     continue
             ws.receive = old_receive
+            if message is None:
+                raise BlenderIOException("Waiting Blender Response Timeout")
             result_data = message.get("data", {})
+        except BlenderIOException as e:
+            raise e
         except Exception as err:
             print("Send error: {}".format(err))
             traceback.print_exc()
@@ -528,7 +538,7 @@ class BlenderInputs:
         return resp_json.get("message", {}).get("data_result", None)
 
     @classmethod
-    def IS_CHANGED(s, frame=0, prompt=None, unique_id=None, extra_pnginfo=None):
+    def IS_CHANGED(s, frame=0, timeout=30, prompt=None, unique_id=None, extra_pnginfo=None):
         return time.time()
 
 

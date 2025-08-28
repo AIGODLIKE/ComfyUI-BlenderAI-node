@@ -3,7 +3,10 @@
     "display_name": "BlenderInputs",
     "inputs": {
       "frame": {
-        "name": "采样帧"
+        "name": "frame"
+      },
+      "timeout": {
+        "name": "timeout"
       }
     },
     "outputs": {

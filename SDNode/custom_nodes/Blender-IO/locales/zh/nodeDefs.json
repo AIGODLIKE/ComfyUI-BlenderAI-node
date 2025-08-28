@@ -4,6 +4,9 @@
     "inputs": {
       "frame": {
         "name": "采样帧"
+      },
+      "timeout": {
+        "name": "最大等待时间"
       }
     },
     "outputs": {
