@@ -853,8 +853,8 @@ class LocalServer(Server):
         p = self.child
         pid = self.pid
         while p.poll() is None and self.child == p:
-            line = p.stdout.readline().strip()
-            if not line:
+            line = p.stdout.readline().rstrip()
+            if not line.strip():
                 continue
             # logger.info(line)
             # print(re.findall("\|(.*?)[", line.decode("gbk")))
