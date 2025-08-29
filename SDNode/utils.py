@@ -6,7 +6,7 @@ from tempfile import gettempdir
 from contextlib import contextmanager
 from pathlib import Path
 from dataclasses import dataclass
-from ..utils import logger, _T
+from ..utils import logger, _T, find_area_by_type
 from ..timer import Timer
 
 SELECTED_COLLECTIONS = []
@@ -632,6 +632,18 @@ def calc_data_from_blender_do(data_name, out_dir, uid) -> dict:
             if not bpy.context.scene.camera:
                 err_info = _T("No Camera in Scene") + " -> " + bpy.context.scene.name
                 raise Exception(err_info)
+            # 如果是cycles 且有3D视口 且 视口中模式为RENDERED时使用bpy.ops.render.render
+            if bpy.context.scene.render.engine == "CYCLES":
+                area = find_area_by_type(bpy.context.screen, "VIEW_3D", 0)
+                spaces = area.spaces if area else []
+                for space in spaces:
+                    if space.type != "VIEW_3D":
+                        continue
+                    if space.shading.type == "RENDERED":
+                        bpy.ops.render.render(write_still=True)
+                        bpy.context.scene.render.filepath = old
+                        bpy.context.scene.render.image_settings.file_format = old_fmt
+                        return
             bpy.ops.render.opengl(write_still=True, view_context=True)
             bpy.context.scene.render.filepath = old
             bpy.context.scene.render.image_settings.file_format = old_fmt
