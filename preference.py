@@ -566,7 +566,7 @@ class AddonPreference(bpy.types.AddonPreferences):
         row.prop(self, "keep_preview_of_prev_node", text="", icon="IMAGE_PLANE", text_ctxt=ctxt)
         row = layout.row(align=True)
         text = "ERROR IP"
-        icon = "INTERNET"
+        icon = "INTERNET" if bpy.app.version >= (4, 0, 0) else "URL"
         if is_ipv6(self.ip):
             text="IPV6"
         elif is_ipv4(self.ip):
@@ -576,7 +576,7 @@ class AddonPreference(bpy.types.AddonPreferences):
         else:
             row.alert = True
             text = "ERROR IP"
-            icon = "INTERNET_OFFLINE"
+            icon = "INTERNET_OFFLINE" if bpy.app.version >= (4, 0, 0) else "X"
         row.prop(self, "ip")
         row.prop(self, "port")
         col = row.column()
