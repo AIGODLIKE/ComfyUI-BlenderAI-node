@@ -229,7 +229,7 @@ class Panel(bpy.types.Panel):
 
         path = Path(__file__).parent / "SDNode/custom_nodes"
         row11 = bbox1.row()
-        row11.label(text="   1.1 Check if Blender-IO is included")
+        row11.label(text="    1.1 Check if Blender-IO is included")
         row11.operator(OpenFolder.bl_idname, text="", icon="FILEBROWSER").folder = path.as_posix()
 
         row12 = bbox1.row()
