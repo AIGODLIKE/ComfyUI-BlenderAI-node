@@ -1,0 +1,13 @@
+[project]
+name = "blender-io"
+description = "Blender Input/Output for ComfyUI."
+version = "1.0.0"
+license = "LICENSE"
+
+[project.urls]
+Repository = "https://github.com/AIGODLIKE/Blender-IO"
+
+[tool.comfy]
+PublisherId = "aigodlike"
+DisplayName = "Blender-IO"
+Icon = ""
