@@ -11,7 +11,7 @@ from mathutils import Vector
 from functools import partial
 from .translations.translation import ctxt
 from .prop import Prop
-from .utils import _T, logger, FSWatcher, read_json
+from .utils import _T, logger, FSWatcher, read_json, popup_folder
 from .timer import Timer, Worker, WorkerFunc
 from .SDNode import TaskManager
 from .SDNode.history import History
@@ -1122,6 +1122,21 @@ class CleanVRam(bpy.types.Operator):
 
     def execute(self, context):
         TaskManager.clear_vram()
+        return {"FINISHED"}
+
+
+class OpenFolder(bpy.types.Operator):
+    bl_idname = "sdn.open_folder"
+    bl_label = "Open Folder"
+    bl_translation_context = ctxt
+    bl_description = "Open Folder"
+    folder: bpy.props.StringProperty()
+
+    def execute(self, context):  # pyright: ignore[reportIncompatibleMethodOverride]
+        p = Path(self.folder)
+        if not p.exists():
+            return {"CANCELLED"}
+        popup_folder(p)
         return {"FINISHED"}
 
 

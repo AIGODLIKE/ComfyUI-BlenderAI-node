@@ -1068,7 +1068,8 @@ class TaskManager:
         try:
             request.urlopen(req)
         except URLError:
-            ...
+            error_info = _T("Dependency Error") + ": " + _T("Cannot connect to ComfyUI-CUP cup/clear_cache api.")
+            TaskManager.put_error_msg(error_info)
 
     @staticmethod
     def clear_vram():
@@ -1076,7 +1077,8 @@ class TaskManager:
         try:
             request.urlopen(req)
         except URLError:
-            ...
+            error_info = _T("Dependency Error") + ": " + _T("Cannot connect to ComfyUI-CUP cup/clear_vram api.")
+            TaskManager.put_error_msg(error_info)
 
     @staticmethod
     def fetch_comfyui_queue():
@@ -1088,7 +1090,8 @@ class TaskManager:
             res = json.loads(res.read().decode())
             return res
         except URLError:
-            ...
+            error_info = _T("Dependency Error") + ": " + _T("Cannot connect to Blender-IO bio/fetch/comfyui_queue api.")
+            TaskManager.put_error_msg(error_info)
         return {}
     
     @staticmethod

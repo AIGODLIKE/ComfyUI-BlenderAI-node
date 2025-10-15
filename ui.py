@@ -1,8 +1,10 @@
 import bpy
 import platform
+from pathlib import Path
 from bl_ui.properties_paint_common import UnifiedPaintPanel
 from bpy.types import Context
 from .ops import Ops, Load_History, Copy_Tree, Load_Batch, Fetch_Node_Status, Clear_Node_Cache, SDNode_To_Image, Image_To_SDNode, Image_Set_Channel_Packed, Open_Log_Window, CleanVRam
+from .ops import OpenFolder
 from .translations.translation import ctxt
 from .SDNode import TaskManager, FakeServer
 from .SDNode.tree import TREE_TYPE
@@ -172,6 +174,7 @@ class Panel(bpy.types.Panel):
         row.prop(bpy.context.scene.sdn, "show_pref_general", text="", icon="PREFERENCES")
         if bpy.context.scene.sdn.show_pref_general:
             AddonPreference.draw_general(get_pref(), layout.box())
+        self.show_dependency_install(layout)
         self.show_error(layout)
 
     def show_debug(self, layout: bpy.types.UILayout):
@@ -199,10 +202,92 @@ class Panel(bpy.types.Panel):
             row.label(text="Adjust node tree and try again", text_ctxt=ctxt)
 
     def show_error(self, layout: bpy.types.UILayout):
+        has_dependency_error = False
         for error_msg in TaskManager.get_error_msg():
+            if error_msg.startswith(_T("Dependency Error")):
+                has_dependency_error = True
             row = layout.row()
             row.alert = True
             row.label(text=error_msg, icon="ERROR", text_ctxt=ctxt)
+        if has_dependency_error:
+            self.show_dependency_error(layout)
+
+    def show_dependency_error(self, layout: bpy.types.UILayout):
+        # 当 bio / cup 接口运行错误时 显示错误信息, 且显示安装教程信息
+        layout.label(text="Dependency error detected, please check if the dependency is installed correctly", text_ctxt=ctxt)
+        self.show_dependency_install(layout)
+
+    def show_dependency_install(self, layout: bpy.types.UILayout):
+        # 1. 未启动服务时显示安装教程
+        # 2. 当 bio / cup 接口运行错误时 显示错误信息, 且显示安装教程信息
+        box = layout.box()
+        box.label(text="Dependency Installation", text_ctxt=ctxt)
+        box.label(text="Installation tutorial for different launch methods:", text_ctxt=ctxt)
+        bbox1 = box.box()
+        bbox1.label(text="Launch Type: LocalServer")
+        bbox1.label(text="1 Check the plugin directory SDNode/custom_nodes")
+
+        path = Path(__file__).parent / "SDNode/custom_nodes"
+        row11 = bbox1.row()
+        row11.label(text="   1.1 Check if Blender-IO is included")
+        row11.operator(OpenFolder.bl_idname, text="", icon="FILEBROWSER").folder = path.as_posix()
+
+        row12 = bbox1.row()
+        row12.label(text="    1.2 Check if ComfyUI-CUP is included")
+        row12.operator(OpenFolder.bl_idname, text="", icon="FILEBROWSER").folder = path.as_posix()
+
+        row13 = bbox1.row()
+        row13.label(text="2 Go to follow url and re-install the plugin if missing")
+        icon = "INTERNET" if bpy.app.version >= (4, 0, 0) else "URL"
+        row13.operator("wm.url_open", icon=icon).url = "https://github.com/AIGODLIKE/ComfyUI-BlenderAI-node"
+
+        if not path.joinpath("Blender-IO").exists():
+            box14 = bbox1.box()
+            box14.alert = True
+            box14.label(text="Blender-IO is missing, please re-install or update the plugin")
+        if not path.joinpath("ComfyUI-CUP").exists():
+            box14 = bbox1.box()
+            box14.alert = True
+            box14.label(text="ComfyUI-CUP is missing, please re-install or update the plugin")
+
+
+        bbox2 = box.box()
+
+        bbox2.label(text="Launch Type: RemoteServer")
+        bbox2.label(text="Check ComfyUI/custom_nodes dependencies")
+        bbox20 = bbox2.box()
+        col20 = bbox20.column()
+        col20.label(text="1.1 Open ComfyUI/custom_nodes folder")
+        col20.label(text="1.2 Check if Blender-IO is included")
+        col20.label(text="1.3 Check if ComfyUI-CUP is included")
+
+        bbox2.label(text="Method 1: Via ComfyUI Extension Manager")
+        bbox21 = bbox2.box()
+        col21 = bbox21.column()
+        col21.label(text="2.1 Launch ComfyUI")
+        col21.label(text="2.2 Open web page of ComfyUI")
+        col21.label(text="2.3 Open the extension manager")
+        col21.label(text="2.4 Search for ComfyUI-CUP and install")
+        col21.label(text="2.5 Search for Blender-IO and install")
+        col21.label(text="2.6 Restart ComfyUI service")
+        col21.label(text="2.7 Reconnect to ComfyUI via RemoteServer")
+
+        bbox2.label(text="Method 2: Manual Installation")
+        bbox22 = bbox2.box()
+
+        col22 = bbox22.column()
+        row221 = col22.row()
+        row221.label(text="3.1 Download Blender-IO")
+        row221.operator("wm.url_open", icon=icon).url = "https://github.com/AIGODLIKE/Blender-IO"
+
+        row222 = col22.row()
+        row222.label(text="3.2 Download ComfyUI-CUP")
+        row222.operator("wm.url_open", icon=icon).url = "https://github.com/AIGODLIKE/ComfyUI-CUP"
+
+        col22.label(text="3.3 Unzip Blender-IO to the directory of step 1")
+        col22.label(text="3.4 Unzip ComfyUI-CUP to the directory of step 1")
+        col22.label(text="3.5 Restart ComfyUI service")
+        col22.label(text="3.6 Reconnect to ComfyUI")
 
 
 def draw_header_button(self: bpy.types.Menu, context):
