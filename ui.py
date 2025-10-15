@@ -224,7 +224,7 @@ class Panel(bpy.types.Panel):
         box.label(text="Dependency Installation", text_ctxt=ctxt)
         box.label(text="Installation tutorial for different launch methods:", text_ctxt=ctxt)
         bbox1 = box.box()
-        bbox1.label(text="Launch Type: LocalServer")
+        bbox1.label(text="Launch Type: LocalServer", icon="LOCKVIEW_ON")
         bbox1.label(text="1 Check the plugin directory SDNode/custom_nodes")
 
         path = Path(__file__).parent / "SDNode/custom_nodes"
@@ -253,7 +253,7 @@ class Panel(bpy.types.Panel):
 
         bbox2 = box.box()
 
-        bbox2.label(text="Launch Type: RemoteServer")
+        bbox2.label(text="Launch Type: RemoteServer", icon="WORLD_DATA")
         bbox2.label(text="Check ComfyUI/custom_nodes dependencies")
         bbox20 = bbox2.box()
         col20 = bbox20.column()
