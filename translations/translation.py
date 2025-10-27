@@ -663,6 +663,10 @@ other = {
     # hook
     "Find Drag file": "发现拖拽文件",
     "Screenshot": "截图",
+    # SDNode/products/ViewportLayerRedraw/ui.py
+    "Viewport Layer Redraw": "AI图层精灵",
+    "Prompts": "提示词",
+    "Run Redraw": "运行重绘",
 }
 
 LANG_TEXT = {
