@@ -172,32 +172,51 @@ class ControlGizmo(bpy.types.Gizmo):
             dm = self.start_mouse - mouse
         else:
             dm = mouse - self.start_mouse
-        print(event.type, event.value, mouse, dm)
+        # print(event.type, event.value, mouse, dm)
         if event.type == "LEFTMOUSE" and event.value == "RELEASE":
             self.exit(context, False)
             return {"FINISHED"}
         elif event.type == "MOUSEMOVE":
             render = context.scene.render
+            self.update_camera_offset(context)
             if self.is_vertical:
                 render.resolution_y = int(self.start_resolution.y + dm.y * self.resolution_proportion)
             else:
                 render.resolution_x = int(self.start_resolution.x + dm.x * self.resolution_proportion)
+            self.update_camera_offset(context)
         return {"RUNNING_MODAL"}
 
     def exit(self, context, cancel):
         if cancel:
             render = context.scene.render
             x, y = self.start_resolution
-            render.resolution_x = x
-            render.resolution_y = y
+            render.resolution_x = int(x)
+            render.resolution_y = int(y)
 
-            camera = get_active_camera(context).data
-            camera.sensor_fit = self.start_sensor_fit
+            camera = get_active_camera(context)
+            camera.data.sensor_fit = self.start_sensor_fit
+            camera.matrix_world = self.start_camera_matrix
 
     def update_camera_offset(self, context):
         """
         camera_matrix.translation + (start_camera_location - now_camera_location) / 2
         """
+        point_key = {
+            "LEFT": 0,
+            "RIGHT": 3,
+            "BOTTOM": 0,
+            "TOP": 1,
+        }.get(self.direction, 0)
+
+        s = self.start_camera_border_3d[point_key]
+        n = get_3d_camera_border(context)[point_key]
+        # print(f"border_3d = {[s, n]}", )
+        # print(f"d = {(s - n).__repr__()}", )
+        matrix = Matrix.Translation(s - n)
+        camera = get_active_camera(context)
+        camera.matrix_world.translation = self.start_camera_matrix.translation
+        camera.matrix_world.translation += s - n
+        print(f"d = {[camera.matrix_world.translation, s, n]}", )
 
 
 class CameraControl(bpy.types.GizmoGroup):
