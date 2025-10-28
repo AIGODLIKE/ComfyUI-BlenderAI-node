@@ -4,7 +4,7 @@ import gpu.matrix
 import gpu_extras
 from bpy_extras.view3d_utils import location_3d_to_region_2d
 from gpu_extras.batch import batch_for_shader
-from mathutils import Vector
+from mathutils import Vector, Matrix
 
 
 def get_active_camera(context) -> bpy.types.Camera | None:
@@ -24,6 +24,11 @@ def get_3d_camera_border(context) -> list[Vector] | None:
 
 
 def get_2d_camera_border(context, camera_border_3d=None) -> list[Vector] | None:
+    """
+    3------0
+    |      |
+    2------1
+    """
     if camera_border_3d is None:
         camera_border_3d = get_3d_camera_border(context)
     return [location_3d_to_region_2d(context.region, context.space_data.region_3d, v) for v in camera_border_3d]
@@ -50,6 +55,9 @@ class ControlGizmo(bpy.types.Gizmo):
     start_mouse: Vector
     start_resolution: Vector
     start_sensor_fit: str
+    start_camera_border_2d: list[Vector]
+    start_camera_border_3d: list[Vector]
+    start_camera_matrix: Matrix
 
     @property
     def is_vertical(self):
@@ -81,6 +89,18 @@ class ControlGizmo(bpy.types.Gizmo):
     def tow_2d_point(self) -> list[Vector]:
         a, b = self.tow_point_index
         return [self.camera_border_2d[a], self.camera_border_2d[b]]
+
+    @property
+    def resolution_proportion(self) -> float:
+        if self.is_vertical:
+            ai, bi = 3, 2
+        else:
+            ai, bi = 3, 0
+        d_2d = self.start_camera_border_2d[ai] - self.start_camera_border_2d[bi]  # 两个二维点相差
+        if self.is_vertical:
+            return self.start_resolution.y / d_2d.y * 2
+        else:
+            return self.start_resolution.x / d_2d.x * 2
 
     def draw(self, context):
         shader = gpu.shader.from_builtin('POLYLINE_UNIFORM_COLOR')
@@ -132,21 +152,26 @@ class ControlGizmo(bpy.types.Gizmo):
 
     def invoke(self, context, event):
         render = context.scene.render
-        camera = get_active_camera(context).data
+        camera = get_active_camera(context)
         self.start_mouse = Vector((event.mouse_region_x, event.mouse_region_y))
         self.start_resolution = Vector((render.resolution_x, render.resolution_y))
-        self.start_sensor_fit = camera.sensor_fit
+        self.start_sensor_fit = camera.data.sensor_fit
+        self.start_camera_matrix = camera.matrix_world.copy()
+        self.start_camera_border_2d = self.camera_border_2d
+        self.start_camera_border_3d = self.camera_border_3d
         if self.is_vertical:
-            camera.sensor_fit = "HORIZONTAL"
+            camera.data.sensor_fit = "HORIZONTAL"
         else:
-            camera.sensor_fit = "VERTICAL"
-
+            camera.data.sensor_fit = "VERTICAL"
         return {"RUNNING_MODAL"}
 
     def modal(self, context, event, tweak):
         context.area.tag_redraw()
         mouse = Vector((event.mouse_region_x, event.mouse_region_y))
-        dm = mouse - self.start_mouse
+        if self.direction in ("BOTTOM", "RIGHT"):
+            dm = self.start_mouse - mouse
+        else:
+            dm = mouse - self.start_mouse
         print(event.type, event.value, mouse, dm)
         if event.type == "LEFTMOUSE" and event.value == "RELEASE":
             self.exit(context, False)
@@ -154,9 +179,9 @@ class ControlGizmo(bpy.types.Gizmo):
         elif event.type == "MOUSEMOVE":
             render = context.scene.render
             if self.is_vertical:
-                render.resolution_y = int(self.start_resolution.y + dm.y)
+                render.resolution_y = int(self.start_resolution.y + dm.y * self.resolution_proportion)
             else:
-                render.resolution_x = int(self.start_resolution.x + dm.x)
+                render.resolution_x = int(self.start_resolution.x + dm.x * self.resolution_proportion)
         return {"RUNNING_MODAL"}
 
     def exit(self, context, cancel):
@@ -168,6 +193,11 @@ class ControlGizmo(bpy.types.Gizmo):
 
             camera = get_active_camera(context).data
             camera.sensor_fit = self.start_sensor_fit
+
+    def update_camera_offset(self, context):
+        """
+        camera_matrix.translation + (start_camera_location - now_camera_location) / 2
+        """
 
 
 class CameraControl(bpy.types.GizmoGroup):
