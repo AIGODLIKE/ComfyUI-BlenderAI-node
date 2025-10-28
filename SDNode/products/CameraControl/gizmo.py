@@ -44,8 +44,12 @@ class ControlGizmo(bpy.types.Gizmo):
     camera_border_2d: list[Vector] | None
     camera_border_3d: list[Vector] | None
     camera_border_index: int
-    is_hover: bool
+    is_hover: bool = False
     margin = 5
+
+    start_mouse: Vector
+    start_resolution: Vector
+    start_sensor_fit: str
 
     @property
     def is_vertical(self):
@@ -57,11 +61,11 @@ class ControlGizmo(bpy.types.Gizmo):
 
     @property
     def tow_point_index(self) -> tuple[int, int]:
-        a, b = 0, 1
+        a, b = 1, 0
         if self.direction == "RIGHT":
-            a, b = 0, 1
+            a, b = 1, 0
         elif self.direction == "BOTTOM":
-            a, b = 1, 2
+            a, b = 2, 1
         elif self.direction == "LEFT":
             a, b = 2, 3
         elif self.direction == "TOP":
@@ -78,55 +82,92 @@ class ControlGizmo(bpy.types.Gizmo):
         a, b = self.tow_point_index
         return [self.camera_border_2d[a], self.camera_border_2d[b]]
 
+    def draw(self, context):
+        shader = gpu.shader.from_builtin('POLYLINE_UNIFORM_COLOR')
+        batch = batch_for_shader(shader, 'LINES', {"pos": self.tow_2d_point}, indices=((0, 1),))
+
+        shader.uniform_float("viewportSize", gpu.state.viewport_get()[2:])
+        shader.uniform_float("lineWidth", 3 if self.is_hover else 0.01)
+        shader.uniform_float("color", (1, 1, 0, 1) if self.is_hover else (1, 0, 0, 0))
+        batch.draw(shader)
+
+        # shader = gpu.shader.from_builtin('POINT_UNIFORM_COLOR')
+        # batch = batch_for_shader(shader, 'POINTS', {"pos": self.camera_border_3d[self.camera_border_index]})
+        # shader.uniform_float("color", (0, 0, 1, 1))
+        # gpu.state.point_size_set(5)
+        # batch.draw(shader)
+
+        text = f"{self.camera_border_index} {self.camera_border_2d[self.camera_border_index]} {self.direction} {self.is_hover}"
+        with gpu.matrix.push_pop():
+            gpu.matrix.load_matrix(self.matrix_basis)
+            blf.position(0, 0, 0, 0)
+            blf.size(0, 10)
+            blf.draw(0, text)
+            gpu_extras.presets.draw_circle_2d((0, 0, 0), (1, 1, 1, 1), 10)
+
+    def test_select(self, context, mouse_pos):
+        x, y = mouse_pos
+        (x1, y1), (x2, y2) = self.tow_2d_point
+
+        margin = self.margin
+        if self.is_vertical:
+            y1 -= margin
+            y2 += margin
+            x1 += margin
+            x2 -= margin
+        else:
+            x1 -= margin
+            x2 += margin
+            y1 -= margin
+            y2 += margin
+
+        x_ok = x1 < x < x2
+        y_ok = y1 < y < y2
+        is_hover = 0 if x_ok and y_ok else -1
+        self.is_hover = is_hover == 0
+        return is_hover
+
+    def refresh(self, context):
+        ...
+
     def invoke(self, context, event):
+        render = context.scene.render
+        camera = get_active_camera(context).data
+        self.start_mouse = Vector((event.mouse_region_x, event.mouse_region_y))
+        self.start_resolution = Vector((render.resolution_x, render.resolution_y))
+        self.start_sensor_fit = camera.sensor_fit
+        if self.is_vertical:
+            camera.sensor_fit = "HORIZONTAL"
+        else:
+            camera.sensor_fit = "VERTICAL"
+
         return {"RUNNING_MODAL"}
 
     def modal(self, context, event, tweak):
         context.area.tag_redraw()
+        mouse = Vector((event.mouse_region_x, event.mouse_region_y))
+        dm = mouse - self.start_mouse
+        print(event.type, event.value, mouse, dm)
+        if event.type == "LEFTMOUSE" and event.value == "RELEASE":
+            self.exit(context, False)
+            return {"FINISHED"}
+        elif event.type == "MOUSEMOVE":
+            render = context.scene.render
+            if self.is_vertical:
+                render.resolution_y = int(self.start_resolution.y + dm.y)
+            else:
+                render.resolution_x = int(self.start_resolution.x + dm.x)
         return {"RUNNING_MODAL"}
 
     def exit(self, context, cancel):
-        ...
+        if cancel:
+            render = context.scene.render
+            x, y = self.start_resolution
+            render.resolution_x = x
+            render.resolution_y = y
 
-    def draw(self, context):
-        text = f"{self.camera_border_index} {self.camera_border_2d[self.camera_border_index]} {self.direction}"
-        with gpu.matrix.push_pop():
-            gpu.matrix.load_matrix(self.matrix_basis)
-            blf.position(0, 0, 0, 0)
-            blf.draw(0, text)
-            gpu_extras.presets.draw_circle_2d((0, 0, 0), (1, 1, 1, 1), 20)
-
-            # shader = gpu.shader.from_builtin('POINT_UNIFORM_COLOR')
-            # batch = batch_for_shader(shader, 'POINTS', {"pos": self.camera_border_3d[self.camera_border_index]})
-            # shader.uniform_float("color", (0, 0, 1, 1))
-            # gpu.state.point_size_set(5)
-            # batch.draw(shader)
-
-        shader = gpu.shader.from_builtin('POLYLINE_UNIFORM_COLOR')
-        batch = batch_for_shader(shader, 'LINES', {"pos": self.tow_2d_point}, indices=((1, 0),))
-
-        shader.uniform_float("viewportSize", gpu.state.viewport_get()[2:])
-        shader.uniform_float("lineWidth", 10)
-        shader.uniform_float("color", (1, 1, 0, 1))
-        batch.draw(shader)
-
-    # def test_select(self, context, mouse_pos):
-    #     x, y = mouse_pos
-    #     (x1, y1), (x2, y2) = self.tow_2d_point
-    #     if self.is_vertical:
-    #         y1 -= self.margin
-    #         y2 -= self.margin
-    #     else:
-    #         x1 -= self.margin
-    #         x2 -= self.margin
-    #     x_ok = x1 < x < x2
-    #     y_ok = y1 < y < y2
-    #     is_hover = 0 if x_ok and y_ok else -1
-    #     self.is_hover = is_hover == 0
-    #     return is_hover
-
-    def refresh(self, context):
-        ...
+            camera = get_active_camera(context).data
+            camera.sensor_fit = self.start_sensor_fit
 
 
 class CameraControl(bpy.types.GizmoGroup):
