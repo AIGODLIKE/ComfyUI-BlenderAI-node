@@ -44,7 +44,7 @@ class ControlGizmo(bpy.types.Gizmo):
     camera_border_2d: list[Vector] | None
     camera_border_3d: list[Vector] | None
     camera_border_index: int
-    is_hover = False
+    is_hover: bool
     margin = 5
 
     @property
@@ -103,14 +103,11 @@ class ControlGizmo(bpy.types.Gizmo):
             # batch.draw(shader)
 
         shader = gpu.shader.from_builtin('POLYLINE_UNIFORM_COLOR')
-        batch = batch_for_shader(shader, 'LINES', {"pos": self.tow_3d_point}, indices=((1, 0),))
+        batch = batch_for_shader(shader, 'LINES', {"pos": self.tow_2d_point}, indices=((1, 0),))
 
-        color = (1, 1, 0, 1) if self.is_hover else (0, 0, 1, 1)
-        a, b = self.tow_2d_point
-        # shader.uniform_float("viewportSize", a - b)
-        # shader.uniform_float("viewportSize", gpu.state.viewport_get()[2:])
-        shader.uniform_float("lineWidth", 100)
-        shader.uniform_float("color", color)
+        shader.uniform_float("viewportSize", gpu.state.viewport_get()[2:])
+        shader.uniform_float("lineWidth", 10)
+        shader.uniform_float("color", (1, 1, 0, 1))
         batch.draw(shader)
 
     # def test_select(self, context, mouse_pos):
