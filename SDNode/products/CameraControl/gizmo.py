@@ -52,6 +52,7 @@ class ControlGizmo(bpy.types.Gizmo):
     is_hover: bool = False
     margin = 5
 
+    mouse: Vector
     start_mouse: Vector
     start_resolution: Vector
     start_sensor_fit: str
@@ -111,12 +112,19 @@ class ControlGizmo(bpy.types.Gizmo):
         shader.uniform_float("color", (1, 1, 0, 1) if self.is_hover else (1, 0, 0, 0))
         batch.draw(shader)
 
-        # shader = gpu.shader.from_builtin('POINT_UNIFORM_COLOR')
-        # batch = batch_for_shader(shader, 'POINTS', {"pos": self.camera_border_3d[self.camera_border_index]})
-        # shader.uniform_float("color", (0, 0, 1, 1))
-        # gpu.state.point_size_set(5)
-        # batch.draw(shader)
+        if self.is_hover:
+            render = bpy.context.scene.render
+            x, y = render.resolution_x, render.resolution_y
 
+            mouse = self.mouse + Vector((20, 20))
+            blf.size(0, 12)
+            blf.position(0, mouse.x, mouse.y, 0)
+            blf.draw(0, bpy.app.translations.pgettext_iface("Resolution"))
+            blf.position(0, mouse.x, mouse.y - 12, 0)
+            blf.draw(0, f"x:{x}px")
+            blf.position(0, mouse.x, mouse.y - 24, 0)
+            blf.draw(0, f"y:{y}px")
+        return
         text = f"{self.camera_border_index} {self.camera_border_2d[self.camera_border_index]} {self.direction} {self.is_hover}"
         with gpu.matrix.push_pop():
             gpu.matrix.load_matrix(self.matrix_basis)
@@ -153,21 +161,28 @@ class ControlGizmo(bpy.types.Gizmo):
     def invoke(self, context, event):
         render = context.scene.render
         camera = get_active_camera(context)
-        self.start_mouse = Vector((event.mouse_region_x, event.mouse_region_y))
-        self.start_resolution = Vector((render.resolution_x, render.resolution_y))
+        self.mouse = self.start_mouse = Vector((event.mouse_region_x, event.mouse_region_y))
+        x, y = self.start_resolution = Vector((render.resolution_x, render.resolution_y))
         self.start_sensor_fit = camera.data.sensor_fit
         self.start_camera_matrix = camera.matrix_world.copy()
         self.start_camera_border_2d = self.camera_border_2d
         self.start_camera_border_3d = self.camera_border_3d
+
         if self.is_vertical:
+            # if camera.data.sensor_fit == "VERTICAL":
+            #     camera.data.sensor_height = camera.data.sensor_width * (y / x)
             camera.data.sensor_fit = "HORIZONTAL"
         else:
+            # if camera.data.sensor_fit == "HORIZONTAL":
+            #     camera.data.sensor_width = camera.data.sensor_height * (y / x)
             camera.data.sensor_fit = "VERTICAL"
+
+        bpy.ops.ed.undo_push(message="Push Undo")
         return {"RUNNING_MODAL"}
 
     def modal(self, context, event, tweak):
         context.area.tag_redraw()
-        mouse = Vector((event.mouse_region_x, event.mouse_region_y))
+        self.mouse = mouse = Vector((event.mouse_region_x, event.mouse_region_y))
         if self.direction in ("BOTTOM", "RIGHT"):
             dm = self.start_mouse - mouse
         else:
@@ -210,13 +225,9 @@ class ControlGizmo(bpy.types.Gizmo):
 
         s = self.start_camera_border_3d[point_key]
         n = get_3d_camera_border(context)[point_key]
-        # print(f"border_3d = {[s, n]}", )
-        # print(f"d = {(s - n).__repr__()}", )
-        matrix = Matrix.Translation(s - n)
         camera = get_active_camera(context)
         camera.matrix_world.translation = self.start_camera_matrix.translation
         camera.matrix_world.translation += s - n
-        print(f"d = {[camera.matrix_world.translation, s, n]}", )
 
 
 class CameraControl(bpy.types.GizmoGroup):
@@ -225,6 +236,11 @@ class CameraControl(bpy.types.GizmoGroup):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'WINDOW'
     bl_options = {'PERSISTENT', 'SCALE', 'SHOW_MODAL_ALL'}
+
+    @classmethod
+    def poll(cls, context):
+        return get_active_camera(
+            context) and context.space_data and context.space_data.region_3d and context.space_data.region_3d.view_perspective == "CAMERA"
 
     def setup(self, context):
         for i in range(4):
