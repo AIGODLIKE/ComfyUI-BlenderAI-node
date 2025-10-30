@@ -1,10 +1,6 @@
-import blf
 import bpy
-import gpu.matrix
-import gpu_extras
-from gpu_extras.batch import batch_for_shader
 from mathutils import Vector, Matrix
-
+from bpy_extras.view3d_utils import location_3d_to_region_2d
 
 def get_active_camera(context) -> bpy.types.Camera | None:
     """
@@ -26,11 +22,19 @@ def get_3d_camera_border(context) -> list[Vector] | None:
 
 def get_2d_camera_border(context, camera_border_3d=None) -> list[Vector] | None:
     """
-    3------0
-    |      |
-    2------1
+    3--------------0
+    |              |
+    |              |
+    |              |
+    2--------------1
     """
     if camera_border_3d is None:
         camera_border_3d = get_3d_camera_border(context)
     return [location_3d_to_region_2d(context.region, context.space_data.region_3d, v) for v in camera_border_3d]
 
+
+def exclude_scale_matrix(matrix: Matrix) -> Matrix:
+    """排除矩阵的缩放"""
+    location = Matrix.Translation(matrix.translation)
+    rotation = matrix.to_quaternion().to_matrix().to_4x4()
+    return location @ rotation

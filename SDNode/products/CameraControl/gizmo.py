@@ -5,6 +5,7 @@ import gpu_extras
 from gpu_extras.batch import batch_for_shader
 from mathutils import Vector, Matrix
 
+from .utils import get_active_camera, get_3d_camera_border, get_2d_camera_border
 
 DIRECTION_ITEMS = [
     "RIGHT",
@@ -18,9 +19,9 @@ class ControlGizmo(bpy.types.Gizmo):
     bl_idname = "CAMERA_GT_gizmo"
     bl_options = {"PERSISTENT", "SCALE", "SHOW_MODAL_ALL", "UNDO", "GRAB_CURSOR"}
 
-    camera_border_2d: list[Vector] | None
-    camera_border_3d: list[Vector] | None
-    camera_border_index: int
+    camera_border_2d: list[Vector] | None = []
+    camera_border_3d: list[Vector] | None = []
+    camera_border_index: int = 0
     is_hover: bool = False
     margin = 5
 
@@ -165,12 +166,12 @@ class ControlGizmo(bpy.types.Gizmo):
             return {"FINISHED"}
         elif event.type == "MOUSEMOVE":
             render = context.scene.render
-            self.update_camera_offset(context)
+            self.update_camera_offset(context, event)
             if self.is_vertical:
                 render.resolution_y = int(self.start_resolution.y + dm.y * self.resolution_proportion)
             else:
                 render.resolution_x = int(self.start_resolution.x + dm.x * self.resolution_proportion)
-            self.update_camera_offset(context)
+            self.update_camera_offset(context, event)
         return {"RUNNING_MODAL"}
 
     def exit(self, context, cancel):
@@ -184,10 +185,12 @@ class ControlGizmo(bpy.types.Gizmo):
             camera.data.sensor_fit = self.start_sensor_fit
             camera.matrix_world = self.start_camera_matrix
 
-    def update_camera_offset(self, context):
+    def update_camera_offset(self, context, event):
         """
         camera_matrix.translation + (start_camera_location - now_camera_location) / 2
         """
+        if not event.ctrl:
+            return
         point_key = {
             "LEFT": 0,
             "RIGHT": 3,

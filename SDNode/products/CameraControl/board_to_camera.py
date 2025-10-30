@@ -1,12 +1,13 @@
 import bpy
 from mathutils import Vector, Matrix
 from mathutils.geometry import intersect_line_line
+
 from .utils import exclude_scale_matrix
 
 
-def camera_to_board(context, camera, board):
-    matrix = exclude_scale_matrix(board.matrix_world.copy())
-    camera.matrix_world = matrix
+def board_to_camera(context, camera, board):
+    matrix = exclude_scale_matrix(camera.matrix_world.copy())
+    board.matrix_world = matrix
 
     # board
     bound_box = [board.matrix_world @ Vector(i[:]) for i in board.bound_box[:]]
@@ -29,8 +30,8 @@ def camera_to_board(context, camera, board):
     intersect_top = itl[0] if itl else None
     intersect_left = ill[0] if ill else None
 
-    offset_top = top_point - intersect_top
-    offset_left = left_point - intersect_left
+    offset_top = intersect_top - top_point
+    offset_left = intersect_left - left_point
     print(f"bound_box = {bound_box}")
     print(f"top_point = {top_point.__repr__()}")
     print(f"left_point = {left_point.__repr__()}")
@@ -48,25 +49,25 @@ def camera_to_board(context, camera, board):
     else:
         offset_location = offset_left
     print(f"offset_location = {offset_location.__repr__()}")
-    camera.matrix_world.translation = Matrix.Translation(offset_location) @ camera.matrix_world.translation
+    board.matrix_world.translation = Matrix.Translation(offset_location) @ board.matrix_world.translation
     print()
 
 
-class CameraToBoard(bpy.types.Operator):
-    bl_idname = "object.camera_to_board"
-    bl_label = "Camera to Board"
+class BoardToCamera(bpy.types.Operator):
+    bl_idname = "object.board_to_camera"
+    bl_label = "Board to Camera"
 
     def execute(self, context):
         from .gizmo import get_active_camera
         camera = get_active_camera(context)
         obj = context.object
         if camera != obj:
-            camera_to_board(context, camera, obj)
+            board_to_camera(context, camera, obj)
         return {"FINISHED"}
 
 
 clss = [
-    CameraToBoard,
+    BoardToCamera,
 ]
 
 reg, unreg = bpy.utils.register_classes_factory(clss)
