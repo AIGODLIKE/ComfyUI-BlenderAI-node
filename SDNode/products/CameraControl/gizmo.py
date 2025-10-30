@@ -2,36 +2,8 @@ import blf
 import bpy
 import gpu.matrix
 import gpu_extras
-from bpy_extras.view3d_utils import location_3d_to_region_2d
 from gpu_extras.batch import batch_for_shader
 from mathutils import Vector, Matrix
-
-
-def get_active_camera(context) -> bpy.types.Camera | None:
-    """
-    bpy.data.screens["Shading"].areas[5].spaces[0].camera 局部相机
-    bpy.context.scene.camera.data
-    """
-    if camera := context.space_data.camera:
-        return camera
-    return context.scene.camera
-
-
-def get_3d_camera_border(context) -> list[Vector] | None:
-    if camera := get_active_camera(context):
-        return [camera.matrix_world @ v for v in camera.data.view_frame(scene=context.scene)]
-    return None
-
-
-def get_2d_camera_border(context, camera_border_3d=None) -> list[Vector] | None:
-    """
-    3------0
-    |      |
-    2------1
-    """
-    if camera_border_3d is None:
-        camera_border_3d = get_3d_camera_border(context)
-    return [location_3d_to_region_2d(context.region, context.space_data.region_3d, v) for v in camera_border_3d]
 
 
 DIRECTION_ITEMS = [
@@ -52,7 +24,7 @@ class ControlGizmo(bpy.types.Gizmo):
     is_hover: bool = False
     margin = 5
 
-    mouse: Vector
+    mouse: Vector = Vector((0.0, 0.0))
     start_mouse: Vector
     start_resolution: Vector
     start_sensor_fit: str
@@ -239,8 +211,11 @@ class CameraControl(bpy.types.GizmoGroup):
 
     @classmethod
     def poll(cls, context):
-        return get_active_camera(
-            context) and context.space_data and context.space_data.region_3d and context.space_data.region_3d.view_perspective == "CAMERA"
+        return (
+                get_active_camera(context) and
+                context.space_data and
+                context.space_data.region_3d and
+                context.space_data.region_3d.view_perspective == "CAMERA")
 
     def setup(self, context):
         for i in range(4):
