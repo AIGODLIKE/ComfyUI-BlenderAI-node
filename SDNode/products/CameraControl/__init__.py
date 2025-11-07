@@ -2,7 +2,7 @@ import bpy
 
 from ....kclogger import logger
 
-modules = ["gizmo", "camera_to_board", "board_to_camera"]
+modules = ["gizmo", "camera_to_board", "board_to_camera", "ops"]
 
 reg, unreg = bpy.utils.register_submodule_factory(__package__, modules)
 

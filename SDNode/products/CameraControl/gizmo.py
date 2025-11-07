@@ -11,11 +11,43 @@ DIRECTION_ITEMS = [
     "RIGHT",
     "BOTTOM",
     "LEFT",
-    "TOP"
+    "TOP",
+    "LEFT_TOP",
+    "RIGHT_TOP",
+    "LEFT_BOTTOM",
+    "RIGHT_BOTTOM",
 ]
 
 
-class ControlGizmo(bpy.types.Gizmo):
+class CornerControl:
+    @property
+    def is_corner(self) -> bool:
+        return "_" in self.direction
+
+    @property
+    def corner_index(self) -> int:
+        return {
+            "LEFT_TOP": 3,
+            "RIGHT_TOP": 0,
+            "LEFT_BOTTOM": 2,
+            "RIGHT_BOTTOM": 1,
+        }.get(self.direction, -1)
+
+    def draw_corner(self, context):
+        text = f"{self.corner_index} {self.camera_border_2d[self.corner_index]} {self.direction} {self.is_hover}"
+        with gpu.matrix.push_pop():
+            x, y = self.camera_border_2d[self.corner_index]
+            gpu.matrix.translate((x, y))
+            blf.position(0, 0, 0, 0)
+            blf.size(0, 10)
+            blf.draw(0, text)
+            gpu_extras.presets.draw_circle_2d((0, 0, 0), (1, 1, 1, 1), 10)
+
+    def test_corner_select(self, context, mouse_pos):
+        return -1
+
+
+class ControlGizmo(bpy.types.Gizmo, CornerControl):
     bl_idname = "CAMERA_GT_gizmo"
     bl_options = {"PERSISTENT", "SCALE", "SHOW_MODAL_ALL", "UNDO", "GRAB_CURSOR"}
 
@@ -77,6 +109,9 @@ class ControlGizmo(bpy.types.Gizmo):
             return self.start_resolution.x / d_2d.x * 2
 
     def draw(self, context):
+        if self.is_corner:
+            self.draw_corner(context)
+            return
         shader = gpu.shader.from_builtin('POLYLINE_UNIFORM_COLOR')
         batch = batch_for_shader(shader, 'LINES', {"pos": self.tow_2d_point}, indices=((0, 1),))
 
@@ -98,15 +133,10 @@ class ControlGizmo(bpy.types.Gizmo):
             blf.position(0, mouse.x, mouse.y - 24, 0)
             blf.draw(0, f"y:{y}px")
         return
-        text = f"{self.camera_border_index} {self.camera_border_2d[self.camera_border_index]} {self.direction} {self.is_hover}"
-        with gpu.matrix.push_pop():
-            gpu.matrix.load_matrix(self.matrix_basis)
-            blf.position(0, 0, 0, 0)
-            blf.size(0, 10)
-            blf.draw(0, text)
-            gpu_extras.presets.draw_circle_2d((0, 0, 0), (1, 1, 1, 1), 10)
 
     def test_select(self, context, mouse_pos):
+        if self.is_corner:
+            return self.test_corner_select(context, mouse_pos)
         x, y = mouse_pos
         (x1, y1), (x2, y2) = self.tow_2d_point
 
@@ -127,9 +157,6 @@ class ControlGizmo(bpy.types.Gizmo):
         is_hover = 0 if x_ok and y_ok else -1
         self.is_hover = is_hover == 0
         return is_hover
-
-    def refresh(self, context):
-        ...
 
     def invoke(self, context, event):
         render = context.scene.render
@@ -212,6 +239,9 @@ class CameraControl(bpy.types.GizmoGroup):
     bl_region_type = 'WINDOW'
     bl_options = {'PERSISTENT', 'SCALE', 'SHOW_MODAL_ALL'}
 
+    drag_gz: bpy.types.Gizmo = None
+    switch_wh: bpy.types.Gizmo = None
+
     @classmethod
     def poll(cls, context):
         return (
@@ -221,10 +251,17 @@ class CameraControl(bpy.types.GizmoGroup):
                 context.space_data.region_3d.view_perspective == "CAMERA")
 
     def setup(self, context):
-        for i in range(4):
+        for i in range(len(DIRECTION_ITEMS)):
             gz = self.gizmos.new(ControlGizmo.bl_idname)
             gz.use_draw_modal = True
-        print("setup camera")
+        self.drag_gz = drag = self.gizmos.new("GIZMO_GT_button_2d")
+        drag.icon = "VIEW_PAN"
+        drag.target_set_operator("transform.translate")
+
+        from .ops import SwitchWH
+        self.switch_wh = switch_wh = self.gizmos.new("GIZMO_GT_button_2d")
+        switch_wh.icon = "UV_SYNC_SELECT"
+        switch_wh.target_set_operator(SwitchWH.bl_idname)
 
     def draw_prepare(self, context):
         self.refresh(context)
@@ -232,14 +269,18 @@ class CameraControl(bpy.types.GizmoGroup):
     def refresh(self, context):
         camera_border_3d = get_3d_camera_border(context)
         if camera_border_2d := get_2d_camera_border(context, camera_border_3d):
-            for (index, i) in enumerate(camera_border_2d):
+            for (index, direction) in enumerate(DIRECTION_ITEMS):
                 gz = self.gizmos[index]
-                x, y = i
                 gz.camera_border_index = index
                 gz.camera_border_2d = camera_border_2d
                 gz.camera_border_3d = camera_border_3d
-                gz.matrix_basis[0][3] = x
-                gz.matrix_basis[1][3] = y
+
+            x, y = camera_border_2d[1]
+            self.drag_gz.matrix_basis[0][3] = x + 20
+            self.drag_gz.matrix_basis[1][3] = y - 20
+
+            self.switch_wh.matrix_basis[0][3] = x -10
+            self.switch_wh.matrix_basis[1][3] = y - 20
 
 
 clss = [
