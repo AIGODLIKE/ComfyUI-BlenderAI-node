@@ -13,7 +13,6 @@ def get_active_camera(context) -> bpy.types.Camera | None:
 
 
 def get_3d_camera_border(context) -> list[Vector] | None:
-    from .camera_to_board import exclude_scale_matrix
     if camera := get_active_camera(context):
         matrix = exclude_scale_matrix(camera.matrix_world.copy())
         return [matrix @ v for v in camera.data.view_frame(scene=context.scene)]
