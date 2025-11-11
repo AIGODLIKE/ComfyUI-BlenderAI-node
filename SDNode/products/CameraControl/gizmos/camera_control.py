@@ -4,7 +4,7 @@ import gpu.matrix
 from gpu_extras.batch import batch_for_shader
 from mathutils import Vector, Matrix
 
-from .utils import get_active_camera, get_3d_camera_border, get_2d_camera_border
+from ..utils import get_active_camera, get_3d_camera_border, get_2d_camera_border
 
 DIRECTION_ITEMS = [
     "RIGHT",
@@ -94,7 +94,7 @@ class CornerControl:
 
 
 class ControlGizmo(bpy.types.Gizmo, CornerControl):
-    bl_idname = "CAMERA_GT_gizmo"
+    bl_idname = "CAMERA_GT_control_gizmo"
     bl_options = {"PERSISTENT", "SCALE", "SHOW_MODAL_ALL", "UNDO", "GRAB_CURSOR"}
 
     camera_border_2d: list[Vector] | None = []
@@ -316,7 +316,7 @@ class CameraControl(bpy.types.GizmoGroup):
                 context.space_data.region_3d.view_perspective == "CAMERA")
 
     def setup(self, context):
-        from .ops import SwitchWH, PanCamera, DollyCamera
+        from ..ops import SwitchWH, PanCamera, DollyCamera
 
         for i in range(len(DIRECTION_ITEMS)):
             gz = self.gizmos.new(ControlGizmo.bl_idname)

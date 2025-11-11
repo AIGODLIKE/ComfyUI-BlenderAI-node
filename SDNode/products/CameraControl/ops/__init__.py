@@ -33,12 +33,13 @@ class DollyCamera(bpy.types.Operator):
     def invoke(self, context, event):
         from ..utils import get_active_camera
         camera = get_active_camera(context)
-        with context.temp_override(selected_objects=[camera, ]):
+        with context.temp_override(selected_objects=[camera, ], active_object=camera, object=camera):
             bpy.ops.transform.translate("INVOKE_DEFAULT", True,
                                         orient_matrix_type='LOCAL',
                                         orient_type='LOCAL',
                                         constraint_axis=(False, False, True))
         return {"PASS_THROUGH", "FINISHED"}
+
 
 clss = [
     SwitchWH,
@@ -48,7 +49,7 @@ clss = [
 
 reg, unreg = bpy.utils.register_classes_factory(clss)
 
-modules = ["camera_to_board", "board_to_camera", ]
+modules = ["camera_to_board", "board_to_camera", "texture_space"]
 
 reg_submodule, unreg_submodule = bpy.utils.register_submodule_factory(__package__, modules)
 

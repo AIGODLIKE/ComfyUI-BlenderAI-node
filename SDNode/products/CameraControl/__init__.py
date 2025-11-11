@@ -2,7 +2,7 @@ import bpy
 
 from ....kclogger import logger
 
-modules = ["gizmo", "ops"]
+modules = ["gizmos", "ops", "texture_space_tool"]
 
 reg, unreg = bpy.utils.register_submodule_factory(__package__, modules)
 
