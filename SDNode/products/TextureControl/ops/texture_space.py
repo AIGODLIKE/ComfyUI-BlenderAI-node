@@ -31,9 +31,30 @@ class TextureSpaceScaleRestore(bpy.types.Operator):
         return {"FINISHED"}
 
 
+class TextureSpaceApply(bpy.types.Operator):
+    bl_idname = "object.texture_space_apply"
+    bl_label = "Texture Space Apply"
+
+    @classmethod
+    def poll(cls, context):
+        obj = context.object
+        return obj and obj.type == "MESH"
+
+    def execute(self, context):
+        from ..utils import get_image
+        images = get_image(context.object)
+        if len(images) == 1:
+            mat, node, image = images[0]
+        else:
+            self.report({"ERROR"}, "物体材质需要单张图像")
+
+        return {"FINISHED"}
+
+
 clss = [
     TextureSpaceLocationRestore,
     TextureSpaceScaleRestore,
+    TextureSpaceApply,
 ]
 
 reg, unreg = bpy.utils.register_classes_factory(clss)

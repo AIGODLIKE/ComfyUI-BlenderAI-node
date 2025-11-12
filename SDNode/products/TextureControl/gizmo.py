@@ -1,5 +1,6 @@
 import bpy
 import gpu
+from bl_ui.space_toolsystem_common import ToolSelectPanelHelper
 from gpu_extras.batch import batch_for_shader
 from mathutils import Vector
 
@@ -21,7 +22,11 @@ class TextureSpaceGizmo(bpy.types.Gizmo):
         shader.uniform_float("lineWidth", 3 if self.is_hover else 0)
         shader.uniform_float("color", (1, 1, 0, 1) if self.is_hover else (1, 0, 0, 0))
         batch.draw(shader)
-        print("draw", self.bl_idname)
+        space_type, mode = ToolSelectPanelHelper._tool_key_from_context(context)
+        cls = ToolSelectPanelHelper._tool_class_from_space_type(space_type)
+        item, tool, icon_value = cls._tool_get_active(context, space_type, mode, with_icon=True)
+
+        print("draw", self.bl_idname, tool)
 
     def invoke(self, context, event):
         ...
@@ -48,7 +53,12 @@ class TextureSpaceControl(bpy.types.GizmoGroup):
     @classmethod
     def poll(cls, context):
         obj = context.object
-        return obj and obj.type == "MESH"
+
+        space_type, mode = ToolSelectPanelHelper._tool_key_from_context(context)
+        cls = ToolSelectPanelHelper._tool_class_from_space_type(space_type)
+        item, tool, icon_value = cls._tool_get_active(context, space_type, mode, with_icon=True)
+
+        return obj and obj.type == "MESH" and obj.mode == "OBJECT" and tool and tool.idname == "object.texture_space_tool"
 
     def setup(self, context):
         self.gizmos.new(TextureSpaceGizmo.bl_idname)

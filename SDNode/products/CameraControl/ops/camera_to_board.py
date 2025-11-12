@@ -57,7 +57,7 @@ class CameraToBoard(bpy.types.Operator):
     bl_label = "Camera to Board"
 
     def execute(self, context):
-        from .gizmo import get_active_camera
+        from ..utils import get_active_camera
         camera = get_active_camera(context)
         obj = context.object
         if camera != obj:

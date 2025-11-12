@@ -49,7 +49,7 @@ clss = [
 
 reg, unreg = bpy.utils.register_classes_factory(clss)
 
-modules = ["camera_to_board", "board_to_camera", "texture_space"]
+modules = ["camera_to_board", "board_to_camera"]
 
 reg_submodule, unreg_submodule = bpy.utils.register_submodule_factory(__package__, modules)
 

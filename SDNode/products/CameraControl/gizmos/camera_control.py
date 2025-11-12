@@ -206,14 +206,15 @@ class ControlGizmo(bpy.types.Gizmo, CornerControl):
         if self.is_corner:
             ...
         else:
-            if self.is_vertical:
-                # if camera.data.sensor_fit == "VERTICAL":
-                #     camera.data.sensor_height = camera.data.sensor_width * (y / x)
-                camera.data.sensor_fit = "HORIZONTAL"
-            else:
-                # if camera.data.sensor_fit == "HORIZONTAL":
-                #     camera.data.sensor_width = camera.data.sensor_height * (y / x)
-                camera.data.sensor_fit = "VERTICAL"
+            ...
+            # if self.is_vertical:
+            #     # if camera.data.sensor_fit == "VERTICAL":
+            #     #     camera.data.sensor_height = camera.data.sensor_width * (y / x)
+            #     camera.data.sensor_fit = "HORIZONTAL"
+            # else:
+            #     # if camera.data.sensor_fit == "HORIZONTAL":
+            #     #     camera.data.sensor_width = camera.data.sensor_height * (y / x)
+            #     camera.data.sensor_fit = "VERTICAL"
 
         bpy.ops.ed.undo_push(message="Push Undo")
         return {"RUNNING_MODAL"}

@@ -1,7 +1,6 @@
 import bpy
 
-
-modules = ["camera_control","texture_space_control"]
+modules = ["camera_control", ]
 
 reg, unreg = bpy.utils.register_submodule_factory(__package__, modules)
 
