@@ -1,3 +1,5 @@
+import os
+
 import bpy
 import numpy as np
 from mathutils import Vector
@@ -79,8 +81,8 @@ class TextureSpaceApply(bpy.types.Operator):
             print("sx", sx, sy)
             print("iw ih", iw, ih)
 
-            ox = np.floor(np.multiply(lx, np.divide(iw, dx)))
-            oy = np.floor(np.multiply(ly, np.divide(ih, dy)))
+            ox = np.multiply(lx, np.divide(iw, dx))
+            oy = np.multiply(ly, np.divide(ih, dy))
             # ox = iw * lx
             # oy = ih * ly
             print("oxoy", ox, oy)
@@ -88,14 +90,16 @@ class TextureSpaceApply(bpy.types.Operator):
             image_buf = blender_image_to_image_buf_with_numpy(image)
             transformed_image_buf = resize_move_crop_image_buf(
                 image_buf,
-                position=(int(ox), int(oy)),
+                position=(ox, oy),
                 scale_factor=(sx, sy),
                 crop=Vector((0, 0, 0, 0)),
                 background=(0, 0, 0, 0)
             )
-            transformed_image_buf.write(r"C:\Users\32099\Desktop\output_sss.png")
-
-            new_image = image_buf_to_blender_image(transformed_image_buf, f"{image.name}_Transformed")
+            n = image.name.split(".")[0]
+            new_image = image_buf_to_blender_image(transformed_image_buf, f"{n}_Transformed")
+            if image.filepath != "":
+                folder = os.path.dirname(image.filepath)
+                new_image.save(filepath=os.path.join(folder, f"{new_image.name}.png"))
             print("new_image", new_image)
             node.image = new_image
 

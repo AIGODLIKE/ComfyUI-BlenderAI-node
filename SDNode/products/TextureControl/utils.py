@@ -140,9 +140,13 @@ def resize_move_crop_image_buf(
     # yoffset = max(0, min(yoffset, h - 1))
 
     # 将缩放后的图像粘贴到画布上 - 使用正确的参数
+    rsp = resized_buf.spec()
+    so_x = (spec.height - rsp.height) / 2
+    so_y = (spec.width - rsp.width) / 2
+
     success = oiio.ImageBufAlgo.paste(
         canvas_buf,
-        xoffset, yoffset, 0, 0,  # 目标位置: xbegin, ybegin, zbegin, chbegin
+        int(xoffset + so_x), int(yoffset + so_y), 0, 0,  # 目标位置: xbegin, ybegin, zbegin, chbegin
         resized_buf,  # 源图像
         roi=oiio.ROI(0, scale_width, 0, scale_height, 0, 1, 0, spec.nchannels)  # 使用roi而不是src_roi
     )
