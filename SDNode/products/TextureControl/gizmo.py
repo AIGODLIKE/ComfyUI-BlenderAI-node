@@ -26,10 +26,9 @@ class TextureSpaceGizmo(bpy.types.Gizmo):
         cls = ToolSelectPanelHelper._tool_class_from_space_type(space_type)
         item, tool, icon_value = cls._tool_get_active(context, space_type, mode, with_icon=True)
 
-        print("draw", self.bl_idname, tool)
+        # print("draw", self.bl_idname, tool)
 
     def invoke(self, context, event):
-        ...
         bpy.ops.ed.undo_push(message="Push Undo")
         return {"RUNNING_MODAL"}
 
