@@ -50,7 +50,7 @@ class ViewportLayerRedrawPanel(bpy.types.Panel):
     def show_layer_list(self, layout: bpy.types.UILayout):
         prop = bpy.context.scene.sdn_viewport_layer_redraw
         layout.label(text="Layer")
-        layout.template_list("SDN_UL_ULViewportLayerList", "", prop, "layers", prop, "active_layer_index")
+        # layout.template_list("SDN_UL_ULViewportLayerList", "", prop, "layers", prop, "active_layer_index")
 
     def show_progress(self, layout: bpy.types.UILayout):
         layout = layout.box()

@@ -43,7 +43,7 @@ def blender_image_to_image_buf_with_numpy(image: bpy.types.Image) -> ImageBuf:
 
     # 将像素数据转换为numpy数组
     pixels_np = np.array(image.pixels, dtype=np.float32)
-    pixels_reshaped = srgb_to_linear(pixels_np).reshape(height, width, channels)
+    pixels_reshaped = pixels_np.reshape(height, width, channels)
 
     # 创建OpenImageIO ImageBuf
     spec = ImageSpec(width, height, channels, 'float')
@@ -165,12 +165,13 @@ def image_buf_to_blender_image(image_buf: ImageBuf, image_name: str) -> bpy.type
     根据OpenImageIO的ImageBuf在Blender中创建新图像并填充像素。
     """
     spec = image_buf.spec()
+
     width, height, channels = spec.width, spec.height, spec.nchannels
     # 1. 在Blender中创建新图像
     # Blender图像通常需要RGBA通道，如果OIIO图像不是4通道，可能需要转换
     if channels not in [3, 4]:
         print(f"警告: 图像通道数({channels})可能不被Blender完美支持。")
-    bl_image = bpy.data.images.new(image_name, width=width, height=height, alpha=channels == 4, float_buffer=True)
+    bl_image = bpy.data.images.new(image_name, width=width, height=height, alpha=channels == 4)
 
     # 2. 准备像素数据
     # 获取OIIO像素数据 (浮点数列表)
@@ -178,9 +179,7 @@ def image_buf_to_blender_image(image_buf: ImageBuf, image_name: str) -> bpy.type
 
     # 3. 处理数据格式以匹配Blender
     # Blender的pixels属性是一个扁平的、每像素4个分量(RGBA)的浮点数列表
-    # bl_pixels = srgb_to_linear(oiio_pixels.ravel())
-    # bl_pixels = linear_to_srgb(oiio_pixels.ravel())
-    bl_pixels = linear_to_srgb(oiio_pixels.ravel())
+    bl_pixels = oiio_pixels.ravel()
 
     # 如果OIIO图像是3通道(RGB)，需要添加Alpha通道变成RGBA
     if channels == 3:
