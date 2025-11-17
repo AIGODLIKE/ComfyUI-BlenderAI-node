@@ -1,20 +1,10 @@
+from typing import Any
+
 import OpenImageIO as oiio
 import bpy
 import numpy as np
-from OpenImageIO import ImageBuf, ImageSpec
+from OpenImageIO import ImageBuf, ImageSpec, ImageBufAlgo
 from mathutils import Vector, Matrix
-
-
-def linear_to_srgb(c_linear):
-    # 对每个颜色分量进行伽马校正
-    c_srgb = np.where(c_linear <= 0.0031308, 12.92 * c_linear, 1.055 * (c_linear ** (1 / 2.4)) - 0.055)
-    return c_srgb  # 假设image是一个linear RGB图像
-
-
-def srgb_to_linear(c_srgb):
-    # 对每个颜色分量进行逆伽马校正
-    c_linear = np.where(c_srgb <= 0.04045, c_srgb / 12.92, ((c_srgb + 0.055) / 1.055) ** 2.4)
-    return c_linear
 
 
 def scale_to_matrix(scale: Vector) -> Matrix:
@@ -53,115 +43,6 @@ def blender_image_to_image_buf_with_numpy(image: bpy.types.Image) -> ImageBuf:
     image_buf.set_pixels(oiio.ROI(), pixels_reshaped)
 
     return image_buf
-
-
-def resize_move_crop_image_buf(
-        image_buf: ImageBuf,
-        scale_factor: tuple | float,
-        position="center",
-        crop=None,
-        background=None,
-):
-    """
-    缩放图像像素但保持画布尺寸不变，可控制位置
-
-    参数:
-        input_path: 输入图像路径
-        output_path: 输出图像路径
-        scale_factor: 缩放因子
-        position: 位置，可以是 "center", "top-left", "top-right", "bottom-left", "bottom-right"
-                  或自定义偏移量 (x, y)
-        background: 背景色
-    """
-
-    # 读取原始图像
-    spec = image_buf.spec()
-
-    if crop is None:
-        crop = Vector((0, 0, spec.height, spec.width))
-
-    if spec.nchannels < 4:
-        # 创建新的图像规格，增加Alpha通道
-        new_spec = oiio.ImageSpec(spec.width, spec.height, 4, spec.format)
-
-        # 创建新的ImageBuf，并设置所有像素为完全透明
-        buf_with_alpha = oiio.ImageBuf(new_spec)
-        oiio.ImageBufAlgo.fill(buf_with_alpha, [1, 1, 0, 1])  # R,G,B,A 全为0
-
-        # 将原始图像的RGB通道复制到新图像的前三个通道
-        # 这里使用'copy'操作将原图的RGB通道复制到新图的前三个通道
-        oiio.ImageBufAlgo.copy(buf_with_alpha, image_buf, roi=oiio.ROI(0, spec.width, 0, spec.height, 0, 1, 0, 3))
-        image_buf = buf_with_alpha
-        spec = image_buf.spec()
-
-    w, h = spec.width, spec.height
-    # 计算缩放后的图像尺寸
-    if isinstance(scale_factor, tuple):
-        sx, sy = scale_factor[:]
-    else:
-        sx = sy = scale_factor
-    scale_width = int(w * sx)
-    scale_height = int(h * sy)
-
-    # 创建缩放后的图像
-    resized_buf = oiio.ImageBuf(oiio.ImageSpec(scale_width, scale_height, 4, spec.format))
-    success_resize = oiio.ImageBufAlgo.resize(resized_buf, image_buf)
-
-    if not success_resize:
-        print("缩放错误:", resized_buf.geterror())
-        return None
-    # 创建与原始图像相同尺寸的画布
-    canvas_buf = oiio.ImageBuf(spec)
-
-    # 设置背景色
-    if background is not None:
-        oiio.ImageBufAlgo.fill(canvas_buf, background)
-    # 计算位置
-    if position == "center":
-        xoffset = (w - scale_width) // 2
-        yoffset = (h - scale_height) // 2
-    elif position == "top-left":
-        xoffset = 0
-        yoffset = h - scale_height
-    elif position == "top-right":
-        xoffset = w - scale_width
-        yoffset = h - scale_height
-    elif position == "bottom-left":
-        xoffset = 0
-        yoffset = 0
-    elif position == "bottom-right":
-        xoffset = w - scale_width
-        yoffset = 0
-    else:  # 自定义位置
-        xoffset, yoffset = position
-
-    # # 确保位置在合理范围内
-    # xoffset = max(0, min(xoffset, w - 1))
-    # yoffset = max(0, min(yoffset, h - 1))
-
-    # 将缩放后的图像粘贴到画布上 - 使用正确的参数
-    rsp = resized_buf.spec()
-    so_x = (spec.height - rsp.height) / 2
-    so_y = (spec.width - rsp.width) / 2
-
-    success = oiio.ImageBufAlgo.paste(
-        canvas_buf,
-        int(xoffset + so_x), int(yoffset + so_y), 0, 0,  # 目标位置: xbegin, ybegin, zbegin, chbegin
-        resized_buf,  # 源图像
-        roi=oiio.ROI(0, scale_width, 0, scale_height, 0, 1, 0, spec.nchannels)  # 使用roi而不是src_roi
-    )
-
-    if not success:
-        print("粘贴错误:", canvas_buf.geterror())
-        return None
-    return canvas_buf
-    # 定义裁剪区域：x起始, y起始, z起始, x宽度, y高度, z深度
-    # 例如：从(100, 50)开始，裁剪一个200x150的区域
-    l, r, t, b = crop[:]
-    region = oiio.ROI(int(l), int(w - r), int(t), int(h - b))
-    # 执行裁剪
-    cropped_buf = oiio.ImageBufAlgo.cut(canvas_buf, region)
-    return cropped_buf
 
 
 def image_buf_to_blender_image(image_buf: ImageBuf, image_name: str) -> bpy.types.Image:
@@ -207,8 +88,74 @@ def image_buf_to_blender_image(image_buf: ImageBuf, image_name: str) -> bpy.type
     return bl_image
 
 
-if __name__ == "__main__":
-    a = r"C:\Users\32099\Desktop\23FF1D14639FD0527F1B3A6355C789B4.png"
-    buf = oiio.ImageBuf(a)
-    nb = resize_move_crop_image_buf(buf, 0.5, background=(0, 0, 0, 0), crop=Vector((10, 100, 100, 200)))
-    nb.write(r"C:\Users\32099\Desktop\output_ww.png")
+def offset_scale_image(image_buf: ImageBuf, offset: Vector, scale: Vector,
+                       background=None,
+
+                       ) -> ImageBuf | None:
+    spec = image_buf.spec()
+
+    width, height, channels = spec.width, spec.height, spec.nchannels
+
+    # 设置填充值
+    if background is None:
+        background = [0.0] * channels
+
+    if spec.nchannels < 4:
+        # 创建新的图像规格，增加Alpha通道
+        new_spec = oiio.ImageSpec(spec.width, spec.height, 4, spec.format)
+
+        # 创建新的ImageBuf，并设置所有像素为完全透明
+        buf_with_alpha = oiio.ImageBuf(new_spec)
+        oiio.ImageBufAlgo.fill(buf_with_alpha, [1, 1, 0, 1])  # R,G,B,A 全为0
+
+        # 将原始图像的RGB通道复制到新图像的前三个通道
+        # 这里使用'copy'操作将原图的RGB通道复制到新图的前三个通道
+        oiio.ImageBufAlgo.copy(buf_with_alpha, image_buf, roi=oiio.ROI(0, spec.width, 0, spec.height, 0, 1, 0, 3))
+        image_buf = buf_with_alpha
+        spec = image_buf.spec()
+
+    scale_width = int(np.multiply(width, scale.x))
+    scale_height = int(np.multiply(height, scale.y))
+    # 创建缩放后的图像
+    scaled_buf = ImageBufAlgo.resize(
+        image_buf,
+        roi=oiio.ROI(0, scale_width, 0, scale_height),
+    )
+    if scaled_buf.has_error:
+        print("缩放图像错误:", scaled_buf.geterror())
+        return output_buf
+    # 计算居中放置的位置
+    pos_x = int((width - scale_width) // 2)
+    pos_y = int((height - scale_height) // 2)
+
+    # 如果缩放后的尺寸为0，则直接返回填充图像
+    if scale_width <= 0 or scale_height <= 0:
+        print("警告: 缩放系数过小，缩放后图像尺寸为0")
+        return None
+
+    res_buf = oiio.ImageBuf(spec)  # 输出的buf
+    ImageBufAlgo.fill(res_buf, background)
+
+    # 将缩放后的图像粘贴到输出图像的中心位置
+    success = ImageBufAlgo.paste(
+        res_buf,
+        int(offset.x + pos_x),
+        int(offset.y + pos_y),
+        0,
+        0,  # 目标位置
+        scaled_buf,  # 源图像
+        oiio.ROI(0, scale_width, 0, scale_height)  # 源区域
+    )
+
+    if not success:
+        print("粘贴操作失败:", ImageBufAlgo.geterror())
+        return None
+    return res_buf
+
+    # 定义裁剪区域：x起始, y起始, z起始, x宽度, y高度, z深度
+    # 例如：从(100, 50)开始，裁剪一个200x150的区域
+    l, r, t, b = crop[:]
+    region = oiio.ROI(int(l), int(w - r), int(t), int(h - b))
+    # 执行裁剪
+    cropped_buf = oiio.ImageBufAlgo.cut(canvas_buf, region)
+    return cropped_buf

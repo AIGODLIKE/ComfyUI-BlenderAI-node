@@ -6,10 +6,10 @@ from mathutils import Vector
 
 from ..utils import (
     get_image,
-    resize_move_crop_image_buf,
     blender_image_to_image_buf_with_numpy,
     scale_to_matrix,
     image_buf_to_blender_image,
+    offset_scale_image
 )
 
 
@@ -74,8 +74,8 @@ class TextureSpaceApply(bpy.types.Operator):
             lx, ly, lz = mesh.texspace_location[:]
             tsx, tsy, tsz = mesh.texspace_size[:]
 
-            sx = tsx / (dx / 2)
-            sy = tsy / (dy / 2)
+            sx = np.divide(tsx, np.divide(dx, 2))
+            sy = np.divide(tsy, np.divide(dy, 2))
             print("dx", dx, dy, dz)
             print("lx", lx, ly, lz)
             print("sx", sx, sy)
@@ -88,15 +88,19 @@ class TextureSpaceApply(bpy.types.Operator):
             print("oxoy", ox, oy)
 
             image_buf = blender_image_to_image_buf_with_numpy(image)
-            transformed_image_buf = resize_move_crop_image_buf(
-                image_buf,
-                position=(ox, oy),
-                scale_factor=(sx, sy),
-                crop=Vector((0, 0, 0, 0)),
-                background=(0, 0, 0, 0)
-            )
+
+            # transformed_image_buf = resize_move_crop_image_buf(
+            #     image_buf,
+            #     position=(ox, oy),
+            #     scale_factor=(sx, sy),
+            #     crop=Vector((0, 0, 0, 0)),
+            #     background=(0, 0, 0, 0)
+            # )
+            # image_buf = shift_pixels_simple(image_buf, int(ox), int(oy))
+            image_buf = offset_scale_image(image_buf, Vector((ox, oy)), Vector((sx, sy)))
+
             n = image.name.split(".")[0]
-            new_image = image_buf_to_blender_image(transformed_image_buf, f"{n}_Transformed")
+            new_image = image_buf_to_blender_image(image_buf, f"{n}_Transformed")
             if image.filepath != "":
                 folder = os.path.dirname(image.filepath)
                 new_image.save(filepath=os.path.join(folder, f"{new_image.name}.png"))
