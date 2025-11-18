@@ -146,6 +146,7 @@ class ControlGizmo(bpy.types.Gizmo, CornerControl):
 
     @property
     def resolution_proportion(self) -> float:
+        """分辨率比例"""
         if self.is_vertical:
             ai, bi = 3, 2
         else:
@@ -321,6 +322,7 @@ class CameraControl(bpy.types.GizmoGroup):
 
         for i in range(len(DIRECTION_ITEMS)):
             gz = self.gizmos.new(ControlGizmo.bl_idname)
+            gz.camera_border_index = i
             # gz.use_draw_modal = True
 
         icon_scale = (80 * 0.35) / 2  # 14
@@ -351,7 +353,6 @@ class CameraControl(bpy.types.GizmoGroup):
         if camera_border_2d := get_2d_camera_border(context, camera_border_3d):
             for (index, direction) in enumerate(DIRECTION_ITEMS):
                 gz = self.gizmos[index]
-                gz.camera_border_index = index
                 gz.camera_border_2d = camera_border_2d
                 gz.camera_border_3d = camera_border_3d
 

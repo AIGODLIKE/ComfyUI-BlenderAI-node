@@ -2,6 +2,7 @@ import bpy
 from mathutils import Vector, Matrix
 from bpy_extras.view3d_utils import location_3d_to_region_2d
 
+
 def get_active_camera(context) -> bpy.types.Camera | None:
     """
     bpy.data.screens["Shading"].areas[5].spaces[0].camera 局部相机
@@ -14,8 +15,9 @@ def get_active_camera(context) -> bpy.types.Camera | None:
 
 def get_3d_camera_border(context) -> list[Vector] | None:
     if camera := get_active_camera(context):
-        matrix = exclude_scale_matrix(camera.matrix_world.copy())
-        return [matrix @ v for v in camera.data.view_frame(scene=context.scene)]
+        if camera is not None:
+            matrix = exclude_scale_matrix(camera.matrix_world.copy())
+            return [matrix @ v for v in camera.data.view_frame(scene=context.scene)]
     return None
 
 

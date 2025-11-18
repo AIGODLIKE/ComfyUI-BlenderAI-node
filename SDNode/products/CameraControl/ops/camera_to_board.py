@@ -1,7 +1,8 @@
 import bpy
 from mathutils import Vector, Matrix
 from mathutils.geometry import intersect_line_line
-from ..utils import exclude_scale_matrix
+
+from ..utils import exclude_scale_matrix, get_active_camera
 
 
 def camera_to_board(context, camera, board):
@@ -55,9 +56,15 @@ def camera_to_board(context, camera, board):
 class CameraToBoard(bpy.types.Operator):
     bl_idname = "object.camera_to_board"
     bl_label = "Camera to Board"
+    bl_options = {'UNDO', 'REGISTER'}
+
+    @classmethod
+    def poll(cls, context):
+        obj = context.object
+        camera = get_active_camera(context)
+        return obj and obj.type == "MESH" and obj.mode == "OBJECT" and camera
 
     def execute(self, context):
-        from ..utils import get_active_camera
         camera = get_active_camera(context)
         obj = context.object
         if camera != obj:
