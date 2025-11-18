@@ -135,11 +135,6 @@ class ControlGizmo(bpy.types.Gizmo, CornerControl):
         return a, b
 
     @property
-    def tow_3d_point(self) -> list[Vector]:
-        a, b = self.tow_point_index
-        return [self.camera_border_3d[a], self.camera_border_3d[b]]
-
-    @property
     def tow_2d_point(self) -> list[Vector]:
         a, b = self.tow_point_index
         return [self.camera_border_2d[a], self.camera_border_2d[b]]
