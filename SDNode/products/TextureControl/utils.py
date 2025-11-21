@@ -159,3 +159,8 @@ def offset_scale_image(image_buf: ImageBuf, offset: Vector, scale: Vector,
     # 执行裁剪
     cropped_buf = oiio.ImageBufAlgo.cut(canvas_buf, region)
     return cropped_buf
+
+def line_factor_point(point_a, point_b, t):
+    x = point_a[0] + t * (point_b[0] - point_a[0])
+    y = point_a[1] + t * (point_b[1] - point_a[1])
+    return Vector((x, y))
