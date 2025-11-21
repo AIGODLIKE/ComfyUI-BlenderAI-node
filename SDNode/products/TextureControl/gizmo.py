@@ -282,7 +282,6 @@ class TextureSpaceGizmo(bpy.types.Gizmo):
         matrix = obj.matrix_world
 
         mouse = Vector((event.mouse_region_x, event.mouse_region_y))
-        mouse_move_length = (self.start_mouse - mouse).length
 
         l, r = matrix @ self.point(context, offset=False, direction="LEFT"), matrix @ self.point(context, offset=False,
                                                                                                  direction="RIGHT")
@@ -293,32 +292,16 @@ class TextureSpaceGizmo(bpy.types.Gizmo):
         t2d, b2d = location_3d_to_region_2d(region, region_3d, t), location_3d_to_region_2d(region, region_3d, b)
 
         dx, dy, dz = obj.dimensions
-
-        h_2d = (l2d - r2d).length
-        v_2d = (t2d - b2d).length
-        # h_factor = dx / h_2d
-        # v_factor = dy / v_2d
-
-        aa, cc = intersect_point_line(mouse, l2d, r2d)
-        bb, dd = intersect_point_line(mouse, t2d, b2d)
-
         if self.is_corner:
             ...
         else:
-            index = 0
-            o = 0
-            if self.direction == "RIGHT":
-                f, o = intersect_point_line(mouse, r2d, l2d)
-                index = 1
-            elif self.direction == "LEFT":
-                f, o = intersect_point_line(mouse, l2d, r2d)
-                index = 0
-            elif self.direction == "TOP":
-                f, o = intersect_point_line(mouse, t2d, b2d)
-                index = 2
-            elif self.direction == "BOTTOM":
-                f, o = intersect_point_line(mouse, b2d, t2d)
-                index = 3
+            (a2d, b2d), index = {
+                "LEFT": [(l2d, r2d), 0],
+                "RIGHT": [(r2d, l2d), 1],
+                "TOP": [(t2d, b2d), 2],
+                "BOTTOM": [(b2d, t2d), 3]
+            }.get(self.direction)
+            _, o = intersect_point_line(mouse, a2d, b2d)
 
             if self.is_vertical:
                 v = dy * o
@@ -328,7 +311,7 @@ class TextureSpaceGizmo(bpy.types.Gizmo):
             fv = (sm.inverted() @ Vector((v, v, v)))[0]
             if not self.is_negative_xis:
                 fv = fv * -1
-            ofv = Vector(self.target_get_value("texture_space_control_offset"))
+            ofv = Vector(texture_space_control_offset)
             ofv[index] = fv
             self.target_set_value("texture_space_control_offset", ofv)
 
