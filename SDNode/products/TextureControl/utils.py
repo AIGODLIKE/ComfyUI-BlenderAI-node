@@ -164,3 +164,10 @@ def line_factor_point(point_a, point_b, t):
     x = point_a[0] + t * (point_b[0] - point_a[0])
     y = point_a[1] + t * (point_b[1] - point_a[1])
     return Vector((x, y))
+
+
+def scale_to_matrix(scale: Vector) -> Matrix:
+    matrix = Matrix()
+    for i in range(3):
+        matrix[i][i] = scale[i]
+    return matrix

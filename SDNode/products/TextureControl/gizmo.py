@@ -7,7 +7,7 @@ from gpu_extras.batch import batch_for_shader
 from mathutils import Vector
 from mathutils.geometry import intersect_point_line
 
-from .utils import line_factor_point
+from .utils import line_factor_point, scale_to_matrix
 
 DIRECTION_ITEMS = [
     "RIGHT",
@@ -61,6 +61,10 @@ class TextureSpaceGizmo(bpy.types.Gizmo):
         return "_" in self.direction
 
     @property
+    def is_negative_xis(self) -> bool:
+        return self.direction in ("LEFT", "BOTTOM")
+
+    @property
     def points(self) -> list[Vector]:
         """
         b----d
@@ -72,9 +76,9 @@ class TextureSpaceGizmo(bpy.types.Gizmo):
         bound_box = obj.bound_box
         return [Vector(bound_box[i]) for i in (1, 2, 5, 6)]
 
-    def offset(self, context) -> Vector:
-        l, r, t, b = self.get
-        print("offset", l, r, t, b)
+    def offset(self) -> Vector:
+        l, r, t, b = self.target_get_value("texture_space_control_offset")
+        # print("offset", l, r, t, b)
         if of := {
             "RIGHT": (r, 0, 0),
             "BOTTOM": (0, b, 0),
@@ -134,7 +138,7 @@ class TextureSpaceGizmo(bpy.types.Gizmo):
             value = ap
 
         if offset:
-            po = value + self.offset(context)
+            po = value + self.offset()
         else:
             po = value
         return po
@@ -298,13 +302,35 @@ class TextureSpaceGizmo(bpy.types.Gizmo):
         aa, cc = intersect_point_line(mouse, l2d, r2d)
         bb, dd = intersect_point_line(mouse, t2d, b2d)
 
-        if self.direction == "RIGHT":
-            f, o = intersect_point_line(mouse, r2d, l2d)
-            v = dx * o
-            a = self.target_get_value("texture_space_control_offset")
-            print(self.direction, dx, h_2d, cc, f, o, v, a[1])
-            a[1] = v * -1
-            self.target_set_value("texture_space_control_offset", a)
+        if self.is_corner:
+            ...
+        else:
+            index = 0
+            o = 0
+            if self.direction == "RIGHT":
+                f, o = intersect_point_line(mouse, r2d, l2d)
+                index = 1
+            elif self.direction == "LEFT":
+                f, o = intersect_point_line(mouse, l2d, r2d)
+                index = 0
+            elif self.direction == "TOP":
+                f, o = intersect_point_line(mouse, t2d, b2d)
+                index = 2
+            elif self.direction == "BOTTOM":
+                f, o = intersect_point_line(mouse, b2d, t2d)
+                index = 3
+
+            if self.is_vertical:
+                v = dy * o
+            else:
+                v = dx * o
+            sm = scale_to_matrix(obj.matrix_world.to_scale())
+            fv = (sm.inverted() @ Vector((v, v, v)))[0]
+            if not self.is_negative_xis:
+                fv = fv * -1
+            ofv = Vector(self.target_get_value("texture_space_control_offset"))
+            ofv[index] = fv
+            self.target_set_value("texture_space_control_offset", ofv)
 
 
 class TextureSpaceControl(bpy.types.GizmoGroup):
@@ -332,7 +358,7 @@ class TextureSpaceControl(bpy.types.GizmoGroup):
             gz.use_draw_modal = True
             gz.use_draw_value = True
             gz.line_width = 1
-            gz.target_set_prop("texture_space_control_offset", context.object, "texture_space_control_offset")
+            # gz.target_set_prop("texture_space_control_offset", context.object, "texture_space_control_offset")
 
         # gz = self.gizmos.new("GIZMO_GT_arrow_3d")
         # gz.draw_style = "NORMAL"
@@ -344,7 +370,7 @@ class TextureSpaceControl(bpy.types.GizmoGroup):
     def refresh(self, context):
         context.area.tag_redraw()
         for g in self.gizmos:
-            gg.target_set_prop("texture_space_control_offset", context.object, "texture_space_control_offset")
+            g.target_set_prop("texture_space_control_offset", context.object, "texture_space_control_offset")
 
 
 clss = [
