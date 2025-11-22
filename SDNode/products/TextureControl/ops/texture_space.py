@@ -9,7 +9,8 @@ from ..utils import (
     blender_image_to_image_buf_with_numpy,
     scale_to_matrix,
     image_buf_to_blender_image,
-    offset_scale_image
+    offset_scale_image,
+    apply_mesh_offset
 )
 
 
@@ -53,7 +54,7 @@ class TextureSpaceScaleRestore(bpy.types.Operator):
 class TextureSpaceApply(bpy.types.Operator):
     bl_idname = "object.texture_space_apply"
     bl_label = "Texture Space Apply"
-    bl_options = {'UNDO', 'REGISTER'}
+    bl_options = {'REGISTER'}  # 'UNDO',
 
     @classmethod
     def poll(cls, context):
@@ -91,13 +92,14 @@ class TextureSpaceApply(bpy.types.Operator):
 
             # ox = iw * lx
             # oy = ih * ly
-            ofl, ofr, oft, ofb = obj.texture_space_control_offset[:]
+            ofl, ofr, oft, ofb = offset_space = obj.texture_space_control_offset[:]
             ll = np.multiply(ofl, np.divide(iw, dx))
             rr = np.multiply(ofr, np.divide(iw, dx))
             tt = np.multiply(oft, np.divide(ih, dy))
             bb = np.multiply(ofb, np.divide(ih, dy))
             print("oxoy", ox, oy)
             print("lrtb", ll, rr, tt, bb)
+            offset_space_pixel = Vector((ll, rr, tt, bb))
 
             image_buf = blender_image_to_image_buf_with_numpy(image)
 
@@ -110,7 +112,7 @@ class TextureSpaceApply(bpy.types.Operator):
             # )
             # image_buf = shift_pixels_simple(image_buf, int(ox), int(oy))
             image_buf = offset_scale_image(image_buf, Vector((ox, oy)), Vector((sx, sy)),
-                                           crop=Vector((ll, rr, tt, bb)))
+                                           crop=offset_space_pixel)
 
             n = image.name.split(".")[0]
             new_image = image_buf_to_blender_image(image_buf, f"{n}_Transformed")
@@ -120,8 +122,13 @@ class TextureSpaceApply(bpy.types.Operator):
             print("new_image", new_image)
             node.image = new_image
 
-            TextureSpaceScaleRestore.restore_scale(obj)
+            apply_mesh_offset(context, obj, offset_space)
             mesh.texspace_location = Vector((0, 0, 0))
+            obj.texture_space_control_offset = Vector((0, 0, 0, 0))
+            TextureSpaceScaleRestore.restore_scale(obj)
+            with context.temp_override(object=obj, selected_objects=[obj, ], active_object=obj):
+                bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY', center='MEDIAN')
+            TextureSpaceScaleRestore.restore_scale(obj)
         else:
             self.report({"ERROR"}, "物体材质需要单张图像")
         return {"FINISHED"}

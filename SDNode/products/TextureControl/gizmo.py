@@ -8,7 +8,7 @@ from mathutils import Vector
 from mathutils.geometry import intersect_point_line
 
 from .utils import line_factor_point, scale_to_matrix
-
+import bmesh
 DIRECTION_ITEMS = [
     "RIGHT",
     "BOTTOM",

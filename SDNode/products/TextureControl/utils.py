@@ -170,3 +170,26 @@ def scale_to_matrix(scale: Vector) -> Matrix:
     for i in range(3):
         matrix[i][i] = scale[i]
     return matrix
+
+
+def apply_mesh_offset(context, obj: bpy.types.Object, offset_space: Vector):
+    """
+    2-----3
+    |     |
+    |     |
+    0-----1
+    """
+    import bmesh
+    l, r, t, b = offset_space[:]
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    bm.verts.ensure_lookup_table()
+    for v in bm.verts:
+        of = {
+            0: Vector((l, b, 0)),
+            1: Vector((r, b, 0)),
+            2: Vector((l, t, 0)),
+            3: Vector((r, t, 0)),
+        }.get(v.index)
+        v.co += of
+    bm.to_mesh(obj.data)
