@@ -1,5 +1,3 @@
-from typing import Any
-
 import OpenImageIO as oiio
 import bpy
 import numpy as np
@@ -90,7 +88,7 @@ def image_buf_to_blender_image(image_buf: ImageBuf, image_name: str) -> bpy.type
 
 def offset_scale_image(image_buf: ImageBuf, offset: Vector, scale: Vector,
                        background=None,
-
+                       crop=None,
                        ) -> ImageBuf | None:
     spec = image_buf.spec()
 
@@ -150,15 +148,16 @@ def offset_scale_image(image_buf: ImageBuf, offset: Vector, scale: Vector,
     if not success:
         print("粘贴操作失败:", ImageBufAlgo.geterror())
         return None
-    return res_buf
+    # return res_buf
 
     # 定义裁剪区域：x起始, y起始, z起始, x宽度, y高度, z深度
     # 例如：从(100, 50)开始，裁剪一个200x150的区域
     l, r, t, b = crop[:]
-    region = oiio.ROI(int(l), int(w - r), int(t), int(h - b))
+    region = oiio.ROI(int(l), int(width + r), int(b), int(height + t))
     # 执行裁剪
-    cropped_buf = oiio.ImageBufAlgo.cut(canvas_buf, region)
+    cropped_buf = oiio.ImageBufAlgo.cut(res_buf, region)
     return cropped_buf
+
 
 def line_factor_point(point_a, point_b, t):
     x = point_a[0] + t * (point_b[0] - point_a[0])

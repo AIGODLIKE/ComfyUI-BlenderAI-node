@@ -60,6 +60,10 @@ class TextureSpaceApply(bpy.types.Operator):
         obj = context.object
         return obj and obj.type == "MESH"
 
+    def invoke(self, context, event):
+        bpy.ops.ed.undo_push(message="Push Undo")
+        return self.execute(context)
+
     def execute(self, context):
         obj = context.object
         mesh = obj.data
@@ -69,13 +73,14 @@ class TextureSpaceApply(bpy.types.Operator):
             mat, node, image = images[0]
             iw, ih = image.size[:]
 
-            scale = scale_to_matrix(obj.matrix_world.to_scale())
-            dx, dy, dz = scale.inverted() @ obj.dimensions  # 物理尺寸
+            scale = scale_to_matrix(obj.matrix_world.to_scale()).inverted()
+            dx, dy, dz = scale @ obj.dimensions  # 物理尺寸
             lx, ly, lz = mesh.texspace_location[:]
             tsx, tsy, tsz = mesh.texspace_size[:]
 
             sx = np.divide(tsx, np.divide(dx, 2))
             sy = np.divide(tsy, np.divide(dy, 2))
+
             print("dx", dx, dy, dz)
             print("lx", lx, ly, lz)
             print("sx", sx, sy)
@@ -83,9 +88,16 @@ class TextureSpaceApply(bpy.types.Operator):
 
             ox = np.multiply(lx, np.divide(iw, dx))
             oy = np.multiply(ly, np.divide(ih, dy))
+
             # ox = iw * lx
             # oy = ih * ly
+            ofl, ofr, oft, ofb = obj.texture_space_control_offset[:]
+            ll = np.multiply(ofl, np.divide(iw, dx))
+            rr = np.multiply(ofr, np.divide(iw, dx))
+            tt = np.multiply(oft, np.divide(ih, dy))
+            bb = np.multiply(ofb, np.divide(ih, dy))
             print("oxoy", ox, oy)
+            print("lrtb", ll, rr, tt, bb)
 
             image_buf = blender_image_to_image_buf_with_numpy(image)
 
@@ -97,7 +109,8 @@ class TextureSpaceApply(bpy.types.Operator):
             #     background=(0, 0, 0, 0)
             # )
             # image_buf = shift_pixels_simple(image_buf, int(ox), int(oy))
-            image_buf = offset_scale_image(image_buf, Vector((ox, oy)), Vector((sx, sy)))
+            image_buf = offset_scale_image(image_buf, Vector((ox, oy)), Vector((sx, sy)),
+                                           crop=Vector((ll, rr, tt, bb)))
 
             n = image.name.split(".")[0]
             new_image = image_buf_to_blender_image(image_buf, f"{n}_Transformed")
