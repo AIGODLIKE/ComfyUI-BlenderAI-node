@@ -203,25 +203,17 @@ class TextureSpaceGizmo(bpy.types.Gizmo):
         gpu.state.line_width_set(self.line_width)
         gpu.state.blend_set("ALPHA")
         gpu.state.depth_test_set("ALWAYS")
-
-        text = f"{self.direction} {self.is_hover}"
-        blf.size(0, 20)
-        blf.draw(0, text)
-
-        # color = (1, 1, 0, 1) if self.is_hover else (1, 0, 0, 1)
+        #
+        # text = f"{self.direction} {self.is_hover}"
+        # blf.size(0, 20)
+        # blf.draw(0, text)
+        #
+        # color = (1, 0, 1, 1) if self.is_hover else (1, 1, 0, 1)
         # shader = gpu.shader.from_builtin('UNIFORM_COLOR')
-        # batch = batch_for_shader(shader, 'POINTS', {"pos": [self.point(context)]})
-        # # shader.uniform_float("viewportSize", gpu.state.viewport_get()[2:])
-        # # shader.uniform_float("lineWidth", 3 if self.is_hover else 0)
+        # batch = batch_for_shader(shader, 'POINTS',
+        #                          {"pos": [context.object.matrix_world @ self.point(context, offset=False), ]})
         # shader.uniform_float("color", color)
         # batch.draw(shader)
-
-        color = (1, 0, 1, 1) if self.is_hover else (1, 1, 0, 1)
-        shader = gpu.shader.from_builtin('UNIFORM_COLOR')
-        batch = batch_for_shader(shader, 'POINTS',
-                                 {"pos": [context.object.matrix_world @ self.point(context, offset=False), ]})
-        shader.uniform_float("color", color)
-        batch.draw(shader)
 
         if self.is_corner:
             self.draw_corner(context)
@@ -277,24 +269,46 @@ class TextureSpaceGizmo(bpy.types.Gizmo):
         """
         obj = context.object
 
-        texture_space_control_offset = self.target_get_value("texture_space_control_offset")
+        texture_space_control_offset = Vector(self.target_get_value("texture_space_control_offset"))
+        ofv = texture_space_control_offset
         region, region_3d = context.region, context.space_data.region_3d
         matrix = obj.matrix_world
 
         mouse = Vector((event.mouse_region_x, event.mouse_region_y))
-
-        l, r = matrix @ self.point(context, offset=False, direction="LEFT"), matrix @ self.point(context, offset=False,
-                                                                                                 direction="RIGHT")
-        t, b = matrix @ self.point(context, offset=False, direction="TOP"), matrix @ self.point(context, offset=False,
-                                                                                                direction="BOTTOM")
-
-        l2d, r2d = location_3d_to_region_2d(region, region_3d, l), location_3d_to_region_2d(region, region_3d, r)
-        t2d, b2d = location_3d_to_region_2d(region, region_3d, t), location_3d_to_region_2d(region, region_3d, b)
-
+        sm = scale_to_matrix(obj.matrix_world.to_scale()).inverted()
         dx, dy, dz = obj.dimensions
         if self.is_corner:
-            ...
+            lt = matrix @ self.point(context, offset=False, direction="LEFT_TOP")
+            rt = matrix @ self.point(context, offset=False, direction="RIGHT_TOP")
+            lb = matrix @ self.point(context, offset=False, direction="LEFT_BOTTOM")
+            rb = matrix @ self.point(context, offset=False, direction="RIGHT_BOTTOM")
+            lt2d = location_3d_to_region_2d(region, region_3d, lt)
+            rt2d = location_3d_to_region_2d(region, region_3d, rt)
+            lb2d = location_3d_to_region_2d(region, region_3d, lb)
+            rb2d = location_3d_to_region_2d(region, region_3d, rb)
+            (ax2d, bx2d), (cy2d, dy2d), (ix, iy), (ffx, ffy) = {
+                "LEFT_TOP": [(lt2d, rt2d), (lt2d, lb2d), (0, 2), (1, -1)],  # x,y
+                "RIGHT_TOP": [(rt2d, lt2d), (rt2d, rb2d), (1, 2), (-1, -1)],
+                "LEFT_BOTTOM": [(lb2d, rb2d), (lb2d, lt2d), (0, 3), (1, 1)],
+                "RIGHT_BOTTOM": [(rb2d, lb2d), (rb2d, rt2d), (1, 3), (-1, 1)],
+            }.get(self.direction)
+            _, ax = intersect_point_line(mouse, ax2d, bx2d)
+            _, by = intersect_point_line(mouse, cy2d, dy2d)
+
+            xx = dx * ax
+            yy = dy * by
+            fxx = (sm @ Vector((xx, xx, xx)))[0]
+            fyy = (sm @ Vector((yy, yy, yy)))[0]
+            ofv[ix] = fxx * ffx
+            ofv[iy] = fyy * ffy
+            self.target_set_value("texture_space_control_offset", ofv)
         else:
+            l = matrix @ self.point(context, offset=False, direction="LEFT")
+            r = matrix @ self.point(context, offset=False, direction="RIGHT")
+            t = matrix @ self.point(context, offset=False, direction="TOP")
+            b = matrix @ self.point(context, offset=False, direction="BOTTOM")
+            l2d, r2d = location_3d_to_region_2d(region, region_3d, l), location_3d_to_region_2d(region, region_3d, r)
+            t2d, b2d = location_3d_to_region_2d(region, region_3d, t), location_3d_to_region_2d(region, region_3d, b)
             (a2d, b2d), index = {
                 "LEFT": [(l2d, r2d), 0],
                 "RIGHT": [(r2d, l2d), 1],
@@ -307,11 +321,9 @@ class TextureSpaceGizmo(bpy.types.Gizmo):
                 v = dy * o
             else:
                 v = dx * o
-            sm = scale_to_matrix(obj.matrix_world.to_scale())
-            fv = (sm.inverted() @ Vector((v, v, v)))[0]
+            fv = (sm @ Vector((v, v, v)))[0]
             if not self.is_negative_xis:
                 fv = fv * -1
-            ofv = Vector(texture_space_control_offset)
             ofv[index] = fv
             self.target_set_value("texture_space_control_offset", ofv)
 
