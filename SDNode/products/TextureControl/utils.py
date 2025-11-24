@@ -172,7 +172,7 @@ def scale_to_matrix(scale: Vector) -> Matrix:
     return matrix
 
 
-def apply_mesh_offset(context, obj: bpy.types.Object, offset_space: Vector):
+def apply_mesh_offset(obj: bpy.types.Object, offset_space: Vector):
     """
     2-----3
     |     |

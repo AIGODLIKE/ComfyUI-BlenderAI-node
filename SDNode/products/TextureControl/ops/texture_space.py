@@ -122,12 +122,12 @@ class TextureSpaceApply(bpy.types.Operator):
             print("new_image", new_image)
             node.image = new_image
 
-            apply_mesh_offset(context, obj, offset_space)
+            apply_mesh_offset(obj, offset_space)
             mesh.texspace_location = Vector((0, 0, 0))
             obj.texture_space_control_offset = Vector((0, 0, 0, 0))
             TextureSpaceScaleRestore.restore_scale(obj)
             with context.temp_override(object=obj, selected_objects=[obj, ], active_object=obj):
-                bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY', center='MEDIAN')
+                bpy.ops.object.origin_set("EXEC_DEFAULT", False, type='ORIGIN_GEOMETRY', center='MEDIAN')
             TextureSpaceScaleRestore.restore_scale(obj)
         else:
             self.report({"ERROR"}, "物体材质需要单张图像")
