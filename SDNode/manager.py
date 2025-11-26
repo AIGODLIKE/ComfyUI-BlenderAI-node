@@ -18,6 +18,7 @@ from urllib.parse import urlparse
 from urllib.error import URLError
 from threading import Thread
 from subprocess import Popen, PIPE, STDOUT
+from typing import Callable
 from pathlib import Path
 from queue import Queue
 from .utils import WindowLogger, calc_data_from_blender, load_data_from_comfyui
@@ -52,6 +53,7 @@ class Task:
         self.res: Queue[dict] = Queue()
         self._pre = pre
         self._post = post
+        self.result_callbacks: dict[Callable[Task, dict], None] = {}
         from .tree import CFNodeTree
         from .nodes import NodeBase
 
@@ -66,6 +68,12 @@ class Task:
         if not tree:
             return
         self.node_ref_map = {n.id: n.bl_idname for n in tree.nodes if hasattr(n, "id")}
+
+    def add_result_cb(self, cb):
+        self.result_callbacks[cb] = None
+
+    def remove_result_cb(self, cb):
+        self.result_callbacks.pop(cb, None)
 
     def build_task(self):
         # 判断 task 是否是可被调用的对象(可以让task动态生成)
@@ -158,6 +166,17 @@ class Task:
 
         Timer.put((f, self))
 
+    def call_res_cb(self):
+        if self.res.empty():
+            return
+        logger.debug(_T("Proc Result"))
+        res = self.res.get()
+        node = res["node"]
+        prompt = self.task["prompt"]
+        if node in prompt:
+            Timer.put((prompt[node][2], self, res))
+        for res_cb in self.result_callbacks:
+            Timer.put((res_cb, self, res))
 
 class TaskErrPaser:
     class ErrType:
@@ -1230,14 +1249,7 @@ class TaskManager:
             if TaskManager.res_queue.empty():
                 continue
             task = TaskManager.res_queue.get()
-            if task.res.empty():
-                continue
-            logger.debug(_T("Proc Result"))
-            res = task.res.get()
-            node = res["node"]
-            prompt = task.task["prompt"]
-            if node in prompt:
-                Timer.put((prompt[node][2], task, res))
+            task.call_res_cb()
         logger.debug(_T("Proc Task Thread Exit"))
 
     @staticmethod
