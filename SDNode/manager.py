@@ -148,8 +148,6 @@ class Task:
         """
         process: {'value': 20, 'max': 20}
         """
-        # if not node_id:
-        #     node_id = self.executing_node_id
 
         def f(self: Task):
             if not self.is_tree_valid():
@@ -159,7 +157,6 @@ class Task:
             self.process = process
 
         Timer.put((f, self))
-        # self.tree.display_process()
 
 
 class TaskErrPaser:
@@ -651,7 +648,7 @@ class LocalServer(Server):
             logger.error(_T("ComfyUI Path Not Found"))
             TaskManager.put_error_msg(_T("ComfyUI Path Not Found"))
             WindowLogger.push_log(_T("ComfyUI Path Not Found"))
-            return
+            return False
         logger.debug("%s: %s", _T("Model Path"), model_path)
         WindowLogger.push_log("%s: %s", _T("Model Path"), model_path)
         python = pref.get_python()
@@ -677,7 +674,7 @@ class LocalServer(Server):
             WindowLogger.push_log("      │ ├─ python.exe")
             WindowLogger.push_log("      │ └─ ...")
             WindowLogger.push_log("      └─ ...")
-            return
+            return False
 
         # custom_nodes
         for file in Path(__file__).parent.joinpath("custom_nodes").iterdir():
@@ -687,7 +684,7 @@ class LocalServer(Server):
             if dst.exists():
                 try:
                     rt(dst)
-                except Exception as e:
+                except Exception:
                     # 可能会删除失败
                     ...
             try:
@@ -701,7 +698,7 @@ class LocalServer(Server):
                     Path(model_path).joinpath("custom_nodes", file.name, cup_py.name).write_text(t, encoding="utf-8")
                 if old_cup_py.exists():
                     Path(model_path).joinpath("custom_nodes", cup_py.name).unlink(missing_ok=True)
-            except Exception as e:
+            except Exception:
                 # 可能会拷贝失败(权限问题)
                 ...
         args = pref.parse_server_args(self)
@@ -842,11 +839,9 @@ class LocalServer(Server):
         p = self.child
         pid = self.pid
         while p.poll() is None and self.child == p:
-            line = p.stdout.readline().rstrip()
+            line: bytes = p.stdout.readline().rstrip()
             if not line.strip():
                 continue
-            # logger.info(line)
-            # print(re.findall("\|(.*?)[", line.decode("gbk")))
             if "# 😺dzNodes:".encode() in line:
                 continue
             if b"CUDA out of memory" in line or b"not enough memory" in line:
@@ -879,7 +874,7 @@ class TaskManager:
     error_msg = []
     progress_bar = 0
     timers = []
-    executer = ThreadPoolExecutor(max_workers=1)
+    executor = ThreadPoolExecutor(max_workers=1)
     ws: WebSocketApp = None
     is_server_launching = False
 
@@ -1205,7 +1200,7 @@ class TaskManager:
             else:
                 ...
 
-        TaskManager.executer.submit(queue_task, task)
+        TaskManager.executor.submit(queue_task, task)
 
     @staticmethod
     def mark_finished(with_noexe=True):
@@ -1295,8 +1290,8 @@ class TaskManager:
                     return
             except Exception:
                 ...
-            mtype = msg["type"]
-            data = msg["data"]
+            mtype: str = msg["type"]
+            data: dict = msg["data"]
             if mtype == "executing":
                 n = data.get("node", "")
                 if n:
