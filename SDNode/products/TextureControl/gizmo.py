@@ -49,10 +49,6 @@ class TextureSpaceGizmo(bpy.types.Gizmo):
     )
 
     @property
-    def line_width(self):
-        return 5 if self.is_hover else 2
-
-    @property
     def is_vertical(self):
         return self.direction in ("BOTTOM", "TOP")
 
@@ -78,7 +74,6 @@ class TextureSpaceGizmo(bpy.types.Gizmo):
 
     def offset(self) -> Vector:
         l, r, t, b = self.target_get_value("texture_space_control_offset")
-        # print("offset", l, r, t, b)
         if of := {
             "RIGHT": (r, 0, 0),
             "BOTTOM": (0, b, 0),
@@ -187,7 +182,8 @@ class TextureSpaceGizmo(bpy.types.Gizmo):
         return DIRECTION_ITEMS[self.direction_index]
 
     def draw_corner(self, context):
-        color = (1, 1, 0, 1) if self.is_hover else (1, 0, 0, 1)
+        line_width = 2 if self.is_hover else 5
+        color = (1, 1, 0, 1) if self.is_hover else  [1.242635, 0.375755, 0.010106, 1.000000]
         with gpu.matrix.push_pop():
             shader = gpu.shader.from_builtin('POLYLINE_SMOOTH_COLOR')
             batch = batch_for_shader(
@@ -196,36 +192,25 @@ class TextureSpaceGizmo(bpy.types.Gizmo):
                 {"pos": self.corner_3d_points(context), "color": [color, color, color]},
                 indices=((0, 1), (1, 2)))
             shader.uniform_float("viewportSize", gpu.state.viewport_get()[2:])
-            shader.uniform_float("lineWidth", self.line_width)
+            shader.uniform_float("lineWidth", line_width)
             batch.draw(shader)
 
     def draw(self, context):
-        gpu.state.line_width_set(self.line_width)
+        line_width = 2 if self.is_hover else 5
+        gpu.state.line_width_set(line_width)
         gpu.state.blend_set("ALPHA")
         gpu.state.depth_test_set("ALWAYS")
-        #
-        # text = f"{self.direction} {self.is_hover}"
-        # blf.size(0, 20)
-        # blf.draw(0, text)
-        #
-        # color = (1, 0, 1, 1) if self.is_hover else (1, 1, 0, 1)
-        # shader = gpu.shader.from_builtin('UNIFORM_COLOR')
-        # batch = batch_for_shader(shader, 'POINTS',
-        #                          {"pos": [context.object.matrix_world @ self.point(context, offset=False), ]})
-        # shader.uniform_float("color", color)
-        # batch.draw(shader)
-
         if self.is_corner:
             self.draw_corner(context)
             return
 
-        color = (1, 1, 0, 1) if self.is_hover else (1, 0, 0, 1)
+        color = (1, 1, 0, 1) if self.is_hover else [1.242635, 0.375755, 0.010106, 1.000000]
         shader = gpu.shader.from_builtin('POLYLINE_SMOOTH_COLOR')
         batch = batch_for_shader(shader, 'LINES', {"pos": self.tow_2d_point(context), "color": [color, color]},
                                  indices=((0, 1),)
                                  )
         shader.uniform_float("viewportSize", gpu.state.viewport_get()[2:])
-        shader.uniform_float("lineWidth", self.line_width)
+        shader.uniform_float("lineWidth", line_width)
         batch.draw(shader)
 
     def invoke(self, context, event):
@@ -352,7 +337,7 @@ class TextureSpaceControl(bpy.types.GizmoGroup):
             gz.use_draw_scale = True
             gz.use_draw_modal = True
             gz.use_draw_value = True
-            gz.line_width = 1
+            # gz.line_width = 1
             # gz.target_set_prop("texture_space_control_offset", context.object, "texture_space_control_offset")
 
         # gz = self.gizmos.new("GIZMO_GT_arrow_3d")
