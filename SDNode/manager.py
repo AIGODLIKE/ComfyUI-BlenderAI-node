@@ -402,17 +402,6 @@ class TaskErrPaser:
         logger.error(info_list)
         for ei in info_list:
             TaskManager.put_error_msg(ei)
-        return
-        error = self.error_info["error"]
-        err_type = error.get("type", "")
-        msg = error.get("message", "")
-        details = error.get("details", "")
-        extra_info = error.get("extra_info", "")
-        print(f"Error Type: {err_type}")
-        print(f"Message: {msg}")
-        print(f"Details: {details}")
-        print(f"Extra Info: {extra_info}")
-        # type message details extra_info
 
     def node_error_parse(self):
         if "node_errors" not in self.error_info:
@@ -996,9 +985,6 @@ class TaskManager:
         else:
             t = Thread(target=job, daemon=True)
             t.start()
-        # logger.info(_T("UnregNode Time:") + f" {t2-t1:.2f}s")
-        # logger.info(_T("Launch Time:") + f" {t3-t2:.2f}s")
-        # logger.info(_T("RegNode Time:") + f" {t4-t3:.2f}s")
 
     @staticmethod
     def init_server(fake=False, callback=lambda: ...):
@@ -1106,15 +1092,6 @@ class TaskManager:
         except URLError:
             ...
         return {}
-    
-    # def get_temp_directory():
-    #     req = request.Request(f"{TaskManager.server.get_url()}/cup/get_temp_directory", method="POST")
-    #     try:
-    #         res = request.urlopen(req)
-    #         return res.read().decode()
-    #     except Exception as e:
-    #         ...
-    #     return ""
 
     @staticmethod
     def interrupt():
@@ -1207,8 +1184,6 @@ class TaskManager:
                 data = json.dumps(content).encode()
                 req = request.Request(f"{TaskManager.server.get_url()}/{api}", data=data)
                 History.put_history(task.get("workflow"))
-                # logger.debug(f'post to {TaskManager.server.get_url()}/{api}:')
-                # logger.debug(data.decode())
                 try:
                     request.urlopen(req)
                 except request.HTTPError as e:
@@ -1231,7 +1206,6 @@ class TaskManager:
                 ...
 
         TaskManager.executer.submit(queue_task, task)
-        # Thread(target=queue_task, args=(task, )).start()
 
     @staticmethod
     def mark_finished(with_noexe=True):
@@ -1269,7 +1243,6 @@ class TaskManager:
             prompt = task.task["prompt"]
             if node in prompt:
                 Timer.put((prompt[node][2], task, res))
-                # prompt[node][2](task, res)
         logger.debug(_T("Proc Task Thread Exit"))
 
     @staticmethod
@@ -1359,7 +1332,6 @@ class TaskManager:
                     },
                 }
                 logger.critical(f"Receive data from Blender: {data}")
-                # Timer.put((load_data_from_comfyui, data))
                 return
             elif mtype == "status":
                 ...
@@ -1386,7 +1358,6 @@ class TaskManager:
                     TaskManager.execute_status_record.append(data["node"])
                     if tm.cur_task:
                         tm.cur_task.set_executing_node_id(n)
-                # logger.debug(data)
             elif mtype == "progress":
                 m = 40
                 fac = m / data["max"]
@@ -1396,8 +1367,6 @@ class TaskManager:
                 cp = "\033[32m" + "░" * (m - v) + "\033[0m"
                 content = f"{v * 100 / m:3.0f}% " + cf + cp + f" {v}/{m}"
                 logger.info(content + "\r", extra={"same_line": True})
-                # sys.stdout.write(content)
-                # sys.stdout.flush()
                 if tm.cur_task:
                     tm.cur_task.set_process(data)
             elif mtype == "progress_state":
@@ -1418,8 +1387,6 @@ class TaskManager:
                     node_id = data.get("node_id", None)
                     etype = data.get("exception_type", None)
                     ["prompt_id", "node_id", "node_type", "executed", "exception_message", "exception_type", "traceback", "current_inputs", "current_outputs"]
-                    # _msg = msg.get("data", None)
-                    # print(_msg.keys())
                     trace = data.get("traceback", None)
                     if trace and isinstance(trace, list):
                         trace = "\n" + "".join([str(t) for t in trace])
@@ -1448,10 +1415,7 @@ class TaskManager:
                     },
                 }
                 TaskManager.put_error_msg(_T("Execute Node Cancelled!"))
-                # tm.mark_finished(with_noexe=False)
             elif mtype == "execution_cached":
-                # {"type": "execution_cached", "data": {"nodes": ["12", "7", "10"], "prompt_id": "ddd"}}
-                # logger.warning(message)
                 ...  # pass
             else:
                 logger.error(message)
@@ -1460,22 +1424,7 @@ class TaskManager:
         ws = WebSocketApp(listen_addr, on_message=on_message)
         TaskManager.ws = ws
         ws.run_forever()
-        if True:
-            ...
-        else:
-            # 备选方案
-            from ..External.websockets.sync.client import connect
-            from ..External.websockets import ConnectionClosedError
-
-            ws = connect(listen_addr)
-            TaskManager.ws = ws
-            try:
-                for msg in ws:
-                    on_message(None, msg)
-            except ConnectionClosedError:
-                ...
         logger.debug(_T("Poll Result Thread Exit"))
-        # WindowLogger.push_log(_T("Poll Result Thread Exit")) # 可能是blender退出, 会导致crash
         TaskManager.ws = None
         if TaskManager.server.is_launched():
             Timer.put((TaskManager.restart_server, True))
@@ -1488,15 +1437,6 @@ class TaskManager:
         if event_type != 1:
             logger.debug("Unknown binary event type: %s", event_type)
             return
-        # 处理图像类型
-        image_type = struct.unpack(">I", data[4:8])[0]
-        image_mime = "image/png" if image_type == 2 else "image/jpeg"
-        # 假设剩余的数据是图像数据，可以保存或进一步处理
-        image_data = data[8:]
-        return
-        with open(f"/Users/karrycharon/Desktop/000.{image_mime.split('/')[1]}", "wb") as f:
-            f.write(image_data)
-
 
 def removetemp():
     tempdir = Path(__file__).parent / "temp"
