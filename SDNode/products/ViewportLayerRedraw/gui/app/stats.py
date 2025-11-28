@@ -23,6 +23,10 @@ class RightPanelType(Enum):
     GENERATION = "generation"
     MESH = "mesh"
     MATERIAL = "material"
+    EXTRACT = "extract"
+    FILL = "fill"
+    SEG = "seg"
+    PIXBOOST = "pixboost"
 
 
 @dataclass
