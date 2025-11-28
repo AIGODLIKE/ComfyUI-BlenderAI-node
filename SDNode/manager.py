@@ -18,6 +18,7 @@ from urllib.parse import urlparse
 from urllib.error import URLError
 from threading import Thread
 from subprocess import Popen, PIPE, STDOUT
+from typing import Callable
 from pathlib import Path
 from queue import Queue
 from .utils import WindowLogger, calc_data_from_blender, load_data_from_comfyui
@@ -52,6 +53,7 @@ class Task:
         self.res: Queue[dict] = Queue()
         self._pre = pre
         self._post = post
+        self.result_callbacks: dict[Callable[Task, dict], None] = {}
         from .tree import CFNodeTree
         from .nodes import NodeBase
 
@@ -66,6 +68,12 @@ class Task:
         if not tree:
             return
         self.node_ref_map = {n.id: n.bl_idname for n in tree.nodes if hasattr(n, "id")}
+
+    def add_result_cb(self, cb):
+        self.result_callbacks[cb] = None
+
+    def remove_result_cb(self, cb):
+        self.result_callbacks.pop(cb, None)
 
     def build_task(self):
         # 判断 task 是否是可被调用的对象(可以让task动态生成)
@@ -148,8 +156,6 @@ class Task:
         """
         process: {'value': 20, 'max': 20}
         """
-        # if not node_id:
-        #     node_id = self.executing_node_id
 
         def f(self: Task):
             if not self.is_tree_valid():
@@ -159,8 +165,18 @@ class Task:
             self.process = process
 
         Timer.put((f, self))
-        # self.tree.display_process()
 
+    def call_res_cb(self):
+        if self.res.empty():
+            return
+        logger.debug(_T("Proc Result"))
+        res = self.res.get()
+        node = res["node"]
+        prompt = self.task["prompt"]
+        if node in prompt:
+            Timer.put((prompt[node][2], self, res))
+        for res_cb in self.result_callbacks:
+            Timer.put((res_cb, self, res))
 
 class TaskErrPaser:
     class ErrType:
@@ -402,17 +418,6 @@ class TaskErrPaser:
         logger.error(info_list)
         for ei in info_list:
             TaskManager.put_error_msg(ei)
-        return
-        error = self.error_info["error"]
-        err_type = error.get("type", "")
-        msg = error.get("message", "")
-        details = error.get("details", "")
-        extra_info = error.get("extra_info", "")
-        print(f"Error Type: {err_type}")
-        print(f"Message: {msg}")
-        print(f"Details: {details}")
-        print(f"Extra Info: {extra_info}")
-        # type message details extra_info
 
     def node_error_parse(self):
         if "node_errors" not in self.error_info:
@@ -662,7 +667,7 @@ class LocalServer(Server):
             logger.error(_T("ComfyUI Path Not Found"))
             TaskManager.put_error_msg(_T("ComfyUI Path Not Found"))
             WindowLogger.push_log(_T("ComfyUI Path Not Found"))
-            return
+            return False
         logger.debug("%s: %s", _T("Model Path"), model_path)
         WindowLogger.push_log("%s: %s", _T("Model Path"), model_path)
         python = pref.get_python()
@@ -688,7 +693,7 @@ class LocalServer(Server):
             WindowLogger.push_log("      │ ├─ python.exe")
             WindowLogger.push_log("      │ └─ ...")
             WindowLogger.push_log("      └─ ...")
-            return
+            return False
 
         # custom_nodes
         for file in Path(__file__).parent.joinpath("custom_nodes").iterdir():
@@ -698,7 +703,7 @@ class LocalServer(Server):
             if dst.exists():
                 try:
                     rt(dst)
-                except Exception as e:
+                except Exception:
                     # 可能会删除失败
                     ...
             try:
@@ -712,7 +717,7 @@ class LocalServer(Server):
                     Path(model_path).joinpath("custom_nodes", file.name, cup_py.name).write_text(t, encoding="utf-8")
                 if old_cup_py.exists():
                     Path(model_path).joinpath("custom_nodes", cup_py.name).unlink(missing_ok=True)
-            except Exception as e:
+            except Exception:
                 # 可能会拷贝失败(权限问题)
                 ...
         args = pref.parse_server_args(self)
@@ -853,11 +858,9 @@ class LocalServer(Server):
         p = self.child
         pid = self.pid
         while p.poll() is None and self.child == p:
-            line = p.stdout.readline().rstrip()
+            line: bytes = p.stdout.readline().rstrip()
             if not line.strip():
                 continue
-            # logger.info(line)
-            # print(re.findall("\|(.*?)[", line.decode("gbk")))
             if "# 😺dzNodes:".encode() in line:
                 continue
             if b"CUDA out of memory" in line or b"not enough memory" in line:
@@ -890,7 +893,7 @@ class TaskManager:
     error_msg = []
     progress_bar = 0
     timers = []
-    executer = ThreadPoolExecutor(max_workers=1)
+    executor = ThreadPoolExecutor(max_workers=1)
     ws: WebSocketApp = None
     is_server_launching = False
 
@@ -996,9 +999,6 @@ class TaskManager:
         else:
             t = Thread(target=job, daemon=True)
             t.start()
-        # logger.info(_T("UnregNode Time:") + f" {t2-t1:.2f}s")
-        # logger.info(_T("Launch Time:") + f" {t3-t2:.2f}s")
-        # logger.info(_T("RegNode Time:") + f" {t4-t3:.2f}s")
 
     @staticmethod
     def init_server(fake=False, callback=lambda: ...):
@@ -1106,15 +1106,6 @@ class TaskManager:
         except URLError:
             ...
         return {}
-    
-    # def get_temp_directory():
-    #     req = request.Request(f"{TaskManager.server.get_url()}/cup/get_temp_directory", method="POST")
-    #     try:
-    #         res = request.urlopen(req)
-    #         return res.read().decode()
-    #     except Exception as e:
-    #         ...
-    #     return ""
 
     @staticmethod
     def interrupt():
@@ -1207,8 +1198,6 @@ class TaskManager:
                 data = json.dumps(content).encode()
                 req = request.Request(f"{TaskManager.server.get_url()}/{api}", data=data)
                 History.put_history(task.get("workflow"))
-                # logger.debug(f'post to {TaskManager.server.get_url()}/{api}:')
-                # logger.debug(data.decode())
                 try:
                     request.urlopen(req)
                 except request.HTTPError as e:
@@ -1230,8 +1219,7 @@ class TaskManager:
             else:
                 ...
 
-        TaskManager.executer.submit(queue_task, task)
-        # Thread(target=queue_task, args=(task, )).start()
+        TaskManager.executor.submit(queue_task, task)
 
     @staticmethod
     def mark_finished(with_noexe=True):
@@ -1261,15 +1249,7 @@ class TaskManager:
             if TaskManager.res_queue.empty():
                 continue
             task = TaskManager.res_queue.get()
-            if task.res.empty():
-                continue
-            logger.debug(_T("Proc Result"))
-            res = task.res.get()
-            node = res["node"]
-            prompt = task.task["prompt"]
-            if node in prompt:
-                Timer.put((prompt[node][2], task, res))
-                # prompt[node][2](task, res)
+            task.call_res_cb()
         logger.debug(_T("Proc Task Thread Exit"))
 
     @staticmethod
@@ -1322,8 +1302,8 @@ class TaskManager:
                     return
             except Exception:
                 ...
-            mtype = msg["type"]
-            data = msg["data"]
+            mtype: str = msg["type"]
+            data: dict = msg["data"]
             if mtype == "executing":
                 n = data.get("node", "")
                 if n:
@@ -1359,7 +1339,6 @@ class TaskManager:
                     },
                 }
                 logger.critical(f"Receive data from Blender: {data}")
-                # Timer.put((load_data_from_comfyui, data))
                 return
             elif mtype == "status":
                 ...
@@ -1386,7 +1365,6 @@ class TaskManager:
                     TaskManager.execute_status_record.append(data["node"])
                     if tm.cur_task:
                         tm.cur_task.set_executing_node_id(n)
-                # logger.debug(data)
             elif mtype == "progress":
                 m = 40
                 fac = m / data["max"]
@@ -1396,8 +1374,6 @@ class TaskManager:
                 cp = "\033[32m" + "░" * (m - v) + "\033[0m"
                 content = f"{v * 100 / m:3.0f}% " + cf + cp + f" {v}/{m}"
                 logger.info(content + "\r", extra={"same_line": True})
-                # sys.stdout.write(content)
-                # sys.stdout.flush()
                 if tm.cur_task:
                     tm.cur_task.set_process(data)
             elif mtype == "progress_state":
@@ -1418,8 +1394,6 @@ class TaskManager:
                     node_id = data.get("node_id", None)
                     etype = data.get("exception_type", None)
                     ["prompt_id", "node_id", "node_type", "executed", "exception_message", "exception_type", "traceback", "current_inputs", "current_outputs"]
-                    # _msg = msg.get("data", None)
-                    # print(_msg.keys())
                     trace = data.get("traceback", None)
                     if trace and isinstance(trace, list):
                         trace = "\n" + "".join([str(t) for t in trace])
@@ -1448,10 +1422,7 @@ class TaskManager:
                     },
                 }
                 TaskManager.put_error_msg(_T("Execute Node Cancelled!"))
-                # tm.mark_finished(with_noexe=False)
             elif mtype == "execution_cached":
-                # {"type": "execution_cached", "data": {"nodes": ["12", "7", "10"], "prompt_id": "ddd"}}
-                # logger.warning(message)
                 ...  # pass
             else:
                 logger.error(message)
@@ -1460,22 +1431,7 @@ class TaskManager:
         ws = WebSocketApp(listen_addr, on_message=on_message)
         TaskManager.ws = ws
         ws.run_forever()
-        if True:
-            ...
-        else:
-            # 备选方案
-            from ..External.websockets.sync.client import connect
-            from ..External.websockets import ConnectionClosedError
-
-            ws = connect(listen_addr)
-            TaskManager.ws = ws
-            try:
-                for msg in ws:
-                    on_message(None, msg)
-            except ConnectionClosedError:
-                ...
         logger.debug(_T("Poll Result Thread Exit"))
-        # WindowLogger.push_log(_T("Poll Result Thread Exit")) # 可能是blender退出, 会导致crash
         TaskManager.ws = None
         if TaskManager.server.is_launched():
             Timer.put((TaskManager.restart_server, True))
@@ -1488,15 +1444,6 @@ class TaskManager:
         if event_type != 1:
             logger.debug("Unknown binary event type: %s", event_type)
             return
-        # 处理图像类型
-        image_type = struct.unpack(">I", data[4:8])[0]
-        image_mime = "image/png" if image_type == 2 else "image/jpeg"
-        # 假设剩余的数据是图像数据，可以保存或进一步处理
-        image_data = data[8:]
-        return
-        with open(f"/Users/karrycharon/Desktop/000.{image_mime.split('/')[1]}", "wb") as f:
-            f.write(image_data)
-
 
 def removetemp():
     tempdir = Path(__file__).parent / "temp"

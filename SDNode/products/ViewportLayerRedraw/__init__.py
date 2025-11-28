@@ -4,6 +4,8 @@ from ....kclogger import logger
 
 modules = [
     "ui",
+    "gui",
+    "ime",
     "operator",
     "properties",
     "TextureControl",

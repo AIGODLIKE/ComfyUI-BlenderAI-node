@@ -25,12 +25,16 @@ class ViewportLayerRedrawPanel(bpy.types.Panel):
         self.show_launch_cnn(layout)
         self.show_layer_list(layout)
         prop = bpy.context.scene.sdn_viewport_layer_redraw
-        layout.prop(prop, "prompt", placeholder="Enter a prompt")
-        
+        layout.prop(prop, "prompt")
         row = layout.row()
         row.scale_y = 2
         row.operator(RunRedraw.bl_idname, text="Run Redraw")
-        self.show_progress(layout)
+        self.show_progress(layout)        
+        try:
+            from .gui.integration import ViewportGui
+            layout.operator(ViewportGui.bl_idname, text="Enter Canvas", icon="PLUGIN")
+        except Exception:
+            pass
 
     def show_launch_cnn(self, layout: bpy.types.UILayout):
         if TaskManager.server != FakeServer._instance:
