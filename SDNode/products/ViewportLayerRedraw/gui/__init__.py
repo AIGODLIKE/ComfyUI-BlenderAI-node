@@ -1,23 +1,23 @@
 import bpy
-from ....kclogger import logger
+import sys
+from .....utils import PkgInstaller
 
+ori_hook = sys.excepthook
 
 modules = [
-    "ui",
-    "gui",
-    "ime",
-    "operator",
+    "app",
     "properties",
+    "integration",
+    "texture",
 ]
 
 reg, unreg = bpy.utils.register_submodule_factory(__package__, modules)
 
 
 def register():
+    PkgInstaller.try_install("slimgui", "glfw")
     reg()
-    logger.debug(f"{__package__} registered")
 
 
 def unregister():
     unreg()
-    logger.debug(f"{__package__} unregistered")
