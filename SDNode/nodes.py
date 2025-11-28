@@ -1774,7 +1774,7 @@ class NodeParser:
             self.object_info = self.fetch_object()
             self.SOCKET_TYPE.clear()
             self.load_internal()
-        # self.CACHED_OBJECT_INFO.update(deepcopy(self.ori_object_info))
+        self.CACHED_OBJECT_INFO.update(self.object_info)
         try:
             socket_clss = self._parse_sockets_clss()
         except Exception as e:
@@ -1945,7 +1945,7 @@ class NodeParser:
         node_clss = []
         for nname, ndesc in nodes_desc.items():
             # TODO: 暂时删除两个变更key, 由IPAdapter 导致
-            ndesc.pop("input_order", None)
+            # ndesc.pop("input_order", None)
             ndesc.pop("python_module", None)
             ndesc.pop("description", None)  # 删除description
             opt_types: dict = ndesc["input"].get("optional", {})
