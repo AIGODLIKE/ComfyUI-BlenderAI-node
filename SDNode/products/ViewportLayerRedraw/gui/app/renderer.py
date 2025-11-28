@@ -130,11 +130,11 @@ class Renderer:
         }
         
         vec3 LinearToSrgb(vec3 linear) {
-            return pow(linear, 1.0 / 2.2);
+            return pow(linear, vec3(1.0 / 2.2));
         }
         
         vec3 SrgbToLinear(vec3 srgb) {
-            return pow(srgb, 2.2);
+            return pow(srgb, vec3(2.2));
         }
         
         void main() {
