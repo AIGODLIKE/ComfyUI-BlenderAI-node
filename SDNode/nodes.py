@@ -572,7 +572,7 @@ class MLTRec(bpy.types.PropertyGroup):
     addtext: bpy.props.StringProperty(name="Add Tag By Input", update=add_text_update)
 
 
-class MLTWords_UL_UIList(bpy.types.UIList):
+class MLT_WORDS_UL_UIList(bpy.types.UIList):
 
     def draw_item(self,
                   context: bpy.types.Context,
@@ -587,7 +587,7 @@ class MLTWords_UL_UIList(bpy.types.UIList):
         op.action = "AddTag"
 
 
-class MLTText_UL_UIList(bpy.types.UIList):
+class MLT_TEXT_UL_UIList(bpy.types.UIList):
     def draw_item(self,
                   context: bpy.types.Context,
                   layout: bpy.types.UILayout,
@@ -1774,7 +1774,7 @@ class NodeParser:
             self.object_info = self.fetch_object()
             self.SOCKET_TYPE.clear()
             self.load_internal()
-        # self.CACHED_OBJECT_INFO.update(deepcopy(self.ori_object_info))
+        self.CACHED_OBJECT_INFO.update(self.object_info)
         try:
             socket_clss = self._parse_sockets_clss()
         except Exception as e:
@@ -1945,7 +1945,7 @@ class NodeParser:
         node_clss = []
         for nname, ndesc in nodes_desc.items():
             # TODO: 暂时删除两个变更key, 由IPAdapter 导致
-            ndesc.pop("input_order", None)
+            # ndesc.pop("input_order", None)
             ndesc.pop("python_module", None)
             ndesc.pop("description", None)  # 删除description
             opt_types: dict = ndesc["input"].get("optional", {})
@@ -2138,7 +2138,7 @@ class Images(bpy.types.PropertyGroup):
     image: bpy.props.PointerProperty(type=bpy.types.Image)
 
 
-clss = [SDNConfig, MLTText, MLTRec, MLTWords_UL_UIList, MLTText_UL_UIList, Ops_Switch_Socket_Disp, Ops_Switch_Socket_Widget, Ops_Add_SaveImage, Set_Render_Res, GetSelCol, AdvTextEdit, Ops_Active_Tex, Ops_Link_Mask, Images]
+clss = [SDNConfig, MLTText, MLTRec, MLT_WORDS_UL_UIList, MLT_TEXT_UL_UIList, Ops_Switch_Socket_Disp, Ops_Switch_Socket_Widget, Ops_Add_SaveImage, Set_Render_Res, GetSelCol, AdvTextEdit, Ops_Active_Tex, Ops_Link_Mask, Images]
 
 reg, unreg = bpy.utils.register_classes_factory(clss)
 

@@ -223,9 +223,9 @@ class BluePrintBase:
                 col = box.column()
                 mgr = bpy.context.window_manager
                 col.prop(stat, "addtext", icon="ADD", text="")
-                col.template_list("MLTWords_UL_UIList", prop, mgr, "mlt_words", mgr, "mlt_words_index")
+                col.template_list("MLT_WORDS_UL_UIList", prop, mgr, "mlt_words", mgr, "mlt_words_index")
                 col.prop(bpy.context.scene.sdn, "search_tag", icon="VIEWZOOM", text="")
-                col.template_list("MLTText_UL_UIList", "", stat, "texts", stat, "tindex")
+                col.template_list("MLT_TEXT_UL_UIList", "", stat, "texts", stat, "tindex")
             return True
 
         popup_scale = 5
@@ -343,12 +343,13 @@ class BluePrintBase:
             self.width, self.height = [size[0], -size[1]]
         else:
             self.width, self.height = [size["0"], -size["1"]]
-        title = data.get("title", "")
-        if self.class_type in {"KSampler", "KSamplerAdvanced"}:
-            logger.info(_T("Saved Title Name -> ") + title)  # do not replace name
-        elif title:
-            self.name = title
-        data["title"] = self.name  # 反向同步到metadata
+        title = data.get("title", self.name)
+        # if self.class_type in {"KSampler", "KSamplerAdvanced"}:
+        #     logger.info(_T("Saved Title Name -> ") + title)  # do not replace name
+        # elif title:
+        #     self.name = title
+        # data["title"] = self.name  # 反向同步到metadata
+        self.name = title
         if with_id:
             try:
                 if "index" in data:

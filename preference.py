@@ -11,6 +11,10 @@ from .External.lupawrapper import toggle_debug
 from .translations.translation import ctxt
 from .kclogger import logger
 
+prop_kwargs = {}
+if bpy.app.version >= (4, 0, 0):
+    prop_kwargs["translation_context"] = ctxt
+
 
 def dir_cb_test(path):
     # logger.info("%s changed", path)
@@ -244,7 +248,7 @@ class AddonPreference(bpy.types.AddonPreferences):
     install_deps: bpy.props.BoolProperty(default=False, name="Check Depencies Before Server Launch", description="Check ComfyUI(some) Depencies Before Server Launch")
     force_log: bpy.props.BoolProperty(default=False, name="Force Log", description="Force Log, Generally Not Needed")
     preview_image_size_type: bpy.props.EnumProperty(default="FIXED", name="Preview Image Size",
-                                                    translation_context=ctxt,
+                                                    **prop_kwargs,
                                                      items=[("FIXED", "Fixed", "Previews are shown at your chosen resolution", 0),
                                                             ("NATIVE", "Native", "Previews are shown at their native resolution", 1),
                                                             ("DEFAULT", "Blender Default", "Default Blender behavior, previews are not automatically resized", 2),

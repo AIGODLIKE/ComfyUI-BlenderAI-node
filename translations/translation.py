@@ -667,6 +667,8 @@ other = {
     "Viewport Layer Redraw": "AI图层精灵",
     "Prompts": "提示词",
     "Run Redraw": "运行重绘",
+    "Overwrite": "覆盖",
+    "NewCanvas": "新画布",
 }
 
 LANG_TEXT = {

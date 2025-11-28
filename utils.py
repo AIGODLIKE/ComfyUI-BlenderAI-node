@@ -6,6 +6,7 @@ import re
 import json
 import bpy
 import addon_utils
+import site
 from pathlib import Path
 from functools import lru_cache
 from urllib.parse import urlparse
@@ -557,20 +558,29 @@ class PkgInstaller:
         return False
 
     @staticmethod
+    def should_use_user():
+        return platform.system() == "Windows" and Path(bpy.app.binary_path).drive.upper().startswith("C:")
+
+    @staticmethod
     def try_install(*packages):
         if not PkgInstaller.prepare_pip():
             return False
+        should_use_user = PkgInstaller.should_use_user()
+        if should_use_user:
+            site.addsitedir(site.getusersitepackages())
         need = [pkg for pkg in packages if not PkgInstaller.is_installed(pkg)]
         from pip._internal import main
         if need:
             url = PkgInstaller.select_pip_source()
         for pkg in need:
             try:
-                site = urlparse(url)
+                final_url = urlparse(url)
                 # 避免build
                 command = ['install', pkg, "-i", url, "--prefer-binary"]
+                if should_use_user:
+                    command.append("--user")
                 command.append("--trusted-host")
-                command.append(site.netloc)
+                command.append(final_url.netloc)
                 main(command)
                 if not PkgInstaller.is_installed(pkg):
                     return False
