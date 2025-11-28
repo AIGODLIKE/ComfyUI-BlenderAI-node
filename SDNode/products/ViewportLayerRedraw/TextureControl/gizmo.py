@@ -70,7 +70,7 @@ class TextureSpaceGizmo(bpy.types.Gizmo):
 
         obj = bpy.context.object
         bound_box = obj.bound_box
-        return [Vector(bound_box[i]) for i in (1, 2, 5, 6)]
+        return [Vector(bound_box[i]) for i in (0, 1, 4, 5)]
 
     def offset(self) -> Vector:
         l, r, t, b = self.target_get_value("texture_space_control_offset")
@@ -114,8 +114,8 @@ class TextureSpaceGizmo(bpy.types.Gizmo):
                         oa = (l, 0, 0)
                         ob = (r, 0, 0)
                     else:
-                        oa = (0, t, 0)
-                        ob = (0, bo, 0)
+                        oa = (0, 0, t)
+                        ob = (0, 0, bo)
                     aa = aa + Vector(oa)
                     bb = bb + Vector(ob)
                 return aa, bb
@@ -183,7 +183,7 @@ class TextureSpaceGizmo(bpy.types.Gizmo):
 
     def draw_corner(self, context):
         line_width = 2 if self.is_hover else 5
-        color = (1, 1, 0, 1) if self.is_hover else  [1.242635, 0.375755, 0.010106, 1.000000]
+        color = (1, 1, 0, 1) if self.is_hover else [1.242635, 0.375755, 0.010106, 1.000000]
         with gpu.matrix.push_pop():
             shader = gpu.shader.from_builtin('POLYLINE_SMOOTH_COLOR')
             batch = batch_for_shader(
