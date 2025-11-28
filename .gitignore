@@ -11,6 +11,7 @@ SDNode/diff_object_info.json
 SDNode/config.yaml
 SDNode/yaml/config.yaml
 SDNode/history/history.json
+SDNode/products/ViewportLayerRedraw/gui/example
 presets/00测试
 groups/00测试
 SDNode/pid
