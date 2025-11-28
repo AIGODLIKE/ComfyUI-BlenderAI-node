@@ -324,9 +324,10 @@ class ImageDescriptor(WidgetDescriptor):
                 "image_from_mat",
                 "image_from_file",
                 "image_from_canvas",
+                "image_from_viewport",
                 "image_from_render",
             ]
-            imgui.begin_table("EditTable", 4)
+            imgui.begin_table("EditTable", len(btn_types))
             for i, btn_type in enumerate(btn_types):
                 imgui.table_next_column()
                 if imgui.button(f"##EditBtn{i}", (s, s)):

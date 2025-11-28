@@ -165,6 +165,8 @@ class NodeAdapter(BaseAdapter):
             node_load_image_from_file(self.node, prop, obj)
         elif action == "image_from_canvas":
             node_load_image_from_canvas(self.node, prop, obj)
+        elif action == "image_from_viewport":
+            node_load_image_from_viewport(self.node, prop, obj)
         elif action == "image_from_render":
             node_load_image_from_render(self.node, prop, obj)
         elif action == "delete_image":
@@ -206,6 +208,10 @@ def node_load_image_from_file(node: NodeBase, prop: str, obj: bpy.types.Object):
 def node_load_image_from_canvas(node: NodeBase, prop: str, obj: bpy.types.Object):
     bpy.ops.sdn.cfnode_canvas_picker("INVOKE_DEFAULT", tree_name=node.get_tree().name, node_name=node.name, prop_name=prop)
     print("加载画布图片", node[prop], obj.name)
+
+
+def node_load_image_from_viewport(node: NodeBase, prop: str, obj: bpy.types.Object):
+    print("加载视图图片", node[prop], obj.name)
 
 
 def node_load_image_from_render(node: NodeBase, prop: str, obj: bpy.types.Object):
