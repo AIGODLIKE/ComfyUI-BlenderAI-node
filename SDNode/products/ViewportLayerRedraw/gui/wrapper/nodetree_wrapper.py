@@ -139,9 +139,22 @@ class NodeAdapter(BaseAdapter):
         return self.node.get_meta(prop)
 
     def get_value(self, prop: str):
+        if bpy.app.version > (5, 0):
+            try:
+                props = self.node.bl_system_properties_get()
+                return props[prop]
+            except Exception:
+                pass
         return self.node[prop]
 
     def set_value(self, prop: str, value):
+        if bpy.app.version > (5, 0):
+            try:
+                props = self.node.bl_system_properties_get()
+                props[prop] = value
+                return
+            except Exception:
+                pass
         self.node[prop] = value
 
     def on_image_action(self, prop: str, action: str):
