@@ -223,9 +223,9 @@ class BluePrintBase:
                 col = box.column()
                 mgr = bpy.context.window_manager
                 col.prop(stat, "addtext", icon="ADD", text="")
-                col.template_list("MLTWords_UL_UIList", prop, mgr, "mlt_words", mgr, "mlt_words_index")
+                col.template_list("MLT_WORDS_UL_UIList", prop, mgr, "mlt_words", mgr, "mlt_words_index")
                 col.prop(bpy.context.scene.sdn, "search_tag", icon="VIEWZOOM", text="")
-                col.template_list("MLTText_UL_UIList", "", stat, "texts", stat, "tindex")
+                col.template_list("MLT_TEXT_UL_UIList", "", stat, "texts", stat, "tindex")
             return True
 
         popup_scale = 5
