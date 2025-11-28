@@ -343,12 +343,13 @@ class BluePrintBase:
             self.width, self.height = [size[0], -size[1]]
         else:
             self.width, self.height = [size["0"], -size["1"]]
-        title = data.get("title", "")
-        if self.class_type in {"KSampler", "KSamplerAdvanced"}:
-            logger.info(_T("Saved Title Name -> ") + title)  # do not replace name
-        elif title:
-            self.name = title
-        data["title"] = self.name  # 反向同步到metadata
+        title = data.get("title", self.name)
+        # if self.class_type in {"KSampler", "KSamplerAdvanced"}:
+        #     logger.info(_T("Saved Title Name -> ") + title)  # do not replace name
+        # elif title:
+        #     self.name = title
+        # data["title"] = self.name  # 反向同步到metadata
+        self.name = title
         if with_id:
             try:
                 if "index" in data:
