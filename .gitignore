@@ -4,6 +4,7 @@ __pycache__
 *.DS_Store
 log.log
 *.log*
+imgui.ini
 ./SDNode/PATH_CFG.json
 SDNode/PATH_CFG.json
 SDNode/object_info.json
@@ -12,6 +13,7 @@ SDNode/config.yaml
 SDNode/yaml/config.yaml
 SDNode/history/history.json
 SDNode/products/ViewportLayerRedraw/gui/example
+SDNode/products/ViewportLayerRedraw/gui/app/imgui.ini
 presets/00测试
 groups/00测试
 SDNode/pid
