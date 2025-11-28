@@ -418,6 +418,10 @@ class ViewportGui(bpy.types.Operator):
         styler.pop_all()
         imgui.end()
 
+    def sdn_right_panel(self):
+        self.sdn_layers_panel()
+        self.sdn_canvas_panel()
+
     def sdn_layers_panel(self):
         if self.app_hud.state.active_right_panel != RightPanelType.LAYERS:
             return
@@ -454,27 +458,7 @@ class ViewportGui(bpy.types.Operator):
                 imgui.text("新建图层")
                 self.app_hud.font_manager.pop_font()
                 imgui.same_line()
-                # 关闭按钮
-                h = imgui.get_text_line_height_with_spacing()
-                aw = imgui.get_content_region_avail()[0]
-                imgui.dummy((aw - Const.LP_WINDOW_P[0] - h * 0.5, h))
-                imgui.same_line()
-                imgui.push_style_color(imgui.Col.BUTTON, Const.TRANSPARENT)
-                imgui.push_style_color(imgui.Col.BUTTON_ACTIVE, Const.TRANSPARENT)
-                imgui.push_style_color(imgui.Col.BUTTON_HOVERED, Const.TRANSPARENT)
-
-                if imgui.button("##CloseBtn", (h, h)):
-                    self.app_hud.state.active_right_panel = RightPanelType.NONE
-                imgui.pop_style_color(3)
-                col = Const.CLOSE_BUTTON_NORMAL
-                if imgui.is_item_active():
-                    col = Const.CLOSE_BUTTON_ACTIVE
-                elif imgui.is_item_hovered():
-                    col = Const.CLOSE_BUTTON_HOVERED
-                col = imgui.get_color_u32(col)
-                icon = TexturePool.get_tex_id("close")
-                dl = imgui.get_window_draw_list()
-                dl.add_image(icon, imgui.get_item_rect_min(), imgui.get_item_rect_max(), col=col)
+                self.sdn_right_panel_close_button()
             # endregion
 
             # region 通用
@@ -612,13 +596,8 @@ class ViewportGui(bpy.types.Operator):
             imgui.end()
             imgui.pop_style_var(3)
 
-    def sdn_right_panel(self):
-        self.sdn_layers_panel()
-        self.sdn_canvas_generation_panel()
-        self.sdn_canvas_material_panel()
-
-    def sdn_canvas_generation_panel(self):
-        if self.app_hud.state.active_right_panel != RightPanelType.GENERATION:
+    def sdn_canvas_panel(self):
+        if self.app_hud.state.active_right_panel in [RightPanelType.NONE, RightPanelType.LAYERS]:
             return
         if not bpy.context.object:
             return
@@ -660,8 +639,17 @@ class ViewportGui(bpy.types.Operator):
             btn_size = 40, 40
             left_w = btn_size[0] + (fp[0] + fp[0]) * 2
             imgui.begin_table("CategoryTable", 1, outer_size=(left_w - fp[0], 0))
-            for i in range(8):
-                if i == 3:
+            subpanel_config = {
+                RightPanelType.GENERATION: "RightPanel/generate",
+                RightPanelType.MESH: "RightPanel/canvas",
+                RightPanelType.MATERIAL: "RightPanel/material",
+                RightPanelType.EXTRACT: "RightPanel/extract",
+                RightPanelType.FILL: "RightPanel/fill",
+                RightPanelType.SEG: "RightPanel/seg",
+                RightPanelType.PIXBOOST: "RightPanel/pixboost",
+            }
+            for subpanel in subpanel_config:
+                if subpanel == RightPanelType.EXTRACT:
                     # 水平线
                     imgui.table_next_column()
                     imgui.begin_group()
@@ -675,9 +663,26 @@ class ViewportGui(bpy.types.Operator):
                     imgui.end_group()
 
                 imgui.table_next_column()
-                icon = TexturePool.get_tex_id(f"RightPanel/p{i + 1}")
-                if imgui.image_button(f"##Btn{i}", icon, btn_size):
-                    print(f"RP Left Button {i} pressed")
+                imgui.begin_group()
+                icon = TexturePool.get_tex_id(subpanel_config[subpanel])
+                if imgui.button(f"##Btn{subpanel}", (btn_size[0] + fp[0] * 2, btn_size[1] + fp[1] * 2)):
+                    print(f"RP Left Button {subpanel} pressed")
+                    self.app_hud.state.active_right_panel = subpanel
+                col = Const.CLOSE_BUTTON_NORMAL
+                if imgui.is_item_active():
+                    col = Const.CLOSE_BUTTON_ACTIVE
+                elif imgui.is_item_hovered():
+                    col = Const.CLOSE_BUTTON_HOVERED
+                if subpanel == self.app_hud.state.active_right_panel:
+                    col = Const.BUTTON_SELECTED
+                col = imgui.get_color_u32(col)
+                dl = imgui.get_window_draw_list()
+                pmin = imgui.get_item_rect_min()
+                pmin = pmin[0] + fp[0], pmin[1] + fp[1]
+                pmax = imgui.get_item_rect_max()
+                pmax = pmax[0] - fp[0], pmax[1] - fp[1]
+                dl.add_image(icon, pmin, pmax, col=col)
+                imgui.end_group()
 
             imgui.end_table()
             imgui.end_group()
@@ -705,7 +710,13 @@ class ViewportGui(bpy.types.Operator):
 
             imgui.table_next_column()
             imgui.begin_group()
-            self._sdn_canvas_generation_panel()
+            self.sdn_canvas_generation_panel()
+            self.sdn_canvas_mesh_panel()
+            self.sdn_canvas_material_panel()
+            self.sdn_canvas_extract_panel()
+            self.sdn_canvas_fill_panel()
+            self.sdn_canvas_seg_panel()
+            self.sdn_canvas_pixboost_panel()
             imgui.end_group()
 
             imgui.end_table()
@@ -713,7 +724,9 @@ class ViewportGui(bpy.types.Operator):
         imgui.end()
         imgui.pop_style_color(4)
 
-    def _sdn_canvas_generation_panel(self):
+    def sdn_canvas_generation_panel(self):
+        if self.app_hud.state.active_right_panel != RightPanelType.GENERATION:
+            return
         canvas = self.app_hud.state.right_panels_data.canvas
         dummy_size = 0, 26 / 2
         imgui.push_style_var_x(imgui.StyleVar.CELL_PADDING, Const.LP_CELL_P[0])
@@ -723,31 +736,12 @@ class ViewportGui(bpy.types.Operator):
             self.app_hud.font_manager.push_h1_font()
             imgui.text("生成")
             imgui.same_line()
+            imgui.push_style_color(imgui.Col.TEXT, Const.BUTTON_SELECTED)
             imgui.text(" CREATE ")
+            imgui.pop_style_color()
             self.app_hud.font_manager.pop_font()
             imgui.same_line()
-            # 关闭按钮
-            if True:
-                h = imgui.get_text_line_height_with_spacing()
-                aw = imgui.get_content_region_avail()[0]
-                imgui.dummy((aw - Const.LP_WINDOW_P[0] - h * 0.5, h))
-                imgui.same_line()
-                imgui.push_style_color(imgui.Col.BUTTON, Const.TRANSPARENT)
-                imgui.push_style_color(imgui.Col.BUTTON_ACTIVE, Const.TRANSPARENT)
-                imgui.push_style_color(imgui.Col.BUTTON_HOVERED, Const.TRANSPARENT)
-
-                if imgui.button("##CloseBtn", (h, h)):
-                    self.app_hud.state.active_right_panel = RightPanelType.NONE
-                imgui.pop_style_color(3)
-                col = Const.CLOSE_BUTTON_NORMAL
-                if imgui.is_item_active():
-                    col = Const.CLOSE_BUTTON_ACTIVE
-                elif imgui.is_item_hovered():
-                    col = Const.CLOSE_BUTTON_HOVERED
-                col = imgui.get_color_u32(col)
-                icon = TexturePool.get_tex_id("close")
-                dl = imgui.get_window_draw_list()
-                dl.add_image(icon, imgui.get_item_rect_min(), imgui.get_item_rect_max(), col=col)
+            self.sdn_right_panel_close_button()
 
             if False:
                 imgui.dummy(dummy_size)
@@ -936,103 +930,28 @@ class ViewportGui(bpy.types.Operator):
         task.add_result_cb(cb)
         TaskManager.task_queue.put(task)
 
+    def sdn_canvas_mesh_panel(self):
+        if self.app_hud.state.active_right_panel != RightPanelType.MESH:
+            return
+        dummy_size = 0, 26 / 2
+        imgui.push_style_var_x(imgui.StyleVar.CELL_PADDING, Const.LP_CELL_P[0])
+
+        if True:
+            self.app_hud.font_manager.push_h1_font()
+            imgui.text("画板")
+            imgui.same_line()
+            imgui.push_style_color(imgui.Col.TEXT, Const.BUTTON_SELECTED)
+            imgui.text(" MESH ")
+            imgui.pop_style_color()
+            self.app_hud.font_manager.pop_font()
+            imgui.same_line()
+            self.sdn_right_panel_close_button()
+            imgui.dummy(dummy_size)
+        imgui.pop_style_var(1)
+
     def sdn_canvas_material_panel(self):
         if self.app_hud.state.active_right_panel != RightPanelType.MATERIAL:
             return
-        if not bpy.context.object:
-            return
-        window_size = 540, 1359
-        window_pos = bpy.context.region.width - window_size[0] - get_ui_panel_width(), 400
-        imgui.set_next_window_pos(window_pos, imgui.Cond.ALWAYS)
-        imgui.set_next_window_size(window_size, imgui.Cond.ALWAYS)
-        flags = 0
-        flags |= imgui.WindowFlags.NO_RESIZE
-        flags |= imgui.WindowFlags.NO_MOVE
-        flags |= imgui.WindowFlags.NO_COLLAPSE
-        flags |= imgui.WindowFlags.NO_TITLE_BAR
-        flags |= imgui.WindowFlags.NO_SCROLL_WITH_MOUSE
-        flags |= imgui.WindowFlags.NO_SCROLLBAR
-        flags |= imgui.WindowFlags.NO_SAVED_SETTINGS
-
-        imgui.push_style_var(imgui.StyleVar.WINDOW_PADDING, Const.RP_WINDOW_P)
-        imgui.push_style_var(imgui.StyleVar.WINDOW_ROUNDING, Const.RP_WINDOW_R)
-        imgui.push_style_var(imgui.StyleVar.FRAME_PADDING, Const.RP_FRAME_P)
-        imgui.push_style_var(imgui.StyleVar.FRAME_ROUNDING, Const.RP_FRAME_R)
-        imgui.push_style_var(imgui.StyleVar.CELL_PADDING, Const.RP_CELL_P)
-        imgui.push_style_var_x(imgui.StyleVar.ITEM_SPACING, 0)
-
-        imgui.push_style_color(imgui.Col.WINDOW_BG, Const.RP_L_BOX_BG)
-        imgui.push_style_color(imgui.Col.BUTTON, Const.BUTTON)
-        imgui.push_style_color(imgui.Col.BUTTON_ACTIVE, Const.BUTTON_ACTIVE)
-        imgui.push_style_color(imgui.Col.BUTTON_HOVERED, Const.BUTTON_HOVERED)
-
-        istyle = imgui.get_style()
-        fp = istyle.frame_padding
-        cp = istyle.cell_padding
-
-        imgui.begin("##RightPanel", False, flags)
-        # Left
-        if True:
-            imgui.begin_group()
-            imgui.set_cursor_pos((fp[0], fp[1] - cp[1]))
-
-            btn_size = 40, 40
-            left_w = btn_size[0] + (fp[0] + fp[0]) * 2
-            imgui.begin_table("CategoryTable", 1, outer_size=(left_w - fp[0], 0))
-            for i in range(8):
-                if i == 3:
-                    # 水平线
-                    imgui.table_next_column()
-                    imgui.begin_group()
-                    x, y = imgui.get_cursor_screen_pos()
-                    x += 7
-                    y += 10
-                    col = imgui.get_color_u32((65 / 255, 65 / 255, 65 / 255, 1))
-                    dl = imgui.get_window_draw_list()
-                    dl.add_rect((x, y), (x + btn_size[0] + fp[0] * 2 - 14, y + 3), col, 3)
-                    imgui.dummy((0, 3 + 20))
-                    imgui.end_group()
-
-                imgui.table_next_column()
-                icon = TexturePool.get_tex_id(f"RightPanel/p{i + 1}")
-                if imgui.image_button(f"##Btn{i}", icon, btn_size):
-                    print(f"RP Left Button {i} pressed")
-
-            imgui.end_table()
-            imgui.end_group()
-
-        imgui.same_line()
-        imgui.pop_style_var(6)
-
-        # Right
-        if True:
-            wx, wy = imgui.get_window_pos()
-            ww, wh = imgui.get_window_size()
-
-            lt = wx + left_w, wy
-            rb = wx + ww, wy + wh
-            col = imgui.get_color_u32(Const.RP_R_BOX_BG)
-            r = Const.LP_WINDOW_R + 4
-            dl = imgui.get_window_draw_list()
-            dl.add_rect_filled(lt, rb, col, r, imgui.DrawFlags.ROUND_CORNERS_RIGHT)
-
-            cx, cy = imgui.get_cursor_pos()
-            cx += Const.RP_R_WINDOW_P[0]
-            cy += Const.RP_R_WINDOW_P[1]
-            imgui.set_cursor_pos((cx, cy - cp[1]))
-            imgui.begin_table("##RightInner", 1, outer_size=(ww - left_w - Const.RP_R_WINDOW_P[0] * 2, 0))
-
-            imgui.table_next_column()
-            imgui.begin_group()
-            self._sdn_canvas_material_panel()
-            imgui.end_group()
-
-            imgui.end_table()
-
-        imgui.end()
-        imgui.pop_style_color(4)
-
-    def _sdn_canvas_material_panel(self):
         dummy_size = 0, 26 / 2
         imgui.push_style_var_x(imgui.StyleVar.CELL_PADDING, Const.LP_CELL_P[0])
 
@@ -1041,31 +960,12 @@ class ViewportGui(bpy.types.Operator):
             self.app_hud.font_manager.push_h1_font()
             imgui.text("材质")
             imgui.same_line()
+            imgui.push_style_color(imgui.Col.TEXT, Const.BUTTON_SELECTED)
             imgui.text(" MATERIAL ")
+            imgui.pop_style_color()
             self.app_hud.font_manager.pop_font()
             imgui.same_line()
-            # 关闭按钮
-            if True:
-                h = imgui.get_text_line_height_with_spacing()
-                aw = imgui.get_content_region_avail()[0]
-                imgui.dummy((aw - Const.LP_WINDOW_P[0] - h * 0.5, h))
-                imgui.same_line()
-                imgui.push_style_color(imgui.Col.BUTTON, Const.TRANSPARENT)
-                imgui.push_style_color(imgui.Col.BUTTON_ACTIVE, Const.TRANSPARENT)
-                imgui.push_style_color(imgui.Col.BUTTON_HOVERED, Const.TRANSPARENT)
-
-                if imgui.button("##CloseBtn", (h, h)):
-                    self.app_hud.state.active_right_panel = RightPanelType.NONE
-                imgui.pop_style_color(3)
-                col = Const.CLOSE_BUTTON_NORMAL
-                if imgui.is_item_active():
-                    col = Const.CLOSE_BUTTON_ACTIVE
-                elif imgui.is_item_hovered():
-                    col = Const.CLOSE_BUTTON_HOVERED
-                col = imgui.get_color_u32(col)
-                icon = TexturePool.get_tex_id("close")
-                dl = imgui.get_window_draw_list()
-                dl.add_image(icon, imgui.get_item_rect_min(), imgui.get_item_rect_max(), col=col)
+            self.sdn_right_panel_close_button()
 
         # endregion
         # region 按钮
@@ -1106,6 +1006,107 @@ class ViewportGui(bpy.types.Operator):
 
         # endregion
         imgui.pop_style_var(1)
+
+    def sdn_canvas_extract_panel(self):
+        if self.app_hud.state.active_right_panel != RightPanelType.EXTRACT:
+            return
+        dummy_size = 0, 26 / 2
+        imgui.push_style_var_x(imgui.StyleVar.CELL_PADDING, Const.LP_CELL_P[0])
+
+        if True:
+            self.app_hud.font_manager.push_h1_font()
+            imgui.text("扣图")
+            imgui.same_line()
+            imgui.push_style_color(imgui.Col.TEXT, Const.BUTTON_SELECTED)
+            imgui.text(" EXTRACT ")
+            imgui.pop_style_color()
+            self.app_hud.font_manager.pop_font()
+            imgui.same_line()
+            self.sdn_right_panel_close_button()
+            imgui.dummy(dummy_size)
+        imgui.pop_style_var(1)
+
+    def sdn_canvas_fill_panel(self):
+        if self.app_hud.state.active_right_panel != RightPanelType.FILL:
+            return
+        dummy_size = 0, 26 / 2
+        imgui.push_style_var_x(imgui.StyleVar.CELL_PADDING, Const.LP_CELL_P[0])
+
+        if True:
+            self.app_hud.font_manager.push_h1_font()
+            imgui.text("填充")
+            imgui.same_line()
+            imgui.push_style_color(imgui.Col.TEXT, Const.BUTTON_SELECTED)
+            imgui.text(" FILL ")
+            imgui.pop_style_color()
+            self.app_hud.font_manager.pop_font()
+            imgui.same_line()
+            self.sdn_right_panel_close_button()
+            imgui.dummy(dummy_size)
+        imgui.pop_style_var(1)
+
+    def sdn_canvas_seg_panel(self):
+        if self.app_hud.state.active_right_panel != RightPanelType.SEG:
+            return
+        dummy_size = 0, 26 / 2
+        imgui.push_style_var_x(imgui.StyleVar.CELL_PADDING, Const.LP_CELL_P[0])
+
+        if True:
+            self.app_hud.font_manager.push_h1_font()
+            imgui.text("分层")
+            imgui.same_line()
+            imgui.push_style_color(imgui.Col.TEXT, Const.BUTTON_SELECTED)
+            imgui.text(" SEG ")
+            imgui.pop_style_color()
+            self.app_hud.font_manager.pop_font()
+            imgui.same_line()
+            self.sdn_right_panel_close_button()
+            imgui.dummy(dummy_size)
+        imgui.pop_style_var(1)
+
+    def sdn_canvas_pixboost_panel(self):
+        if self.app_hud.state.active_right_panel != RightPanelType.PIXBOOST:
+            return
+        dummy_size = 0, 26 / 2
+        imgui.push_style_var_x(imgui.StyleVar.CELL_PADDING, Const.LP_CELL_P[0])
+
+        if True:
+            self.app_hud.font_manager.push_h1_font()
+            imgui.text("超清")
+            imgui.same_line()
+            imgui.push_style_color(imgui.Col.TEXT, Const.BUTTON_SELECTED)
+            imgui.text(" PIXBOOST ")
+            imgui.pop_style_color()
+            self.app_hud.font_manager.pop_font()
+            imgui.same_line()
+            self.sdn_right_panel_close_button()
+            imgui.dummy(dummy_size)
+        imgui.pop_style_var(1)
+
+    def sdn_right_panel_close_button(self):
+        # 关闭按钮
+        h = imgui.get_text_line_height_with_spacing()
+        aw = imgui.get_content_region_avail()[0]
+        imgui.dummy((aw - Const.LP_WINDOW_P[0] - h * 0.5, h))
+        imgui.same_line()
+        imgui.push_style_color(imgui.Col.BUTTON, Const.TRANSPARENT)
+        imgui.push_style_color(imgui.Col.BUTTON_ACTIVE, Const.TRANSPARENT)
+        imgui.push_style_color(imgui.Col.BUTTON_HOVERED, Const.TRANSPARENT)
+
+        if imgui.button("##CloseBtn", (h, h)):
+            self.app_hud.state.active_right_panel = RightPanelType.NONE
+        imgui.pop_style_color(3)
+        col = Const.CLOSE_BUTTON_NORMAL
+        if imgui.is_item_active():
+            col = Const.CLOSE_BUTTON_ACTIVE
+        elif imgui.is_item_hovered():
+            col = Const.CLOSE_BUTTON_HOVERED
+        col = imgui.get_color_u32(col)
+        icon = TexturePool.get_tex_id("close")
+        dl = imgui.get_window_draw_list()
+        pmin = imgui.get_item_rect_min()
+        pmax = imgui.get_item_rect_max()
+        dl.add_image(icon, pmin, pmax, col=col)
 
     def proc_selectable_click(self, label):
         old_state = self.selectables[label]
