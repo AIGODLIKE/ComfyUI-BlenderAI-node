@@ -165,6 +165,10 @@ def line_factor_point(point_a, point_b, t):
     return Vector((x, y))
 
 
+def image_buf_set_dpi(image_buf: ImageBuf, dpi: int):
+    ...
+
+
 def scale_to_matrix(scale: Vector) -> Matrix:
     matrix = Matrix()
     for i in range(3):

@@ -6,6 +6,7 @@ modules = [
     "ui",
     "operator",
     "properties",
+    "TextureControl",
 ]
 
 reg, unreg = bpy.utils.register_submodule_factory(__package__, modules)

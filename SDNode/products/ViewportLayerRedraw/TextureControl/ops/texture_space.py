@@ -102,15 +102,6 @@ class TextureSpaceApply(bpy.types.Operator):
             offset_space_pixel = Vector((ll, rr, tt, bb))
 
             image_buf = blender_image_to_image_buf_with_numpy(image)
-
-            # transformed_image_buf = resize_move_crop_image_buf(
-            #     image_buf,
-            #     position=(ox, oy),
-            #     scale_factor=(sx, sy),
-            #     crop=Vector((0, 0, 0, 0)),
-            #     background=(0, 0, 0, 0)
-            # )
-            # image_buf = shift_pixels_simple(image_buf, int(ox), int(oy))
             image_buf = offset_scale_image(image_buf, Vector((ox, oy)), Vector((sx, sy)),
                                            crop=offset_space_pixel)
 

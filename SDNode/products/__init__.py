@@ -3,7 +3,6 @@ import bpy
 modules = [
     "ViewportLayerRedraw",
     "CameraControl",
-    "TextureControl"
 ]
 
 reg, unreg = bpy.utils.register_submodule_factory(__package__, modules)
