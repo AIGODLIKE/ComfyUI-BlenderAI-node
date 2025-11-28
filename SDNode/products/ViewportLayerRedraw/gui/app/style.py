@@ -43,6 +43,7 @@ class Const:
     BUTTON = (56 / 255, 56 / 255, 56 / 255, 1)
     BUTTON_ACTIVE = (255 / 255, 195 / 255, 0 / 255, 1)
     BUTTON_HOVERED = (75 / 255, 75 / 255, 75 / 255, 1)
+    BUTTON_SELECTED = BUTTON_ACTIVE
     TEXT = (1, 1, 1, 1)
 
     # TOP BAR
