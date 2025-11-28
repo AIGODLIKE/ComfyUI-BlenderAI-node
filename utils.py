@@ -559,7 +559,7 @@ class PkgInstaller:
 
     @staticmethod
     def should_use_user():
-        return platform.system() == "Windows" and bpy.app.binary_path[0].upper() == "C"
+        return platform.system() == "Windows" and Path(bpy.app.binary_path).drive.startswith("C")
 
     @staticmethod
     def try_install(*packages):
