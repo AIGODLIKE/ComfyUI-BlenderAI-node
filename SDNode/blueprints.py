@@ -30,6 +30,23 @@ from ..utils import _T, Icon, update_screen, PrevMgr, rgb2hex, hex2rgb
 from ..translations.translation import ComfyTranslator
 
 
+def get_sequences(scene=None):
+    if scene is None:
+        scene = bpy.context.scene
+    # Blender 5.0 Fix
+    if hasattr(bpy.context, "workspace") and hasattr(bpy.context.workspace, "sequencer_scene"):
+        if not bpy.context.workspace.sequencer_scene:
+            bpy.context.workspace.sequencer_scene = scene
+    
+    seqe = scene.sequence_editor
+    if hasattr(seqe, "sequences"):
+        return seqe.sequences
+    # Fallback for Blender 5.0+ if sequences is renamed to strips
+    if hasattr(seqe, "strips"):
+        return seqe.strips
+    return seqe.sequences
+
+
 def get_next_filename(save_path, max_len=4):
     save_path = Path(save_path)
     directory = save_path.parent
@@ -1739,6 +1756,7 @@ class 存储(BluePrintBase):
     def make_serialize(s, self: NodeBase, parent: NodeBase = None) -> dict:
         def __post_fn__(self: NodeBase, t: Task, result: dict, mode, image):
             logger.debug("%s%s->%s", self.class_type, _T('Post Function'), result)
+            
             img_paths = result.get("output", {}).get("images", [])
             if self.mode == "ToSeq":
                 imgs = []
@@ -1746,11 +1764,11 @@ class 存储(BluePrintBase):
                     imgs.append(cache_to_local(img).as_posix())
 
                 def push_images_seq(imgs: list[str], channel, frame_start, frame_final_duration):
-                    seqe = bpy.context.scene.sequence_editor
+                    sequences = get_sequences()
                     seqs = []
                     for img in imgs:
                         name = Path(img).name
-                        seq = seqe.sequences.new_image(name, img, channel, frame_start)
+                        seq = sequences.new_image(name, img, channel, frame_start)
                         seq.frame_final_duration = frame_final_duration
                         frame_start += frame_final_duration
                         seqs.append(seq)
@@ -1761,7 +1779,7 @@ class 存储(BluePrintBase):
                         self.frame_to_channel: dict[int, dict[int, "bpy.types.Sequence"]] = {}
                         self.channel_to_frame: dict[int, dict[int, "bpy.types.Sequence"]] = {}
                         if not sequences and sce:
-                            sequences = sce.sequence_editor.sequences
+                            sequences = get_sequences(sce)
                         self.update(sequences)
 
                     def __repr__(self):
@@ -1809,8 +1827,8 @@ class 存储(BluePrintBase):
                 def do_tween(self, seqs: list["bpy.types.Sequence"]):
                     if self.seq_mode != "SeqAppend" or not self.frame_tween:
                         return
-                    seqe = bpy.context.scene.sequence_editor
-                    st = SeqSegmentTree(seqe.sequences)
+                    sequences = get_sequences()
+                    st = SeqSegmentTree(sequences)
                     for seq in seqs:
                         ele = seq.elements[0]
                         imgpath = Path(seq.directory, ele.filename).as_posix()
@@ -1820,14 +1838,14 @@ class 存储(BluePrintBase):
                             chan = seq.channel + self.frame_tween - tw
                             frames = st.get_frames_by_chan(chan) or [seq.frame_final_start - (self.frame_tween - tw) * duration - 1]
                             frame = round(frames[-1]) + 1
-                            seq_copy = seqe.sequences.new_image(name, imgpath, chan, frame)
+                            seq_copy = sequences.new_image(name, imgpath, chan, frame)
                             seq_copy.blend_type = "ALPHA_OVER"
                             seq_copy.blend_alpha = (tw + 1) / (self.frame_tween + 1)
                             seq_copy.frame_final_duration = duration
                             st.insert_sequence(seq_copy)
 
                 def f(self, imgs):
-                    seqe = bpy.context.scene.sequence_editor
+                    sequences = get_sequences()
                     channel = self.channel
                     frame_start = bpy.context.scene.frame_current if self.current_frame_as_fs else self.frame_start
                     frame_final_duration = self.frame_final_duration
@@ -1840,7 +1858,7 @@ class 存储(BluePrintBase):
                         rm_seq = []
                         frame_end = frame_start + frame_final_duration * len(imgs)
                         print(frame_start, frame_end)
-                        for seq in seqe.sequences:
+                        for seq in sequences:
                             if seq.channel != channel:
                                 continue
                             if cut_off and (seq.frame_final_start <= frame_start < seq.frame_final_end or seq.frame_final_start >= frame_start):
@@ -1852,10 +1870,10 @@ class 存储(BluePrintBase):
                                 rm_seq.append(seq)
                                 print("RM2:", seq.frame_final_start, seq.frame_final_end)
                         for seq in rm_seq:
-                            seqe.sequences.remove(seq)
+                            sequences.remove(seq)
                     elif mode == "SeqAppend":
                         # 追加模式: 查找当前通道的 最后一个序列的持续位置, 往后新增
-                        for seq in seqe.sequences:
+                        for seq in sequences:
                             if seq.channel != channel:
                                 continue
                             if seq.frame_final_end > max_final_start:
@@ -2934,7 +2952,7 @@ class SaveAudioBL(BluePrintBase):
                     audios.append(cache_to_local(audio_path, suffix="flac").as_posix())
 
                 def f(self, audios):
-                    seqe = bpy.context.scene.sequence_editor
+                    sequences = get_sequences()
                     channel = self.channel
                     frame_start = bpy.context.scene.frame_current if self.current_frame_as_fs else self.frame_start
                     mode = self.seq_mode
@@ -2942,7 +2960,7 @@ class SaveAudioBL(BluePrintBase):
                     max_final_start = bpy.context.scene.frame_current if self.current_frame_as_fs else 0
                     for audio in audios:
                         name = Path(audio).name
-                        audio_seq = seqe.sequences.new_sound(name, audio, channel, frame_start)
+                        audio_seq = sequences.new_sound(name, audio, channel, frame_start)
                         frame_final_duration = audio_seq.frame_final_duration
 
                         if mode == "SeqReplace":
@@ -2950,7 +2968,7 @@ class SaveAudioBL(BluePrintBase):
                             rm_seq = []
                             frame_end = frame_start + frame_final_duration
                             print(frame_start, frame_end)
-                            for seq in seqe.sequences:
+                            for seq in sequences:
                                 if seq == audio_seq:
                                     continue
                                 if seq.channel != channel:
@@ -2964,10 +2982,10 @@ class SaveAudioBL(BluePrintBase):
                                     rm_seq.append(seq)
                                     print("RM2:", seq.frame_final_start, seq.frame_final_end)
                             for seq in rm_seq:
-                                seqe.sequences.remove(seq)
+                                sequences.remove(seq)
                         elif mode == "SeqAppend":
                             # 追加模式: 查找当前通道的 最后一个序列的持续位置, 往后新增
-                            for seq in seqe.sequences:
+                            for seq in sequences:
                                 if seq == audio_seq:
                                     continue
                                 if seq.channel != channel:
