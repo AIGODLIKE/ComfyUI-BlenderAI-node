@@ -1,5 +1,6 @@
 # Reference from: https://github.com/eliemichel/BlenderImgui
 from typing import Any
+import re
 
 import bpy
 import json
@@ -256,6 +257,70 @@ def get_wrap_text(text, lwidth):
     return "\n".join(text[i * lwidth: (i + 1) * lwidth] for i in range(ceil(len(text) / lwidth)))
 
 
+def clamp(v: float, lo: float, hi: float) -> float:
+    return max(lo, min(hi, v))
+
+
+def apply_weight_bump(text: str, cursor_pos: int, bump: float) -> tuple[str, int]:
+    """
+    Adjust weight of the word at cursor_pos.
+    Supports tokens like foo, (foo), foo:1.2, (foo:1.2).
+    Returns new_text and new_cursor_pos.
+    """
+    if text is None:
+        text = ""
+    text_len = len(text)
+    cursor_pos = max(0, min(text_len, cursor_pos))
+    spans = list(re.finditer(r"[^, ]+", text))
+    target = None
+    for m in spans:
+        if m.start() <= cursor_pos <= m.end():
+            target = m
+            break
+    if not target:
+        return text, cursor_pos
+    token = target.group(0)
+    m = re.match(r"^\(?([^():]+)(?::([0-9.]+))?\)?$", token)
+    if not m:
+        return text, cursor_pos
+    word = m.group(1)
+    base = float(m.group(2)) if m.group(2) else 1.0
+    new_w = clamp(base + bump, 0.1, 2.0)
+    if abs(new_w - 1.0) < 1e-6:
+        new_token = word
+    else:
+        new_token = f"({word}:{new_w:.2f})"
+    new_text = text[:target.start()] + new_token + text[target.end():]
+    new_cursor = target.start() + len(new_token)
+    return new_text, new_cursor
+
+
+def apply_weight_reset(text: str, cursor_pos: int) -> tuple[str, int]:
+    """
+    Reset weight of the word at cursor_pos to 1.0 (plain word without wrapper).
+    """
+    if text is None:
+        text = ""
+    text_len = len(text)
+    cursor_pos = max(0, min(text_len, cursor_pos))
+    spans = list(re.finditer(r"[^, ]+", text))
+    target = None
+    for m in spans:
+        if m.start() <= cursor_pos <= m.end():
+            target = m
+            break
+    if not target:
+        return text, cursor_pos
+    token = target.group(0)
+    m = re.match(r"^\(?([^():]+)(?::([0-9.]+))?\)?$", token)
+    if not m:
+        return text, cursor_pos
+    word = m.group(1)
+    new_text = text[:target.start()] + word + text[target.end():]
+    new_cursor = target.start() + len(word)
+    return new_text, new_cursor
+
+
 class MLTOps(bpy.types.Operator, BaseDrawCall):
     bl_idname = "sdn.multiline_text"
     bl_label = "MLT"
@@ -285,6 +350,8 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
         self.try_search = False
         self.font_scale = 2.0
         self.pending_cursor_jump = None
+        self.pending_weight_bump = 0.0
+        self.pending_weight_reset = False
         self.force_rewrap = False
         self.force_rewrap_props: set[tuple[int, str]] = set()
         self.window_size_cache: dict[tuple[int, str], tuple[float, float]] = {}
@@ -317,7 +384,7 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
             return {"PASS_THROUGH"}
 
         context.area.tag_redraw()
-        if event.ctrl and event.value == "PRESS" and event.type in {"EQUAL", "MINUS"}:
+        if self.cover and event.ctrl and event.value == "PRESS" and event.type in {"EQUAL", "MINUS"}:
             step = 0.50
             if event.type == "EQUAL":
                 self.font_scale = min(self.font_scale + step, 3.0)
@@ -325,8 +392,22 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
                 self.font_scale = max(self.font_scale - step, 0.5)
             self.force_rewrap = True
             return {"RUNNING_MODAL"}
-        if event.ctrl and event.type in {"UP_ARROW", "DOWN_ARROW"} and event.value == "PRESS":
-            self.pending_cursor_jump = "START" if event.type == "UP_ARROW" else "END"
+        if event.ctrl and event.type == "RET" and event.value == "PRESS" and self.cover:
+            try:
+                bpy.ops.sdn.ops(action="Submit")
+            except Exception as exc:
+                logger.error(f"Submit failed: {exc}")
+            return {"RUNNING_MODAL"}
+        if self.cover and event.ctrl and event.shift and event.type in {"UP_ARROW", "DOWN_ARROW"} and event.value == "PRESS":
+            self.pending_weight_reset = True
+            self.pending_weight_bump = 0.0
+            return {"RUNNING_MODAL"}
+        if self.cover and event.ctrl and event.type in {"UP_ARROW", "DOWN_ARROW"} and event.value == "PRESS":
+            self.pending_weight_bump = 0.05 if event.type == "UP_ARROW" else -0.05
+            return {"RUNNING_MODAL"}
+        if self.cover and event.type in {"LEFT_ARROW", "RIGHT_ARROW"} and event.value in {"PRESS", "RELEASE"}:
+            # allow cursor movement within ImGui text
+            self.poll_events(context, event)
             return {"RUNNING_MODAL"}
         if event.type == "ESC":
             self.stop_search()
@@ -582,7 +663,7 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
         window_key = (node.as_pointer(), prop)
         imgui.begin(window_name, closable=False, flags=flags)
         imgui.set_window_position(50, 20 + count * 300, condition=imgui.ALWAYS)
-        imgui.set_window_size(600, 600, condition=imgui.ONCE)
+        imgui.set_window_size(900, 600, condition=imgui.ONCE)
         imgui.set_window_font_scale(self.font_scale)
         window_size = imgui.core.get_window_size()
         width, height = float(window_size.x), float(window_size.y)
@@ -650,12 +731,33 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
                 if self.force_rewrap:
                     self.force_rewrap = False
                 self.force_rewrap_props.discard(window_key)
-            if self.pending_cursor_jump:
-                if self.pending_cursor_jump == "START":
-                    data.cursor_pos = 0
-                else:
-                    data.cursor_pos = data.buffer_text_length
-                self.pending_cursor_jump = None
+            if self.pending_weight_reset:
+                try:
+                    raw = getattr(node, data.user_data)
+                    new_raw, new_pos = apply_weight_reset(raw, data.cursor_pos)
+                    setattr(node, data.user_data, new_raw)
+                    refreshed = get_wrap_text(new_raw, lnum)
+                    data.delete_chars(0, data.buffer_text_length)
+                    data.insert_chars(0, refreshed)
+                    data.buffer_dirty = True
+                    data.cursor_pos = min(new_pos, data.buffer_text_length)
+                except Exception as exc:
+                    logger.error(f"weight reset failed: {exc}")
+                self.pending_weight_reset = False
+                self.pending_weight_bump = 0.0
+            if self.pending_weight_bump:
+                try:
+                    raw = getattr(node, data.user_data)
+                    new_raw, new_pos = apply_weight_bump(raw, data.cursor_pos, self.pending_weight_bump or 0.0)
+                    setattr(node, data.user_data, new_raw)
+                    refreshed = get_wrap_text(new_raw, lnum)
+                    data.delete_chars(0, data.buffer_text_length)
+                    data.insert_chars(0, refreshed)
+                    data.buffer_dirty = True
+                    data.cursor_pos = min(new_pos, data.buffer_text_length)
+                except Exception as exc:
+                    logger.error(f"weight bump failed: {exc}")
+                self.pending_weight_bump = 0.0
             # buffer_text_length 是最后一位
             # 161 12 156 158
             # print(data.buffer_text_length, data.buffer_size, len(data.buffer), data.cursor_pos)
