@@ -1,10 +1,14 @@
+import bpy
 import gpu
 import ctypes
 import numpy as np
-import bgl as gl
-import bpy
 import time
 import platform
+
+if bpy.app.version < (4, 0):
+    import bgl as gl
+else:
+    gl = None
 # from OpenGL import GL as gl
 from gpu_extras.batch import batch_for_shader
 from ..utils import logger
@@ -15,7 +19,6 @@ except ModuleNotFoundError:
 
 
 from imgui.integrations.base import BaseOpenGLRenderer
-from .old_renderer import Renderer340
 
 
 class Renderer(BaseOpenGLRenderer):
@@ -271,8 +274,14 @@ class Renderer(BaseOpenGLRenderer):
         gl.glScissor(last_scissor_box[0], last_scissor_box[1], last_scissor_box[2], last_scissor_box[3])
 
     def _invalidate_device_objects(self):
-        if self._font_texture > -1:
+        if gl and self._font_texture > -1:
             gl.glDeleteTextures([self._font_texture])
+        if getattr(self, "_font_tex", None):
+            try:
+                self._font_tex.free()
+            except Exception:
+                pass
+            self._font_tex = None
         self.io.fonts.texture_id = 0
         self._font_texture = 0
 
@@ -384,8 +393,16 @@ class Renderer400(BaseOpenGLRenderer):
             logger.debug(f"MLT Init -> {time.time() - ts:.2f}s")
         img.gl_load()
         self._font_tex = gpu.texture.from_image(img)
-        self._font_texture = img.bindcode
-        self.io.fonts.texture_id = self._font_texture
+        if hasattr(img, "bindcode"):
+            font_texture = img.bindcode
+        elif hasattr(self._font_tex, "gl_bindcode_get"):
+            font_texture = self._font_tex.gl_bindcode_get()
+        elif hasattr(self._font_tex, "bindcode"):
+            font_texture = self._font_tex.bindcode
+        else:
+            font_texture = 0
+        self._font_texture = font_texture
+        self.io.fonts.texture_id = font_texture
 
     def _create_device_objects(self):
         # self._bl_shader = gpu.types.GPUShader(self.VERTEX_SHADER_SRC, self.FRAGMENT_SHADER_SRC)
@@ -529,7 +546,8 @@ class Renderer400(BaseOpenGLRenderer):
 
 
 BlenderImguiRenderer = Renderer400
-if bpy.app.version < (3, 4):
-    BlenderImguiRenderer = Renderer340
 if bpy.app.version < (4, 0):
     BlenderImguiRenderer = Renderer
+    if bpy.app.version < (3, 4):
+        from .old_renderer import Renderer340
+        BlenderImguiRenderer = Renderer340

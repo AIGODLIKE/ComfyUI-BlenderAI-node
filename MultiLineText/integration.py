@@ -6,6 +6,7 @@ import json
 from functools import lru_cache
 from math import ceil
 from pathlib import Path
+from bpy.props import StringProperty
 from ..utils import _T, logger
 from ..SDNode.tree import TREE_TYPE, NodeBase
 from .renderer import BlenderImguiRenderer, imgui
@@ -38,6 +39,7 @@ class GlobalImgui:
             return
 
         self.imgui_ctx = imgui.create_context()
+        imgui.style_colors_dark()
         self.init_font()
         self.imgui_backend = BlenderImguiRenderer()
         self.setup_key_map()
@@ -66,7 +68,7 @@ class GlobalImgui:
             self.shutdown_imgui()
             return
         # clear handle only
-        for (space, area) in self.draw_handlers:
+        for (space, area) in list(self.draw_handlers.keys()):
             if area != bpy.context.area:
                 continue
             self.draw_handlers.pop((space, area))
@@ -89,20 +91,28 @@ class GlobalImgui:
         self.apply_ui_settings()
 
         imgui.new_frame()
-        title_bg_active_color = (0.546, 0.322, 0.730, 0.9)
-        frame_bg_color = (0.512, 0.494, 0.777, 0.573)
+        title_bg_active_color = (0.12, 0.12, 0.12, 0.95)
+        frame_bg_color = (0.16, 0.16, 0.16, 0.95)
         imgui.push_style_color(imgui.COLOR_TITLE_BACKGROUND_ACTIVE, *title_bg_active_color)
         imgui.push_style_color(imgui.COLOR_FRAME_BACKGROUND, *frame_bg_color)
+        colors_pushed = 2
+        window_bg_id = getattr(imgui, "COLOR_WINDOW_BACKGROUND", getattr(imgui, "COLOR_WINDOW_BACKGROUND_COLLAPSED", None))
+        if window_bg_id is not None:
+            window_bg_color = (0.08, 0.08, 0.08, 0.98)
+            imgui.push_style_color(window_bg_id, *window_bg_color)
+            colors_pushed += 1
         invalid_callback = []
-        for cb in self.callbacks[area]:
+        for cb in tuple(self.callbacks.get(area, [])):
             try:
                 cb(bpy.context)
             except ReferenceError:
                 invalid_callback.append(cb)
+            except Exception as exc:
+                logger.error(f"MLT draw callback failed: {exc}", exc_info=True)
+                invalid_callback.append(cb)
         for cb in invalid_callback:
             self.callbacks[area].discard(cb)
-        imgui.pop_style_color()
-        imgui.pop_style_color()
+        imgui.pop_style_color(colors_pushed)
         imgui.end_frame()
         imgui.render()
         self.imgui_backend.render(imgui.get_draw_data())
@@ -249,8 +259,21 @@ def get_wrap_text(text, lwidth):
 class MLTOps(bpy.types.Operator, BaseDrawCall):
     bl_idname = "sdn.multiline_text"
     bl_label = "MLT"
+    ANCHOR_NODE_TYPES = {"CLIPTextEncode"}
+    ANCHOR_SIZE_CACHE: dict[tuple[int, str], tuple[float, float]] = {}
+    ACTIVE_OP: "MLTOps | None" = None
+
+    tree_name: StringProperty(default="")
+    node_name: StringProperty(default="")
+    prop: StringProperty(default="")
 
     def invoke(self, context, event):
+        # ensure only one operator instance runs at a time
+        if prev := self.__class__.ACTIVE_OP:
+            try:
+                prev.cancel(context)
+            except Exception:
+                pass
         self.area = context.area
         if not self.try_reg(self.area):
             return {"FINISHED"}
@@ -260,8 +283,25 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
         self.candicates_word = ""
         self.candicates_words = []
         self.try_search = False
+        self.font_scale = 2.0
+        self.pending_cursor_jump = None
+        self.force_rewrap = False
+        self.force_rewrap_props: set[tuple[int, str]] = set()
+        self.window_size_cache: dict[tuple[int, str], tuple[float, float]] = {}
         self.io = imgui.get_io()
-        self._timer = context.window_manager.event_timer_add(1 / 60, window=context.window)
+        window = getattr(context, "window", None)
+        wm = context.window_manager
+        if window:
+            self._timer = wm.event_timer_add(1 / 60, window=window)
+        else:
+            self._timer = wm.event_timer_add(1 / 60)
+        tree = context.space_data.edit_tree if context.space_data.type == 'NODE_EDITOR' else None
+        self.target_tree_name = self.tree_name or (tree.name if tree else "")
+        node = context.active_node
+        self.target_node_name = self.node_name or (node.name if node else "")
+        self.target_prop = self.prop or "text"
+        self._node_ref = node
+        self.__class__.ACTIVE_OP = self
         context.window_manager.modal_handler_add(self)
         return {'RUNNING_MODAL'}
 
@@ -277,6 +317,17 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
             return {"PASS_THROUGH"}
 
         context.area.tag_redraw()
+        if event.ctrl and event.value == "PRESS" and event.type in {"EQUAL", "MINUS"}:
+            step = 0.50
+            if event.type == "EQUAL":
+                self.font_scale = min(self.font_scale + step, 3.0)
+            else:
+                self.font_scale = max(self.font_scale - step, 0.5)
+            self.force_rewrap = True
+            return {"RUNNING_MODAL"}
+        if event.ctrl and event.type in {"UP_ARROW", "DOWN_ARROW"} and event.value == "PRESS":
+            self.pending_cursor_jump = "START" if event.type == "UP_ARROW" else "END"
+            return {"RUNNING_MODAL"}
         if event.type == "ESC":
             self.stop_search()
             return {"RUNNING_MODAL"}
@@ -311,9 +362,50 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
         if event.unicode and 0 < ord(event.unicode) < 0x10000:
             self.try_search = True
 
+    def _reset_active_node(self):
+        if getattr(self, "_node_ref", None):
+            try:
+                self._node_ref.mlt_active = False
+            except Exception:
+                pass
+
+    def _target_equals(self, tree_name: str, node_name: str, prop: str) -> bool:
+        return (
+            (self.target_tree_name or "") == (tree_name or "")
+            and (self.target_node_name or "") == (node_name or "")
+            and (self.target_prop or "") == (prop or "")
+        )
+
+    def switch_target(self, tree_name: str, node_name: str, prop: str = "text"):
+        if self._target_equals(tree_name, node_name, prop):
+            return
+        self._reset_active_node()
+        self.target_tree_name = tree_name or ""
+        self.target_node_name = node_name or ""
+        self.target_prop = prop or "text"
+        self._node_ref = None
+        self.force_rewrap = True
+        self.force_rewrap_props.clear()
+        self.window_size_cache.clear()
+
     def clear(self):
         super().clear()
         self.__class__.REG_AREA.discard(self.area)
+        self.ANCHOR_SIZE_CACHE.clear()
+        if getattr(self, "_timer", None):
+            try:
+                bpy.context.window_manager.event_timer_remove(self._timer)
+            except Exception:
+                pass
+            self._timer = None
+        self._reset_active_node()
+        if self.__class__.ACTIVE_OP is self:
+            self.__class__.ACTIVE_OP = None
+        self._node_ref = None
+
+    def cancel(self, context):
+        self.clear()
+        return {'CANCELLED'}
 
     def stop_search(self):
         self.candicates_words = []
@@ -328,21 +420,39 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
         # hover 不一定 focus,  focus也不一定hover
         self.cover |= imgui.is_any_item_hovered() or imgui.is_window_hovered()
 
-    @staticmethod
-    def can_draw() -> Any | None:
-        tree = bpy.context.space_data.edit_tree
-        if not tree or bpy.context.space_data.tree_type != TREE_TYPE:
-            return
-        node = tree.nodes.active
-        if not node:
-            return
-        if node.bl_idname == "NodeFrame":
-            return
+    def _resolve_target_node(self) -> NodeBase | None:
+        if getattr(self, "_node_ref", None):
+            try:
+                _ = self._node_ref.name
+                return self._node_ref
+            except (ReferenceError, UnicodeDecodeError, AttributeError, ValueError):
+                self._node_ref = None
+        tree = bpy.data.node_groups.get(self.target_tree_name) if self.target_tree_name else None
+        if not tree and self.area:
+            for space in self.area.spaces:
+                if space.type == 'NODE_EDITOR':
+                    tree = space.edit_tree
+                    break
+        if not tree and getattr(bpy.context, "space_data", None) and bpy.context.space_data.type == 'NODE_EDITOR':
+            tree = bpy.context.space_data.edit_tree
+        if not tree or tree.bl_idname != TREE_TYPE:
+            return None
+        node = tree.nodes.get(self.target_node_name) if self.target_node_name else tree.nodes.active
+        if not node or node.bl_idname == "NodeFrame":
+            return None
+        self._node_ref = node
+        self.target_tree_name = tree.name
+        self.target_node_name = node.name
+        node.mlt_active = True
         return node
+
+    def can_draw(self) -> Any | None:
+        return self._resolve_target_node()
 
     def draw_call(self, context: bpy.types.Context):
         self.cover = False
         if not (node := self.can_draw()):
+            self.cancel(context)
             return
         self.draw_mlt(context, node)
         self.draw_rect(context, node)
@@ -392,35 +502,100 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
 
         imgui.end()
 
+    @staticmethod
+    def _node_screen_rect(area: bpy.types.Area, node: NodeBase) -> tuple[float, float, float, float] | None:
+        if not area:
+            return None
+        region = next((r for r in area.regions if r.type == "WINDOW"), None)
+        view2d = getattr(region, "view2d", None)
+        if view2d is None:
+            return None
+        x, y = node.location
+        width, height = node.dimensions
+        top_left = view2d.view_to_region(x, y, clip=False)
+        bottom_right = view2d.view_to_region(x + width, y - height, clip=False)
+        if top_left is None or bottom_right is None:
+            return None
+        left = float(top_left[0])
+        top = float(region.height - top_left[1])
+        right = float(bottom_right[0])
+        bottom = float(region.height - bottom_right[1])
+        rect_width = right - left
+        rect_height = bottom - top
+        if rect_width <= 0 or rect_height <= 0:
+            return None
+        return left, top, rect_width, rect_height
+
+    def _should_anchor(self, node: NodeBase, prop: str) -> bool:
+        # anchoring disabled per user request; keep legacy floating window behavior
+        return False
+
+    def _calc_anchor_rect(self, area: bpy.types.Area, node: NodeBase, prop: str) -> tuple[float, float, float, float] | None:
+        if not self._should_anchor(node, prop):
+            return None
+        rect = self._node_screen_rect(area, node)
+        if not rect:
+            return None
+        left, top, node_width, node_height = rect
+        region = next((r for r in area.regions if r.type == "WINDOW"), None)
+        if not region:
+            return None
+        margin = 10
+        available_width = max(region.width - margin * 2, 120.0)
+        available_height = max(region.height - margin * 2, 180.0)
+        desired_width = min(max(node_width, 260.0), available_width)
+        desired_height = min(max(node_height * 1.5, 200.0), available_height)
+        bottom = top + node_height
+        x = max(margin, min(left, region.width - desired_width - margin))
+        y = bottom + margin
+        if y + desired_height > region.height - margin:
+            y = max(margin, top - margin - desired_height)
+        return x, y, desired_width, desired_height
+
     def draw_mlt(self, context: bpy.types.Context, node: NodeBase):
         draw_list: list[tuple[NodeBase, str]] = []
 
-        def try_add(node: NodeBase, prop: str):
-            md = node.get_meta(prop)
+        def try_add(node_obj: NodeBase, prop_name: str):
+            if not prop_name or prop_name not in getattr(node_obj, "inp_types", {}):
+                return
+            md = node_obj.get_meta(prop_name)
             if not md or md[0] != "STRING":
                 return
             if len(md) <= 1 or not isinstance(md[1], dict) or not md[1].get("multiline", ):
                 return
-            draw_list.append((node, prop))
+            draw_list.append((node_obj, prop_name))
 
-        for prop in node.inp_types:
-            if node.query_stat(prop):
+        props = [self.target_prop] if self.target_prop else list(node.inp_types)
+        for prop in props:
+            if prop and node.query_stat(prop):
                 continue
             try_add(node, prop)
-        if node.bl_idname == "PrimitiveNode" and node.outputs[0].is_linked and node.outputs[0].links:
-            try_add(node.outputs[0].links[0].to_node, node.prop)
+        if not draw_list and node.bl_idname == "PrimitiveNode" and node.outputs[0].is_linked and node.outputs[0].links:
+            try_add(node.outputs[0].links[0].to_node, getattr(node, "prop", ""))
 
         for count, (node, prop) in enumerate(draw_list):
             self.draw_mlt_ex(context, node, count, prop)
 
     def draw_mlt_ex(self, context, node: NodeBase, count: int, prop: str):
-        flags = imgui.WINDOW_NO_BRING_TO_FRONT_ON_FOCUS | imgui.WINDOW_NO_SAVED_SETTINGS | imgui.WINDOW_NO_FOCUS_ON_APPEARING
-        imgui.begin(f"{_T(' Prompts')}: {_T(prop)} ##" + hex(hash(context.area)), closable=False, flags=flags)
-        imgui.set_window_position(50, 20 + count * 300, condition=imgui.ONCE)
-        imgui.set_window_size(300, 300, condition=imgui.ONCE)
+        flags = imgui.WINDOW_NO_BRING_TO_FRONT_ON_FOCUS | imgui.WINDOW_NO_SAVED_SETTINGS | imgui.WINDOW_NO_FOCUS_ON_APPEARING | imgui.WINDOW_NO_MOVE
+        window_name = f"{_T(' Prompts')}: {_T(prop)} ##{node.as_pointer()}"
+        window_key = (node.as_pointer(), prop)
+        imgui.begin(window_name, closable=False, flags=flags)
+        imgui.set_window_position(50, 20 + count * 300, condition=imgui.ALWAYS)
+        imgui.set_window_size(600, 600, condition=imgui.ONCE)
+        imgui.set_window_font_scale(self.font_scale)
         window_size = imgui.core.get_window_size()
-        w, h = window_size.x, window_size.y
-        lnum = max(1, int(w * 2 // imgui.get_font_size()) - 3)
+        width, height = float(window_size.x), float(window_size.y)
+        prev_size = self.window_size_cache.get(window_key)
+        current_size = (width, height)
+        if not prev_size or abs(prev_size[0] - width) > 0.5 or abs(prev_size[1] - height) > 0.5:
+            self.window_size_cache[window_key] = current_size
+            self.force_rewrap_props.add(window_key)
+        content_min = imgui.get_window_content_region_min()
+        content_max = imgui.get_window_content_region_max()
+        content_width = max(32.0, float(content_max.x - content_min.x))
+        char_px = max(1e-3, imgui.calc_text_size("M").x)
+        lnum = max(1, int(content_width // char_px) - 1)
 
         def find_word(buffer, end_pos):
             buffer = buffer.encode()[:end_pos].decode()
@@ -460,7 +635,27 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
             self.stop_search()
             edit(data)
 
+        def refresh_wrapped_buffer(data):
+            raw_value = getattr(node, data.user_data)
+            refreshed = get_wrap_text(raw_value, lnum)
+            data.delete_chars(0, data.buffer_text_length)
+            data.insert_chars(0, refreshed)
+            data.buffer_dirty = True
+            data.cursor_pos = min(data.cursor_pos, data.buffer_text_length)
+
         def always(data):
+            needs_rewrap = self.force_rewrap or window_key in self.force_rewrap_props
+            if needs_rewrap:
+                refresh_wrapped_buffer(data)
+                if self.force_rewrap:
+                    self.force_rewrap = False
+                self.force_rewrap_props.discard(window_key)
+            if self.pending_cursor_jump:
+                if self.pending_cursor_jump == "START":
+                    data.cursor_pos = 0
+                else:
+                    data.cursor_pos = data.buffer_text_length
+                self.pending_cursor_jump = None
             # buffer_text_length 是最后一位
             # 161 12 156 158
             # print(data.buffer_text_length, data.buffer_size, len(data.buffer), data.cursor_pos)
@@ -470,7 +665,7 @@ class MLTOps(bpy.types.Operator, BaseDrawCall):
             cursor_screen_pos = imgui.core.get_cursor_screen_pos()
             rect_min = imgui.get_item_rect_min()
             bbuffer = data.buffer.encode()[:data.cursor_pos].decode()
-            curpy = imgui.calc_text_size(bbuffer, wrap_width=w).y
+            curpy = imgui.calc_text_size(bbuffer, wrap_width=content_width).y
             curpx = imgui.calc_text_size("W" * (len(bbuffer) % (lnum + 1))).x
             curpx = curpx + rect_min.x
             curpy = curpy + cursor_screen_pos.y
