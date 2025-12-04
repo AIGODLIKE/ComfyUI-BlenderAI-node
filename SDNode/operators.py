@@ -183,7 +183,9 @@ class AIMatSolutionLoad(bpy.types.Operator):
         scene.render.film_transparent = True
         scene.render.resolution_x = self.get_resolution()[0]
         scene.render.resolution_y = self.get_resolution()[1]
-        scene.use_nodes = True
+        if scene.compositing_node_group is None:
+            tree = bpy.data.node_groups.new("Compositing", "CompositorNodeTree")
+            scene.compositing_node_group = tree
         return scene
 
     def prepare_mat_norm(self, obj: bpy.types.Object):
@@ -229,8 +231,11 @@ class AIMatSolutionLoad(bpy.types.Operator):
         return cam
 
     def prepare_compositor_for_depth(self):
-        bpy.context.scene.use_nodes = True
-        tree = bpy.context.scene.node_tree
+        if bpy.context.scene.compositing_node_group is None:
+            tree = bpy.data.node_groups.new("Compositing", "CompositorNodeTree")
+            bpy.context.scene.compositing_node_group = tree
+        else:
+            tree = bpy.context.scene.compositing_node_group
         nodes = tree.nodes
         nodes.clear()
         # Add required nodes
@@ -337,7 +342,8 @@ class AIMatSolutionLoad(bpy.types.Operator):
 
     def render_normal(self, ob: bpy.types.Object, name: str):
         self.prepare_mat_norm(ob)
-        bpy.context.scene.use_nodes = False
+        old_compositing = bpy.context.scene.compositing_node_group
+        bpy.context.scene.compositing_node_group = None
         tempdir = tempfile.gettempdir()
         final_path = Path(tempdir, name)
         final_path.unlink(missing_ok=True)
@@ -377,6 +383,7 @@ class AIMatSolutionLoad(bpy.types.Operator):
         # 恢复渲染状态
         for obj, status in obj_render_status.items():
             obj.hide_render = status
+        bpy.context.scene.compositing_node_group = old_compositing
         return final_path.as_posix()
 
     def render_color(self, ob: bpy.types.Object, name: str):

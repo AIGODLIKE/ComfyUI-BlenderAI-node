@@ -472,8 +472,11 @@ def gen_mask(self):
         return
     logger.debug(_T("Gen Mask"))
     # 设置节点
-    bpy.context.scene.use_nodes = True
-    nt = bpy.context.scene.node_tree
+    if bpy.context.scene.compositing_node_group is None:
+        nt = bpy.data.node_groups.new("Compositing", "CompositorNodeTree")
+        bpy.context.scene.compositing_node_group = nt
+    else:
+        nt = bpy.context.scene.compositing_node_group
     with set_setting() as r:
         bpy.context.scene.render.image_settings.file_format = "PNG"
         if mode in {"Collection", "Object"}:
@@ -687,9 +690,11 @@ def calc_data_from_blender_do(data_name, out_dir, uid) -> dict:
             bpy.context.view_layer.use_pass_z = True
             bpy.context.scene.render.filepath = data_path.as_posix()
             bpy.context.scene.render.image_settings.file_format = "PNG"
-            bpy.context.scene.use_nodes = True
-
-            nt = bpy.context.scene.node_tree
+            if bpy.context.scene.compositing_node_group is None:
+                nt = bpy.data.node_groups.new("Compositing", "CompositorNodeTree")
+                bpy.context.scene.compositing_node_group = nt
+            else:
+                nt = bpy.context.scene.compositing_node_group
             out_layer_name = "Depth"
             with set_composite(nt) as cmp:
                 render_layer: bpy.types.CompositorNodeRLayers = nt.nodes.new("CompositorNodeRLayers")
@@ -717,9 +722,11 @@ def calc_data_from_blender_do(data_name, out_dir, uid) -> dict:
             bpy.context.view_layer.use_pass_mist = True
             bpy.context.scene.render.filepath = data_path.as_posix()
             bpy.context.scene.render.image_settings.file_format = "PNG"
-            bpy.context.scene.use_nodes = True
-
-            nt = bpy.context.scene.node_tree
+            if bpy.context.scene.compositing_node_group is None:
+                nt = bpy.data.node_groups.new("Compositing", "CompositorNodeTree")
+                bpy.context.scene.compositing_node_group = nt
+            else:
+                nt = bpy.context.scene.compositing_node_group
             out_layer_name = "Mist"
             with set_composite(nt) as cmp:
                 render_layer: bpy.types.CompositorNodeRLayers = nt.nodes.new("CompositorNodeRLayers")

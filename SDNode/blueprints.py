@@ -1993,9 +1993,9 @@ class 输入图像(BluePrintBase):
 
         def search_layers(self, context):
             items = []
-            if not bpy.context.scene.use_nodes:
+            if bpy.context.scene.compositing_node_group is None:
                 return items
-            nodes = bpy.context.scene.node_tree.nodes
+            nodes = bpy.context.scene.compositing_node_group.nodes
             render_layer = nodes.get(self.render_layer, None)
             if not render_layer:
                 return items
@@ -2035,7 +2035,7 @@ class 输入图像(BluePrintBase):
                 layout.label(text="Frames Directory", text_ctxt=self.get_ctxt())
             if self.mode == "渲染":
                 layout.label(text="Set Image Path of Render Result(.png)", icon="ERROR")
-                if bpy.context.scene.use_nodes:
+                if bpy.context.scene.compositing_node_group is not None:
                     row = layout.row(align=True)
                     row.prop_search(self, "render_layer", bpy.context.scene.sdn, "render_layer")
                     icon = "RESTRICT_RENDER_ON" if self.disable_render else "RESTRICT_RENDER_OFF"
@@ -2145,9 +2145,9 @@ class 输入图像(BluePrintBase):
             current_frame = bpy.context.scene.frame_current
             if self.mode == "渲染" and not self.use_current_frame:
                 bpy.context.scene.frame_set(self.input_frame)
-            if bpy.context.scene.use_nodes:
+            if bpy.context.scene.compositing_node_group is not None:
                 from .utils import set_composite
-                nt = bpy.context.scene.node_tree
+                nt = bpy.context.scene.compositing_node_group
 
                 with set_composite(nt) as cmp:
                     render_layer: bpy.types.CompositorNodeRLayers = nt.nodes.new("CompositorNodeRLayers")
