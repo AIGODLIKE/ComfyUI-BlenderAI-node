@@ -180,3 +180,6 @@ def timer_reg():
 def timer_unreg():
     Timer.unreg()
     Worker.unreg()
+    # guard handler removal to avoid double-remove errors during reload
+    if Worker.clear in bpy.app.handlers.load_pre:
+        bpy.app.handlers.load_pre.remove(Worker.clear)

@@ -461,38 +461,34 @@ class PropGen:
                 if node == self:
                     continue
                 if hasattr(node, "seed"):
-                    node["seed"] = seed
+                    setattr(node, "seed", seed)
                 elif hasattr(node, "noise_seed"):
-                    node["noise_seed"] = seed
+                    setattr(node, "noise_seed", seed)
 
         if inp_name == "noise_seed":
-            def setter(self, v):
+            def _noise_seed_update(self, context):
+                v = getattr(self, "noise_seed", "0")
                 try:
-                    _ = int(v)
-                    self["noise_seed"] = v
+                    int(v)
                 except Exception:
-                    ...
-                set_sync_rand(self, self["noise_seed"])
+                    v = "0"
+                    if getattr(self, "noise_seed", None) != v:
+                        self.noise_seed = v
+                set_sync_rand(self, v)
 
-            def getter(self):
-                if "noise_seed" not in self:
-                    self["noise_seed"] = "0"
-                return str(self["noise_seed"])
-            prop = bpy.props.StringProperty(default="0", set=setter, get=getter)
+            prop = bpy.props.StringProperty(default="0", update=_noise_seed_update)
         elif inp_name == "seed":
-            def setter(self, v):
+            def _seed_update(self, context):
+                v = getattr(self, "seed", "0")
                 try:
-                    _ = int(v)
-                    self["seed"] = v
+                    int(v)
                 except Exception:
-                    ...
-                set_sync_rand(self, self["seed"])
+                    v = "0"
+                    if getattr(self, "seed", None) != v:
+                        self.seed = v
+                set_sync_rand(self, v)
 
-            def getter(self):
-                if "seed" not in self:
-                    return "0"
-                return str(self["seed"])
-            prop = bpy.props.StringProperty(default="0", set=setter, get=getter)
+            prop = bpy.props.StringProperty(default="0", update=_seed_update)
         return prop
 
 
@@ -517,25 +513,6 @@ class MLTText(bpy.types.PropertyGroup):
                     continue
                 return stat
 
-    def set_content(self, v):
-        # v format: '[xxx]key'
-        # 如果v已经存在则弹出报错
-        if "]" in v:
-            v = v.split("]")[1].strip()
-        node: NodeBase = bpy.context.active_node
-        stat = self.find_stat(node)
-        if stat and v in stat.texts:
-            def pop_error(self, context):
-                self.layout.label(text="Text already exists", icon="ERROR")
-            bpy.context.window_manager.popup_menu(pop_error, title="ERROR", icon="ERROR")
-            return
-        self["name"] = v
-
-    def get_content(self):
-        if "name" not in self:
-            self["name"] = ""
-        return self["name"]
-
     def update_content(self, context):
         node: NodeBase = get_ctx_node()
         # 合并text
@@ -547,7 +524,7 @@ class MLTText(bpy.types.PropertyGroup):
             return
         setattr(node, stat.name, ct)
 
-    name: bpy.props.StringProperty(update=update_content, set=set_content, get=get_content)
+    name: bpy.props.StringProperty(update=update_content)
 
 
 class MLTRec(bpy.types.PropertyGroup):
@@ -1366,9 +1343,10 @@ class Ops_Link_Mask(bpy.types.Operator):
         import gpu_extras
         if bpy.app.version >= (4, 0):
             shader_color = gpu.shader.from_builtin("UNIFORM_COLOR")
+            shader_line = gpu.shader.from_builtin("POLYLINE_SMOOTH_COLOR")
         else:
             shader_color = gpu.shader.from_builtin("2D_UNIFORM_COLOR")
-        shader_line = gpu.shader.from_builtin("POLYLINE_SMOOTH_COLOR")
+            shader_line = gpu.shader.from_builtin("2D_POLYLINE_SMOOTH_COLOR")
         shader_line.uniform_float("viewportSize", gpu.state.viewport_get()[2:4])
         shader_line.uniform_float("lineSmooth", True)
 

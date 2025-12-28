@@ -815,99 +815,73 @@ class MultiAreaConditioning(BluePrintBase):
                    "col": (0, 1, 1, 0.5)
                    }]
 
-        def config_set(self, value):
-            self["config"] = value
-
-        def config_get(self):
-            if 'config' not in self:
-                self['config'] = json.dumps(config)
-            return self['config']
-
-        prop = bpy.props.StringProperty(default=json.dumps(config), set=config_set, get=config_get)
+        prop = bpy.props.StringProperty(default=json.dumps(config))
         properties["config"] = prop
 
         def update(self):
             config = json.loads(self.config)
             c = config[self.index]
             for k in c:
-                if k not in self:
-                    continue
-                c[k] = getattr(self, k)
+                if hasattr(self, k):
+                    c[k] = getattr(self, k)
             self.config = json.dumps(config)
 
-        def resolutionX_set(self, value):
-            self['resolutionX'] = (value // 64) * 64
-
-        def resolutionX_get(self):
-            if 'resolutionX' not in self:
-                self['resolutionX'] = 0
-            return self['resolutionX']
-        prop = bpy.props.IntProperty(default=0, min=0, max=4096, set=resolutionX_set, get=resolutionX_get)
+        def resolutionX_update(self, context):
+            v = max(0, min(4096, (int(self.resolutionX) // 64) * 64))
+            if self.resolutionX != v:
+                self.resolutionX = v
+            update(self)
+        prop = bpy.props.IntProperty(default=0, min=0, max=4096, update=resolutionX_update)
         properties["resolutionX"] = prop
 
-        def resolutionY_set(self, value):
-            self['resolutionY'] = (value // 64) * 64
-
-        def resolutionY_get(self):
-            if 'resolutionY' not in self:
-                self['resolutionY'] = 0
-            return self['resolutionY']
-        prop = bpy.props.IntProperty(default=0, min=0, max=4096, set=resolutionY_set, get=resolutionY_get)
+        def resolutionY_update(self, context):
+            v = max(0, min(4096, (int(self.resolutionY) // 64) * 64))
+            if self.resolutionY != v:
+                self.resolutionY = v
+            update(self)
+        prop = bpy.props.IntProperty(default=0, min=0, max=4096, update=resolutionY_update)
         properties["resolutionY"] = prop
 
         def update_index(self, context):
             config = json.loads(self.config)
             c = config[self.index]
             for k in c:
-                if k not in self:
-                    continue
-                self[k] = c[k]
+                if hasattr(self, k):
+                    setattr(self, k, c[k])
 
         prop = bpy.props.IntProperty(default=0, min=0, max=1, update=update_index)
         properties["index"] = prop
 
-        def x_set(self, value):
-            self['x'] = (value // 64) * 64
+        def x_update(self, context):
+            v = max(0, min(4096, (int(self.x) // 64) * 64))
+            if self.x != v:
+                self.x = v
             update(self)
-
-        def x_get(self):
-            if 'x' not in self:
-                self['x'] = 0
-            return self['x']
-        prop = bpy.props.IntProperty(default=0, min=0, max=4096, set=x_set, get=x_get)
+        prop = bpy.props.IntProperty(default=0, min=0, max=4096, update=x_update)
         properties["x"] = prop
 
-        def y_set(self, value):
-            self['y'] = (value // 64) * 64
+        def y_update(self, context):
+            v = max(0, min(4096, (int(self.y) // 64) * 64))
+            if self.y != v:
+                self.y = v
             update(self)
-
-        def y_get(self):
-            if 'y' not in self:
-                self['y'] = 0
-            return self['y']
-        prop = bpy.props.IntProperty(default=0, min=0, max=4096, set=y_set, get=y_get)
+        prop = bpy.props.IntProperty(default=0, min=0, max=4096, update=y_update)
         properties["y"] = prop
 
-        def sdn_width_set(self, value):
-            self['sdn_width'] = (value // 64) * 64
+        def sdn_width_update(self, context):
+            v = max(0, min(4096, (int(self.sdn_width) // 64) * 64))
+            if self.sdn_width != v:
+                self.sdn_width = v
             update(self)
-
-        def sdn_width_get(self):
-            if 'sdn_width' not in self:
-                self['sdn_width'] = 0
-            return self['sdn_width']
-        prop = bpy.props.IntProperty(default=0, min=0, max=4096, set=sdn_width_set, get=sdn_width_get)
+        prop = bpy.props.IntProperty(default=0, min=0, max=4096, update=sdn_width_update)
         properties["sdn_width"] = prop
 
-        def sdn_height_set(self, value):
-            self['sdn_height'] = (value // 64) * 64
+        def sdn_height_update(self, context):
+            v = max(0, min(4096, (int(self.sdn_height) // 64) * 64))
+            if self.sdn_height != v:
+                self.sdn_height = v
             update(self)
-
-        def sdn_height_get(self):
-            if 'sdn_height' not in self:
-                self['sdn_height'] = 0
-            return self['sdn_height']
-        prop = bpy.props.IntProperty(default=0, min=0, max=4096, set=sdn_height_set, get=sdn_height_get)
+        prop = bpy.props.IntProperty(default=0, min=0, max=4096, update=sdn_height_update)
         properties["sdn_height"] = prop
 
         def update_strength(self, context):
@@ -929,25 +903,25 @@ class MultiAreaConditioning(BluePrintBase):
             config[i]["sdn_width"] = d[2]
             config[i]["sdn_height"] = d[3]
             config[i]["strength"] = d[4]
-        self["config"] = json.dumps(config)
+        self.config = json.dumps(config)
         d = data["properties"]["values"][s.getattr(self, "index")]
-        self["x"] = d[0]
-        self["y"] = d[1]
-        self["sdn_width"] = d[2]
-        self["sdn_height"] = d[3]
-        self["strength"] = d[4]
-        self["resolutionX"] = data["properties"]["width"]
-        self["resolutionY"] = data["properties"]["height"]
+        self.x = d[0]
+        self.y = d[1]
+        self.sdn_width = d[2]
+        self.sdn_height = d[3]
+        self.strength = d[4]
+        self.resolutionX = data["properties"]["width"]
+        self.resolutionY = data["properties"]["height"]
 
     def dump_specific(s, self: NodeBase = None, cfg=None, selected_only=False, **kwargs):
         properties = cfg["properties"]
         widgets_values = cfg["widgets_values"]
         if self.class_type == "MultiAreaConditioning":
-            config = json.loads(self["config"])
+            config = json.loads(self.config)
             properties.clear()
             properties.update({'Node name for S&R': 'MultiAreaConditioning',
-                               'width': self["resolutionX"],
-                               'height': self["resolutionY"],
+                               'width': self.resolutionX,
+                               'height': self.resolutionY,
                                'values': [[64, 128, 384, 128, 10],
                                           [320, 64, 192, 128, 0.03]]})
             for i in range(2):
@@ -959,8 +933,8 @@ class MultiAreaConditioning(BluePrintBase):
                     config[i]["strength"],
                 ]
             widgets_values.clear()
-            widgets_values += [self["resolutionX"],
-                               self["resolutionY"],
+            widgets_values += [self.resolutionX,
+                               self.resolutionY,
                                None,
                                s.getattr(self, "index"),
                                *properties["values"][s.getattr(self, "index")]]
@@ -3217,14 +3191,11 @@ class PreviewAudio(BluePrintBase):
         prop = bpy.props.FloatProperty(min=0, subtype="TIME_ABSOLUTE")
         properties["time_max"] = prop
 
-        def time_set(self, value):
-            self["time"] = min(value, self.time_max)
-
-        def time_get(self):
-            if "time" not in self:
-                self["time"] = 0
-            return self["time"]
-        prop = bpy.props.FloatProperty(min=0, max=9999999, set=time_set, get=time_get)
+        def time_update(self, context):
+            clamped = min(max(self.time, 0), self.time_max if self.time_max else self.time)
+            if self.time != clamped:
+                self.time = clamped
+        prop = bpy.props.FloatProperty(min=0, max=9999999, update=time_update)
         properties["time"] = prop
 
         def play(self, context):

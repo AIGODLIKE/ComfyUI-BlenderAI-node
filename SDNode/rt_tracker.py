@@ -127,5 +127,11 @@ def reg_tracker():
 
 def unreg_tracker():
     h = bpy.app.handlers
-    h.depsgraph_update_pre.remove(handler_pre)
+    if handler_pre in h.depsgraph_update_pre:
+        h.depsgraph_update_pre.remove(handler_pre)
+    if is_looped():
+        try:
+            bpy.app.timers.unregister(tracker_timer)
+        except Exception:
+            ...
     bpy.utils.unregister_class(Tracker_Loop)

@@ -198,9 +198,15 @@ def unregister():
     ui_unreg()
     rtnode_unreg()
     timer_unreg()
+    if hasattr(bpy.types, "WindowManager") and hasattr(bpy.types.WindowManager, "mlt_words"):
+        del bpy.types.WindowManager.mlt_words
+    if hasattr(bpy.types, "WindowManager") and hasattr(bpy.types.WindowManager, "mlt_words_index"):
+        del bpy.types.WindowManager.mlt_words_index
     del bpy.types.Scene.sdn
     del bpy.types.Scene.sdn_history_item
     del bpy.types.Scene.sdn_history_item_index
+    if hasattr(bpy.types, "Node") and hasattr(bpy.types.Node, "ac_expand"):
+        del bpy.types.Node.ac_expand
     History.unregister_timer()
     modules_update()
     linker_unregister()

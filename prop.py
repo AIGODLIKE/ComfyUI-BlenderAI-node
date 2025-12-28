@@ -151,14 +151,14 @@ class Prop(bpy.types.PropertyGroup):
     open_pref: bpy.props.BoolProperty(default=False, name="Open Addon Preference", update=open_pref_update)
 
     def restart_webui_update(self, context):
-        if self["restart_webui"]:
-            self["restart_webui"] = False
+        if self.restart_webui:
+            self.restart_webui = False
             bpy.ops.sdn.ops(action="Restart")
     restart_webui: bpy.props.BoolProperty(default=False, update=restart_webui_update, name="Restart ComfyUI")
 
     def open_webui_update(self, context):
-        if self["open_webui"]:
-            self["open_webui"] = False
+        if self.open_webui:
+            self.open_webui = False
             from .SDNode.manager import get_url
             bpy.ops.wm.url_open(url=get_url())
     open_webui: bpy.props.BoolProperty(default=False, update=open_webui_update, name="Launch ComfyUI")

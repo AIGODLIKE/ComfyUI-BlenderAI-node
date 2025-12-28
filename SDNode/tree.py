@@ -1294,6 +1294,8 @@ def rtnode_unreg():
         bpy.app.handlers.save_pre.remove(CFNodeTree.save_pre)
     if CFNodeTree.reinit in bpy.app.handlers.load_post:
         bpy.app.handlers.load_post.remove(CFNodeTree.reinit)
+    if bpy.app.timers.is_registered(CFNodeTree.update_tree_handler):
+        bpy.app.timers.unregister(CFNodeTree.update_tree_handler)
     set_draw_intern(reg=False)
     if TREE_NAME in _node_categories:
         try:
