@@ -129,8 +129,7 @@ class Panel(bpy.types.Panel):
         row.prop(bpy.context.scene.sdn, "open_presets_dir", text="", icon="FILEBROWSER", text_ctxt=ctxt)
         col = box.column(align=True)
         col.prop(bpy.context.scene.sdn, "presets_dir", text="", text_ctxt=ctxt)
-        col.template_icon_view(bpy.context.scene.sdn, "presets", show_labels=True, scale_popup=scale_popup, scale=scale_popup)
-        # col.prop(bpy.context.scene.sdn, "presets", text="")
+        col.prop(bpy.context.scene.sdn, "presets", text="")
         row = col.row(align=True)
         row.operator(Ops.bl_idname, text="Save", text_ctxt=ctxt).action = "Save"
         row.operator(Ops.bl_idname, text="Delete", text_ctxt=ctxt).action = "Del"
@@ -146,8 +145,7 @@ class Panel(bpy.types.Panel):
         row.prop(bpy.context.scene.sdn, "open_groups_dir", text="", icon="FILEBROWSER", text_ctxt=ctxt)
         col = box.column(align=True)
         col.prop(bpy.context.scene.sdn, "groups_dir", text="", text_ctxt=ctxt)
-        col.template_icon_view(bpy.context.scene.sdn, "groups", show_labels=True, scale_popup=scale_popup, scale=scale_popup)
-        # col.prop(bpy.context.scene.sdn, "groups", text="")
+        col.prop(bpy.context.scene.sdn, "groups", text="")
         row = col.row(align=True)
         row.operator(Ops.bl_idname, text="Save", text_ctxt=ctxt).action = "SaveGroup"
         row.operator(Ops.bl_idname, text="Delete", text_ctxt=ctxt).action = "DelGroup"
@@ -376,7 +374,7 @@ class AIMatPanel(bpy.types.Panel):
         row.prop(bpy.context.scene.sdn, "clear_material_slots", text="", icon="CON_TRANSLIKE")
         row.operator(AIMatSolutionSave.bl_idname, text="", icon="FILE_TICK")
         row.operator(AIMatSolutionDel.bl_idname, text="", icon="TRASH")
-        layout.template_icon_view(bpy.context.scene.sdn, "ai_gen_solution", show_labels=True, scale_popup=5)
+        # layout.template_icon_view(bpy.context.scene.sdn, "ai_gen_solution", show_labels=True, scale_popup=5)
         row = layout.row(align=True)
         row.prop(bpy.context.scene.sdn, "ai_mat_tex_size", text="")
         row.operator(AIMatSolutionLoad.bl_idname, text_ctxt=ctxt)
