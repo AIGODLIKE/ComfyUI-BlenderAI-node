@@ -1116,9 +1116,9 @@ class Open_Log_Window(bpy.types.Operator):
 
 class CleanVRam(bpy.types.Operator):
     bl_idname = "sdn.clean_vram"
-    bl_label = "Clean VRAM"
+    bl_label = "Clean VRAM & Cache"
     bl_translation_context = ctxt
-    bl_description = "Clean VRAM"
+    bl_description = "Free model memory and clear node execution cache"
 
     def execute(self, context):
         TaskManager.clear_vram()

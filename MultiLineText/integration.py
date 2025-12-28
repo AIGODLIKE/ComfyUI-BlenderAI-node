@@ -1,4 +1,5 @@
 # Reference from: https://github.com/eliemichel/BlenderImgui
+import time
 from typing import Any
 import re
 
@@ -19,6 +20,7 @@ class GlobalImgui:
     draw_handlers = {}
     callbacks = {}
     imgui_backend = None
+    _last_time = 0.0
 
     def __new__(cls):
         if cls._instance is None:
@@ -77,7 +79,10 @@ class GlobalImgui:
 
     def apply_ui_settings(self):
         region = bpy.context.region
-        imgui.get_io().display_size = region.width, region.height
+        io = imgui.get_io()
+        io.display_size = region.width, region.height
+        io.key_repeat_delay = 0.4
+        io.key_repeat_rate = 0.05
         style = imgui.get_style()
         style.window_padding = (1, 1)
         style.window_rounding = 6
@@ -88,6 +93,13 @@ class GlobalImgui:
     def draw(self, area):
         if area != bpy.context.area:
             return
+
+        current_time = time.time()
+        if self._last_time > 0:
+            imgui.get_io().delta_time = max(1e-5, current_time - self._last_time)
+        else:
+            imgui.get_io().delta_time = 1.0 / 60.0
+        self._last_time = current_time
 
         self.apply_ui_settings()
 
