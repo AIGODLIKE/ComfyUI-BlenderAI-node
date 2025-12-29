@@ -210,13 +210,14 @@ class BluePrintBase:
 
     def draw_button(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swsock=True, swdisp=False):
         def show_model_preview(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILayout, prop: str):
-            if self.class_type not in name2path:
-                return False
-            if prop not in get_icon_path(self.class_type):
-                return False
-            col = draw_prop_with_link(layout, self, prop, swsock, swdisp, text="", row=False)
-            col.template_icon_view(self, prop, show_labels=True, scale_popup=popup_scale, scale=popup_scale)
-            return True
+            # Commented out to disable large model preview picker; falls back to dropdown-only UI.
+            # if self.class_type not in name2path:
+            #     return False
+            # if prop not in get_icon_path(self.class_type):
+            #     return False
+            # col = draw_prop_with_link(layout, self, prop, swsock, swdisp, text="", row=False)
+            # col.template_icon_view(self, prop, show_labels=True, scale_popup=popup_scale, scale=popup_scale)
+            return False
 
         # 多行文本处理
         md = self.get_meta(prop)
