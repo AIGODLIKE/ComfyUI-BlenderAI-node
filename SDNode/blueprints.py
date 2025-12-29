@@ -1821,11 +1821,15 @@ class 存储(BluePrintBase):
                 def f(self, imgs):
                     sequences = get_sequences()
                     channel = self.channel
-                    frame_start = bpy.context.scene.frame_current if self.current_frame_as_fs else self.frame_start
+                    frame_start = (
+                        t.task.get("sdn_frame", bpy.context.scene.frame_current)
+                        if self.current_frame_as_fs
+                        else self.frame_start
+                    )
                     frame_final_duration = self.frame_final_duration
                     mode = self.seq_mode
                     cut_off = self.cut_off
-                    max_final_start = bpy.context.scene.frame_current if self.current_frame_as_fs else 0
+                    max_final_start = 0 if self.current_frame_as_fs else frame_start
 
                     if mode == "SeqReplace":
                         # 替换模式: 查找当前通道的 frame_start 到 frame_final_duration 之间的所有序列, 删除, 然后将新建序列
@@ -1847,12 +1851,21 @@ class 存储(BluePrintBase):
                             sequences.remove(seq)
                     elif mode == "SeqAppend":
                         # 追加模式: 查找当前通道的 最后一个序列的持续位置, 往后新增
-                        for seq in sequences:
-                            if seq.channel != channel:
-                                continue
-                            if seq.frame_final_end > max_final_start:
-                                max_final_start = seq.frame_final_end
-                        frame_start = max_final_start
+                        # 当“使用当前帧”启用时，沿用 pre-hook 设置的帧，不再改写
+                        if not self.current_frame_as_fs:
+                            total_duration = frame_final_duration * len(imgs)
+                            channel_seqs = sorted(
+                                (seq for seq in sequences if seq.channel == channel),
+                                key=lambda s: s.frame_final_start,
+                            )
+                            desired_start = frame_start
+                            for seq in channel_seqs:
+                                # 如果在当前插入窗口之前有空隙，则直接使用空隙
+                                if desired_start + total_duration <= seq.frame_final_start:
+                                    break
+                                # 否则将起始位置推到该序列之后，继续查找下一段空隙
+                                desired_start = max(desired_start, seq.frame_final_end)
+                            frame_start = desired_start
                     elif mode == "SeqStack":
                         # 堆叠模式: 直接新建, blender会自己堆叠
                         ...

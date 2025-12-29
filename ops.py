@@ -342,7 +342,11 @@ class Ops(bpy.types.Operator):
                     def pre(cf):
                         bpy.context.scene.frame_set(cf)
                     pre = partial(pre, cf)
-                    TaskManager.push_task(tree.get_task, pre, tree=tree)
+                    def task_with_frame(tree=tree, frame=cf):
+                        task = tree.get_task()
+                        task["sdn_frame"] = frame
+                        return task
+                    TaskManager.push_task(task_with_frame, pre, tree=tree)
             elif bpy.context.scene.sdn.frame_mode == "Batch":
                 batch_dir = bpy.context.scene.sdn.batch_dir
                 select_node = tree.nodes.active
