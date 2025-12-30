@@ -1968,6 +1968,13 @@ class 输入图像(BluePrintBase):
         return setwidth(self, max(self.prev.size[0], self.prev.size[1]))
 
     def spec_extra_properties(s, properties, nname, ndesc):
+        mode_items = [
+            ("输入", "Input", "Use Image From Disk or Blender Image.", "IMAGE_DATA", 0),
+            ("渲染", "Render", "Render needs a .png filepath (Render Properties → Output → Filepath).\n\nUses compositor output; enable Post Processing → Sequencer to include VSE.", "RENDER_STILL", 1),
+            ("序列图", "Sequence", "Load a frame series from the specified directory.", "SEQUENCE", 2),
+            ("视口", "3D Viewport", "OpenGL viewport render from the active camera.", "CAMERA_DATA", 3),
+        ]
+        properties["mode"] = bpy.props.EnumProperty(items=mode_items, default="输入", name="Mode")
         prop = bpy.props.EnumProperty(items=[("FILE", "Image From Disk", "", "FILEBROWSER", 0), ("IMAGE", "Blender Image", "", "IMAGE_DATA", 1)], default="FILE", name="Input Type")
         properties["input_type"] = prop
         prop = bpy.props.PointerProperty(type=bpy.types.Image)
@@ -2020,7 +2027,6 @@ class 输入图像(BluePrintBase):
             if self.mode == "序列图":
                 layout.label(text="Frames Directory", text_ctxt=self.get_ctxt())
             if self.mode == "渲染":
-                layout.label(text="Set Image Path of Render Result(.png)", icon="ERROR")
                 if bpy.context.scene.compositing_node_group is not None:
                     row = layout.row(align=True)
                     row.prop_search(self, "render_layer", bpy.context.scene.sdn, "render_layer")
@@ -2133,6 +2139,10 @@ class 输入图像(BluePrintBase):
                 if not bpy.context.scene.camera:
                     err_info = _T("No Camera in Scene") + " -> " + bpy.context.scene.name
                     raise Exception(err_info)
+                # view_context OpenGL renders crash Blender when no VIEW_3D areas are visible.
+                view3d_exists = any(area.type == "VIEW_3D" for area in bpy.context.window.screen.areas)
+                if get_pref().view_context and not view3d_exists:
+                    raise Exception(_T("View Context requires a visible 3D Viewport area"))
                 bpy.ops.render.opengl(write_still=True, view_context=get_pref().view_context)
                 bpy.context.scene.render.filepath = old
                 bpy.context.scene.render.image_settings.file_format = old_fmt
