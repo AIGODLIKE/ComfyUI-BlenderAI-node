@@ -431,11 +431,14 @@ class PropGen:
 
             def wrap(self, context):
                 update_default(self, context)
-                if not self[i_name]:
+                if i_name not in self.keys():
                     return
-                if not self[i_name].startswith("//"):
+                value = self[i_name]
+                if not value:
                     return
-                self[i_name] = bpy.path.abspath(self[i_name])
+                if not value.startswith("//"):
+                    return
+                self[i_name] = bpy.path.abspath(value)
             return wrap
 
         update = update_wrap(inp_name)
