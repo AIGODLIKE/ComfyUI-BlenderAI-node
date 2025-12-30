@@ -1968,7 +1968,7 @@ class 输入图像(BluePrintBase):
         return setwidth(self, max(self.prev.size[0], self.prev.size[1]))
 
     def spec_extra_properties(s, properties, nname, ndesc):
-        prop = bpy.props.EnumProperty(items=[("FILE", "File", "", "FILEBROWSER", 0), ("IMAGE", "Image", "", "IMAGE_DATA", 1)], default="FILE", name="Input Type")
+        prop = bpy.props.EnumProperty(items=[("FILE", "Image From Disk", "", "FILEBROWSER", 0), ("IMAGE", "Blender Image", "", "IMAGE_DATA", 1)], default="FILE", name="Input Type")
         properties["input_type"] = prop
         prop = bpy.props.PointerProperty(type=bpy.types.Image)
         properties["inner_image"] = prop
@@ -2093,11 +2093,26 @@ class 输入图像(BluePrintBase):
             image: bpy.types.Image = self.inner_image
             old_format = bpy.context.scene.render.image_settings.file_format
             old_color_mode = bpy.context.scene.render.image_settings.color_mode
+            view_settings = bpy.context.scene.view_settings
+            old_view_transform = view_settings.view_transform
+            old_look = view_settings.look
+            old_exposure = view_settings.exposure
+            old_gamma = view_settings.gamma
             bpy.context.scene.render.image_settings.file_format = "PNG"
             bpy.context.scene.render.image_settings.color_mode = "RGBA"
-            image.save_render(filepath = self.image)
-            bpy.context.scene.render.image_settings.file_format = old_format
-            bpy.context.scene.render.image_settings.color_mode = old_color_mode
+            try:
+                view_settings.view_transform = "Standard"
+                view_settings.look = "None"
+                view_settings.exposure = 0.0
+                view_settings.gamma = 1.0
+                image.save_render(filepath = self.image)
+            finally:
+                view_settings.view_transform = old_view_transform
+                view_settings.look = old_look
+                view_settings.exposure = old_exposure
+                view_settings.gamma = old_gamma
+                bpy.context.scene.render.image_settings.file_format = old_format
+                bpy.context.scene.render.image_settings.color_mode = old_color_mode
 
         save_image()
 
@@ -2131,6 +2146,11 @@ class 输入图像(BluePrintBase):
             current_frame = bpy.context.scene.frame_current
             if self.mode == "渲染" and not self.use_current_frame:
                 bpy.context.scene.frame_set(self.input_frame)
+            view_settings = bpy.context.scene.view_settings
+            old_view_transform = view_settings.view_transform
+            old_look = view_settings.look
+            old_exposure = view_settings.exposure
+            old_gamma = view_settings.gamma
             if bpy.context.scene.compositing_node_group is not None:
                 from .utils import set_composite
                 nt = bpy.context.scene.compositing_node_group
@@ -2142,10 +2162,30 @@ class 输入图像(BluePrintBase):
                         render_layer.layer = sel_render_layer.layer
                     if out := render_layer.outputs.get(self.out_layers):
                         nt.links.new(cmp.inputs["Image"], out)
-                    bpy.ops.render.render(write_still=True)
+                    try:
+                        view_settings.view_transform = "Standard"
+                        view_settings.look = "None"
+                        view_settings.exposure = 0.0
+                        view_settings.gamma = 1.0
+                        bpy.ops.render.render(write_still=True)
+                    finally:
+                        view_settings.view_transform = old_view_transform
+                        view_settings.look = old_look
+                        view_settings.exposure = old_exposure
+                        view_settings.gamma = old_gamma
                     nt.nodes.remove(render_layer)
             else:
-                bpy.ops.render.render(write_still=True)
+                try:
+                    view_settings.view_transform = "Standard"
+                    view_settings.look = "None"
+                    view_settings.exposure = 0.0
+                    view_settings.gamma = 1.0
+                    bpy.ops.render.render(write_still=True)
+                finally:
+                    view_settings.view_transform = old_view_transform
+                    view_settings.look = old_look
+                    view_settings.exposure = old_exposure
+                    view_settings.gamma = old_gamma
             if self.mode == "渲染":
                 bpy.context.scene.frame_set(current_frame)
             bpy.context.scene.render.filepath = old
