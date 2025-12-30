@@ -3,6 +3,7 @@ import re
 import bpy
 import random
 import os
+import time
 import textwrap
 import urllib.request
 import urllib.parse
@@ -2206,12 +2207,17 @@ class 输入图像(BluePrintBase):
             render()
             # 上传图片
             upload_image(self.image)
+            time.sleep(0.1)
         r()
 
     def ensure_img_path(s, self: NodeBase):
         if not self.image:
             self.image = Path(tempfile.gettempdir()).joinpath("_render.png").as_posix()
-        p = Path(self.image)
+
+        # Resolve Blender's relative path notation '//' to an absolute path
+        abs_path = bpy.path.abspath(self.image)
+        p = Path(abs_path)
+
         if p.is_dir():
             p = p.joinpath("_render.png")
         if p.suffix.lower() not in [".png"]:
@@ -2220,13 +2226,15 @@ class 输入图像(BluePrintBase):
             p.parent.mkdir(parents=True, exist_ok=True)
         except BaseException:
             ...
-        self.image = p.as_posix()
+        self.image = p.resolve().as_posix()
 
     def serialize_pre(s, self: NodeBase):
         if self.mode in {"渲染", "视口"} and self.reaches_output():
             s.ensure_img_path(self)
         if self.mode == "输入" and self.input_type == "IMAGE":
-            self.image = Path(tempfile.gettempdir()).joinpath(f"{uuid.uuid4().hex}_render.png").as_posix()
+            if not self.image or "_render.png" not in self.image:
+                self.image = Path(tempfile.gettempdir()).joinpath(f"{uuid.uuid4().hex}_render.png").as_posix()
+            s.ensure_img_path(self)
         super().serialize_pre(self)
 
     def serialize_specific(s, self: NodeBase, cfg, execute):
