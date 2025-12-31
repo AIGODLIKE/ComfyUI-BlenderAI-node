@@ -420,6 +420,23 @@ class Icon(metaclass=MetaIn):
             return img
 
     @staticmethod
+    def process_pixels(pixels):
+        """
+        Composite pixels over a dark background to make transparency visible in previews.
+        """
+        import numpy as np
+        arr = np.array(pixels)
+        sized = arr.reshape(-1, 4)
+        # Dark grey background like Blender's Image Editor
+        bg = np.array([0.15, 0.15, 0.15], dtype=np.float32)
+        alpha = sized[:, 3:4]
+        # Blend: color * alpha + bg * (1 - alpha)
+        sized[:, :3] = sized[:, :3] * alpha + bg * (1.0 - alpha)
+        # Set alpha to 1.0 so Blender doesn't blend it again with white
+        sized[:, 3] = 1.0
+        return arr
+
+    @staticmethod
     def reg_icon_by_pixel(prev, name):
         name = FSWatcher.to_str(name)
         if not Icon.can_mark_pixel(prev, name):
@@ -429,7 +446,7 @@ class Icon(metaclass=MetaIn):
         p = Icon.PREV_DICT.new(name)
         p.icon_size = (32, 32)
         p.image_size = (prev.size[0], prev.size[1])
-        p.image_pixels_float[:] = prev.pixels[:]
+        p.image_pixels_float[:] = Icon.process_pixels(prev.pixels)
 
     @staticmethod
     def get_icon_id(name: Path):
@@ -437,6 +454,18 @@ class Icon(metaclass=MetaIn):
         if not p:
             p = Icon.PREV_DICT.get(FSWatcher.to_str(Icon.NONE_IMAGE), None)
         return p.icon_id if p else 0
+
+    @staticmethod
+    def update_icon_pixel_live(name, prev):
+        """
+        Update icon pixels directly from memory without reloading from disk.
+        """
+        p = Icon.PREV_DICT.get(name, None)
+        if not p:
+            return
+        p.icon_size = (32, 32)
+        p.image_size = (prev.size[0], prev.size[1])
+        p.image_pixels_float[:] = Icon.process_pixels(prev.pixels)
 
     @staticmethod
     def update_icon_pixel(name, prev):
@@ -450,7 +479,7 @@ class Icon(metaclass=MetaIn):
             return
         p.icon_size = (32, 32)
         p.image_size = (prev.size[0], prev.size[1])
-        p.image_pixels_float[:] = prev.pixels[:]
+        p.image_pixels_float[:] = Icon.process_pixels(prev.pixels)
 
     def __getitem__(self, name):
         return Icon.get_icon_id(name)

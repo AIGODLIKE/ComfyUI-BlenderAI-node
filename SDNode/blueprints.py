@@ -1970,7 +1970,7 @@ class 输入图像(BluePrintBase):
 
     def spec_extra_properties(s, properties, nname, ndesc):
         mode_items = [
-            ("输入", "Input", "Use Image From Disk or Blender Image.", "IMAGE_DATA", 0),
+            ("输入", "Image", "Use Image From Disk or Blender Image.", "IMAGE_DATA", 0),
             ("渲染", "Render", "Render needs a .png filepath (Render Properties → Output → Filepath).\n\nUses compositor output; enable Post Processing → Sequencer to include VSE.", "RENDER_STILL", 1),
             ("序列图", "Sequence", "Load a frame series from the specified directory.", "SEQUENCE", 2),
             ("视口", "3D Viewport", "OpenGL viewport render from the active camera.", "CAMERA_DATA", 3),
@@ -2116,6 +2116,8 @@ class 输入图像(BluePrintBase):
                 view_settings.exposure = 0.0
                 view_settings.gamma = 1.0
                 image.save_render(filepath = self.image)
+                Icon.update_icon_pixel_live(image.filepath, image)
+                update_screen()
             finally:
                 view_settings.view_transform = old_view_transform
                 view_settings.look = old_look
