@@ -2071,6 +2071,9 @@ class 输入图像(BluePrintBase):
                 icon_id = Icon[prev.filepath]
                 row = layout.row(align=True)
                 row.label(text=f"{prev.file_format} : [{prev.size[0]} x {prev.size[1]}]")
+                if self.mode == "输入" and self.input_type == "IMAGE" and self.inner_image:
+                    op = row.operator("sdn.paint_image_mask", text="", icon="BRUSH_DATA")
+                    op.img_name = self.inner_image.name
                 row.operator(Set_Render_Res.bl_idname, text="", icon="LOOP_FORWARDS").node_name = self.name
                 layout.template_icon(icon_id, scale=self.width // 20)
             return True

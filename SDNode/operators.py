@@ -12,6 +12,46 @@ from ..translations.translation import ctxt
 from ..utils import Timer, _T, get_ai_mat_tree, set_ai_mat_tree, find_area_by_type, find_areas_of_type, find_region_by_type
 
 
+class PaintImageMask(bpy.types.Operator):
+    bl_idname = "sdn.paint_image_mask"
+    bl_label = "Paint Image Mask"
+    bl_description = "Open a new window to paint/erase mask for this image"
+    bl_translation_context = ctxt
+
+    img_name: bpy.props.StringProperty()
+
+    def execute(self, context):
+        if not self.img_name or self.img_name not in bpy.data.images:
+            return {'CANCELLED'}
+
+        img = bpy.data.images[self.img_name]
+
+        # Open new window
+        bpy.ops.wm.window_new()
+        target_window = context.window_manager.windows[-1]
+        target_area = target_window.screen.areas[0]
+        target_area.type = 'IMAGE_EDITOR'
+
+        # Setup space
+        space = target_area.spaces.active
+        space.image = img
+        space.mode = 'PAINT'
+        space.show_region_tool_header = True
+
+        # Activate Erase Soft brush
+        try:
+            with context.temp_override(window=target_window, area=target_area):
+                bpy.ops.brush.asset_activate(
+                    asset_library_type='ESSENTIALS',
+                    asset_library_identifier="",
+                    relative_asset_identifier="brushes/essentials_brushes-mesh_texture.blend/Brush/Erase Soft"
+                )
+        except Exception as e:
+            print(f"SDNode: Could not activate brush: {e}")
+
+        return {'FINISHED'}
+
+
 class AIMatSolutionLoad(bpy.types.Operator):
     bl_idname = "sdn.ai_mat_sol_load"
     bl_label = "AI Mat Solution Load"
@@ -1013,6 +1053,7 @@ clss = (
     ImageProjectOnObject,
     ProjectThenBake,
     OkBakeMenu,
+    PaintImageMask,
 )
 
 ops_register, ops_unregister = bpy.utils.register_classes_factory(clss)

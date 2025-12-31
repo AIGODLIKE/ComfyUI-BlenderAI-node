@@ -1512,6 +1512,12 @@ class Set_Render_Res(bpy.types.Operator):
     bl_translation_context = ctxt
     node_name: bpy.props.StringProperty(default="")
 
+    def invoke(self, context, event):
+        node = bpy.context.space_data.edit_tree.nodes.get(self.node_name)
+        if not node or not node.prev:
+            return {"CANCELLED"}
+        return context.window_manager.invoke_confirm(self, event)
+
     def execute(self, context):
         node = bpy.context.space_data.edit_tree.nodes.get(self.node_name)
         if not node or not node.prev:
