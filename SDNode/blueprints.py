@@ -1,4 +1,5 @@
 import json
+from pprint import pformat
 import re
 import bpy
 import random
@@ -772,19 +773,101 @@ class CheckpointLoaderPysssss(BluePrintBase):
 
 
 class PreviewTextNode(BluePrintBase):
-    comfyClass = "PreviewTextNode"
+    comfyClass = "PreviewTextNode|PreviewAny|Preview Any Node|ShowAny|Display Any (rgthree)|ShowText|pysssss"
+    ANY_CLASS = {"PreviewAny", "Preview Any Node", "ShowAny", "Display Any (rgthree)", "ShowText", "pysssss"}
+    PRIORITY_KEYS = ("string", "text", "text_out", "value", "values", "data", "preview", "result")
+
+    @staticmethod
+    def _format_value(value):
+        if isinstance(value, str):
+            return value
+        if isinstance(value, (int, float, bool)):
+            return str(value)
+        if value is None:
+            return "None"
+        if isinstance(value, dict):
+            try:
+                return json.dumps(value, ensure_ascii=False, indent=2)
+            except TypeError:
+                return pformat(value, width=80, compact=True)
+        if isinstance(value, (list, tuple, set)):
+            if not value:
+                return "[]"
+            if all(isinstance(v, str) for v in value):
+                return "\n".join(str(v) for v in value)
+            try:
+                return json.dumps(list(value), ensure_ascii=False, indent=2)
+            except TypeError:
+                return pformat(value, width=80, compact=True)
+        return str(value)
+
+    @classmethod
+    def _format_output(cls, output: dict):
+        if not output:
+            return ""
+        for key in cls.PRIORITY_KEYS:
+            if key not in output:
+                continue
+            payload = output[key]
+            if isinstance(payload, list) and len(payload) == 1:
+                payload = payload[0]
+            formatted = cls._format_value(payload)
+            if formatted:
+                return formatted
+        return cls._format_value(output)
+
+    @classmethod
+    def _is_preview_any(cls, nname: str | None = None):
+        return nname in cls.ANY_CLASS
+
+    def spec_extra_properties(s, properties, nname, ndesc):
+        if s._is_preview_any(nname):
+            properties["text"] = bpy.props.StringProperty(
+                name="Text",
+                default="",
+                description="Preview output",
+            )
 
     def post_fn(s, self: NodeBase, t: Task, result):
         logger.debug("%s%s->%s", self.class_type, _T('Post Function'), result)
         WindowLogger.push_log("%s%s->%s", self.class_type, _T('Post Function'), result)
-        text = result.get("output", {}).get("string", [])
-        if text and isinstance(text[0], str):
-            self.text = text[0]
+        output = result.get("output", {})
+        text_value = ""
+        strings = output.get("string", [])
+        if strings and isinstance(strings, list) and strings and isinstance(strings[0], str):
+            text_value = strings[0]
+        if not text_value and s._is_preview_any(self.class_type):
+            text_value = s._format_output(output)
+        if not text_value:
+            return
+
+        def assign(node, value):
+            if hasattr(node, "text"):
+                node.text = value
+            elif hasattr(node, "string"):
+                node.string = value
+        Timer.put((assign, self, str(text_value)))
+
+    def spec_draw(s, self: NodeBase, context, layout, prop: str, swsock=True, swdisp=False):
+        if prop != "text" or not s._is_preview_any(self.class_type):
+            return False
+
+        text_value = getattr(self, "text", "")
+        if text_value:
+            width = max(1, int(self.width) // 7)
+            for line in textwrap.wrap(text=str(text_value), width=width):
+                layout.label(text=line, text_ctxt=self.get_ctxt())
+            row = layout.row(align=True)
+            op = row.operator("sdn.copy_iname_to_clipboard", text="", icon="COPYDOWN")
+            op.info = str(text_value)
+        return True
 
     def dump_specific(s, self: NodeBase = None, cfg=None, selected_only=False, **kwargs):
-        inputs = cfg["inputs"]
+        inputs = cfg.get("inputs", cfg.get("input", []))
+        if not inputs:
+            return
         for inp in inputs:
-            if inp.get("name") == "text" and "widget" in inp:
+            if inp.get("name") in {"text", "string"} and "widget" in inp:
                 inp.pop("widget")
 
 
@@ -3627,8 +3710,7 @@ class SDParameterGenerator(BluePrintBase):
 @lru_cache(maxsize=1024)
 def get_blueprints(comfyClass="", default=BluePrintBase) -> BluePrintBase:
     for cls in BluePrintBase.__subclasses__():
-        if cls.comfyClass != comfyClass:
-            continue
-        return cls()
+        if comfyClass in cls.comfyClass.split("|"):
+            return cls()
     new_comfy_bp = type(comfyClass, (default,), {"comfyClass": comfyClass})
     return new_comfy_bp()
