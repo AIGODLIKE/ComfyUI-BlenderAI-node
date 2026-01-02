@@ -456,13 +456,6 @@ class PropGen:
     @staticmethod
     def _spec_gen_properties(nname, inp_name, prop):
 
-        def clamp_seed_value(seed: str) -> str:
-            try:
-                value = int(seed)
-            except Exception:
-                return "0"
-            return str(max(0, min(value, MAX_SEED_VALUE)))
-
         def set_sync_rand(self: NodeBase, seed):
             if not getattr(self, "sync_rand", False):
                 return
@@ -477,17 +470,25 @@ class PropGen:
 
         if inp_name == "noise_seed":
             def _noise_seed_update(self, context):
-                v = clamp_seed_value(getattr(self, "noise_seed", "0"))
-                if getattr(self, "noise_seed", None) != v:
-                    self.noise_seed = v
+                v = getattr(self, "noise_seed", "0")
+                try:
+                    int(v)
+                except Exception:
+                    v = "0"
+                    if getattr(self, "noise_seed", None) != v:
+                        self.noise_seed = v
                 set_sync_rand(self, v)
 
             prop = bpy.props.StringProperty(default="0", update=_noise_seed_update)
         elif inp_name == "seed":
             def _seed_update(self, context):
-                v = clamp_seed_value(getattr(self, "seed", "0"))
-                if getattr(self, "seed", None) != v:
-                    self.seed = v
+                v = getattr(self, "seed", "0")
+                try:
+                    int(v)
+                except Exception:
+                    v = "0"
+                    if getattr(self, "seed", None) != v:
+                        self.seed = v
                 set_sync_rand(self, v)
 
             prop = bpy.props.StringProperty(default="0", update=_seed_update)

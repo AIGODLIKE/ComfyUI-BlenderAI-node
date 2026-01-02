@@ -91,11 +91,8 @@ def get_sync_rand_node(tree):
             return node
 
 
-MAX_SEED_VALUE = 2_147_483_647
-
-
 def get_fixed_seed():
-    return int(random.randrange(MAX_SEED_VALUE + 1))
+    return int(random.randrange(4294967294))
 
 
 def is_bool_list(some_list: list):
