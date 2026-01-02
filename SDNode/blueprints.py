@@ -92,7 +92,7 @@ def get_sync_rand_node(tree):
 
 
 def get_fixed_seed():
-    return int(random.randrange(4294967294))
+    return int(random.randrange(2147483647))
 
 
 def is_bool_list(some_list: list):
