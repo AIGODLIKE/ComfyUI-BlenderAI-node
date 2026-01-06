@@ -31,6 +31,9 @@ from ..kclogger import logger
 from ..utils import _T, Icon, update_screen, PrevMgr, rgb2hex, hex2rgb
 from ..translations.translation import ComfyTranslator
 
+# Profiling cache for preview draw (avoid writing to ID data blocks)
+_PROFILE_TOKENS = {}
+
 
 def get_sequences(scene=None):
     if scene is None:
@@ -1306,6 +1309,8 @@ class 预览(BluePrintBase):
             return self.width
         pnum = len(self.prev)
         p0 = self.prev[0].image
+        if p0 is None:
+            return self.width
         w = max(p0.size[0], p0.size[1])
         if w == 0:
             return self.width
@@ -1332,6 +1337,10 @@ class 预览(BluePrintBase):
             if pnum == 0:
                 return True
             p0 = self.prev[0].image
+            if p0 is None:
+                return True
+            profile_token = p0.name
+            start_ns = time.time_ns()
             layout.label(text=f"{p0.file_format} : [{p0.size[0]} x {p0.size[1]}]")
             col = layout.column(align=True)
             w = self.width / max(1, min(self.lnum, pnum)) // 20
@@ -1339,9 +1348,9 @@ class 预览(BluePrintBase):
                 if i % self.lnum == 0:
                     fcol = col.column_flow(columns=min(self.lnum, pnum))
                 prev = p.image
-                if prev.name not in Icon:
-                    Icon.reg_icon_by_pixel(prev, prev.name)
-                icon_id = Icon[prev.name]
+                if prev is None:
+                    continue
+                icon_id = Icon.get_icon_id(prev.name)
                 cfcol = fcol.column(align=True)
                 cfcol.template_icon(icon_id, scale=w)
                 cfrow = cfcol.row(align=True)
@@ -1351,6 +1360,13 @@ class 预览(BluePrintBase):
                 cfrow.operator(PreviewImageInPlane.bl_idname, text="", icon="HIDE_OFF").img_name = prev.name
                 cfrow.operator(ImageAsPBRMat.bl_idname, text="", icon="MATERIAL").img_name = prev.name
                 cfrow.operator(ImageProjectOnObject.bl_idname, text="", icon="SCENE").img_name = prev.name
+            if get_pref().debug:
+                dt_ms = (time.time_ns() - start_ns) / 1e6
+                key = self.as_pointer() if hasattr(self, "as_pointer") else id(self)
+                last_token = _PROFILE_TOKENS.get(("prev", key))
+                if last_token != profile_token:
+                    _PROFILE_TOKENS[("prev", key)] = profile_token
+                    logger.info("[Preview Draw] node=%s images=%d time=%.2f ms", self.name, pnum, dt_ms)
             return True
 
     def serialize_pre_specific(s, self: NodeBase):
@@ -1389,6 +1405,7 @@ class 预览(BluePrintBase):
                     if not (img := Icon.find_image(img_path)):
                         return
                     p.image = img
+                    Icon.reg_icon_by_pixel(img, img.name)
                 except TypeError:
                     ...
         Timer.put((f, self, img_paths))
@@ -1402,6 +1419,8 @@ class PreviewImage(BluePrintBase):
             return self.width
         pnum = len(self.prev)
         p0 = self.prev[0].image
+        if p0 is None:
+            return self.width
         w = max(p0.size[0], p0.size[1])
         if w == 0:
             return self.width
@@ -1427,6 +1446,10 @@ class PreviewImage(BluePrintBase):
             if pnum == 0:
                 return True
             p0 = self.prev[0].image
+            if p0 is None:
+                return True
+            profile_token = p0.name
+            start_ns = time.time_ns()
             layout.label(text=f"{p0.file_format} : [{p0.size[0]} x {p0.size[1]}]")
             col = layout.column(align=True)
             w = self.width / max(1, min(self.lnum, pnum)) // 20
@@ -1434,9 +1457,9 @@ class PreviewImage(BluePrintBase):
                 if i % self.lnum == 0:
                     fcol = col.column_flow(columns=min(self.lnum, pnum))
                 prev = p.image
-                if prev.name not in Icon:
-                    Icon.reg_icon_by_pixel(prev, prev.name)
-                icon_id = Icon[prev.name]
+                if prev is None:
+                    continue
+                icon_id = Icon.get_icon_id(prev.name)
                 cfcol = fcol.column(align=True)
                 cfcol.template_icon(icon_id, scale=w)
                 cfrow = cfcol.row(align=True)
@@ -1446,6 +1469,13 @@ class PreviewImage(BluePrintBase):
                 cfrow.operator(PreviewImageInPlane.bl_idname, text="", icon="HIDE_OFF").img_name = prev.name
                 cfrow.operator(ImageAsPBRMat.bl_idname, text="", icon="MATERIAL").img_name = prev.name
                 cfrow.operator(ImageProjectOnObject.bl_idname, text="", icon="SCENE").img_name = prev.name
+            if get_pref().debug:
+                dt_ms = (time.time_ns() - start_ns) / 1e6
+                key = self.as_pointer() if hasattr(self, "as_pointer") else id(self)
+                last_token = _PROFILE_TOKENS.get(("prev_image", key))
+                if last_token != profile_token:
+                    _PROFILE_TOKENS[("prev_image", key)] = profile_token
+                    logger.info("[PreviewImage Draw] node=%s images=%d time=%.2f ms", self.name, pnum, dt_ms)
             return True
 
     def serialize_pre_specific(s, self: NodeBase):
@@ -1614,6 +1644,8 @@ class ComfyUIInputs(BluePrintBase):
             return self.width
         pnum = len(self.prev_image)
         p0 = self.prev_image[0].image
+        if p0 is None:
+            return self.width
         w = max(p0.size[0], p0.size[1])
         if w == 0:
             return self.width
@@ -1706,6 +1738,8 @@ class ComfyUIInputs(BluePrintBase):
             if pnum == 0:
                 return True
             p0 = self.prev_image[0].image
+            if p0 is None:
+                return True
             layout.label(text=f"{p0.file_format} : [{p0.size[0]} x {p0.size[1]}]")
             col = layout.column(align=True)
             w = self.width / max(1, min(self.lnum, pnum)) // 20
@@ -1713,9 +1747,9 @@ class ComfyUIInputs(BluePrintBase):
                 if i % self.lnum == 0:
                     fcol = col.column_flow(columns=min(self.lnum, pnum))
                 prev = p.image
-                if prev.name not in Icon:
-                    Icon.reg_icon_by_pixel(prev, prev.name)
-                icon_id = Icon[prev.name]
+                if prev is None:
+                    continue
+                icon_id = Icon.get_icon_id(prev.name)
                 cfcol = fcol.column(align=True)
                 cfcol.template_icon(icon_id, scale=w)
                 cfrow = cfcol.row(align=True)
