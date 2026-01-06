@@ -1306,6 +1306,8 @@ class 预览(BluePrintBase):
             return self.width
         pnum = len(self.prev)
         p0 = self.prev[0].image
+        if not p0:
+            return self.width
         w = max(p0.size[0], p0.size[1])
         if w == 0:
             return self.width
@@ -1383,11 +1385,11 @@ class 预览(BluePrintBase):
                 if not Path(img_path).exists():
                     continue
                 try:
-                    p = self.prev.add()
-                    # p.image = bpy.data.images.load(img_path)
                     Icon.load_icon(img_path)
                     if not (img := Icon.find_image(img_path)):
-                        return
+                        continue
+                    p = self.prev.add()
+                    # p.image = bpy.data.images.load(img_path)
                     p.image = img
                 except TypeError:
                     ...
@@ -1402,6 +1404,8 @@ class PreviewImage(BluePrintBase):
             return self.width
         pnum = len(self.prev)
         p0 = self.prev[0].image
+        if not p0:
+            return self.width
         w = max(p0.size[0], p0.size[1])
         if w == 0:
             return self.width
@@ -1478,11 +1482,11 @@ class PreviewImage(BluePrintBase):
                 if not Path(img_path).exists():
                     continue
                 try:
-                    p = self.prev.add()
-                    # p.image = bpy.data.images.load(img_path)
                     Icon.load_icon(img_path)
                     if not (img := Icon.find_image(img_path)):
-                        return
+                        continue
+                    p = self.prev.add()
+                    # p.image = bpy.data.images.load(img_path)
                     p.image = img
                 except TypeError:
                     ...
@@ -1614,6 +1618,8 @@ class ComfyUIInputs(BluePrintBase):
             return self.width
         pnum = len(self.prev_image)
         p0 = self.prev_image[0].image
+        if not p0:
+            return self.width
         w = max(p0.size[0], p0.size[1])
         if w == 0:
             return self.width
