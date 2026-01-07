@@ -198,6 +198,13 @@ class BluePrintBase:
                     if str(i) == v:
                         return i
             return type(meta[0][0])(v)
+        # Clamp FLOAT widgets to declared bounds to avoid float32 rounding underflow/overflow from Blender UI
+        if meta and meta[0] == "FLOAT" and len(meta) > 1 and isinstance(meta[1], dict) and isinstance(v, (float, int)):
+            cfg = meta[1]
+            if "min" in cfg:
+                v = max(v, cfg["min"])
+            if "max" in cfg:
+                v = min(v, cfg["max"])
         return v
 
     def setattr(s, self: NodeBase, prop_name, v):
