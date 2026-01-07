@@ -31,9 +31,6 @@ from ..kclogger import logger
 from ..utils import _T, Icon, update_screen, PrevMgr, rgb2hex, hex2rgb
 from ..translations.translation import ComfyTranslator
 
-# Profiling cache for preview draw (avoid writing to ID data blocks)
-_PROFILE_TOKENS = {}
-
 
 def get_sequences(scene=None):
     if scene is None:
@@ -1339,8 +1336,6 @@ class 预览(BluePrintBase):
             p0 = self.prev[0].image
             if p0 is None:
                 return True
-            profile_token = p0.name
-            start_ns = time.time_ns()
             layout.label(text=f"{p0.file_format} : [{p0.size[0]} x {p0.size[1]}]")
             col = layout.column(align=True)
             w = self.width / max(1, min(self.lnum, pnum)) // 20
@@ -1360,13 +1355,6 @@ class 预览(BluePrintBase):
                 cfrow.operator(PreviewImageInPlane.bl_idname, text="", icon="HIDE_OFF").img_name = prev.name
                 cfrow.operator(ImageAsPBRMat.bl_idname, text="", icon="MATERIAL").img_name = prev.name
                 cfrow.operator(ImageProjectOnObject.bl_idname, text="", icon="SCENE").img_name = prev.name
-            if get_pref().debug:
-                dt_ms = (time.time_ns() - start_ns) / 1e6
-                key = self.as_pointer() if hasattr(self, "as_pointer") else id(self)
-                last_token = _PROFILE_TOKENS.get(("prev", key))
-                if last_token != profile_token:
-                    _PROFILE_TOKENS[("prev", key)] = profile_token
-                    logger.info("[Preview Draw] node=%s images=%d time=%.2f ms", self.name, pnum, dt_ms)
             return True
 
     def serialize_pre_specific(s, self: NodeBase):
@@ -1448,8 +1436,6 @@ class PreviewImage(BluePrintBase):
             p0 = self.prev[0].image
             if p0 is None:
                 return True
-            profile_token = p0.name
-            start_ns = time.time_ns()
             layout.label(text=f"{p0.file_format} : [{p0.size[0]} x {p0.size[1]}]")
             col = layout.column(align=True)
             w = self.width / max(1, min(self.lnum, pnum)) // 20
@@ -1469,13 +1455,6 @@ class PreviewImage(BluePrintBase):
                 cfrow.operator(PreviewImageInPlane.bl_idname, text="", icon="HIDE_OFF").img_name = prev.name
                 cfrow.operator(ImageAsPBRMat.bl_idname, text="", icon="MATERIAL").img_name = prev.name
                 cfrow.operator(ImageProjectOnObject.bl_idname, text="", icon="SCENE").img_name = prev.name
-            if get_pref().debug:
-                dt_ms = (time.time_ns() - start_ns) / 1e6
-                key = self.as_pointer() if hasattr(self, "as_pointer") else id(self)
-                last_token = _PROFILE_TOKENS.get(("prev_image", key))
-                if last_token != profile_token:
-                    _PROFILE_TOKENS[("prev_image", key)] = profile_token
-                    logger.info("[PreviewImage Draw] node=%s images=%d time=%.2f ms", self.name, pnum, dt_ms)
             return True
 
     def serialize_pre_specific(s, self: NodeBase):
