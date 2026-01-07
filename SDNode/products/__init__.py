@@ -12,4 +12,7 @@ def products_reg():
 
 
 def products_unreg():
-    unreg()
+    try:
+        unreg()
+    except KeyError:
+        ...

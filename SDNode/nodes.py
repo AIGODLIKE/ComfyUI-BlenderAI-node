@@ -900,7 +900,7 @@ class NodeBase(bpy.types.Node):
         if not self.is_registered_node_type():
             return
         tree = self.get_tree()
-        if tree.freeze:
+        if not tree or not hasattr(tree, "freeze") or tree.freeze:
             return
         self.remove_multi_link()
         self.remove_invalid_link()
