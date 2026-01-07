@@ -423,6 +423,13 @@ class AddonPreference(bpy.types.AddonPreferences):
             args.append("--disable-metadata")
         if self.windows_standalone_build:
             args.append("--windows-standalone-build")
+
+        # Enable Manager (legacy UI) automatically if manager_requirements.txt exists in ComfyUI root
+        manager_req = Path(self.model_path).joinpath("manager_requirements.txt")
+        if manager_req.exists():
+            args.append("--enable-manager")
+            args.append("--enable-manager-legacy-ui")
+
         # args.append("--front-end-version")
         # args.append("Comfy-Org/ComfyUI_frontend@latest")
         return args
