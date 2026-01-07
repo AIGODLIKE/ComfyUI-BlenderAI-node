@@ -435,19 +435,6 @@ class Icon(metaclass=MetaIn):
         img.pixels.foreach_get(pixels)
         arr = pixels.reshape(-1, 4)
 
-        # Downscale large images to reduce preview processing cost
-        max_dim = max(w, h)
-        new_w, new_h = w, h
-        if max_dim > 1024:
-            scale = 1024 / max_dim
-            new_w = max(1, int(w * scale))
-            new_h = max(1, int(h * scale))
-            step_x = max(1, int(round(w / new_w)))
-            step_y = max(1, int(round(h / new_h)))
-            arr = arr.reshape(h, w, 4)[::step_y, ::step_x, :]
-            new_h, new_w = arr.shape[0], arr.shape[1]
-            arr = arr.reshape(-1, 4)
-
         # Dark grey background like Blender's Image Editor
         bg = np.array([0.15, 0.15, 0.15], dtype=np.float32)
         alpha = arr[:, 3:4]
@@ -455,7 +442,7 @@ class Icon(metaclass=MetaIn):
         arr[:, :3] = arr[:, :3] * alpha + bg * (1.0 - alpha)
         # Set alpha to 1.0 so Blender doesn't blend it again with white
         arr[:, 3] = 1.0
-        return arr.reshape(-1), (new_w, new_h)
+        return arr.reshape(-1), (w, h)
 
     @staticmethod
     def reg_icon_by_pixel(prev, name):
