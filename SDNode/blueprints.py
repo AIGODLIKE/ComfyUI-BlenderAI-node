@@ -3200,6 +3200,7 @@ class SaveModel(BluePrintBase):
         properties["import_to_origin"] = bpy.props.BoolProperty(name="Import to Origin", default=False)
         # 保存到资产库
         properties["save_to_asset_lib"] = bpy.props.BoolProperty(name="Save to Asset Library", default=False)
+        properties["delete_empty_objects"] = bpy.props.BoolProperty(name="Delete Empty Objects", default=False, description="Unparent children and remove root empties after import")
         # 导入位置
         properties["import_location"] = bpy.props.FloatVectorProperty(name="Location", size=3, subtype="TRANSLATION")
         # 导入朝向
@@ -3212,6 +3213,7 @@ class SaveModel(BluePrintBase):
             "align_to_bottom",
             "import_to_origin",
             "save_to_asset_lib",
+            "delete_empty_objects",
             "import_location",
             "import_rotation",
         }:
@@ -3226,6 +3228,7 @@ class SaveModel(BluePrintBase):
                 layout.prop(self, "align_to_bottom", text_ctxt=self.get_ctxt())
                 layout.prop(self, "import_to_origin", text_ctxt=self.get_ctxt())
                 layout.prop(self, "save_to_asset_lib", text_ctxt=self.get_ctxt())
+                layout.prop(self, "delete_empty_objects", text_ctxt=self.get_ctxt())
                 layout.prop(self, "import_location", text_ctxt=self.get_ctxt())
                 layout.prop(self, "import_rotation", text_ctxt=self.get_ctxt())
                 return True
@@ -3299,11 +3302,13 @@ class SaveModel(BluePrintBase):
             for filename in model_paths:
                 if not filename:
                     continue
-                if not filename.lower().endswith(".glb"):
+                suffix = Path(filename).suffix.lower()
+                allowed = {".glb", ".gltf", ".fbx", ".obj", ".stl", ".usdz"}
+                if suffix not in allowed:
                     logger.warning(f"Not process {filename}")
                     WindowLogger.push_log(f"Not process {filename}")
                     continue
-                
+
                 if "/" in filename:
                     folder, name = filename.rsplit("/", 1)
                 else:
@@ -3312,9 +3317,10 @@ class SaveModel(BluePrintBase):
                 # data = {"filename": filename, "subfolder": "3d", "type": "output"}
 
                 if self.mode == "Save":
-                    save_path = Path(self.output_dir).joinpath(self.filename_prefix).with_suffix(".glb")
+                    target_suffix = suffix if suffix in allowed else ".glb"
+                    save_path = Path(self.output_dir).joinpath(self.filename_prefix).with_suffix(target_suffix)
                     save_path = get_next_filename(save_path)
-                    cache_to_local(data, suffix=".glb", save_path=save_path)
+                    cache_to_local(data, suffix=target_suffix, save_path=save_path)
                     continue
 
                 save_path = save_dir.joinpath(filename)
@@ -3325,6 +3331,13 @@ class SaveModel(BluePrintBase):
 
                 active_object = bpy.context.object
                 imp_objs = s.import_model(model_path)
+                if self.delete_empty_objects:
+                    root_empties = [o for o in imp_objs if o.type == "EMPTY"]
+                    for empty in root_empties:
+                        for child in list(empty.children):
+                            child.matrix_world = child.matrix_world.copy()
+                            child.parent = None
+                        bpy.data.objects.remove(empty, do_unlink=True)
                 for obj in imp_objs:
                     if self.align_to_bottom:
                         s.set_origin(obj)
