@@ -163,6 +163,14 @@ class BlenderInputs:
                         "tooltip": "Waiting Timeout.",
                     },
                 ),
+                "format": (
+                    IO.COMBO,
+                    {
+                        "default": "glb",
+                        "options": ["glb", "fbx"],
+                        "tooltip": "Active model export format.",
+                    },
+                ),
             },
             "hidden": {
                 "unique_id": "UNIQUE_ID",
@@ -243,15 +251,24 @@ class BlenderInputs:
     FUNCTION = "build_inputs" if get_comfyui_version() <= (0, 3, 43) else "async_build_inputs"
     unique_id = -1
 
-    def build_inputs(self, frame=0, timeout=30, prompt=None, unique_id=None, extra_pnginfo=None):
+    def build_inputs(self, frame=0, timeout=30, format="glb", prompt=None, unique_id=None, extra_pnginfo=None):
         try:
             loop = asyncio.get_event_loop()
         except Exception:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
-        return loop.run_until_complete(self.async_build_inputs(frame, prompt, timeout, unique_id, extra_pnginfo))
+        return loop.run_until_complete(
+            self.async_build_inputs(
+                frame=frame,
+                timeout=timeout,
+                format=format,
+                prompt=prompt,
+                unique_id=unique_id,
+                extra_pnginfo=extra_pnginfo,
+            )
+        )
 
-    async def async_build_inputs(self, frame=0, timeout=30, prompt=None, unique_id=None, extra_pnginfo=None):
+    async def async_build_inputs(self, frame=0, timeout=30, format="glb", prompt=None, unique_id=None, extra_pnginfo=None):
         # print("Combined Outputs: ", prompt, unique_id, extra_pnginfo)
         _prompt = {
             "20": {
@@ -387,11 +404,11 @@ class BlenderInputs:
                 node_outputs[output["name"]] = output
         res = []
         for data_name in self.RETURN_NAMES:
-            bldata = await self.get_data_from_blender(data_name, frame, timeout, node_outputs)
+            bldata = await self.get_data_from_blender(data_name, frame, timeout, node_outputs, model_format=format)
             res.append(bldata)
         return res
 
-    async def get_data_from_blender(self, data_name, frame, timeout, node_outputs: dict[str, str]):
+    async def get_data_from_blender(self, data_name, frame, timeout, node_outputs: dict[str, str], model_format="glb"):
         """
         通过网络向Blender发送请求并获取数据
         """
@@ -404,6 +421,8 @@ class BlenderInputs:
             "data_name": data_name,
             "frame": frame,
         }
+        if data_name == "active_model" and model_format:
+            data_req["format"] = str(model_format).lower()
         return await self.get_data_ws_ex(data_req, timeout)
         return self.get_data_ws_ex(data_req)
 

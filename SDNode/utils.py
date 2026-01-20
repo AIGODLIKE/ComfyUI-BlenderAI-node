@@ -604,6 +604,7 @@ def calc_data_from_blender(request_data: dict) -> dict:
     # ({"name": "active_model", "type": "STRING", "links": [18]},)
     # ({"name": "custom_image", "type": "IMAGE", "links": None},)
     data_name = message.get("data_name")
+    model_format = str(message.get("format", "glb")).lower()
     uid = uuid.uuid4().hex[:8]
     out_dir = Path(gettempdir()) / f"BlenderAI_Inputs/{data_name}"
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -615,12 +616,12 @@ def calc_data_from_blender(request_data: dict) -> dict:
     old_frame = bpy.context.scene.frame_current
     if frame != -999:
         Timer.wait_run(set_frame)(frame)
-    res = calc_data_from_blender_do(data_name, out_dir, uid)
+    res = calc_data_from_blender_do(data_name, out_dir, uid, model_format=model_format)
     if frame != -999:
         Timer.wait_run(set_frame)(old_frame)
     return res
 
-def calc_data_from_blender_do(data_name, out_dir, uid) -> dict:
+def calc_data_from_blender_do(data_name, out_dir, uid, model_format="glb") -> dict:
     if data_name == "camera_viewport":
         data_path = out_dir / f"render_view_{uid}.png"
 
@@ -746,13 +747,23 @@ def calc_data_from_blender_do(data_name, out_dir, uid) -> dict:
     elif data_name == "active_model":
         # 保存当前激活模型
         # 上传模型
-        data_path = out_dir / f"active_model_{uid}.glb"
+        export_format = str(model_format or "glb").lower()
+        if export_format == "fbx":
+            data_path = out_dir / f"active_model_{uid}.fbx"
+        else:
+            data_path = out_dir / f"active_model_{uid}.glb"
 
         def run():
-            bpy.ops.export_scene.gltf(
-                filepath=data_path.as_posix(),
-                use_selection=True,
-            )
+            if export_format == "fbx":
+                bpy.ops.export_scene.fbx(
+                    filepath=data_path.as_posix(),
+                    use_selection=True,
+                )
+            else:
+                bpy.ops.export_scene.gltf(
+                    filepath=data_path.as_posix(),
+                    use_selection=True,
+                )
 
         Timer.wait_run(run)()
         upload_status = upload_data(data_name, data_path)

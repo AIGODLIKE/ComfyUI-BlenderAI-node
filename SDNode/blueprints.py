@@ -3191,6 +3191,7 @@ class SaveModel(BluePrintBase):
         items = [
             ("Save", "Save", "", "", 0),
             ("Import", "Import", "", "", 1),
+            ("Apply Animation", "Apply Animation", "", "", 2),
         ]
         prop = bpy.props.EnumProperty(items=items)
         properties["mode"] = prop
@@ -3201,6 +3202,7 @@ class SaveModel(BluePrintBase):
         # 保存到资产库
         properties["save_to_asset_lib"] = bpy.props.BoolProperty(name="Save to Asset Library", default=False)
         properties["delete_empty_objects"] = bpy.props.BoolProperty(name="Delete Empty Objects", default=False, description="Unparent children and remove root empties after import")
+        properties["retain_armature"] = bpy.props.BoolProperty(name="Retain Armature Obj", default=False, description="Keep imported armature after applying animation")
         # 导入位置
         properties["import_location"] = bpy.props.FloatVectorProperty(name="Location", size=3, subtype="TRANSLATION")
         # 导入朝向
@@ -3214,6 +3216,7 @@ class SaveModel(BluePrintBase):
             "import_to_origin",
             "save_to_asset_lib",
             "delete_empty_objects",
+            "retain_armature",
             "import_location",
             "import_rotation",
         }:
@@ -3231,6 +3234,10 @@ class SaveModel(BluePrintBase):
                 layout.prop(self, "delete_empty_objects", text_ctxt=self.get_ctxt())
                 layout.prop(self, "import_location", text_ctxt=self.get_ctxt())
                 layout.prop(self, "import_rotation", text_ctxt=self.get_ctxt())
+                return True
+            elif self.mode == "Apply Animation":
+                layout.label(text="Select an armature to apply animation", text_ctxt=self.get_ctxt())
+                layout.prop(self, "retain_armature", text_ctxt=self.get_ctxt())
                 return True
         return False
 
@@ -3330,7 +3337,54 @@ class SaveModel(BluePrintBase):
                 model_path = cache_to_local(data, suffix=suffix, save_path=save_path).as_posix()
 
                 active_object = bpy.context.object
+                selected_objects = list(bpy.context.selected_objects)
                 imp_objs = s.import_model(model_path)
+                if self.mode == "Apply Animation":
+                    target_armature = None
+                    if active_object and active_object.type == "ARMATURE":
+                        target_armature = active_object
+                    else:
+                        for obj in selected_objects:
+                            if obj.type == "ARMATURE":
+                                target_armature = obj
+                                break
+                    if not target_armature:
+                        logger.error("No active armature selected for Apply Animation")
+                        WindowLogger.push_log("No active armature selected for Apply Animation")
+                        return
+
+                    source_armatures = [obj for obj in imp_objs if obj.type == "ARMATURE"]
+                    if not source_armatures:
+                        logger.error("No armature found in imported model")
+                        WindowLogger.push_log("No armature found in imported model")
+                        return
+                    source_armature = source_armatures[0]
+                    try:
+                        if bpy.context.mode != "OBJECT":
+                            bpy.ops.object.mode_set(mode="OBJECT")
+                    except Exception:
+                        pass
+                    for obj in bpy.context.selected_objects:
+                        obj.select_set(False)
+                    source_armature.select_set(True)
+                    target_armature.select_set(True)
+                    bpy.context.view_layer.objects.active = source_armature
+                    try:
+                        bpy.ops.object.make_links_data(type="ANIMATION")
+                    except Exception as err:
+                        logger.error("Apply Animation failed: %s", err)
+                        WindowLogger.push_log("Apply Animation failed: %s", err)
+                    if not self.retain_armature:
+                        bpy.data.objects.remove(source_armature, do_unlink=True)
+                    for obj in bpy.context.selected_objects:
+                        obj.select_set(False)
+                    for obj in selected_objects:
+                        if obj.name in bpy.context.scene.objects:
+                            obj.select_set(True)
+                    if target_armature.name in bpy.context.scene.objects:
+                        bpy.context.view_layer.objects.active = target_armature
+                    continue
+
                 if self.delete_empty_objects:
                     root_empties = [o for o in imp_objs if o.type == "EMPTY"]
                     for empty in root_empties:
