@@ -623,34 +623,36 @@ class PkgInstaller:
         should_use_user = PkgInstaller.should_use_user()
         if should_use_user:
             site.addsitedir(site.getusersitepackages())
+        is_arch = PkgInstaller.is_arch_linux()
+        arch_target = None
+        if is_arch:
+            arch_target = bpy.utils.user_resource("SCRIPTS", path="addons/modules", create=True)
+            if not arch_target:
+                user_root = bpy.utils.resource_path("USER")
+                if user_root:
+                    arch_target = Path(user_root) / "scripts" / "addons" / "modules"
+                    arch_target.mkdir(parents=True, exist_ok=True)
+                    arch_target = arch_target.as_posix()
+            if arch_target:
+                site.addsitedir(arch_target)
         need = [pkg for pkg in packages if not PkgInstaller.is_installed(pkg)]
         from pip._internal import main
         if need:
             url = PkgInstaller.select_pip_source()
-        arch_target = None
-        if need and PkgInstaller.is_arch_linux():
-            arch_target = bpy.utils.user_resource("SCRIPTS", path="addons/modules", create=True)
-            if arch_target:
-                site.addsitedir(arch_target)
         for pkg in need:
             try:
                 final_url = urlparse(url)
                 # 避免build
                 command = ['install', pkg, "-i", url, "--prefer-binary"]
-                if arch_target and pkg == "slimgui":
-                    command.extend(["--target", arch_target, "--break-system-packages"])
+                if is_arch:
+                    command.append("--break-system-packages")
+                    if arch_target:
+                        command.extend(["--target", arch_target])
                 if should_use_user:
                     command.append("--user")
                 command.append("--trusted-host")
                 command.append(final_url.netloc)
                 main(command)
-                if arch_target and pkg == "slimgui" and not PkgInstaller.is_installed(pkg):
-                    fallback = ['install', pkg, "-i", url, "--prefer-binary"]
-                    if should_use_user:
-                        fallback.append("--user")
-                    fallback.append("--trusted-host")
-                    fallback.append(final_url.netloc)
-                    main(fallback)
                 if not PkgInstaller.is_installed(pkg):
                     return False
             except Exception:
