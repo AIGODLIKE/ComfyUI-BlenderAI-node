@@ -602,6 +602,21 @@ class PkgInstaller:
         return platform.system() == "Windows" and Path(bpy.app.binary_path).drive.upper().startswith("C:")
 
     @staticmethod
+    def is_arch_linux():
+        if platform.system() != "Linux":
+            return False
+        for os_release in (Path("/etc/os-release"), Path("/usr/lib/os-release")):
+            if not os_release.exists():
+                continue
+            try:
+                content = os_release.read_text(encoding="utf8").lower()
+            except Exception:
+                continue
+            if "id=arch" in content or "id_like=arch" in content:
+                return True
+        return False
+
+    @staticmethod
     def try_install(*packages):
         if not PkgInstaller.prepare_pip():
             return False
@@ -612,16 +627,30 @@ class PkgInstaller:
         from pip._internal import main
         if need:
             url = PkgInstaller.select_pip_source()
+        arch_target = None
+        if need and PkgInstaller.is_arch_linux():
+            arch_target = bpy.utils.user_resource("SCRIPTS", path="addons/modules", create=True)
+            if arch_target:
+                site.addsitedir(arch_target)
         for pkg in need:
             try:
                 final_url = urlparse(url)
                 # 避免build
                 command = ['install', pkg, "-i", url, "--prefer-binary"]
+                if arch_target and pkg == "slimgui":
+                    command.extend(["--target", arch_target, "--break-system-packages"])
                 if should_use_user:
                     command.append("--user")
                 command.append("--trusted-host")
                 command.append(final_url.netloc)
                 main(command)
+                if arch_target and pkg == "slimgui" and not PkgInstaller.is_installed(pkg):
+                    fallback = ['install', pkg, "-i", url, "--prefer-binary"]
+                    if should_use_user:
+                        fallback.append("--user")
+                    fallback.append("--trusted-host")
+                    fallback.append(final_url.netloc)
+                    main(fallback)
                 if not PkgInstaller.is_installed(pkg):
                     return False
             except Exception:
