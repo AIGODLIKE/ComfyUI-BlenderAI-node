@@ -13,10 +13,7 @@ try:
     from slimgui import imgui
     # import imgui
 except ModuleNotFoundError:
-    try:
-        import imgui
-    except ModuleNotFoundError:
-        print("ERROR: imgui was not found")
+    print("ERROR: imgui was not found")
 
 RESOURCE_PATH = Path(__file__).parent.parent / "assets"
 

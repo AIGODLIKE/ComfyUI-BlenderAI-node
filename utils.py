@@ -4,7 +4,6 @@ import platform
 import time
 import re
 import json
-import sys
 import bpy
 import addon_utils
 import site
@@ -564,10 +563,10 @@ class PkgInstaller:
     def select_pip_source():
         if not PkgInstaller.fast_url:
             import requests
-            t, PkgInstaller.fast_url = 999, "https://pypi.org/simple"
+            t, PkgInstaller.fast_url = 999, PkgInstaller.source[0]
             for url in PkgInstaller.source:
                 try:
-                    tping = requests.get(url, timeout=2).elapsed.total_seconds()
+                    tping = requests.get(url, timeout=1).elapsed.total_seconds()
                 except Exception as e:
                     logger.warning(e)
                     continue
@@ -610,30 +609,20 @@ class PkgInstaller:
         if should_use_user:
             site.addsitedir(site.getusersitepackages())
         need = [pkg for pkg in packages if not PkgInstaller.is_installed(pkg)]
-        if not need:
-            return True
-        
-        import subprocess
-        from pathlib import Path
-        import bpy
-        
-        blender_python = Path(bpy.app.binary_path).parent / "python" / "bin" / "python3"
-        if not blender_python.exists():
-            blender_python = Path(sys.executable)
-        
-        url = PkgInstaller.select_pip_source()
+        from pip._internal import main
+        if need:
+            url = PkgInstaller.select_pip_source()
         for pkg in need:
             try:
                 final_url = urlparse(url)
-                command = [
-                    blender_python.as_posix(), "-m", "pip", "install", pkg,
-                    "-i", url, "--prefer-binary", "--break-system-packages",
-                    "--trusted-host", final_url.netloc
-                ]
+                # 避免build
+                command = ['install', pkg, "-i", url, "--prefer-binary"]
                 if should_use_user:
                     command.append("--user")
-                result = subprocess.run(command, capture_output=True, text=True)
-                if result.returncode != 0 or not PkgInstaller.is_installed(pkg):
+                command.append("--trusted-host")
+                command.append(final_url.netloc)
+                main(command)
+                if not PkgInstaller.is_installed(pkg):
                     return False
             except Exception:
                 return False

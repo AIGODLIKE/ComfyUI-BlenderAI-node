@@ -15,8 +15,7 @@ reg, unreg = bpy.utils.register_submodule_factory(__package__, modules)
 
 
 def register():
-    if not PkgInstaller.try_install("imgui"):
-        PkgInstaller.try_install("slimgui")
+    PkgInstaller.try_install("slimgui")
     reg()
 
 
