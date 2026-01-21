@@ -1,5 +1,6 @@
 import bpy
 import ctypes
+import sys
 from bpy.app.handlers import persistent
 from pathlib import Path
 
@@ -17,6 +18,8 @@ class InputMethodManager:
         self.load_dll()
 
     def load_dll(self):
+        if sys.platform != "win32":
+            return
         try:
             self.dll = ctypes.WinDLL(dll_path.as_posix())
 
