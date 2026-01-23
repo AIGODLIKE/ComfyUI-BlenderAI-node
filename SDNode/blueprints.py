@@ -3378,12 +3378,17 @@ class SaveModel(BluePrintBase):
                             logger.error("No animation data found on imported armature")
                             WindowLogger.push_log("No animation data found on imported armature")
                         else:
-                            root_bones = [b.name for b in target_armature.data.bones if b.parent is None]
-                            root_pose_locs = {
-                                name: target_armature.pose.bones[name].location.copy()
-                                for name in root_bones
-                                if name in target_armature.pose.bones
-                            }
+                            if target_armature.animation_data:
+                                target_armature.animation_data_clear()
+                            for pose_bone in target_armature.pose.bones:
+                                pose_bone.location = (0.0, 0.0, 0.0)
+                                pose_bone.scale = (1.0, 1.0, 1.0)
+                                if pose_bone.rotation_mode == "QUATERNION":
+                                    pose_bone.rotation_quaternion = (1.0, 0.0, 0.0, 0.0)
+                                elif pose_bone.rotation_mode == "AXIS_ANGLE":
+                                    pose_bone.rotation_axis_angle = (0.0, 0.0, 0.0, 1.0)
+                                else:
+                                    pose_bone.rotation_euler = (0.0, 0.0, 0.0)
                             target_armature.animation_data_create()
                             target_anim = target_armature.animation_data
                             target_action = source_action.copy()
@@ -3396,71 +3401,6 @@ class SaveModel(BluePrintBase):
                                         target_anim.action_slot = slot
                                     except Exception:
                                         pass
-
-                            def iter_fcurves(anim_data, action):
-                                if hasattr(action, "fcurves"):
-                                    return action.fcurves
-                                try:
-                                    from bpy_extras import anim_utils
-                                    slot = getattr(anim_data, "action_slot", None)
-                                    if slot is None and hasattr(action, "slots") and action.slots:
-                                        slot = action.slots.active or action.slots[0]
-                                        action.slots.active = slot
-                                        if hasattr(anim_data, "action_slot"):
-                                            try:
-                                                anim_data.action_slot = slot
-                                            except Exception:
-                                                pass
-                                    channelbag = anim_utils.action_get_channelbag_for_slot(action, slot)
-                                    return channelbag.fcurves if channelbag else None
-                                except Exception:
-                                    logger.error(traceback.format_exc())
-                                    return None
-
-                            def find_fcurve(fcurves, data_path, index):
-                                for fc in fcurves:
-                                    if fc.data_path == data_path and fc.array_index == index:
-                                        return fc
-                                return None
-
-                            fcurves = iter_fcurves(target_anim, target_action)
-                            if not fcurves:
-                                logger.error("No animation channels found on imported armature")
-                                WindowLogger.push_log("No animation channels found on imported armature")
-                            else:
-                                for fcurve in list(fcurves):
-                                    if fcurve.data_path in {
-                                        "location",
-                                        "rotation_euler",
-                                        "rotation_quaternion",
-                                        "scale",
-                                        "delta_location",
-                                        "delta_rotation_euler",
-                                        "delta_rotation_quaternion",
-                                        "delta_scale",
-                                    }:
-                                        fcurves.remove(fcurve)
-                                frame_start = float(getattr(target_action, "frame_range", (0.0, 0.0))[0])
-                                for bone_name in root_bones:
-                                    desired_loc = root_pose_locs.get(bone_name)
-                                    if desired_loc is None:
-                                        continue
-                                    for axis in range(3):
-                                        fcurve = find_fcurve(
-                                            fcurves,
-                                            f'pose.bones["{bone_name}"].location',
-                                            axis,
-                                        )
-                                        if not fcurve:
-                                            continue
-                                        start_value = fcurve.evaluate(frame_start)
-                                        offset_value = desired_loc[axis] - start_value
-                                        if abs(offset_value) < 1e-6:
-                                            continue
-                                        for kp in fcurve.keyframe_points:
-                                            kp.co.y += offset_value
-                                            kp.handle_left.y += offset_value
-                                            kp.handle_right.y += offset_value
                     except Exception as err:
                         logger.error("Apply Animation failed: %s", err)
                         WindowLogger.push_log("Apply Animation failed: %s", err)
