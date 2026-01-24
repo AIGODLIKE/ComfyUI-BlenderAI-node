@@ -3269,23 +3269,29 @@ class SaveModel(BluePrintBase):
 
     def import_model(s, filepath) -> list[bpy.types.Object]:
         old_objs = set(bpy.context.scene.objects)
-        suffix = Path(filepath).suffix.lower()
-        if suffix == ".obj":
-            bpy.ops.wm.obj_import(filepath=filepath)
-        elif suffix in {".gltf", ".glb"}:
-            bpy.ops.import_scene.gltf(filepath=filepath, merge_vertices=True, import_shading="FLAT")
-        elif suffix == ".fbx":
-            bpy.ops.import_scene.fbx(filepath=filepath)
-        elif suffix == ".stl":
-            bpy.ops.wm.stl_import(filepath=filepath)
-        elif suffix == ".usdz":
-            texture_dir = Path(filepath).with_suffix("").as_posix()
-            bpy.ops.wm.usd_import(
-                filepath=filepath,
-                import_textures_mode="IMPORT_COPY",
-                import_textures_dir=texture_dir,
-            )
-
+        scene = bpy.context.scene
+        old_fps = scene.render.fps
+        old_fps_base = scene.render.fps_base
+        try:
+            suffix = Path(filepath).suffix.lower()
+            if suffix == ".obj":
+                bpy.ops.wm.obj_import(filepath=filepath)
+            elif suffix in {".gltf", ".glb"}:
+                bpy.ops.import_scene.gltf(filepath=filepath, merge_vertices=True, import_shading="FLAT")
+            elif suffix == ".fbx":
+                bpy.ops.import_scene.fbx(filepath=filepath)
+            elif suffix == ".stl":
+                bpy.ops.wm.stl_import(filepath=filepath)
+            elif suffix == ".usdz":
+                texture_dir = Path(filepath).with_suffix("").as_posix()
+                bpy.ops.wm.usd_import(
+                    filepath=filepath,
+                    import_textures_mode="IMPORT_COPY",
+                    import_textures_dir=texture_dir,
+                )
+        finally:
+            scene.render.fps = old_fps
+            scene.render.fps_base = old_fps_base
         new_objs = set(bpy.context.scene.objects) - old_objs
         return list(new_objs)
 
