@@ -3204,6 +3204,7 @@ class SaveModel(BluePrintBase):
         properties["save_to_asset_lib"] = bpy.props.BoolProperty(name="Save to Asset Library", default=False)
         properties["delete_empty_objects"] = bpy.props.BoolProperty(name="Delete Empty Objects", default=False, description="Unparent children and remove root empties after import")
         properties["retain_armature"] = bpy.props.BoolProperty(name="Retain Armature Obj", default=False, description="Keep imported armature after applying animation")
+        properties["push_action_to_nla"] = bpy.props.BoolProperty(name="Push Action to NLA", default=False, description="After applying animation, push the action to NLA tracks")
         # 导入位置
         properties["import_location"] = bpy.props.FloatVectorProperty(name="Location", size=3, subtype="TRANSLATION")
         # 导入朝向
@@ -3218,6 +3219,7 @@ class SaveModel(BluePrintBase):
             "save_to_asset_lib",
             "delete_empty_objects",
             "retain_armature",
+            "push_action_to_nla",
             "import_location",
             "import_rotation",
         }:
@@ -3239,6 +3241,7 @@ class SaveModel(BluePrintBase):
             elif self.mode == "Apply Animation":
                 layout.label(text="Select an armature to apply animation", text_ctxt=self.get_ctxt())
                 layout.prop(self, "retain_armature", text_ctxt=self.get_ctxt())
+                layout.prop(self, "push_action_to_nla", text_ctxt=self.get_ctxt())
                 return True
         return False
 
@@ -3378,17 +3381,6 @@ class SaveModel(BluePrintBase):
                             logger.error("No animation data found on imported armature")
                             WindowLogger.push_log("No animation data found on imported armature")
                         else:
-                            if target_armature.animation_data:
-                                target_armature.animation_data_clear()
-                            for pose_bone in target_armature.pose.bones:
-                                pose_bone.location = (0.0, 0.0, 0.0)
-                                pose_bone.scale = (1.0, 1.0, 1.0)
-                                if pose_bone.rotation_mode == "QUATERNION":
-                                    pose_bone.rotation_quaternion = (1.0, 0.0, 0.0, 0.0)
-                                elif pose_bone.rotation_mode == "AXIS_ANGLE":
-                                    pose_bone.rotation_axis_angle = (0.0, 0.0, 0.0, 1.0)
-                                else:
-                                    pose_bone.rotation_euler = (0.0, 0.0, 0.0)
                             target_armature.animation_data_create()
                             target_anim = target_armature.animation_data
                             target_action = source_action.copy()
@@ -3401,6 +3393,21 @@ class SaveModel(BluePrintBase):
                                         target_anim.action_slot = slot
                                     except Exception:
                                         pass
+                            if self.push_action_to_nla:
+                                try:
+                                    target_anim.use_nla = True
+                                    track = target_anim.nla_tracks.new()
+                                    track.name = f"{target_action.name}_track"
+                                    strip = track.strips.new(
+                                        target_action.name,
+                                        int(target_action.frame_range[0]),
+                                        target_action,
+                                    )
+                                    strip.action_frame_start = target_action.frame_range[0]
+                                    strip.action_frame_end = target_action.frame_range[1]
+                                    target_anim.action = None
+                                except Exception:
+                                    pass
                     except Exception as err:
                         logger.error("Apply Animation failed: %s", err)
                         WindowLogger.push_log("Apply Animation failed: %s", err)

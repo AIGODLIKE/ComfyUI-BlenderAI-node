@@ -767,6 +767,8 @@ def calc_data_from_blender_do(data_name, out_dir, uid, model_format="glb", clear
             active_obj = bpy.context.view_layer.objects.active
             obj_state = None
             pose_state = None
+            stored_action = None
+            stored_nla_tracks = None
             old_mode = None
             mode_changed = False
             old_frame = None
@@ -863,7 +865,37 @@ def calc_data_from_blender_do(data_name, out_dir, uid, model_format="glb", clear
                             pose_state = store_pose_state(active_obj)
                             clear_pose_transforms(active_obj)
                             if no_animation_transforms and active_obj.animation_data:
-                                active_obj.animation_data_clear()
+                                anim = active_obj.animation_data
+                                stored_action = anim.action
+                                stored_nla_tracks = []
+                                for tr in anim.nla_tracks:
+                                    tr_data = {
+                                        "name": tr.name,
+                                        "mute": getattr(tr, "mute", False),
+                                        "lock": getattr(tr, "lock", False),
+                                        "is_solo": getattr(tr, "is_solo", False),
+                                        "strips": [],
+                                    }
+                                    for st in tr.strips:
+                                        tr_data["strips"].append(
+                                            {
+                                                "name": st.name,
+                                                "action": st.action,
+                                                "frame_start": st.frame_start,
+                                                "frame_end": st.frame_end,
+                                                "action_frame_start": st.action_frame_start,
+                                                "action_frame_end": st.action_frame_end,
+                                                "blend_type": st.blend_type,
+                                                "extrapolation": st.extrapolation,
+                                                "mute": st.mute,
+                                                "use_reverse": getattr(st, "use_reverse", False),
+                                                "use_auto_blend": getattr(st, "use_auto_blend", False),
+                                            }
+                                        )
+                                    stored_nla_tracks.append(tr_data)
+                                anim.action = None
+                                for tr in list(anim.nla_tracks):
+                                    anim.nla_tracks.remove(tr)
 
                 if export_format == "fbx":
                     bpy.ops.export_scene.fbx(
@@ -883,6 +915,35 @@ def calc_data_from_blender_do(data_name, out_dir, uid, model_format="glb", clear
                         restore_pose_state(active_obj, pose_state)
                     if active_obj and obj_state is not None:
                         restore_object_state(active_obj, obj_state)
+                    if active_obj and (stored_action is not None or stored_nla_tracks):
+                        anim = active_obj.animation_data_create()
+                        if stored_action is not None:
+                            anim.action = stored_action
+                        if stored_nla_tracks:
+                            for tr_data in stored_nla_tracks:
+                                tr = anim.nla_tracks.new()
+                                tr.name = tr_data["name"]
+                                if hasattr(tr, "mute"):
+                                    tr.mute = tr_data.get("mute", False)
+                                if hasattr(tr, "lock"):
+                                    tr.lock = tr_data.get("lock", False)
+                                if hasattr(tr, "is_solo"):
+                                    tr.is_solo = tr_data.get("is_solo", False)
+                                for st_data in tr_data["strips"]:
+                                    st = tr.strips.new(
+                                        st_data["name"], int(st_data["frame_start"]), st_data["action"]
+                                    )
+                                    st.frame_start = st_data["frame_start"]
+                                    st.frame_end = st_data["frame_end"]
+                                    st.action_frame_start = st_data["action_frame_start"]
+                                    st.action_frame_end = st_data["action_frame_end"]
+                                    st.blend_type = st_data["blend_type"]
+                                    st.extrapolation = st_data["extrapolation"]
+                                    st.mute = st_data["mute"]
+                                    if hasattr(st, "use_reverse"):
+                                        st.use_reverse = st_data["use_reverse"]
+                                    if hasattr(st, "use_auto_blend"):
+                                        st.use_auto_blend = st_data["use_auto_blend"]
                     if active_obj and mode_changed and old_mode and active_obj.mode != old_mode:
                         try:
                             bpy.ops.object.mode_set(mode=old_mode)
