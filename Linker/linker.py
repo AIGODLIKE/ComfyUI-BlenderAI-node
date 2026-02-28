@@ -13,15 +13,24 @@ from ..SDNode.nodes import NodeBase, calc_hash_type, ctxt
 from ..utils import _T2
 from ..preference import get_pref
 
+def _shader_builtin(name_new: str, name_old: str):
+    return name_new if bpy.app.version >= (4, 0, 0) else name_old
+
 if not background:
     from gpu_extras.batch import batch_for_shader
-    gpuLine = gpu.shader.from_builtin('POLYLINE_SMOOTH_COLOR')
-    gpuArea = gpu.shader.from_builtin('UNIFORM_COLOR')
+    gpuLine = gpu.shader.from_builtin(_shader_builtin('POLYLINE_SMOOTH_COLOR', '2D_POLYLINE_SMOOTH_COLOR'))
+    gpuArea = gpu.shader.from_builtin(_shader_builtin('UNIFORM_COLOR', '2D_UNIFORM_COLOR'))
 
-if "Node Editor" in bpy.context.window_manager.keyconfigs.addon.keymaps:
-    newKeyMapNodeEditor = bpy.context.window_manager.keyconfigs.addon.keymaps["Node Editor"]
-else:
-    newKeyMapNodeEditor = bpy.context.window_manager.keyconfigs.addon.keymaps.new(name="Node Editor", space_type='NODE_EDITOR')
+def _get_node_editor_km():
+    wm = bpy.context.window_manager if bpy.context.window_manager else None
+    if not wm:
+        return None
+    kc = wm.keyconfigs.addon
+    if "Node Editor" in kc.keymaps:
+        return kc.keymaps["Node Editor"]
+    return kc.keymaps.new(name="Node Editor", space_type='NODE_EDITOR')
+
+newKeyMapNodeEditor = _get_node_editor_km()
 
 
 def GetSocketIndex(sk):
@@ -817,12 +826,14 @@ def linker_register():
     bpy.utils.register_class(DRAG_LINK_PT_PANEL)
     bpy.utils.register_class(DRAG_LINK_MT_NODE_PIE)
     bpy.utils.register_class(DragLinkOps)
-    blId, key, shift, ctrl, alt = Comfyui_Swapper.bl_idname, 'R', False, False, False
-    kmi = newKeyMapNodeEditor.keymap_items.new(idname=blId, type=key, value='PRESS', shift=shift, ctrl=ctrl, alt=alt)
-    list_addonKeymaps.append(kmi)
-    blId, key = Comfyui_Linker.bl_idname, "D"
-    kmi = newKeyMapNodeEditor.keymap_items.new(idname=blId, type=key, value='PRESS', shift=shift, ctrl=ctrl, alt=alt)
-    list_addonKeymaps.append(kmi)
+    km = _get_node_editor_km()
+    if km:
+        blId, key, shift, ctrl, alt = Comfyui_Swapper.bl_idname, 'R', False, False, False
+        kmi = km.keymap_items.new(idname=blId, type=key, value='PRESS', shift=shift, ctrl=ctrl, alt=alt)
+        list_addonKeymaps.append((km, kmi))
+        blId, key = Comfyui_Linker.bl_idname, "D"
+        kmi = km.keymap_items.new(idname=blId, type=key, value='PRESS', shift=shift, ctrl=ctrl, alt=alt)
+        list_addonKeymaps.append((km, kmi))
 
 
 def linker_unregister():
@@ -833,8 +844,11 @@ def linker_unregister():
         bpy.utils.unregister_class(DRAG_LINK_PT_PANEL)
         bpy.utils.unregister_class(DRAG_LINK_MT_NODE_PIE)
         bpy.utils.unregister_class(DragLinkOps)
-        for li in list_addonKeymaps:
-            newKeyMapNodeEditor.keymap_items.remove(li)
+        for km, kmi in list_addonKeymaps:
+            try:
+                km.keymap_items.remove(kmi)
+            except Exception:
+                ...
         list_addonKeymaps.clear()
     except BaseException:
         ...

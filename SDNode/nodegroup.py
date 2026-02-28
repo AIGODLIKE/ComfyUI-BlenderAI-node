@@ -625,3 +625,10 @@ def nodegroup_unreg():
     bpy.utils.unregister_class(SDNNewGroup)
     bpy.utils.unregister_class(PackGroupTree)
     bpy.utils.unregister_class(UnPackGroupTree)
+    # remove registered keymaps
+    for km, kmi in nodeview_keymaps:
+        try:
+            km.keymap_items.remove(kmi)
+        except Exception:
+            ...
+    nodeview_keymaps.clear()

@@ -342,7 +342,11 @@ class Ops(bpy.types.Operator):
                     def pre(cf):
                         bpy.context.scene.frame_set(cf)
                     pre = partial(pre, cf)
-                    TaskManager.push_task(tree.get_task, pre, tree=tree)
+                    def task_with_frame(tree=tree, frame=cf):
+                        task = tree.get_task()
+                        task["sdn_frame"] = frame
+                        return task
+                    TaskManager.push_task(task_with_frame, pre, tree=tree)
             elif bpy.context.scene.sdn.frame_mode == "Batch":
                 batch_dir = bpy.context.scene.sdn.batch_dir
                 select_node = tree.nodes.active
@@ -1057,7 +1061,22 @@ class Image_To_SDNode(bpy.types.Operator):
                 filename = f"render_{uuid.uuid4()}"
                 newpath = f"/tmp/{filename}.png"
                 image.alpha_mode = 'CHANNEL_PACKED'
-                image.save_render(filepath=newpath, scene=context.scene)
+                view_settings = context.scene.view_settings
+                old_view_transform = view_settings.view_transform
+                old_look = view_settings.look
+                old_exposure = view_settings.exposure
+                old_gamma = view_settings.gamma
+                try:
+                    view_settings.view_transform = "Standard"
+                    view_settings.look = "None"
+                    view_settings.exposure = 0.0
+                    view_settings.gamma = 1.0
+                    image.save_render(filepath=newpath, scene=context.scene)
+                finally:
+                    view_settings.view_transform = old_view_transform
+                    view_settings.look = old_look
+                    view_settings.exposure = old_exposure
+                    view_settings.gamma = old_gamma
                 newim = bpy.data.images.new(image.name + MODIFIED_IMAGE_SUFFIX, 32, 32, alpha=True)
                 newim.source = 'FILE'
                 newim.filepath = newpath
@@ -1066,11 +1085,41 @@ class Image_To_SDNode(bpy.types.Operator):
                 extensionless = image.filepath_raw[:image.filepath_raw.rfind(".")]
                 if not extensionless.endswith(MODIFIED_IMAGE_SUFFIX):
                     newpath = extensionless + MODIFIED_IMAGE_SUFFIX + ".png"
-                    image.save_render(filepath=newpath, scene=context.scene)  # save_render is needed to properly save channel packed images
+                    view_settings = context.scene.view_settings
+                    old_view_transform = view_settings.view_transform
+                    old_look = view_settings.look
+                    old_exposure = view_settings.exposure
+                    old_gamma = view_settings.gamma
+                    try:
+                        view_settings.view_transform = "Standard"
+                        view_settings.look = "None"
+                        view_settings.exposure = 0.0
+                        view_settings.gamma = 1.0
+                        image.save_render(filepath=newpath, scene=context.scene)  # save_render is needed to properly save channel packed images
+                    finally:
+                        view_settings.view_transform = old_view_transform
+                        view_settings.look = old_look
+                        view_settings.exposure = old_exposure
+                        view_settings.gamma = old_gamma
                     image.filepath = newpath
                     image.name = image.name
                 else:
-                    image.save()
+                    view_settings = context.scene.view_settings
+                    old_view_transform = view_settings.view_transform
+                    old_look = view_settings.look
+                    old_exposure = view_settings.exposure
+                    old_gamma = view_settings.gamma
+                    try:
+                        view_settings.view_transform = "Standard"
+                        view_settings.look = "None"
+                        view_settings.exposure = 0.0
+                        view_settings.gamma = 1.0
+                        image.save()
+                    finally:
+                        view_settings.view_transform = old_view_transform
+                        view_settings.look = old_look
+                        view_settings.exposure = old_exposure
+                        view_settings.gamma = old_gamma
 
         active = sdn_area.spaces[0].node_tree.nodes.active
         if active and active.bl_idname == '输入图像' and active.select:  # "Input Image" Blender-side node
@@ -1116,9 +1165,9 @@ class Open_Log_Window(bpy.types.Operator):
 
 class CleanVRam(bpy.types.Operator):
     bl_idname = "sdn.clean_vram"
-    bl_label = "Clean VRAM"
+    bl_label = "Clean VRAM & Cache"
     bl_translation_context = ctxt
-    bl_description = "Clean VRAM"
+    bl_description = "Free model memory and clear node execution cache"
 
     def execute(self, context):
         TaskManager.clear_vram()

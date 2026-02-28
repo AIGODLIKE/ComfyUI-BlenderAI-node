@@ -22,24 +22,26 @@ def dir_cb_test(path):
 
 
 class PresetsDirDesc(bpy.types.PropertyGroup):
-    def path_set(self, path):
+    def path_update(self, context):
         """检查路径是否合法"""
-        if not path or path == self.path:
+        path = self.path
+        if not path:
             return
         if not os.path.exists(path) or not os.path.isdir(path):
             return
         # 路径不能已经存在于pref_dirs中
         pref = get_pref()
         for item in pref.pref_dirs:
-            if item.path != path:
+            if item is self:
                 continue
+            if item.path == path:
+                def error_draw(self, context):
+                    self.layout.label(text="Custom Preset Path already exists", text_ctxt=ctxt)
+                bpy.context.window_manager.popup_menu(error_draw, title=_T("Error"), icon="ERROR")
+                # reset to empty to avoid duplicates
+                self.path = ""
+                return
 
-            def error_draw(self, context):
-                self.layout.label(text="Custom Preset Path already exists", text_ctxt=ctxt)
-            bpy.context.window_manager.popup_menu(error_draw, title=_T("Error"), icon="ERROR")
-            return
-
-        self["path"] = path
         if pref.pref_dirs_init:
             # 创建presets/groups目录
             Path(path).joinpath("presets").mkdir(parents=True, exist_ok=True)
@@ -48,11 +50,7 @@ class PresetsDirDesc(bpy.types.PropertyGroup):
             FSWatcher.register(Path(path).joinpath("presets"), dir_cb_test)
             FSWatcher.register(Path(path).joinpath("groups"), dir_cb_test)
 
-    def path_get(self):
-        if "path" not in self:
-            return ""
-        return self["path"]
-    path: bpy.props.StringProperty(name="Path", subtype="DIR_PATH", set=path_set, get=path_get)
+    path: bpy.props.StringProperty(name="Path", subtype="DIR_PATH", update=path_update)
 
     def update_enabled(self, context):
         p = Path(self.path)
@@ -425,6 +423,13 @@ class AddonPreference(bpy.types.AddonPreferences):
             args.append("--disable-metadata")
         if self.windows_standalone_build:
             args.append("--windows-standalone-build")
+
+        # Enable Manager (legacy UI) automatically if manager_requirements.txt exists in ComfyUI root
+        manager_req = Path(self.model_path).joinpath("manager_requirements.txt")
+        if manager_req.exists():
+            args.append("--enable-manager")
+            args.append("--enable-manager-legacy-ui")
+
         # args.append("--front-end-version")
         # args.append("Comfy-Org/ComfyUI_frontend@latest")
         return args
@@ -489,7 +494,9 @@ class AddonPreference(bpy.types.AddonPreferences):
                 ip[i] = "0"
             v = int(ip[i])
             ip[i] = str(min(255, max(0, v)))
-        self["ip"] = ".".join(ip)
+        sanitized = ".".join(ip)
+        if self.ip != sanitized:
+            self.ip = sanitized
 
     ip: bpy.props.StringProperty(default="127.0.0.1", name="IP", description="Service IP Address")
     

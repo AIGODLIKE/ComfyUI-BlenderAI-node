@@ -196,11 +196,28 @@ def unregister():
     unreg()
     prop_unreg()
     ui_unreg()
+    # Reset Node Editor spaces pointing to custom tree to avoid warnings after unregister.
+    try:
+        wm = getattr(bpy.context, "window_manager", None)
+        if wm:
+            for win in wm.windows:
+                for area in win.screen.areas:
+                    for space in area.spaces:
+                        if getattr(space, "type", "") == "NODE_EDITOR" and getattr(space, "tree_type", "") == "CFNodeTree":
+                            space.tree_type = "ShaderNodeTree"
+    except Exception:
+        ...
     rtnode_unreg()
     timer_unreg()
+    if hasattr(bpy.types, "WindowManager") and hasattr(bpy.types.WindowManager, "mlt_words"):
+        del bpy.types.WindowManager.mlt_words
+    if hasattr(bpy.types, "WindowManager") and hasattr(bpy.types.WindowManager, "mlt_words_index"):
+        del bpy.types.WindowManager.mlt_words_index
     del bpy.types.Scene.sdn
     del bpy.types.Scene.sdn_history_item
     del bpy.types.Scene.sdn_history_item_index
+    if hasattr(bpy.types, "Node") and hasattr(bpy.types.Node, "ac_expand"):
+        del bpy.types.Node.ac_expand
     History.unregister_timer()
     modules_update()
     linker_unregister()

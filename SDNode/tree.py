@@ -895,6 +895,26 @@ class CFNodeTree(NodeTree):
         if not self.animation_data.action:
             return
 
+        def iter_fcurves(anim_data):
+            """
+            Blender 5.0 replaced action.fcurves with slot-based channelbags.
+            Keep legacy path for <5.0; use channelbag for 5.0+.
+            """
+            if bpy.app.version >= (5, 0):
+                try:
+                    from bpy_extras import anim_utils
+                    slot = getattr(anim_data, "action_slot", None)
+                    if slot is None:
+                        return []
+                    channelbag = anim_utils.action_get_channelbag_for_slot(anim_data.action, slot)
+                    if not channelbag:
+                        return []
+                    return channelbag.fcurves
+                except Exception:
+                    logger.error(traceback.format_exc())
+                    return []
+            return anim_data.action.fcurves
+
         def value_set(obj, path, value):
             if "." in path:
                 path_prop, path_attr = path.rsplit(".", 1)
@@ -906,7 +926,7 @@ class CFNodeTree(NodeTree):
             setattr(prop, path_attr, value)
 
         current_frame = bpy.context.scene.frame_current
-        for fc in self.animation_data.action.fcurves:
+        for fc in iter_fcurves(self.animation_data):
             if not fc.keyframe_points:
                 continue
             ks: bpy.types.Keyframe = fc.keyframe_points[0]
@@ -1285,6 +1305,8 @@ def rtnode_reg(rereg=True):
         bpy.app.handlers.load_post.append(CFNodeTree.reinit)
     if CFNodeTree.save_pre not in bpy.app.handlers.save_pre:
         bpy.app.handlers.save_pre.append(CFNodeTree.save_pre)
+    if CFNodeTree.frame_change_handler not in bpy.app.handlers.frame_change_pre:
+        bpy.app.handlers.frame_change_pre.append(CFNodeTree.frame_change_handler)
     if not bpy.app.timers.is_registered(CFNodeTree.update_tree_handler):
         bpy.app.timers.register(CFNodeTree.update_tree_handler, persistent=True)
 
@@ -1294,6 +1316,10 @@ def rtnode_unreg():
         bpy.app.handlers.save_pre.remove(CFNodeTree.save_pre)
     if CFNodeTree.reinit in bpy.app.handlers.load_post:
         bpy.app.handlers.load_post.remove(CFNodeTree.reinit)
+    if CFNodeTree.frame_change_handler in bpy.app.handlers.frame_change_pre:
+        bpy.app.handlers.frame_change_pre.remove(CFNodeTree.frame_change_handler)
+    if bpy.app.timers.is_registered(CFNodeTree.update_tree_handler):
+        bpy.app.timers.unregister(CFNodeTree.update_tree_handler)
     set_draw_intern(reg=False)
     if TREE_NAME in _node_categories:
         try:

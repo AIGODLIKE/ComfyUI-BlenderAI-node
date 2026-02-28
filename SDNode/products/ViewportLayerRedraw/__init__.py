@@ -19,5 +19,9 @@ def register():
 
 
 def unregister():
-    unreg()
+    try:
+        unreg()
+    except KeyError:
+        # module may already be removed during shutdown
+        ...
     logger.debug(f"{__package__} unregistered")

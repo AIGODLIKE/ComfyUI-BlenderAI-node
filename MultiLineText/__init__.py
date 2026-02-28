@@ -33,14 +33,33 @@ def disable_multiline_text():
 class EnableMLT(bpy.types.Operator):
     bl_idname = "sdn.enable_mlt"
     bl_label = "Enable MLT"
-    bl_description = "Enable multiline text for this textbox"
+    bl_description = "Toggle multiline text editor for this node"
     bl_translation_context = ctxt
 
     def execute(self, context):
         if not enable_multiline_text():
             self.report({"ERROR"}, "MultiLineText Not Enabled")
             return {"FINISHED"}
-        bpy.ops.sdn.multiline_text("INVOKE_DEFAULT")
+        node = context.active_node
+        if not node:
+            self.report({"ERROR"}, "No active node")
+            return {"FINISHED"}
+        ops = bpy.ops.sdn.multiline_text
+        # determine current active operator if any
+        from .integration import MLTOps
+        active = MLTOps.ACTIVE_OP
+        tree_name = context.space_data.edit_tree.name if context.space_data.edit_tree else ""
+        target_prop = "text"
+        if active and active._target_equals(tree_name, node.name, target_prop):
+            active.cancel(context)
+            node.mlt_active = False
+            return {"FINISHED"}
+        if active:
+            active.switch_target(tree_name, node.name, target_prop)
+        else:
+            props = {"tree_name": tree_name, "node_name": node.name, "prop": target_prop}
+            ops("INVOKE_DEFAULT", **props)
+        node.mlt_active = True
         return {"FINISHED"}
 
 

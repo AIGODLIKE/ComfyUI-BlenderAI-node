@@ -330,9 +330,14 @@ class Icon(metaclass=MetaIn):
     @staticmethod
     def can_mark_pixel(prev, name) -> bool:
         name = FSWatcher.to_str(name)
-        if Icon.PIX_STATUS.get(name) == hash(prev.pixels):
+        stamp = (
+            tuple(prev.size) if hasattr(prev, "size") else None,
+            getattr(prev, "is_dirty", None),
+            getattr(prev, "filepath", None),
+        )
+        if Icon.PIX_STATUS.get(name) == stamp:
             return False
-        Icon.PIX_STATUS[name] = hash(prev.pixels)
+        Icon.PIX_STATUS[name] = stamp
         return True
 
     @staticmethod
@@ -420,6 +425,26 @@ class Icon(metaclass=MetaIn):
             return img
 
     @staticmethod
+    def process_pixels(img):
+        """
+        Composite pixels over a dark background to make transparency visible in previews.
+        """
+        import numpy as np
+        w, h = img.size
+        pixels = np.empty(w * h * 4, dtype=np.float32)
+        img.pixels.foreach_get(pixels)
+        arr = pixels.reshape(-1, 4)
+
+        # Dark grey background like Blender's Image Editor
+        bg = np.array([0.15, 0.15, 0.15], dtype=np.float32)
+        alpha = arr[:, 3:4]
+        # Blend: color * alpha + bg * (1 - alpha)
+        arr[:, :3] = arr[:, :3] * alpha + bg * (1.0 - alpha)
+        # Set alpha to 1.0 so Blender doesn't blend it again with white
+        arr[:, 3] = 1.0
+        return arr.reshape(-1), (w, h)
+
+    @staticmethod
     def reg_icon_by_pixel(prev, name):
         name = FSWatcher.to_str(name)
         if not Icon.can_mark_pixel(prev, name):
@@ -428,8 +453,9 @@ class Icon(metaclass=MetaIn):
             return
         p = Icon.PREV_DICT.new(name)
         p.icon_size = (32, 32)
-        p.image_size = (prev.size[0], prev.size[1])
-        p.image_pixels_float[:] = prev.pixels[:]
+        pixels, (w, h) = Icon.process_pixels(prev)
+        p.image_size = (w, h)
+        p.image_pixels_float[:] = pixels
 
     @staticmethod
     def get_icon_id(name: Path):
@@ -437,6 +463,19 @@ class Icon(metaclass=MetaIn):
         if not p:
             p = Icon.PREV_DICT.get(FSWatcher.to_str(Icon.NONE_IMAGE), None)
         return p.icon_id if p else 0
+
+    @staticmethod
+    def update_icon_pixel_live(name, prev):
+        """
+        Update icon pixels directly from memory without reloading from disk.
+        """
+        p = Icon.PREV_DICT.get(name, None)
+        if not p:
+            return
+        p.icon_size = (32, 32)
+        pixels, (w, h) = Icon.process_pixels(prev)
+        p.image_size = (w, h)
+        p.image_pixels_float[:] = pixels
 
     @staticmethod
     def update_icon_pixel(name, prev):
@@ -449,8 +488,9 @@ class Icon(metaclass=MetaIn):
             # logger.error("No")
             return
         p.icon_size = (32, 32)
-        p.image_size = (prev.size[0], prev.size[1])
-        p.image_pixels_float[:] = prev.pixels[:]
+        pixels, (w, h) = Icon.process_pixels(prev)
+        p.image_size = (w, h)
+        p.image_pixels_float[:] = pixels
 
     def __getitem__(self, name):
         return Icon.get_icon_id(name)
@@ -562,12 +602,39 @@ class PkgInstaller:
         return platform.system() == "Windows" and Path(bpy.app.binary_path).drive.upper().startswith("C:")
 
     @staticmethod
+    def is_arch_linux():
+        if platform.system() != "Linux":
+            return False
+        for os_release in (Path("/etc/os-release"), Path("/usr/lib/os-release")):
+            if not os_release.exists():
+                continue
+            try:
+                content = os_release.read_text(encoding="utf8").lower()
+            except Exception:
+                continue
+            if "id=arch" in content or "id_like=arch" in content:
+                return True
+        return False
+
+    @staticmethod
     def try_install(*packages):
         if not PkgInstaller.prepare_pip():
             return False
         should_use_user = PkgInstaller.should_use_user()
         if should_use_user:
             site.addsitedir(site.getusersitepackages())
+        is_arch = PkgInstaller.is_arch_linux()
+        arch_target = None
+        if is_arch:
+            arch_target = bpy.utils.user_resource("SCRIPTS", path="addons/modules", create=True)
+            if not arch_target:
+                user_root = bpy.utils.resource_path("USER")
+                if user_root:
+                    arch_target = Path(user_root) / "scripts" / "addons" / "modules"
+                    arch_target.mkdir(parents=True, exist_ok=True)
+                    arch_target = arch_target.as_posix()
+            if arch_target:
+                site.addsitedir(arch_target)
         need = [pkg for pkg in packages if not PkgInstaller.is_installed(pkg)]
         from pip._internal import main
         if need:
@@ -577,6 +644,10 @@ class PkgInstaller:
                 final_url = urlparse(url)
                 # 避免build
                 command = ['install', pkg, "-i", url, "--prefer-binary"]
+                if is_arch:
+                    command.append("--break-system-packages")
+                    if arch_target:
+                        command.extend(["--target", arch_target])
                 if should_use_user:
                     command.append("--user")
                 command.append("--trusted-host")

@@ -1,0 +1,9 @@
+{
+    "PreviewAny": {
+        "title": "Preview as Text",
+        "inputs": {
+            "source": "source"
+        },
+        "outputs": {}
+    }
+}

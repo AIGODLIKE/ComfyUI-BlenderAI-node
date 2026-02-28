@@ -472,8 +472,11 @@ def gen_mask(self):
         return
     logger.debug(_T("Gen Mask"))
     # 设置节点
-    bpy.context.scene.use_nodes = True
-    nt = bpy.context.scene.node_tree
+    if bpy.context.scene.compositing_node_group is None:
+        nt = bpy.data.node_groups.new("Compositing", "CompositorNodeTree")
+        bpy.context.scene.compositing_node_group = nt
+    else:
+        nt = bpy.context.scene.compositing_node_group
     with set_setting() as r:
         bpy.context.scene.render.image_settings.file_format = "PNG"
         if mode in {"Collection", "Object"}:
@@ -601,6 +604,9 @@ def calc_data_from_blender(request_data: dict) -> dict:
     # ({"name": "active_model", "type": "STRING", "links": [18]},)
     # ({"name": "custom_image", "type": "IMAGE", "links": None},)
     data_name = message.get("data_name")
+    model_format = str(message.get("format", "glb")).lower()
+    clear_transforms = bool(message.get("clear_transforms", True))
+    no_animation_transforms = bool(message.get("no_animation_transforms", False))
     uid = uuid.uuid4().hex[:8]
     out_dir = Path(gettempdir()) / f"BlenderAI_Inputs/{data_name}"
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -612,12 +618,20 @@ def calc_data_from_blender(request_data: dict) -> dict:
     old_frame = bpy.context.scene.frame_current
     if frame != -999:
         Timer.wait_run(set_frame)(frame)
-    res = calc_data_from_blender_do(data_name, out_dir, uid)
+    res = calc_data_from_blender_do(
+        data_name,
+        out_dir,
+        uid,
+        model_format=model_format,
+        clear_transforms=clear_transforms,
+        no_animation_transforms=no_animation_transforms,
+        frame=frame,
+    )
     if frame != -999:
         Timer.wait_run(set_frame)(old_frame)
     return res
 
-def calc_data_from_blender_do(data_name, out_dir, uid) -> dict:
+def calc_data_from_blender_do(data_name, out_dir, uid, model_format="glb", clear_transforms=True, no_animation_transforms=False, frame=-999) -> dict:
     if data_name == "camera_viewport":
         data_path = out_dir / f"render_view_{uid}.png"
 
@@ -687,9 +701,11 @@ def calc_data_from_blender_do(data_name, out_dir, uid) -> dict:
             bpy.context.view_layer.use_pass_z = True
             bpy.context.scene.render.filepath = data_path.as_posix()
             bpy.context.scene.render.image_settings.file_format = "PNG"
-            bpy.context.scene.use_nodes = True
-
-            nt = bpy.context.scene.node_tree
+            if bpy.context.scene.compositing_node_group is None:
+                nt = bpy.data.node_groups.new("Compositing", "CompositorNodeTree")
+                bpy.context.scene.compositing_node_group = nt
+            else:
+                nt = bpy.context.scene.compositing_node_group
             out_layer_name = "Depth"
             with set_composite(nt) as cmp:
                 render_layer: bpy.types.CompositorNodeRLayers = nt.nodes.new("CompositorNodeRLayers")
@@ -717,9 +733,11 @@ def calc_data_from_blender_do(data_name, out_dir, uid) -> dict:
             bpy.context.view_layer.use_pass_mist = True
             bpy.context.scene.render.filepath = data_path.as_posix()
             bpy.context.scene.render.image_settings.file_format = "PNG"
-            bpy.context.scene.use_nodes = True
-
-            nt = bpy.context.scene.node_tree
+            if bpy.context.scene.compositing_node_group is None:
+                nt = bpy.data.node_groups.new("Compositing", "CompositorNodeTree")
+                bpy.context.scene.compositing_node_group = nt
+            else:
+                nt = bpy.context.scene.compositing_node_group
             out_layer_name = "Mist"
             with set_composite(nt) as cmp:
                 render_layer: bpy.types.CompositorNodeRLayers = nt.nodes.new("CompositorNodeRLayers")
@@ -739,13 +757,137 @@ def calc_data_from_blender_do(data_name, out_dir, uid) -> dict:
     elif data_name == "active_model":
         # 保存当前激活模型
         # 上传模型
-        data_path = out_dir / f"active_model_{uid}.glb"
+        export_format = str(model_format or "glb").lower()
+        if export_format == "fbx":
+            data_path = out_dir / f"active_model_{uid}.fbx"
+        else:
+            data_path = out_dir / f"active_model_{uid}.glb"
 
         def run():
-            bpy.ops.export_scene.gltf(
-                filepath=data_path.as_posix(),
-                use_selection=True,
-            )
+            active_obj = bpy.context.view_layer.objects.active
+            obj_state = None
+            pose_state = None
+            old_mode = None
+            mode_changed = False
+            old_frame = None
+            scene = bpy.context.scene
+
+            def store_object_state(obj):
+                state = {
+                    "location": obj.location.copy(),
+                    "scale": obj.scale.copy(),
+                    "rotation_mode": obj.rotation_mode,
+                    "rotation_euler": obj.rotation_euler.copy(),
+                    "rotation_quaternion": obj.rotation_quaternion.copy(),
+                    "rotation_axis_angle": tuple(obj.rotation_axis_angle),
+                }
+                return state
+
+            def restore_object_state(obj, state):
+                obj.location = state["location"]
+                obj.scale = state["scale"]
+                obj.rotation_mode = state["rotation_mode"]
+                if obj.rotation_mode == "QUATERNION":
+                    obj.rotation_quaternion = state["rotation_quaternion"]
+                elif obj.rotation_mode == "AXIS_ANGLE":
+                    obj.rotation_axis_angle = state["rotation_axis_angle"]
+                else:
+                    obj.rotation_euler = state["rotation_euler"]
+
+            def clear_object_transforms(obj):
+                obj.location = (0.0, 0.0, 0.0)
+                obj.scale = (1.0, 1.0, 1.0)
+                if obj.rotation_mode == "QUATERNION":
+                    obj.rotation_quaternion = (1.0, 0.0, 0.0, 0.0)
+                elif obj.rotation_mode == "AXIS_ANGLE":
+                    obj.rotation_axis_angle = (0.0, 1.0, 0.0, 0.0)
+                else:
+                    obj.rotation_euler = (0.0, 0.0, 0.0)
+
+            def store_pose_state(armature_obj):
+                state = {}
+                for pb in armature_obj.pose.bones:
+                    state[pb.name] = {
+                        "location": pb.location.copy(),
+                        "scale": pb.scale.copy(),
+                        "rotation_mode": pb.rotation_mode,
+                        "rotation_euler": pb.rotation_euler.copy(),
+                        "rotation_quaternion": pb.rotation_quaternion.copy(),
+                        "rotation_axis_angle": tuple(pb.rotation_axis_angle),
+                    }
+                return state
+
+            def restore_pose_state(armature_obj, state):
+                for name, pb_state in state.items():
+                    pb = armature_obj.pose.bones.get(name)
+                    if not pb:
+                        continue
+                    pb.location = pb_state["location"]
+                    pb.scale = pb_state["scale"]
+                    pb.rotation_mode = pb_state["rotation_mode"]
+                    if pb.rotation_mode == "QUATERNION":
+                        pb.rotation_quaternion = pb_state["rotation_quaternion"]
+                    elif pb.rotation_mode == "AXIS_ANGLE":
+                        pb.rotation_axis_angle = pb_state["rotation_axis_angle"]
+                    else:
+                        pb.rotation_euler = pb_state["rotation_euler"]
+
+            def clear_pose_transforms(armature_obj):
+                for pb in armature_obj.pose.bones:
+                    pb.location = (0.0, 0.0, 0.0)
+                    pb.scale = (1.0, 1.0, 1.0)
+                    if pb.rotation_mode == "QUATERNION":
+                        pb.rotation_quaternion = (1.0, 0.0, 0.0, 0.0)
+                    elif pb.rotation_mode == "AXIS_ANGLE":
+                        pb.rotation_axis_angle = (0.0, 1.0, 0.0, 0.0)
+                    else:
+                        pb.rotation_euler = (0.0, 0.0, 0.0)
+
+            try:
+                if clear_transforms:
+                    old_frame = scene.frame_current
+                    if old_frame != frame:
+                        scene.frame_set(frame)
+                    if active_obj:
+                        old_mode = active_obj.mode
+                        if old_mode != "OBJECT":
+                            try:
+                                bpy.ops.object.mode_set(mode="OBJECT")
+                                mode_changed = True
+                            except Exception as err:
+                                logger.warning("Skip mode_set during export: %s", err)
+                                old_mode = None
+                        obj_state = store_object_state(active_obj)
+                        clear_object_transforms(active_obj)
+                        if active_obj.type == "ARMATURE":
+                            pose_state = store_pose_state(active_obj)
+                            clear_pose_transforms(active_obj)
+
+                if export_format == "fbx":
+                    bpy.ops.export_scene.fbx(
+                        filepath=data_path.as_posix(),
+                        use_selection=True,
+                        bake_anim=False if no_animation_transforms else True,
+                    )
+                else:
+                    bpy.ops.export_scene.gltf(
+                        filepath=data_path.as_posix(),
+                        use_selection=True,
+                        export_animations=False if no_animation_transforms else True,
+                    )
+            finally:
+                if clear_transforms:
+                    if old_frame is not None and scene.frame_current != old_frame:
+                        scene.frame_set(old_frame)
+                    if active_obj and pose_state is not None:
+                        restore_pose_state(active_obj, pose_state)
+                    if active_obj and obj_state is not None:
+                        restore_object_state(active_obj, obj_state)
+                    if active_obj and mode_changed and old_mode and active_obj.mode != old_mode:
+                        try:
+                            bpy.ops.object.mode_set(mode=old_mode)
+                        except Exception:
+                            pass
 
         Timer.wait_run(run)()
         upload_status = upload_data(data_name, data_path)

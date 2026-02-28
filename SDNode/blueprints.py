@@ -1,12 +1,15 @@
 import json
+from pprint import pformat
 import re
 import bpy
 import random
 import os
+import time
 import textwrap
 import urllib.request
 import urllib.parse
 import tempfile
+import traceback
 import aud
 import uuid
 from functools import partial, lru_cache
@@ -28,6 +31,23 @@ from ..preference import get_pref
 from ..kclogger import logger
 from ..utils import _T, Icon, update_screen, PrevMgr, rgb2hex, hex2rgb
 from ..translations.translation import ComfyTranslator
+
+
+def get_sequences(scene=None):
+    if scene is None:
+        scene = bpy.context.scene
+    # Blender 5.0 Fix
+    if hasattr(bpy.context, "workspace") and hasattr(bpy.context.workspace, "sequencer_scene"):
+        if not bpy.context.workspace.sequencer_scene:
+            bpy.context.workspace.sequencer_scene = scene
+    
+    seqe = scene.sequence_editor
+    if hasattr(seqe, "sequences"):
+        return seqe.sequences
+    # Fallback for Blender 5.0+ if sequences is renamed to strips
+    if hasattr(seqe, "strips"):
+        return seqe.strips
+    return seqe.sequences
 
 
 def get_next_filename(save_path, max_len=4):
@@ -73,7 +93,7 @@ def get_sync_rand_node(tree):
 
 
 def get_fixed_seed():
-    return int(random.randrange(4294967294))
+    return int(random.randrange(2147483647))
 
 
 def is_bool_list(some_list: list):
@@ -179,6 +199,13 @@ class BluePrintBase:
                     if str(i) == v:
                         return i
             return type(meta[0][0])(v)
+        # Clamp FLOAT widgets to declared bounds to avoid float32 rounding underflow/overflow from Blender UI
+        if meta and meta[0] == "FLOAT" and len(meta) > 1 and isinstance(meta[1], dict) and isinstance(v, (float, int)):
+            cfg = meta[1]
+            if "min" in cfg:
+                v = max(v, cfg["min"])
+            if "max" in cfg:
+                v = min(v, cfg["max"])
         return v
 
     def setattr(s, self: NodeBase, prop_name, v):
@@ -193,13 +220,14 @@ class BluePrintBase:
 
     def draw_button(s, self: NodeBase, context: Context, layout: UILayout, prop: str, swsock=True, swdisp=False):
         def show_model_preview(self: NodeBase, context: bpy.types.Context, layout: bpy.types.UILayout, prop: str):
-            if self.class_type not in name2path:
-                return False
-            if prop not in get_icon_path(self.class_type):
-                return False
-            col = draw_prop_with_link(layout, self, prop, swsock, swdisp, text="", row=False)
-            col.template_icon_view(self, prop, show_labels=True, scale_popup=popup_scale, scale=popup_scale)
-            return True
+            # Commented out to disable large model preview picker; falls back to dropdown-only UI.
+            # if self.class_type not in name2path:
+            #     return False
+            # if prop not in get_icon_path(self.class_type):
+            #     return False
+            # col = draw_prop_with_link(layout, self, prop, swsock, swdisp, text="", row=False)
+            # col.template_icon_view(self, prop, show_labels=True, scale_popup=popup_scale, scale=popup_scale)
+            return False
 
         # 多行文本处理
         md = self.get_meta(prop)
@@ -753,19 +781,101 @@ class CheckpointLoaderPysssss(BluePrintBase):
 
 
 class PreviewTextNode(BluePrintBase):
-    comfyClass = "PreviewTextNode"
+    comfyClass = "PreviewTextNode|PreviewAny|Preview Any Node|ShowAny|Display Any (rgthree)|ShowText|pysssss"
+    ANY_CLASS = {"PreviewAny", "Preview Any Node", "ShowAny", "Display Any (rgthree)", "ShowText", "pysssss"}
+    PRIORITY_KEYS = ("string", "text", "text_out", "value", "values", "data", "preview", "result")
+
+    @staticmethod
+    def _format_value(value):
+        if isinstance(value, str):
+            return value
+        if isinstance(value, (int, float, bool)):
+            return str(value)
+        if value is None:
+            return "None"
+        if isinstance(value, dict):
+            try:
+                return json.dumps(value, ensure_ascii=False, indent=2)
+            except TypeError:
+                return pformat(value, width=80, compact=True)
+        if isinstance(value, (list, tuple, set)):
+            if not value:
+                return "[]"
+            if all(isinstance(v, str) for v in value):
+                return "\n".join(str(v) for v in value)
+            try:
+                return json.dumps(list(value), ensure_ascii=False, indent=2)
+            except TypeError:
+                return pformat(value, width=80, compact=True)
+        return str(value)
+
+    @classmethod
+    def _format_output(cls, output: dict):
+        if not output:
+            return ""
+        for key in cls.PRIORITY_KEYS:
+            if key not in output:
+                continue
+            payload = output[key]
+            if isinstance(payload, list) and len(payload) == 1:
+                payload = payload[0]
+            formatted = cls._format_value(payload)
+            if formatted:
+                return formatted
+        return cls._format_value(output)
+
+    @classmethod
+    def _is_preview_any(cls, nname: str | None = None):
+        return nname in cls.ANY_CLASS
+
+    def spec_extra_properties(s, properties, nname, ndesc):
+        if s._is_preview_any(nname):
+            properties["text"] = bpy.props.StringProperty(
+                name="Text",
+                default="",
+                description="Preview output",
+            )
 
     def post_fn(s, self: NodeBase, t: Task, result):
         logger.debug("%s%s->%s", self.class_type, _T('Post Function'), result)
         WindowLogger.push_log("%s%s->%s", self.class_type, _T('Post Function'), result)
-        text = result.get("output", {}).get("string", [])
-        if text and isinstance(text[0], str):
-            self.text = text[0]
+        output = result.get("output", {})
+        text_value = ""
+        strings = output.get("string", [])
+        if strings and isinstance(strings, list) and strings and isinstance(strings[0], str):
+            text_value = strings[0]
+        if not text_value and s._is_preview_any(self.class_type):
+            text_value = s._format_output(output)
+        if not text_value:
+            return
+
+        def assign(node, value):
+            if hasattr(node, "text"):
+                node.text = value
+            elif hasattr(node, "string"):
+                node.string = value
+        Timer.put((assign, self, str(text_value)))
+
+    def spec_draw(s, self: NodeBase, context, layout, prop: str, swsock=True, swdisp=False):
+        if prop != "text" or not s._is_preview_any(self.class_type):
+            return False
+
+        text_value = getattr(self, "text", "")
+        if text_value:
+            width = max(1, int(self.width) // 7)
+            for line in textwrap.wrap(text=str(text_value), width=width):
+                layout.label(text=line, text_ctxt=self.get_ctxt())
+            row = layout.row(align=True)
+            op = row.operator("sdn.copy_iname_to_clipboard", text="", icon="COPYDOWN")
+            op.info = str(text_value)
+        return True
 
     def dump_specific(s, self: NodeBase = None, cfg=None, selected_only=False, **kwargs):
-        inputs = cfg["inputs"]
+        inputs = cfg.get("inputs", cfg.get("input", []))
+        if not inputs:
+            return
         for inp in inputs:
-            if inp.get("name") == "text" and "widget" in inp:
+            if inp.get("name") in {"text", "string"} and "widget" in inp:
                 inp.pop("widget")
 
 
@@ -798,99 +908,73 @@ class MultiAreaConditioning(BluePrintBase):
                    "col": (0, 1, 1, 0.5)
                    }]
 
-        def config_set(self, value):
-            self["config"] = value
-
-        def config_get(self):
-            if 'config' not in self:
-                self['config'] = json.dumps(config)
-            return self['config']
-
-        prop = bpy.props.StringProperty(default=json.dumps(config), set=config_set, get=config_get)
+        prop = bpy.props.StringProperty(default=json.dumps(config))
         properties["config"] = prop
 
         def update(self):
             config = json.loads(self.config)
             c = config[self.index]
             for k in c:
-                if k not in self:
-                    continue
-                c[k] = getattr(self, k)
+                if hasattr(self, k):
+                    c[k] = getattr(self, k)
             self.config = json.dumps(config)
 
-        def resolutionX_set(self, value):
-            self['resolutionX'] = (value // 64) * 64
-
-        def resolutionX_get(self):
-            if 'resolutionX' not in self:
-                self['resolutionX'] = 0
-            return self['resolutionX']
-        prop = bpy.props.IntProperty(default=0, min=0, max=4096, set=resolutionX_set, get=resolutionX_get)
+        def resolutionX_update(self, context):
+            v = max(0, min(4096, (int(self.resolutionX) // 64) * 64))
+            if self.resolutionX != v:
+                self.resolutionX = v
+            update(self)
+        prop = bpy.props.IntProperty(default=0, min=0, max=4096, update=resolutionX_update)
         properties["resolutionX"] = prop
 
-        def resolutionY_set(self, value):
-            self['resolutionY'] = (value // 64) * 64
-
-        def resolutionY_get(self):
-            if 'resolutionY' not in self:
-                self['resolutionY'] = 0
-            return self['resolutionY']
-        prop = bpy.props.IntProperty(default=0, min=0, max=4096, set=resolutionY_set, get=resolutionY_get)
+        def resolutionY_update(self, context):
+            v = max(0, min(4096, (int(self.resolutionY) // 64) * 64))
+            if self.resolutionY != v:
+                self.resolutionY = v
+            update(self)
+        prop = bpy.props.IntProperty(default=0, min=0, max=4096, update=resolutionY_update)
         properties["resolutionY"] = prop
 
         def update_index(self, context):
             config = json.loads(self.config)
             c = config[self.index]
             for k in c:
-                if k not in self:
-                    continue
-                self[k] = c[k]
+                if hasattr(self, k):
+                    setattr(self, k, c[k])
 
         prop = bpy.props.IntProperty(default=0, min=0, max=1, update=update_index)
         properties["index"] = prop
 
-        def x_set(self, value):
-            self['x'] = (value // 64) * 64
+        def x_update(self, context):
+            v = max(0, min(4096, (int(self.x) // 64) * 64))
+            if self.x != v:
+                self.x = v
             update(self)
-
-        def x_get(self):
-            if 'x' not in self:
-                self['x'] = 0
-            return self['x']
-        prop = bpy.props.IntProperty(default=0, min=0, max=4096, set=x_set, get=x_get)
+        prop = bpy.props.IntProperty(default=0, min=0, max=4096, update=x_update)
         properties["x"] = prop
 
-        def y_set(self, value):
-            self['y'] = (value // 64) * 64
+        def y_update(self, context):
+            v = max(0, min(4096, (int(self.y) // 64) * 64))
+            if self.y != v:
+                self.y = v
             update(self)
-
-        def y_get(self):
-            if 'y' not in self:
-                self['y'] = 0
-            return self['y']
-        prop = bpy.props.IntProperty(default=0, min=0, max=4096, set=y_set, get=y_get)
+        prop = bpy.props.IntProperty(default=0, min=0, max=4096, update=y_update)
         properties["y"] = prop
 
-        def sdn_width_set(self, value):
-            self['sdn_width'] = (value // 64) * 64
+        def sdn_width_update(self, context):
+            v = max(0, min(4096, (int(self.sdn_width) // 64) * 64))
+            if self.sdn_width != v:
+                self.sdn_width = v
             update(self)
-
-        def sdn_width_get(self):
-            if 'sdn_width' not in self:
-                self['sdn_width'] = 0
-            return self['sdn_width']
-        prop = bpy.props.IntProperty(default=0, min=0, max=4096, set=sdn_width_set, get=sdn_width_get)
+        prop = bpy.props.IntProperty(default=0, min=0, max=4096, update=sdn_width_update)
         properties["sdn_width"] = prop
 
-        def sdn_height_set(self, value):
-            self['sdn_height'] = (value // 64) * 64
+        def sdn_height_update(self, context):
+            v = max(0, min(4096, (int(self.sdn_height) // 64) * 64))
+            if self.sdn_height != v:
+                self.sdn_height = v
             update(self)
-
-        def sdn_height_get(self):
-            if 'sdn_height' not in self:
-                self['sdn_height'] = 0
-            return self['sdn_height']
-        prop = bpy.props.IntProperty(default=0, min=0, max=4096, set=sdn_height_set, get=sdn_height_get)
+        prop = bpy.props.IntProperty(default=0, min=0, max=4096, update=sdn_height_update)
         properties["sdn_height"] = prop
 
         def update_strength(self, context):
@@ -912,25 +996,25 @@ class MultiAreaConditioning(BluePrintBase):
             config[i]["sdn_width"] = d[2]
             config[i]["sdn_height"] = d[3]
             config[i]["strength"] = d[4]
-        self["config"] = json.dumps(config)
+        self.config = json.dumps(config)
         d = data["properties"]["values"][s.getattr(self, "index")]
-        self["x"] = d[0]
-        self["y"] = d[1]
-        self["sdn_width"] = d[2]
-        self["sdn_height"] = d[3]
-        self["strength"] = d[4]
-        self["resolutionX"] = data["properties"]["width"]
-        self["resolutionY"] = data["properties"]["height"]
+        self.x = d[0]
+        self.y = d[1]
+        self.sdn_width = d[2]
+        self.sdn_height = d[3]
+        self.strength = d[4]
+        self.resolutionX = data["properties"]["width"]
+        self.resolutionY = data["properties"]["height"]
 
     def dump_specific(s, self: NodeBase = None, cfg=None, selected_only=False, **kwargs):
         properties = cfg["properties"]
         widgets_values = cfg["widgets_values"]
         if self.class_type == "MultiAreaConditioning":
-            config = json.loads(self["config"])
+            config = json.loads(self.config)
             properties.clear()
             properties.update({'Node name for S&R': 'MultiAreaConditioning',
-                               'width': self["resolutionX"],
-                               'height': self["resolutionY"],
+                               'width': self.resolutionX,
+                               'height': self.resolutionY,
                                'values': [[64, 128, 384, 128, 10],
                                           [320, 64, 192, 128, 0.03]]})
             for i in range(2):
@@ -942,8 +1026,8 @@ class MultiAreaConditioning(BluePrintBase):
                     config[i]["strength"],
                 ]
             widgets_values.clear()
-            widgets_values += [self["resolutionX"],
-                               self["resolutionY"],
+            widgets_values += [self.resolutionX,
+                               self.resolutionY,
                                None,
                                s.getattr(self, "index"),
                                *properties["values"][s.getattr(self, "index")]]
@@ -1230,6 +1314,8 @@ class 预览(BluePrintBase):
             return self.width
         pnum = len(self.prev)
         p0 = self.prev[0].image
+        if p0 is None:
+            return self.width
         w = max(p0.size[0], p0.size[1])
         if w == 0:
             return self.width
@@ -1256,6 +1342,8 @@ class 预览(BluePrintBase):
             if pnum == 0:
                 return True
             p0 = self.prev[0].image
+            if p0 is None:
+                return True
             layout.label(text=f"{p0.file_format} : [{p0.size[0]} x {p0.size[1]}]")
             col = layout.column(align=True)
             w = self.width / max(1, min(self.lnum, pnum)) // 20
@@ -1263,9 +1351,9 @@ class 预览(BluePrintBase):
                 if i % self.lnum == 0:
                     fcol = col.column_flow(columns=min(self.lnum, pnum))
                 prev = p.image
-                if prev.name not in Icon:
-                    Icon.reg_icon_by_pixel(prev, prev.name)
-                icon_id = Icon[prev.name]
+                if prev is None:
+                    continue
+                icon_id = Icon.get_icon_id(prev.name)
                 cfcol = fcol.column(align=True)
                 cfcol.template_icon(icon_id, scale=w)
                 cfrow = cfcol.row(align=True)
@@ -1313,6 +1401,7 @@ class 预览(BluePrintBase):
                     if not (img := Icon.find_image(img_path)):
                         return
                     p.image = img
+                    Icon.reg_icon_by_pixel(img, img.name)
                 except TypeError:
                     ...
         Timer.put((f, self, img_paths))
@@ -1326,6 +1415,8 @@ class PreviewImage(BluePrintBase):
             return self.width
         pnum = len(self.prev)
         p0 = self.prev[0].image
+        if p0 is None:
+            return self.width
         w = max(p0.size[0], p0.size[1])
         if w == 0:
             return self.width
@@ -1351,6 +1442,8 @@ class PreviewImage(BluePrintBase):
             if pnum == 0:
                 return True
             p0 = self.prev[0].image
+            if p0 is None:
+                return True
             layout.label(text=f"{p0.file_format} : [{p0.size[0]} x {p0.size[1]}]")
             col = layout.column(align=True)
             w = self.width / max(1, min(self.lnum, pnum)) // 20
@@ -1358,9 +1451,9 @@ class PreviewImage(BluePrintBase):
                 if i % self.lnum == 0:
                     fcol = col.column_flow(columns=min(self.lnum, pnum))
                 prev = p.image
-                if prev.name not in Icon:
-                    Icon.reg_icon_by_pixel(prev, prev.name)
-                icon_id = Icon[prev.name]
+                if prev is None:
+                    continue
+                icon_id = Icon.get_icon_id(prev.name)
                 cfcol = fcol.column(align=True)
                 cfcol.template_icon(icon_id, scale=w)
                 cfrow = cfcol.row(align=True)
@@ -1538,6 +1631,8 @@ class ComfyUIInputs(BluePrintBase):
             return self.width
         pnum = len(self.prev_image)
         p0 = self.prev_image[0].image
+        if p0 is None:
+            return self.width
         w = max(p0.size[0], p0.size[1])
         if w == 0:
             return self.width
@@ -1630,6 +1725,8 @@ class ComfyUIInputs(BluePrintBase):
             if pnum == 0:
                 return True
             p0 = self.prev_image[0].image
+            if p0 is None:
+                return True
             layout.label(text=f"{p0.file_format} : [{p0.size[0]} x {p0.size[1]}]")
             col = layout.column(align=True)
             w = self.width / max(1, min(self.lnum, pnum)) // 20
@@ -1637,9 +1734,9 @@ class ComfyUIInputs(BluePrintBase):
                 if i % self.lnum == 0:
                     fcol = col.column_flow(columns=min(self.lnum, pnum))
                 prev = p.image
-                if prev.name not in Icon:
-                    Icon.reg_icon_by_pixel(prev, prev.name)
-                icon_id = Icon[prev.name]
+                if prev is None:
+                    continue
+                icon_id = Icon.get_icon_id(prev.name)
                 cfcol = fcol.column(align=True)
                 cfcol.template_icon(icon_id, scale=w)
                 cfrow = cfcol.row(align=True)
@@ -1739,6 +1836,7 @@ class 存储(BluePrintBase):
     def make_serialize(s, self: NodeBase, parent: NodeBase = None) -> dict:
         def __post_fn__(self: NodeBase, t: Task, result: dict, mode, image):
             logger.debug("%s%s->%s", self.class_type, _T('Post Function'), result)
+            
             img_paths = result.get("output", {}).get("images", [])
             if self.mode == "ToSeq":
                 imgs = []
@@ -1746,11 +1844,11 @@ class 存储(BluePrintBase):
                     imgs.append(cache_to_local(img).as_posix())
 
                 def push_images_seq(imgs: list[str], channel, frame_start, frame_final_duration):
-                    seqe = bpy.context.scene.sequence_editor
+                    sequences = get_sequences()
                     seqs = []
                     for img in imgs:
                         name = Path(img).name
-                        seq = seqe.sequences.new_image(name, img, channel, frame_start)
+                        seq = sequences.new_image(name, img, channel, frame_start)
                         seq.frame_final_duration = frame_final_duration
                         frame_start += frame_final_duration
                         seqs.append(seq)
@@ -1761,7 +1859,7 @@ class 存储(BluePrintBase):
                         self.frame_to_channel: dict[int, dict[int, "bpy.types.Sequence"]] = {}
                         self.channel_to_frame: dict[int, dict[int, "bpy.types.Sequence"]] = {}
                         if not sequences and sce:
-                            sequences = sce.sequence_editor.sequences
+                            sequences = get_sequences(sce)
                         self.update(sequences)
 
                     def __repr__(self):
@@ -1809,8 +1907,8 @@ class 存储(BluePrintBase):
                 def do_tween(self, seqs: list["bpy.types.Sequence"]):
                     if self.seq_mode != "SeqAppend" or not self.frame_tween:
                         return
-                    seqe = bpy.context.scene.sequence_editor
-                    st = SeqSegmentTree(seqe.sequences)
+                    sequences = get_sequences()
+                    st = SeqSegmentTree(sequences)
                     for seq in seqs:
                         ele = seq.elements[0]
                         imgpath = Path(seq.directory, ele.filename).as_posix()
@@ -1820,27 +1918,31 @@ class 存储(BluePrintBase):
                             chan = seq.channel + self.frame_tween - tw
                             frames = st.get_frames_by_chan(chan) or [seq.frame_final_start - (self.frame_tween - tw) * duration - 1]
                             frame = round(frames[-1]) + 1
-                            seq_copy = seqe.sequences.new_image(name, imgpath, chan, frame)
+                            seq_copy = sequences.new_image(name, imgpath, chan, frame)
                             seq_copy.blend_type = "ALPHA_OVER"
                             seq_copy.blend_alpha = (tw + 1) / (self.frame_tween + 1)
                             seq_copy.frame_final_duration = duration
                             st.insert_sequence(seq_copy)
 
                 def f(self, imgs):
-                    seqe = bpy.context.scene.sequence_editor
+                    sequences = get_sequences()
                     channel = self.channel
-                    frame_start = bpy.context.scene.frame_current if self.current_frame_as_fs else self.frame_start
+                    frame_start = (
+                        t.task.get("sdn_frame", bpy.context.scene.frame_current)
+                        if self.current_frame_as_fs
+                        else self.frame_start
+                    )
                     frame_final_duration = self.frame_final_duration
                     mode = self.seq_mode
                     cut_off = self.cut_off
-                    max_final_start = bpy.context.scene.frame_current if self.current_frame_as_fs else 0
+                    max_final_start = 0 if self.current_frame_as_fs else frame_start
 
                     if mode == "SeqReplace":
                         # 替换模式: 查找当前通道的 frame_start 到 frame_final_duration 之间的所有序列, 删除, 然后将新建序列
                         rm_seq = []
                         frame_end = frame_start + frame_final_duration * len(imgs)
                         print(frame_start, frame_end)
-                        for seq in seqe.sequences:
+                        for seq in sequences:
                             if seq.channel != channel:
                                 continue
                             if cut_off and (seq.frame_final_start <= frame_start < seq.frame_final_end or seq.frame_final_start >= frame_start):
@@ -1852,15 +1954,22 @@ class 存储(BluePrintBase):
                                 rm_seq.append(seq)
                                 print("RM2:", seq.frame_final_start, seq.frame_final_end)
                         for seq in rm_seq:
-                            seqe.sequences.remove(seq)
+                            sequences.remove(seq)
                     elif mode == "SeqAppend":
                         # 追加模式: 查找当前通道的 最后一个序列的持续位置, 往后新增
-                        for seq in seqe.sequences:
-                            if seq.channel != channel:
-                                continue
-                            if seq.frame_final_end > max_final_start:
-                                max_final_start = seq.frame_final_end
-                        frame_start = max_final_start
+                        total_duration = frame_final_duration * len(imgs)
+                        channel_seqs = sorted(
+                            (seq for seq in sequences if seq.channel == channel),
+                            key=lambda s: s.frame_final_start,
+                        )
+                        desired_start = frame_start
+                        for seq in channel_seqs:
+                            # 如果在当前插入窗口之前有空隙，则直接使用空隙
+                            if desired_start + total_duration <= seq.frame_final_start:
+                                break
+                            # 否则将起始位置推到该序列之后，继续查找下一段空隙
+                            desired_start = max(desired_start, seq.frame_final_end)
+                        frame_start = desired_start
                     elif mode == "SeqStack":
                         # 堆叠模式: 直接新建, blender会自己堆叠
                         ...
@@ -1964,7 +2073,14 @@ class 输入图像(BluePrintBase):
         return setwidth(self, max(self.prev.size[0], self.prev.size[1]))
 
     def spec_extra_properties(s, properties, nname, ndesc):
-        prop = bpy.props.EnumProperty(items=[("FILE", "File", "", "FILEBROWSER", 0), ("IMAGE", "Image", "", "IMAGE_DATA", 1)], default="FILE", name="Input Type")
+        mode_items = [
+            ("输入", "Image", "Use Image From Disk or Blender Image.", "IMAGE_DATA", 0),
+            ("渲染", "Render", "Render needs a .png filepath (Render Properties → Output → Filepath).\n\nUses compositor output; enable Post Processing → Sequencer to include VSE.", "RENDER_STILL", 1),
+            ("序列图", "Sequence", "Load a frame series from the specified directory.", "SEQUENCE", 2),
+            ("视口", "3D Viewport", "OpenGL viewport render from the active camera.", "CAMERA_DATA", 3),
+        ]
+        properties["mode"] = bpy.props.EnumProperty(items=mode_items, default="输入", name="Mode")
+        prop = bpy.props.EnumProperty(items=[("FILE", "Image From Disk", "", "FILEBROWSER", 0), ("IMAGE", "Blender Image", "", "IMAGE_DATA", 1)], default="FILE", name="Input Type")
         properties["input_type"] = prop
         prop = bpy.props.PointerProperty(type=bpy.types.Image)
         properties["inner_image"] = prop
@@ -1975,9 +2091,9 @@ class 输入图像(BluePrintBase):
 
         def search_layers(self, context):
             items = []
-            if not bpy.context.scene.use_nodes:
+            if bpy.context.scene.compositing_node_group is None:
                 return items
-            nodes = bpy.context.scene.node_tree.nodes
+            nodes = bpy.context.scene.compositing_node_group.nodes
             render_layer = nodes.get(self.render_layer, None)
             if not render_layer:
                 return items
@@ -2016,8 +2132,7 @@ class 输入图像(BluePrintBase):
             if self.mode == "序列图":
                 layout.label(text="Frames Directory", text_ctxt=self.get_ctxt())
             if self.mode == "渲染":
-                layout.label(text="Set Image Path of Render Result(.png)", icon="ERROR")
-                if bpy.context.scene.use_nodes:
+                if bpy.context.scene.compositing_node_group is not None:
                     row = layout.row(align=True)
                     row.prop_search(self, "render_layer", bpy.context.scene.sdn, "render_layer")
                     icon = "RESTRICT_RENDER_ON" if self.disable_render else "RESTRICT_RENDER_OFF"
@@ -2060,6 +2175,9 @@ class 输入图像(BluePrintBase):
                 icon_id = Icon[prev.filepath]
                 row = layout.row(align=True)
                 row.label(text=f"{prev.file_format} : [{prev.size[0]} x {prev.size[1]}]")
+                if self.mode == "输入" and self.input_type == "IMAGE" and self.inner_image:
+                    op = row.operator("sdn.paint_image_mask", text="", icon="BRUSH_DATA")
+                    op.img_name = self.inner_image.name
                 row.operator(Set_Render_Res.bl_idname, text="", icon="LOOP_FORWARDS").node_name = self.name
                 layout.template_icon(icon_id, scale=self.width // 20)
             return True
@@ -2089,11 +2207,28 @@ class 输入图像(BluePrintBase):
             image: bpy.types.Image = self.inner_image
             old_format = bpy.context.scene.render.image_settings.file_format
             old_color_mode = bpy.context.scene.render.image_settings.color_mode
+            view_settings = bpy.context.scene.view_settings
+            old_view_transform = view_settings.view_transform
+            old_look = view_settings.look
+            old_exposure = view_settings.exposure
+            old_gamma = view_settings.gamma
             bpy.context.scene.render.image_settings.file_format = "PNG"
             bpy.context.scene.render.image_settings.color_mode = "RGBA"
-            image.save_render(filepath = self.image)
-            bpy.context.scene.render.image_settings.file_format = old_format
-            bpy.context.scene.render.image_settings.color_mode = old_color_mode
+            try:
+                view_settings.view_transform = "Standard"
+                view_settings.look = "None"
+                view_settings.exposure = 0.0
+                view_settings.gamma = 1.0
+                image.save_render(filepath = self.image)
+                Icon.update_icon_pixel_live(image.filepath, image)
+                update_screen()
+            finally:
+                view_settings.view_transform = old_view_transform
+                view_settings.look = old_look
+                view_settings.exposure = old_exposure
+                view_settings.gamma = old_gamma
+                bpy.context.scene.render.image_settings.file_format = old_format
+                bpy.context.scene.render.image_settings.color_mode = old_color_mode
 
         save_image()
 
@@ -2114,6 +2249,10 @@ class 输入图像(BluePrintBase):
                 if not bpy.context.scene.camera:
                     err_info = _T("No Camera in Scene") + " -> " + bpy.context.scene.name
                     raise Exception(err_info)
+                # view_context OpenGL renders crash Blender when no VIEW_3D areas are visible.
+                view3d_exists = any(area.type == "VIEW_3D" for area in bpy.context.window.screen.areas)
+                if get_pref().view_context and not view3d_exists:
+                    raise Exception(_T("View Context requires a visible 3D Viewport area"))
                 bpy.ops.render.opengl(write_still=True, view_context=get_pref().view_context)
                 bpy.context.scene.render.filepath = old
                 bpy.context.scene.render.image_settings.file_format = old_fmt
@@ -2127,9 +2266,14 @@ class 输入图像(BluePrintBase):
             current_frame = bpy.context.scene.frame_current
             if self.mode == "渲染" and not self.use_current_frame:
                 bpy.context.scene.frame_set(self.input_frame)
-            if bpy.context.scene.use_nodes:
+            view_settings = bpy.context.scene.view_settings
+            old_view_transform = view_settings.view_transform
+            old_look = view_settings.look
+            old_exposure = view_settings.exposure
+            old_gamma = view_settings.gamma
+            if bpy.context.scene.compositing_node_group is not None:
                 from .utils import set_composite
-                nt = bpy.context.scene.node_tree
+                nt = bpy.context.scene.compositing_node_group
 
                 with set_composite(nt) as cmp:
                     render_layer: bpy.types.CompositorNodeRLayers = nt.nodes.new("CompositorNodeRLayers")
@@ -2138,10 +2282,30 @@ class 输入图像(BluePrintBase):
                         render_layer.layer = sel_render_layer.layer
                     if out := render_layer.outputs.get(self.out_layers):
                         nt.links.new(cmp.inputs["Image"], out)
-                    bpy.ops.render.render(write_still=True)
+                    try:
+                        view_settings.view_transform = "Standard"
+                        view_settings.look = "None"
+                        view_settings.exposure = 0.0
+                        view_settings.gamma = 1.0
+                        bpy.ops.render.render(write_still=True)
+                    finally:
+                        view_settings.view_transform = old_view_transform
+                        view_settings.look = old_look
+                        view_settings.exposure = old_exposure
+                        view_settings.gamma = old_gamma
                     nt.nodes.remove(render_layer)
             else:
-                bpy.ops.render.render(write_still=True)
+                try:
+                    view_settings.view_transform = "Standard"
+                    view_settings.look = "None"
+                    view_settings.exposure = 0.0
+                    view_settings.gamma = 1.0
+                    bpy.ops.render.render(write_still=True)
+                finally:
+                    view_settings.view_transform = old_view_transform
+                    view_settings.look = old_look
+                    view_settings.exposure = old_exposure
+                    view_settings.gamma = old_gamma
             if self.mode == "渲染":
                 bpy.context.scene.frame_set(current_frame)
             bpy.context.scene.render.filepath = old
@@ -2152,12 +2316,17 @@ class 输入图像(BluePrintBase):
             render()
             # 上传图片
             upload_image(self.image)
+            time.sleep(0.1)
         r()
 
     def ensure_img_path(s, self: NodeBase):
         if not self.image:
             self.image = Path(tempfile.gettempdir()).joinpath("_render.png").as_posix()
-        p = Path(self.image)
+
+        # Resolve Blender's relative path notation '//' to an absolute path
+        abs_path = bpy.path.abspath(self.image)
+        p = Path(abs_path)
+
         if p.is_dir():
             p = p.joinpath("_render.png")
         if p.suffix.lower() not in [".png"]:
@@ -2166,13 +2335,15 @@ class 输入图像(BluePrintBase):
             p.parent.mkdir(parents=True, exist_ok=True)
         except BaseException:
             ...
-        self.image = p.as_posix()
+        self.image = p.resolve().as_posix()
 
     def serialize_pre(s, self: NodeBase):
         if self.mode in {"渲染", "视口"} and self.reaches_output():
             s.ensure_img_path(self)
         if self.mode == "输入" and self.input_type == "IMAGE":
-            self.image = Path(tempfile.gettempdir()).joinpath(f"{uuid.uuid4().hex}_render.png").as_posix()
+            if not self.image or "_render.png" not in self.image:
+                self.image = Path(tempfile.gettempdir()).joinpath(f"{uuid.uuid4().hex}_render.png").as_posix()
+            s.ensure_img_path(self)
         super().serialize_pre(self)
 
     def serialize_specific(s, self: NodeBase, cfg, execute):
@@ -2934,7 +3105,7 @@ class SaveAudioBL(BluePrintBase):
                     audios.append(cache_to_local(audio_path, suffix="flac").as_posix())
 
                 def f(self, audios):
-                    seqe = bpy.context.scene.sequence_editor
+                    sequences = get_sequences()
                     channel = self.channel
                     frame_start = bpy.context.scene.frame_current if self.current_frame_as_fs else self.frame_start
                     mode = self.seq_mode
@@ -2942,7 +3113,7 @@ class SaveAudioBL(BluePrintBase):
                     max_final_start = bpy.context.scene.frame_current if self.current_frame_as_fs else 0
                     for audio in audios:
                         name = Path(audio).name
-                        audio_seq = seqe.sequences.new_sound(name, audio, channel, frame_start)
+                        audio_seq = sequences.new_sound(name, audio, channel, frame_start)
                         frame_final_duration = audio_seq.frame_final_duration
 
                         if mode == "SeqReplace":
@@ -2950,7 +3121,7 @@ class SaveAudioBL(BluePrintBase):
                             rm_seq = []
                             frame_end = frame_start + frame_final_duration
                             print(frame_start, frame_end)
-                            for seq in seqe.sequences:
+                            for seq in sequences:
                                 if seq == audio_seq:
                                     continue
                                 if seq.channel != channel:
@@ -2964,10 +3135,10 @@ class SaveAudioBL(BluePrintBase):
                                     rm_seq.append(seq)
                                     print("RM2:", seq.frame_final_start, seq.frame_final_end)
                             for seq in rm_seq:
-                                seqe.sequences.remove(seq)
+                                sequences.remove(seq)
                         elif mode == "SeqAppend":
                             # 追加模式: 查找当前通道的 最后一个序列的持续位置, 往后新增
-                            for seq in seqe.sequences:
+                            for seq in sequences:
                                 if seq == audio_seq:
                                     continue
                                 if seq.channel != channel:
@@ -3021,6 +3192,7 @@ class SaveModel(BluePrintBase):
         items = [
             ("Save", "Save", "", "", 0),
             ("Import", "Import", "", "", 1),
+            ("Apply Animation", "Apply Animation", "", "", 2),
         ]
         prop = bpy.props.EnumProperty(items=items)
         properties["mode"] = prop
@@ -3030,6 +3202,9 @@ class SaveModel(BluePrintBase):
         properties["import_to_origin"] = bpy.props.BoolProperty(name="Import to Origin", default=False)
         # 保存到资产库
         properties["save_to_asset_lib"] = bpy.props.BoolProperty(name="Save to Asset Library", default=False)
+        properties["delete_empty_objects"] = bpy.props.BoolProperty(name="Delete Empty Objects", default=False, description="Unparent children and remove root empties after import")
+        properties["retain_armature"] = bpy.props.BoolProperty(name="Retain Armature Obj", default=False, description="Keep imported armature after applying animation")
+        properties["push_action_to_nla"] = bpy.props.BoolProperty(name="Push Action to NLA", default=False, description="After applying animation, push the action to NLA tracks")
         # 导入位置
         properties["import_location"] = bpy.props.FloatVectorProperty(name="Location", size=3, subtype="TRANSLATION")
         # 导入朝向
@@ -3042,6 +3217,9 @@ class SaveModel(BluePrintBase):
             "align_to_bottom",
             "import_to_origin",
             "save_to_asset_lib",
+            "delete_empty_objects",
+            "retain_armature",
+            "push_action_to_nla",
             "import_location",
             "import_rotation",
         }:
@@ -3056,8 +3234,14 @@ class SaveModel(BluePrintBase):
                 layout.prop(self, "align_to_bottom", text_ctxt=self.get_ctxt())
                 layout.prop(self, "import_to_origin", text_ctxt=self.get_ctxt())
                 layout.prop(self, "save_to_asset_lib", text_ctxt=self.get_ctxt())
+                layout.prop(self, "delete_empty_objects", text_ctxt=self.get_ctxt())
                 layout.prop(self, "import_location", text_ctxt=self.get_ctxt())
                 layout.prop(self, "import_rotation", text_ctxt=self.get_ctxt())
+                return True
+            elif self.mode == "Apply Animation":
+                layout.label(text="Select an armature to apply animation", text_ctxt=self.get_ctxt())
+                layout.prop(self, "retain_armature", text_ctxt=self.get_ctxt())
+                layout.prop(self, "push_action_to_nla", text_ctxt=self.get_ctxt())
                 return True
         return False
 
@@ -3085,23 +3269,29 @@ class SaveModel(BluePrintBase):
 
     def import_model(s, filepath) -> list[bpy.types.Object]:
         old_objs = set(bpy.context.scene.objects)
-        suffix = Path(filepath).suffix.lower()
-        if suffix == ".obj":
-            bpy.ops.wm.obj_import(filepath=filepath)
-        elif suffix in {".gltf", ".glb"}:
-            bpy.ops.import_scene.gltf(filepath=filepath, merge_vertices=True, import_shading="FLAT")
-        elif suffix == ".fbx":
-            bpy.ops.import_scene.fbx(filepath=filepath)
-        elif suffix == ".stl":
-            bpy.ops.wm.stl_import(filepath=filepath)
-        elif suffix == ".usdz":
-            texture_dir = Path(filepath).with_suffix("").as_posix()
-            bpy.ops.wm.usd_import(
-                filepath=filepath,
-                import_textures_mode="IMPORT_COPY",
-                import_textures_dir=texture_dir,
-            )
-
+        scene = bpy.context.scene
+        old_fps = scene.render.fps
+        old_fps_base = scene.render.fps_base
+        try:
+            suffix = Path(filepath).suffix.lower()
+            if suffix == ".obj":
+                bpy.ops.wm.obj_import(filepath=filepath)
+            elif suffix in {".gltf", ".glb"}:
+                bpy.ops.import_scene.gltf(filepath=filepath, merge_vertices=True, import_shading="FLAT")
+            elif suffix == ".fbx":
+                bpy.ops.import_scene.fbx(filepath=filepath)
+            elif suffix == ".stl":
+                bpy.ops.wm.stl_import(filepath=filepath)
+            elif suffix == ".usdz":
+                texture_dir = Path(filepath).with_suffix("").as_posix()
+                bpy.ops.wm.usd_import(
+                    filepath=filepath,
+                    import_textures_mode="IMPORT_COPY",
+                    import_textures_dir=texture_dir,
+                )
+        finally:
+            scene.render.fps = old_fps
+            scene.render.fps_base = old_fps_base
         new_objs = set(bpy.context.scene.objects) - old_objs
         return list(new_objs)
 
@@ -3129,11 +3319,13 @@ class SaveModel(BluePrintBase):
             for filename in model_paths:
                 if not filename:
                     continue
-                if not filename.lower().endswith(".glb"):
+                suffix = Path(filename).suffix.lower()
+                allowed = {".glb", ".gltf", ".fbx", ".obj", ".stl", ".usdz"}
+                if suffix not in allowed:
                     logger.warning(f"Not process {filename}")
                     WindowLogger.push_log(f"Not process {filename}")
                     continue
-                
+
                 if "/" in filename:
                     folder, name = filename.rsplit("/", 1)
                 else:
@@ -3142,9 +3334,10 @@ class SaveModel(BluePrintBase):
                 # data = {"filename": filename, "subfolder": "3d", "type": "output"}
 
                 if self.mode == "Save":
-                    save_path = Path(self.output_dir).joinpath(self.filename_prefix).with_suffix(".glb")
+                    target_suffix = suffix if suffix in allowed else ".glb"
+                    save_path = Path(self.output_dir).joinpath(self.filename_prefix).with_suffix(target_suffix)
                     save_path = get_next_filename(save_path)
-                    cache_to_local(data, suffix=".glb", save_path=save_path)
+                    cache_to_local(data, suffix=target_suffix, save_path=save_path)
                     continue
 
                 save_path = save_dir.joinpath(filename)
@@ -3154,7 +3347,94 @@ class SaveModel(BluePrintBase):
                 model_path = cache_to_local(data, suffix=suffix, save_path=save_path).as_posix()
 
                 active_object = bpy.context.object
+                selected_objects = list(bpy.context.selected_objects)
                 imp_objs = s.import_model(model_path)
+                if self.mode == "Apply Animation":
+                    target_armature = None
+                    if active_object and active_object.type == "ARMATURE":
+                        target_armature = active_object
+                    else:
+                        for obj in selected_objects:
+                            if obj.type == "ARMATURE":
+                                target_armature = obj
+                                break
+                    if not target_armature:
+                        logger.error("No active armature selected for Apply Animation")
+                        WindowLogger.push_log("No active armature selected for Apply Animation")
+                        return
+
+                    source_armatures = [obj for obj in imp_objs if obj.type == "ARMATURE"]
+                    if not source_armatures:
+                        logger.error("No armature found in imported model")
+                        WindowLogger.push_log("No armature found in imported model")
+                        return
+                    source_armature = source_armatures[0]
+                    try:
+                        if bpy.context.mode != "OBJECT":
+                            bpy.ops.object.mode_set(mode="OBJECT")
+                    except Exception:
+                        pass
+                    for obj in bpy.context.selected_objects:
+                        obj.select_set(False)
+                    source_armature.select_set(True)
+                    target_armature.select_set(True)
+                    bpy.context.view_layer.objects.active = source_armature
+                    try:
+                        source_action = None
+                        if source_armature.animation_data:
+                            source_action = source_armature.animation_data.action
+                        if not source_action:
+                            logger.error("No animation data found on imported armature")
+                            WindowLogger.push_log("No animation data found on imported armature")
+                        else:
+                            target_armature.animation_data_create()
+                            target_anim = target_armature.animation_data
+                            target_action = source_action.copy()
+                            target_anim.action = target_action
+                            if hasattr(target_action, "slots") and target_action.slots:
+                                slot = target_action.slots.active or target_action.slots[0]
+                                target_action.slots.active = slot
+                                if hasattr(target_anim, "action_slot"):
+                                    try:
+                                        target_anim.action_slot = slot
+                                    except Exception:
+                                        pass
+                            if self.push_action_to_nla:
+                                try:
+                                    target_anim.use_nla = True
+                                    track = target_anim.nla_tracks.new()
+                                    track.name = f"{target_action.name}_track"
+                                    strip = track.strips.new(
+                                        target_action.name,
+                                        int(target_action.frame_range[0]),
+                                        target_action,
+                                    )
+                                    strip.action_frame_start = target_action.frame_range[0]
+                                    strip.action_frame_end = target_action.frame_range[1]
+                                    target_anim.action = None
+                                except Exception:
+                                    pass
+                    except Exception as err:
+                        logger.error("Apply Animation failed: %s", err)
+                        WindowLogger.push_log("Apply Animation failed: %s", err)
+                    if not self.retain_armature:
+                        bpy.data.objects.remove(source_armature, do_unlink=True)
+                    for obj in bpy.context.selected_objects:
+                        obj.select_set(False)
+                    for obj in selected_objects:
+                        if obj.name in bpy.context.scene.objects:
+                            obj.select_set(True)
+                    if target_armature.name in bpy.context.scene.objects:
+                        bpy.context.view_layer.objects.active = target_armature
+                    continue
+
+                if self.delete_empty_objects:
+                    root_empties = [o for o in imp_objs if o.type == "EMPTY"]
+                    for empty in root_empties:
+                        for child in list(empty.children):
+                            child.matrix_world = child.matrix_world.copy()
+                            child.parent = None
+                        bpy.data.objects.remove(empty, do_unlink=True)
                 for obj in imp_objs:
                     if self.align_to_bottom:
                         s.set_origin(obj)
@@ -3199,14 +3479,11 @@ class PreviewAudio(BluePrintBase):
         prop = bpy.props.FloatProperty(min=0, subtype="TIME_ABSOLUTE")
         properties["time_max"] = prop
 
-        def time_set(self, value):
-            self["time"] = min(value, self.time_max)
-
-        def time_get(self):
-            if "time" not in self:
-                self["time"] = 0
-            return self["time"]
-        prop = bpy.props.FloatProperty(min=0, max=9999999, set=time_set, get=time_get)
+        def time_update(self, context):
+            clamped = min(max(self.time, 0), self.time_max if self.time_max else self.time)
+            if self.time != clamped:
+                self.time = clamped
+        prop = bpy.props.FloatProperty(min=0, max=9999999, update=time_update)
         properties["time"] = prop
 
         def play(self, context):
@@ -3563,8 +3840,7 @@ class SDParameterGenerator(BluePrintBase):
 @lru_cache(maxsize=1024)
 def get_blueprints(comfyClass="", default=BluePrintBase) -> BluePrintBase:
     for cls in BluePrintBase.__subclasses__():
-        if cls.comfyClass != comfyClass:
-            continue
-        return cls()
+        if comfyClass in cls.comfyClass.split("|"):
+            return cls()
     new_comfy_bp = type(comfyClass, (default,), {"comfyClass": comfyClass})
     return new_comfy_bp()

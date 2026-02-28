@@ -1073,11 +1073,27 @@ class TaskManager:
 
     @staticmethod
     def clear_vram():
-        req = request.Request(f"{TaskManager.server.get_url()}/cup/clear_vram", method="POST")
-        try:
-            request.urlopen(req)
-        except URLError:
-            error_info = _T("Dependency Error") + ": " + _T("Cannot connect to ComfyUI-CUP cup/clear_vram api.")
+        url = TaskManager.server.get_url()
+        errors = []
+
+        def _post(path, data=None, name=""):
+            try:
+                req = request.Request(f"{url}{path}", data=data, method="POST")
+                request.urlopen(req, timeout=5)
+            except Exception as e:
+                logger.debug(f"Clear VRAM step failed ({name or path}): {e}")
+                errors.append(name or path)
+
+        # 1. Clear node execution cache (Custom CUP API)
+        _post("/cup/clear_cache", name="clear_cache")
+        # 2. Free model VRAM (Custom CUP API)
+        _post("/cup/clear_vram", name="clear_vram")
+        # 3. Native ComfyUI Free API (optional, best-effort)
+        free_data = json.dumps({"unload_models": True, "free_memory": True}).encode()
+        _post("/free", data=free_data, name="free")
+
+        if len(errors) == 3:
+            error_info = _T("Dependency Error") + ": " + _T("Cannot connect to ComfyUI api.")
             TaskManager.put_error_msg(error_info)
 
     @staticmethod
